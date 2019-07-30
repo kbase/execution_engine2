@@ -42,6 +42,8 @@ class execution_engine2:
         pass
 
 
+
+
     def list_config(self, ctx):
         """
         :returns: instance of mapping from String to String
@@ -265,6 +267,7 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: line_number
         #BEGIN add_job_logs
+        line_number = self.method_runner.add_job_logs(job_id=job_id, lines=lines, ctx=ctx)
         #END add_job_logs
 
         # At some point might do deeper type checking...

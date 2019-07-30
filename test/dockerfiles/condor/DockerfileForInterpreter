@@ -1,5 +1,5 @@
 FROM python:latest
-COPY requirements-dev.txt requirements.txt
+COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 
 # docker build -f DockerfileForInterpreter . -t ee2_dev
