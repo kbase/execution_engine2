@@ -7,7 +7,7 @@ from enum import Enum
 
 from mongoengine import connect, disconnect
 
-from execution_engine2.models.models import Job, JobOutput, JobInput, JobLog
+from execution_engine2.models.models import Job, JobInput, JobLog, LogLines
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.MongoUtil import MongoUtil
 from installed_clients.CatalogClient import Catalog
@@ -78,7 +78,7 @@ class SDKMethodRunner:
     def _init_job_rec(self, user_id, params):
 
         job = Job()
-        output = JobOutput()
+        # output = JobOutput()
         inputs = JobInput()
 
         job.user = user_id
@@ -93,11 +93,12 @@ class SDKMethodRunner:
         inputs.app_id = params.get("app_id")
 
         job.job_input = inputs
-        job.job_output = output
+        # job.job_output = output
 
-        insert_rec = self.get_mongo_util().insert_one(job.to_mongo())
+        with self.get_mongo_util().me_collection():
+            job.save()
 
-        return str(insert_rec)
+        return str(job.id)
 
     def get_mongo_util(self):
         if self.mongo_util is None:
@@ -113,22 +114,26 @@ class SDKMethodRunner:
         if ctx is None:
             raise Exception("Need to provide credentials for the workspace")
         if self.workspace is None:
-            self.workspace = Workspace(ctx['token'])
+            self.workspace = Workspace(ctx["token"])
         return self.workspace
 
-
     class WorkspacePermissions(Enum):
-        ADMINISTRATOR = 'a'
-        READ_WRITE = 'w'
-        READ = 'r'
-        NONE = 'n'
+        ADMINISTRATOR = "a"
+        READ_WRITE = "w"
+        READ = "r"
+        NONE = "n"
 
     def connect_to_mongoengine(self):
         mu = self.get_mongo_util()
-        connect(db=mu.mongo_database, host=mu.mongo_host, port=mu.mongo_port,
-                authentication_source=mu.mongo_database, username=mu.mongo_user,
-                password=mu.mongo_pass, alias='ee2')
-
+        connect(
+            db=mu.mongo_database,
+            host=mu.mongo_host,
+            port=mu.mongo_port,
+            authentication_source=mu.mongo_database,
+            username=mu.mongo_user,
+            password=mu.mongo_pass,
+            alias="ee2",
+        )
 
     def get_workspace_permissions(self, wsid, ctx):
         # Look up permissions for this workspace
@@ -139,29 +144,55 @@ class SDKMethodRunner:
         self.connect_to_mongoengine()
         job = Job.objects(id=job_id)[0]
         p = self.get_workspace_permissions(wsid=job.wsid, ctx=ctx)
-        if p not in [self.WorkspacePermissions.ADMINISTRATOR, self.WorkspacePermissions.READ_WRITE,
-                     self.WorkspacePermissions.READ]:
+        if p not in [
+            self.WorkspacePermissions.ADMINISTRATOR,
+            self.WorkspacePermissions.READ_WRITE,
+            self.WorkspacePermissions.READ,
+        ]:
             raise PermissionError(
-                f"User {ctx['user']} does not have permissions to get status for wsid:{job.wsid}, job_id:{job_id}")
+                f"User {ctx['user']} does not have permissions to get status for wsid:{job.wsid}, job_id:{job_id}"
+            )
 
-        disconnect(alias='ee2')
+        disconnect(alias="ee2")
         # Return the job status
 
     def view_job_logs(self, job_id, ctx):
         job = JobLog.objects(id=job_id)[0]
         p = self.get_workspace_permissions(wsid=job.wsid, ctx=ctx)
-        if p not in [self.WorkspacePermissions.ADMINISTRATOR, self.WorkspacePermissions.READ_WRITE,
-                     self.WorkspacePermissions.READ]:
+        if p not in [
+            self.WorkspacePermissions.ADMINISTRATOR,
+            self.WorkspacePermissions.READ_WRITE,
+            self.WorkspacePermissions.READ,
+        ]:
             raise PermissionError(
-                f"User {ctx['user']} does not have permissions to view job logs for wsid:{job.wsid}, job_id:{job_id}")
+                f"User {ctx['user']} does not have permissions to view job logs for wsid:{job.wsid}, job_id:{job_id}"
+            )
         # Return the log
 
     def add_job_logs(self, job_id, lines, ctx):
-        job = JobLog.objects(id=job_id)[0]
-        p = self.get_workspace_permissions(wsid=job.wsid, ctx=ctx)
-        if p not in [self.WorkspacePermissions.ADMINISTRATOR, self.WorkspacePermissions.READ_WRITE]:
-            raise PermissionError(
-                f"User {ctx['user']} does not have permissions to view job logs for wsid:{job.wsid}, job_id:{job_id}")
+        with self.get_mongo_util().me_collection():
+            jl = JobLog.objects(id=job_id)[0]  # type: JobLog
+            p = self.get_workspace_permissions(wsid=jl.wsid, ctx=ctx)
+            if p not in [
+                self.WorkspacePermissions.ADMINISTRATOR,
+                self.WorkspacePermissions.READ_WRITE,
+            ]:
+                raise PermissionError(
+                    f"User {ctx['user']} does not have permissions to view job logs for wsid:{job.wsid}, job_id:{job_id}"
+                )
+
+            linepos = jl.stored_line_count
+            line_count = jl.original_line_count
+            now = datetime.utcnow()
+
+            for line in lines:
+                line_count += 1
+                l = LogLines()
+                l.line = line.get("line", "")
+                l.linepos = line_count
+                l.error = line.get("error", 0)
+                l.ts = line.get("timestamp", now)
+
         # Return the log
 
     def __init__(self, config):

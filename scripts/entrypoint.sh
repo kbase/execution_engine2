@@ -14,6 +14,7 @@ if [ $# -eq 0 ] ; then
         /usr/sbin/condor_store_cred -p "${POOL_PASSWORD}" -f /etc/condor/password
   fi
   chown kbase /etc/condor/password
+  cp -rf /runner/JobRunner.tgz /condor_shared
   sh ./scripts/start_server.sh
 
 

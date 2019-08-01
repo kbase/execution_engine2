@@ -35,7 +35,6 @@ COPY ./requirements.txt /kb/module/requirements.txt
 RUN pip install -r /kb/module/requirements.txt
 RUN useradd kbase
 
-
 # -----------------------------------------
 
 COPY ./ /kb/module
@@ -43,8 +42,12 @@ RUN mkdir -p /kb/module/work && chmod -R a+rw /kb/module && mkdir -p /etc/condor
 
 
 WORKDIR /kb/module
-
 RUN make all
+
+WORKDIR /kb/module/scripts
+RUN chmod +x download_runner.sh && ./download_runner.sh
+
+WORKDIR /kb/module/
 
 ENTRYPOINT [ "./scripts/entrypoint.sh" ]
 CMD [ ]

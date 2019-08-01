@@ -14,7 +14,7 @@ from execution_engine2.utils.Condor import Condor
 class ExecutionEngine2SchedulerIntegrationTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.deploy = "deploy.cfg"
+        cls.deploy = "deploy_for_integration_tests.cfg"
         cls.condor = Condor(cls.deploy)
         cls.job_id = "1234"
         cls.user = "kbase"
@@ -126,7 +126,7 @@ class ExecutionEngine2SchedulerIntegrationTest(unittest.TestCase):
         submit_file = c.create_submit(params)
         # Fix for container
         # submit_file['+OWNER'] = ''
-
+        logging.info(submit_file)
         submission_info = c.run_job(params, submit_file=submit_file)
         print(submission_info)
         self.assertIsNotNone(submission_info.clusterid)

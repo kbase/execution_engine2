@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   condor:
-    image: ee2:local_condor
+    image: kbase/ee2:local_condor
     ports: ["22:22"]
     volumes:
       - /Users:/Users

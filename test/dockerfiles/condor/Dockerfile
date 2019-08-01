@@ -25,7 +25,8 @@ RUN useradd kbase && echo "kbase:kbase" | chpasswd
 
 CMD ["/usr/sbin/init"]
 
-# docker build -f Dockerfile . -t ee2:local_condor
+# docker build -f Dockerfile . -t kbase/ee2:local_condor
+# docker push kbase/ee2:local_condor
 # docker run -ti -d --privileged=true -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /Users:/Users -p 22:22 --net=my_bridge ee2:local_condor
 # docker run -ti -d  --net=my_bridge mongo:2.7
 # docker network connect my_bridge 51ef0e863717

@@ -46,7 +46,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         default_sub = c.create_submit(params)
 
         sub = default_sub
-        self.assertEqual(sub["executable"], c.executable)
+        self.assertEqual(sub["executable"], c.initial_dir + "/" + c.executable)
         self.assertEqual(sub["arguments"], f"{params['job_id']} {c.ee_endpoint}")
         self.assertEqual(sub["universe"], "vanilla")
         self.assertEqual(sub["+AccountingGroup"], params["user_id"])

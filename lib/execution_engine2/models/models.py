@@ -13,14 +13,11 @@ from mongoengine import (
     EmbeddedDocumentField,
     DynamicField,
     ValidationError,
-ObjectIdField,
-EmbeddedDocumentListField
-
-
+    ObjectIdField,
+    EmbeddedDocumentListField,
 )
 
-status = ["created", "queued", "running", "finished"]
-authstrat = ["kbaseworkspace", "something_else"]
+
 
 # TODO Make sure Datetime is correct format
 # TODO Use ReferenceField to create a mapping between WSID and JOB IDS?
@@ -30,11 +27,11 @@ authstrat = ["kbaseworkspace", "something_else"]
 """
 
 
-
 class LogLines(EmbeddedDocument):
     line = StringField()
     linepos = IntField()
     error = BooleanField()
+
 
 class JobLog(Document):
     primary_key = ObjectIdField(primary_key=True)
@@ -42,10 +39,8 @@ class JobLog(Document):
     original_line_count = IntField()
     stored_line_count = IntField()
     lines = EmbeddedDocumentListField(LogLines)
-    #meta = {"db_alias": "logs"}
-    meta = {
-        'collection': 'ee2_logs'
-    }
+    # meta = {"db_alias": "logs"}
+    meta = {"collection": "ee2_logs"}
 
 
 class Meta(EmbeddedDocument):
@@ -65,8 +60,7 @@ class JobInput(EmbeddedDocument):
     service_ver = StringField(required=True)
     app_id = StringField(required=True)
 
-    narrative_cell_info = EmbeddedDocumentField( Meta, required=True,)
-
+    narrative_cell_info = EmbeddedDocumentField(Meta, required=True)
 
 
 class JobOutput(EmbeddedDocument):
@@ -76,19 +70,33 @@ class JobOutput(EmbeddedDocument):
 
 
 class Status(Enum):
-    created = 'created'
-    estimating = 'estimating'
-    queued = 'queued'
-    running = 'running'
-    finished = 'finished'
-    error = 'error'
+    created = "created"
+    estimating = "estimating"
+    queued = "queued"
+    running = "running"
+    finished = "finished"
+    error = "error"
+
+class AuthStrat(Enum):
+    kbaseworkspace = "kbaseworkspace"
+    execution_engine = "execution_engine"
+
 
 def valid_status(status):
     try:
         Status(status)
     except Exception as e:
-        raise ValidationError(f"{status} is not a valid status {vars(Status)['_member_names_']}")
+        raise ValidationError(
+            f"{status} is not a valid status {vars(Status)['_member_names_']}"
+        )
 
+def valid_authstrat(status):
+    try:
+        Status(status)
+    except Exception as e:
+        raise ValidationError(
+            f"{status} is not a valid Authentication strategy {vars(AuthStrat)['_member_names_']}"
+        )
 
 class Job(Document):
     user = StringField(required=True)
@@ -100,12 +108,11 @@ class Job(Document):
     errormsg = StringField()
     scheduler_type = StringField()
     scheduler_id = StringField()
-    job_input = EmbeddedDocumentField(JobInput,required=True)
+    job_input = EmbeddedDocumentField(JobInput, required=True)
     job_output = EmbeddedDocumentField(JobOutput)
-    #meta = {"db_alias": "ee2"}
-    meta = {
-        'collection': 'ee2_jobs'
-    }
+    # meta = {"db_alias": "ee2"}
+    meta = {"collection": "ee2_jobs"}
+
 
 ###
 ### Unused fields that we might want
@@ -146,8 +153,3 @@ class Results(EmbeddedDocument):
     workspaceids = ListField()
     workspaceurl = StringField()
     shocknodes = ListField()
-
-
-
-
-
