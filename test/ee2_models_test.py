@@ -77,6 +77,10 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
 
 
     def test_insert_log(self):
+        """
+        This test inserts a log via the models
+        :return:
+        """
         with self.mongo_util.mongo_engine_connection():
             job = self.get_example_job()
             job.save()
@@ -99,3 +103,16 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
             j.save()
 
         # TODO Test adding lines to existing log, but we need the functions in ee2 first
+
+    def test_insert_more_logs(self):
+        """
+        This test inserts a log via the api callss
+        :return:
+        """
+        pass
+
+    def test_retrieve_job(self):
+        pass
+
+    def test_retrieve_logs(self):
+        pass
