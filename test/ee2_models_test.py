@@ -51,7 +51,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         cls.ee2_database = MongoClient(connectTimeoutMS=1000, host='mongo',
                                        port=cls.config['mongo-port']).get_database(
         cls.config['mongo-database'])
-        cls.ee2_mongoengine_connect = connect('ee2', host='mongo', )
+        cls.ee2_mongoengine_connect = connect('ee2', host='mongo', port=)
 
         cls.job_id = None
 
