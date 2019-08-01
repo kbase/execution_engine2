@@ -5,6 +5,8 @@ import re
 from datetime import datetime
 from enum import Enum
 
+from mongoengine import connect, disconnect
+
 from execution_engine2.models.models import Job, JobOutput, JobInput, JobLog
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.MongoUtil import MongoUtil
@@ -114,11 +116,18 @@ class SDKMethodRunner:
             self.workspace = Workspace(ctx['token'])
         return self.workspace
 
+
     class WorkspacePermissions(Enum):
         ADMINISTRATOR = 'a'
         READ_WRITE = 'w'
         READ = 'r'
         NONE = 'n'
+
+    def connect_to_mongoengine(self):
+        mu = self.get_mongo_util()
+        connect(db=mu.mongo_database, host=mu.mongo_host, port=mu.mongo_port,
+                authentication_source=mu.mongo_database, username=mu.mongo_user,
+                password=mu.mongo_pass, alias='ee2')
 
 
     def get_workspace_permissions(self, wsid, ctx):
@@ -126,14 +135,16 @@ class SDKMethodRunner:
         permission = self.get_workspace(ctx).get_permissions_mass([wsid])[0]
         return self.WorkspacePermissions(permission)
 
-
     def get_job_status(self, job_id, ctx):
+        self.connect_to_mongoengine()
         job = Job.objects(id=job_id)[0]
         p = self.get_workspace_permissions(wsid=job.wsid, ctx=ctx)
         if p not in [self.WorkspacePermissions.ADMINISTRATOR, self.WorkspacePermissions.READ_WRITE,
                      self.WorkspacePermissions.READ]:
             raise PermissionError(
                 f"User {ctx['user']} does not have permissions to get status for wsid:{job.wsid}, job_id:{job_id}")
+
+        disconnect(alias='ee2')
         # Return the job status
 
     def view_job_logs(self, job_id, ctx):
@@ -153,14 +164,11 @@ class SDKMethodRunner:
                 f"User {ctx['user']} does not have permissions to view job logs for wsid:{job.wsid}, job_id:{job_id}")
         # Return the log
 
-
-
     def __init__(self, config):
         self.config = config
         self.mongo_util = None
         self.condor = None
         self.workspace = None
-
         catalog_url = config["catalog-url"]
         self.catalog = Catalog(catalog_url)
 

@@ -50,8 +50,8 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         # You can set this up in the docker-compose
         cls.ee2_database = MongoClient(connectTimeoutMS=1000, host='mongo',
                                        port=cls.config['mongo-port']).get_database(
-            cls.config['mongo-database'])
-        cls.ee2_mongoengine_connect = connect('ee2', host='mongo')
+        cls.config['mongo-database'])
+        cls.ee2_mongoengine_connect = connect('ee2', host='mongo', )
 
         cls.job_id = None
 

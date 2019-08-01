@@ -42,7 +42,10 @@ class JobLog(Document):
     original_line_count = IntField()
     stored_line_count = IntField()
     lines = EmbeddedDocumentListField(LogLines)
-
+    #meta = {"db_alias": "logs"}
+    meta = {
+        'collection': 'ee2_logs'
+    }
 
 
 class Meta(EmbeddedDocument):
@@ -63,6 +66,7 @@ class JobInput(EmbeddedDocument):
     app_id = StringField(required=True)
 
     narrative_cell_info = EmbeddedDocumentField( Meta, required=True,)
+
 
 
 class JobOutput(EmbeddedDocument):
@@ -98,7 +102,10 @@ class Job(Document):
     scheduler_id = StringField()
     job_input = EmbeddedDocumentField(JobInput,required=True)
     job_output = EmbeddedDocumentField(JobOutput)
-
+    #meta = {"db_alias": "ee2"}
+    meta = {
+        'collection': 'ee2_jobs'
+    }
 
 ###
 ### Unused fields that we might want

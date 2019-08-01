@@ -32,6 +32,8 @@ class MongoUtil:
         stdout = pipe.communicate()
         logging.info(stdout)
 
+
+
     @classmethod
     def _get_collection(
         self,
@@ -75,6 +77,9 @@ class MongoUtil:
 
         # TODO: check potential problems. MongoDB will create the collection if it does not exist.
         my_database = my_client[mongo_database]
+
+        print(my_database)
+        print(mongo_collection)
         my_collection = my_database[mongo_collection]
 
         return my_collection
@@ -89,6 +94,10 @@ class MongoUtil:
 
         self.mongo_collection = config["mongo-collection"]
 
+        # self.jobs_collection = config["mongo-jobs-collection"]
+        # self.logs_collection = config["mongo-logs-collection"]
+
+        logging.info("Checking to see if we should start server")
         try:
             start_local = int(config.get("start-local-mongo", 1))
         except Exception:
@@ -98,7 +107,10 @@ class MongoUtil:
                 )
             )
         if start_local:
+            logging.info("Starting Server")
             self._start_local_service()
+
+
 
         self.job_col = self._get_collection(
             self.mongo_host,

@@ -12,8 +12,21 @@ services:
   mongo:
     image: mongo:latest
     ports: ["27017:27017"]
-    #volumes:
-    #  - /data/db:/data/db
+    env_file: docker-compose.env
+#    environment:
+#      MONGO_INITDB_ROOT_USERNAME: 'travis'
+#      MONGO_INITDB_ROOT_PASSWORD: 'travis'
+#      MONGO_INITDB_DATABASE: 'ee2'
+    volumes:
+      - /refdata/1:/data/db
 
+
+##########################################
+# If something is wonky with mongodb, its probably due to volumes, try
+# docker-compose down -v
+# docker-compose rm -fv mongo
+# docker-compose up -d --force-recreate
+
+##########################################
 
 
