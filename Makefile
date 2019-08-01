@@ -73,7 +73,7 @@ test-with-docker:
 	nosetests -x -v  --nocapture --nologcapture  --with-coverage --cover-html --cover-package=execution_engine2 ee2_check_configure_mongo_docker
 	# Run tests using python installed in travis, but with mongo and condor running in docker containers
 	nosetests -x -v  --nocapture --nologcapture  --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_scheduler_test.py
-   	nosetests -x -v  --nocapture --nologcapture  --with-coverage --cover-html --cover-package=execution_engine2 ee2_models_test
+	nosetests -x -v  --nocapture --nologcapture  --with-coverage --cover-html --cover-package=execution_engine2 ee2_models_test
 
 
 integration_test:
