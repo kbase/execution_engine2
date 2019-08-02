@@ -93,7 +93,7 @@ class SDKMethodRunner:
         inputs.app_id = params.get("app_id")
 
         # TODO Add Meta Fields From Params
-        job.meta = Meta()
+        inputs.job_input.narrative_cell_info = Meta()
 
         job.job_input = inputs
 
