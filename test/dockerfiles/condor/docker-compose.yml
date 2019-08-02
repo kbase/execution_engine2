@@ -5,7 +5,6 @@ services:
     image: kbase/ee2:local_condor
     ports: ["23:22"]
     volumes:
-#      - /Users:/Users
       - /sys/fs/cgroup:/sys/fs/cgroup
     privileged: true
 

@@ -58,7 +58,6 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
 
         logging.info("Done running mongo setup")
 
-
     def test_database_configured(self):
         logging.info("\nChecking privileged user exists")
         users_info = self.db.command("usersInfo")

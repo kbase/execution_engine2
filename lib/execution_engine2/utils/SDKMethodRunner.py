@@ -84,7 +84,6 @@ class SDKMethodRunner:
         job.user = user_id
         job.authstrat = "kbaseworkspace"
         job.wsid = params.get("wsid")
-        job.creation_time = datetime.timestamp(job.created)
 
         inputs.wsid = job.wsid
         inputs.method = params.get("method")
