@@ -92,6 +92,8 @@ def valid_status(status):
 
 
 def valid_authstrat(status):
+    if status is None:
+        pass
     try:
         Status(status)
     except Exception as e:
@@ -102,7 +104,7 @@ def valid_authstrat(status):
 
 class Job(Document):
     user = StringField(required=True)
-    authstrat = StringField(required=True, default="kbaseworkspace")
+    authstrat = StringField(required=True, default="kbaseworkspace", validation=valid_authstrat)
     wsid = IntField(required=True)
     status = StringField(required=True, validation=valid_status)
     updated = DateTimeField(default=datetime.datetime.utcnow)
