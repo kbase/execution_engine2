@@ -5,7 +5,7 @@ services:
     image: kbase/ee2:local_condor
     ports: ["22:22"]
     volumes:
-      - /Users:/Users
+#      - /Users:/Users
       - /sys/fs/cgroup:/sys/fs/cgroup
     privileged: true
 
@@ -13,12 +13,6 @@ services:
     image: mongo:latest
     ports: ["27017:27017"]
     env_file: docker-compose.env
-#    environment:
-#      MONGO_INITDB_ROOT_USERNAME: 'travis'
-#      MONGO_INITDB_ROOT_PASSWORD: 'travis'
-#      MONGO_INITDB_DATABASE: 'ee2'
-    volumes:
-      - /refdata/1:/data/db
 
 
 ##########################################

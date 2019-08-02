@@ -61,16 +61,18 @@ build-test-script:
 	chmod +x $(TEST_DIR)/$(TEST_SCRIPT_NAME)
 
 TEST_FILES = test/MongoUtil_test.py test/SDKMethodRunner_test.py
-test:
-	# Test with local mongo and condor
-	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_scheduler_test.py
 
 
-test-models:
-	# For Testing In Travis
-
+setup-database:
 	# Set up travis user in mongo
 	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_check_configure_mongo_docker.py
+
+test:
+	# Requires htcondor python bindings
+	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_scheduler_test.py
+
+test-models:
+    # Requires travis user to be set up
 	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_models_test.py
 
 
