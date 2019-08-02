@@ -7,6 +7,7 @@ logging.basicConfig(level=logging.INFO)
 from pymongo import MongoClient
 
 from test.test_utils import read_config_into_dict, bootstrap
+from pymongo.errors import OperationFailure
 
 bootstrap()
 
@@ -39,7 +40,11 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
 
         cls.db = cls.mongo_client.get_database(cls.config["mongo-database"])
         logging.info(f"Dropping user {cls.config['mongo-user']}")
-        cls.db.command("dropUser", cls.config["mongo-user"])
+        try:
+            cls.db.command("dropUser", cls.config["mongo-user"])
+        except OperationFailure:
+            logging.info("Couldn't drop user")
+            
         logging.info("Creating privileged user")
         cls.db.command(
             "createUser",
