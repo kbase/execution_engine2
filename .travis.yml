@@ -6,8 +6,6 @@ dist: xenial
 sudo: required
 
 
-install:
-  - pip install -r requirements.txt
 
 services:
   - docker
@@ -27,6 +25,10 @@ before_install:
   - (cd test/dockerfiles/condor && docker-compose up -d)
   - chmod +x ./build/build_docker_image.sh && chmod +x ./build/push2dockerhub.sh
   - cp test/env/test.travis.env test/env/test.env
+
+
+install:
+  - pip install -r requirements.txt
   - make setup-database
 
 
@@ -34,8 +36,6 @@ script:
   - make test
   - make test-models
   # - make integration_test Doesn't yet work in travis
-
-
 
 after_success:
  # Need to set up credentials for this
