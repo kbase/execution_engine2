@@ -91,14 +91,14 @@ def valid_status(status):
         )
 
 
-def valid_authstrat(status):
-    if status is None:
+def valid_authstrat(strat):
+    if strat is None:
         pass
     try:
-        Status(status)
+        AuthStrat(strat)
     except Exception as e:
         raise ValidationError(
-            f"{status} is not a valid Authentication strategy {vars(AuthStrat)['_member_names_']}"
+            f"{strat} is not a valid Authentication strategy {vars(AuthStrat)['_member_names_']}"
         )
 
 
