@@ -4,20 +4,18 @@ import unittest
 
 logging.basicConfig(level=logging.INFO)
 
-from configparser import ConfigParser
-
 from execution_engine2.models.models import JobInput, Job, Meta, LogLines, JobLog
 from execution_engine2.utils.MongoUtil import MongoUtil
-from test.test_utils import read_config_into_dict
+from test.test_utils import read_config_into_dict, bootstrap
 from bson import ObjectId
+
 import os
-from dotenv import load_dotenv
-load_dotenv("env/test.env", verbose=True)
 
 
 class ExecutionEngine2SchedulerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        bootstrap()
         deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", 'test/deploy.cfg')
         config = read_config_into_dict(deploy)
         # Should this just be added into read_config_into_dict function?
@@ -31,7 +29,6 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         cls.config = config
         cls.ctx = {"job_id": "test", "user_id": "test", "token": "test"}
         cls.mongo_util = MongoUtil(cls.config)
-
 
     def get_example_job(self):
         j = Job()
@@ -57,7 +54,6 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
     def test_insert_job(self):
         logging.info("Testing insert job")
         with self.mongo_util.mongo_engine_connection(), self.mongo_util.pymongo_client() as pc:
-
             job = self.get_example_job()
             job.save()
 
@@ -77,7 +73,6 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
                 job.job_input.narrative_cell_info.cell_id,
                 saved_job["job_input"]["narrative_cell_info"]["cell_id"],
             )
-
 
     def test_insert_log(self):
         """

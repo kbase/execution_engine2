@@ -1,4 +1,7 @@
 from configparser import ConfigParser
+import os
+from dotenv import load_dotenv
+
 def _create_sample_params(self):
     params = dict()
     params["job_id"] = self.job_id
@@ -15,3 +18,5 @@ def read_config_into_dict(config='deploy.cfg', section='execution_engine2'):
         config[key] = val
     return config
 
+def bootstrap():
+    load_dotenv("env/test.env", verbose=True)

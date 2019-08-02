@@ -5,35 +5,25 @@ import unittest
 logging.basicConfig(level=logging.INFO)
 
 from pymongo import MongoClient
-from test.test_utils import read_config_into_dict
 
+from test.test_utils import read_config_into_dict, bootstrap
+
+import os
 
 class ExecutionEngine2SchedulerTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", 'test/deploy.cfg')
 
-        config = read_config_into_dict('deploy.cfg','execution_engine2')
+        config = read_config_into_dict(deploy,'execution_engine2')
 
         #For running python interpreter in a docker container
         mongo_in_docker = config.get('mongo-in-docker-compose', None)
         if mongo_in_docker is not None:
             config['mongo-host'] = config['mongo-in-docker-compose']
 
-        #For using mongo running in docker
-        config['start-local-mongo'] = 0
-
-
-
         cls.config = config
-
-
-
-
-
-
-
-
         cls.ctx = {"job_id": "test", "user_id": "test", "token": "test"}
 
         cls.mongo_client = MongoClient(
