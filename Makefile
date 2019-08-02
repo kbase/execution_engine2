@@ -62,13 +62,22 @@ build-test-script:
 
 TEST_FILES = test/ee2_scheduler_test.py test/MongoUtil_test.py test/SDKMethodRunner_test.py
 test:
-    # Test with local mongo and condor
+	# Test with local mongo and condor
 	nosetests -x -v  --nocapture --nologcapture  --with-coverage --cover-html --cover-package=execution_engine2 $(TEST_FILES)
 
 
+test-models:
+	# For Testing In Travis
+
+	# Set up travis user in mongo
+	nosetests -x -v  --nocapture --nologcapture  --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_check_configure_mongo_docker.py
+	nosetests -x -v  --nocapture --nologcapture  --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_models_test.py
+
+
 test-with-docker:
+	# For Local Testing
 	# Test with docker-compose versions of condor and mongo
-	./test/dockerfiles/condor/start_condor_mongo_for_travis.sh
+	./test/dockerfiles/condor/start_condor_mongo_for_tests.sh
 	# Set up travis user in mongo
 	nosetests -x -v  --nocapture --nologcapture  --with-coverage --cover-html --cover-package=execution_engine2 ee2_check_configure_mongo_docker
 	# Run tests using python installed in travis, but with mongo and condor running in docker containers

@@ -2,6 +2,7 @@
 import os
 import unittest
 from configparser import ConfigParser
+
 from bson.objectid import ObjectId
 
 from execution_engine2.utils.MongoUtil import MongoUtil
@@ -15,8 +16,7 @@ class SDKMethodRunner_test(unittest.TestCase):
         config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "deploy.cfg")
 
         if not os.path.exists(config_file):
-            config_file = os.path.join("test",config_file)
-
+            config_file = os.path.join("test", config_file)
 
         config_parser = ConfigParser()
         config_parser.read(config_file)
@@ -25,11 +25,14 @@ class SDKMethodRunner_test(unittest.TestCase):
         for nameval in config_parser.items("execution_engine2"):
             cls.cfg[nameval[0]] = nameval[1]
 
+
+
         cls.cfg["mongo-collection"] = "jobs"
 
         cls.method_runner = SDKMethodRunner(cls.cfg)
         cls.mongo_util = MongoUtil(cls.cfg)
-        cls.mongo_helper = MongoTestHelper()
+        cls.mongo_helper = MongoTestHelper(cls.cfg)
+
         cls.test_collection = cls.mongo_helper.create_test_db(
             db=cls.cfg["mongo-database"], col=cls.cfg["mongo-collection"]
         )

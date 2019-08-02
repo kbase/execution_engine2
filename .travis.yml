@@ -21,7 +21,7 @@ env:
 before_install:
   - sudo useradd kbase
   - sleep 15
-  - mongo ee2 --eval 'db.createUser({user:"travis",pwd:"test",roles:["readWrite"]});'
+  - mongo ee2 --eval 'db.createUser({user:"travis",pwd:"travis",roles:["readWrite"]});'
 
 
 script:
