@@ -3,7 +3,7 @@ version: "3.7"
 services:
   condor:
     image: kbase/ee2:local_condor
-    ports: ["22:22"]
+    ports: ["23:22"]
     volumes:
 #      - /Users:/Users
       - /sys/fs/cgroup:/sys/fs/cgroup

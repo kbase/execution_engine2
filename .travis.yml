@@ -11,7 +11,7 @@ install:
 
 services:
   - docker
-  - mongodb
+
 
 env:
   global: # The following are for the dockerhub DOCKER_USER and DOCKER_PASS env vars used in the push script
