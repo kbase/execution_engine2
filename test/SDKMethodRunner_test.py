@@ -8,16 +8,14 @@ from bson.objectid import ObjectId
 from execution_engine2.utils.MongoUtil import MongoUtil
 from execution_engine2.utils.SDKMethodRunner import SDKMethodRunner
 from test.mongo_test_helper import MongoTestHelper
+from test.test_utils import bootstrap
+bootstrap()
 
 
 class SDKMethodRunner_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "deploy.cfg")
-
-        if not os.path.exists(config_file):
-            config_file = os.path.join("test", config_file)
-
+        config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
         config_parser = ConfigParser()
         config_parser.read(config_file)
 
