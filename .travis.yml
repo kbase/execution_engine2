@@ -26,6 +26,7 @@ before_install:
 
 script:
   - chmod +x ./build/build_docker_image.sh && chmod +x ./build/push2dockerhub.sh
+  - cp test/env/test.travis.env test/env/test.env
   - make test
   - make test-models
   # - make integration_test Doesn't yet work in travis

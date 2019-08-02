@@ -6,11 +6,15 @@ logging.basicConfig(level=logging.INFO)
 
 from execution_engine2.utils.Condor import Condor
 
+import os
+from dotenv import load_dotenv
+load_dotenv("env/test.env", verbose=True)
+
 
 class ExecutionEngine2SchedulerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.deploy = "deploy.cfg"
+        cls.deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", 'test/deploy.cfg')
         cls.condor = Condor(cls.deploy)
         cls.job_id = "1234"
         cls.user = "kbase"
