@@ -30,7 +30,7 @@ class MongoUtilTest(unittest.TestCase):
             cls.config[nameval[0]] = nameval[1]
 
         cls.config["mongo-collection"] = "jobs"
-        cls.config['mongo-host'] = 'condor_mongo_1'
+        #cls.config['mongo-host'] = 'condor_mongo_1'
 
         logging.info("Setting up mongo test helper")
         cls.mongo_helper = MongoTestHelper(cls.config)
