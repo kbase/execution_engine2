@@ -44,14 +44,20 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
             cls.db.command("dropUser", cls.config["mongo-user"])
         except OperationFailure:
             logging.info("Couldn't drop user")
-            
+
         logging.info("Creating privileged user")
-        cls.db.command(
-            "createUser",
-            cls.config["mongo-user"],
-            pwd=cls.config["mongo-password"],
-            roles=["dbOwner"],
-        )
+
+        try:
+            cls.db.command(
+                "createUser",
+                cls.config["mongo-user"],
+                pwd=cls.config["mongo-password"],
+                roles=["dbOwner"],
+            )
+        except OperationFailure:
+            logging.info("Couldn't add user")
+
+
 
     def test_database_configured(self):
         logging.info("Checking privileged user")
@@ -64,4 +70,4 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
                     user["roles"],
                 )
                 success = 1
-        assert success
+        self.assertTrue(success)
