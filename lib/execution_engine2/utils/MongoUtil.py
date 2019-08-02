@@ -10,7 +10,6 @@ from contextlib import contextmanager
 
 
 class MongoUtil:
-
     def _start_local_service(self):
 
         try:
@@ -111,8 +110,8 @@ class MongoUtil:
         self.mongo_pass = config["mongo-password"]
         self.mongo_authmechanism = config["mongo-authmechanism"]
         self.mongo_collection = config["mongo-collection"]
-        self.mongo_jobs_collection = config['mongo-jobs-collection']
-        self.mongo_logs_collection = config['mongo-logs-collection']
+        self.mongo_jobs_collection = config["mongo-jobs-collection"]
+        self.mongo_logs_collection = config["mongo-logs-collection"]
 
         self._start_local_service()
         logging.basicConfig(

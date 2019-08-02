@@ -7,22 +7,23 @@ logging.basicConfig(level=logging.INFO)
 from pymongo import MongoClient
 
 from test.test_utils import read_config_into_dict, bootstrap
+
 bootstrap()
 
 import os
 
-class ExecutionEngine2SchedulerTest(unittest.TestCase):
 
+class ExecutionEngine2SchedulerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", 'test/deploy.cfg')
+        deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
 
-        config = read_config_into_dict(deploy,'execution_engine2')
+        config = read_config_into_dict(deploy, "execution_engine2")
 
-        #For running python interpreter in a docker container
-        mongo_in_docker = config.get('mongo-in-docker-compose', None)
+        # For running python interpreter in a docker container
+        mongo_in_docker = config.get("mongo-in-docker-compose", None)
         if mongo_in_docker is not None:
-            config['mongo-host'] = config['mongo-in-docker-compose']
+            config["mongo-host"] = config["mongo-in-docker-compose"]
 
         cls.config = config
         cls.ctx = {"job_id": "test", "user_id": "test", "token": "test"}
@@ -36,9 +37,10 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
             authMechanism=cls.config["mongo-authmechanism"],
         )
 
-        logging.info("Creating privileged user")
         cls.db = cls.mongo_client.get_database(cls.config["mongo-database"])
+        logging.info(f"Dropping user {cls.config['mongo-user']}")
         cls.db.command("dropUser", cls.config["mongo-user"])
+        logging.info("Creating privileged user")
         cls.db.command(
             "createUser",
             cls.config["mongo-user"],

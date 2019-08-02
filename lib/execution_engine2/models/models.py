@@ -18,7 +18,6 @@ from mongoengine import (
 )
 
 
-
 # TODO Make sure Datetime is correct format
 # TODO Use ReferenceField to create a mapping between WSID and JOB IDS?
 """
@@ -77,6 +76,7 @@ class Status(Enum):
     finished = "finished"
     error = "error"
 
+
 class AuthStrat(Enum):
     kbaseworkspace = "kbaseworkspace"
     execution_engine = "execution_engine"
@@ -90,6 +90,7 @@ def valid_status(status):
             f"{status} is not a valid status {vars(Status)['_member_names_']}"
         )
 
+
 def valid_authstrat(status):
     try:
         Status(status)
@@ -97,6 +98,7 @@ def valid_authstrat(status):
         raise ValidationError(
             f"{status} is not a valid Authentication strategy {vars(AuthStrat)['_member_names_']}"
         )
+
 
 class Job(Document):
     user = StringField(required=True)

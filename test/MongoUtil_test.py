@@ -12,6 +12,7 @@ from test.mongo_test_helper import MongoTestHelper
 
 logging.basicConfig(level=logging.INFO)
 from test.test_utils import bootstrap
+
 bootstrap()
 
 
@@ -29,12 +30,13 @@ class MongoUtilTest(unittest.TestCase):
             cls.config[nameval[0]] = nameval[1]
 
         cls.config["mongo-collection"] = "jobs"
-        #cls.config['mongo-host'] = 'condor_mongo_1'
+        # cls.config['mongo-host'] = 'condor_mongo_1'
 
         logging.info("Setting up mongo test helper")
         cls.mongo_helper = MongoTestHelper(cls.config)
         logging.info(
-            f" mongo create test db={cls.config['mongo-database']}, col={cls.config['mongo-jobs-collection']}")
+            f" mongo create test db={cls.config['mongo-database']}, col={cls.config['mongo-jobs-collection']}"
+        )
 
         cls.test_collection = cls.mongo_helper.create_test_db(
             db=cls.config["mongo-database"], col=cls.config["mongo-jobs-collection"]
@@ -64,7 +66,7 @@ class MongoUtilTest(unittest.TestCase):
 
     def test_connection_ok(self):
         j = Job()
-        user = 'boris'
+        user = "boris"
         j.user = "boris"
         j.wsid = 123
         job_input = JobInput()
@@ -91,7 +93,15 @@ class MongoUtilTest(unittest.TestCase):
 
         result = list(self.test_collection.find({"_id": j.id}))[0]
 
-        expected_keys = ['_id', 'user', 'authstrat', 'wsid', 'status', 'updated', 'job_input']
+        expected_keys = [
+            "_id",
+            "user",
+            "authstrat",
+            "wsid",
+            "status",
+            "updated",
+            "job_input",
+        ]
 
         # meta = {"db_alias": "ee2"}
         meta = {"collection": "ee2_jobs"}
@@ -194,8 +204,9 @@ class MongoUtilTest(unittest.TestCase):
     def test_delete_one_ok(self):
         mongo_util = MongoUtil(self.config)
         with mongo_util.pymongo_client() as pc:
-            col = pc.get_database(self.config['mongo-database']).get_collection(
-                self.config['mongo-jobs-collection'])
+            col = pc.get_database(self.config["mongo-database"]).get_collection(
+                self.config["mongo-jobs-collection"]
+            )
 
             doc_count = col.count_documents({})
             logging.info("Found {doc_count} documents")

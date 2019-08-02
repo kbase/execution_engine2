@@ -8,14 +8,14 @@ from execution_engine2.utils.Condor import Condor
 from test.test_utils import bootstrap
 
 import os
-bootstrap()
 
+bootstrap()
 
 
 class ExecutionEngine2SchedulerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", 'test/deploy.cfg')
+        cls.deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
         cls.condor = Condor(cls.deploy)
         cls.job_id = "1234"
         cls.user = "kbase"

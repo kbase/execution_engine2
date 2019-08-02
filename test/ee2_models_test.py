@@ -7,6 +7,7 @@ logging.basicConfig(level=logging.INFO)
 from execution_engine2.models.models import JobInput, Job, Meta, LogLines, JobLog
 from execution_engine2.utils.MongoUtil import MongoUtil
 from test.test_utils import read_config_into_dict, bootstrap
+
 bootstrap()
 from bson import ObjectId
 
@@ -16,15 +17,15 @@ import os
 class ExecutionEngine2SchedulerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", 'test/deploy.cfg')
+        deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
         config = read_config_into_dict(deploy)
         # Should this just be added into read_config_into_dict function?
-        mongo_in_docker = config.get('mongo-in-docker-compose', None)
+        mongo_in_docker = config.get("mongo-in-docker-compose", None)
         if mongo_in_docker is not None:
-            config['mongo-host'] = config['mongo-in-docker-compose']
+            config["mongo-host"] = config["mongo-in-docker-compose"]
 
         # For using mongo running in docker
-        config['start-local-mongo'] = 0
+        config["start-local-mongo"] = 0
 
         cls.config = config
         cls.ctx = {"job_id": "test", "user_id": "test", "token": "test"}
@@ -61,13 +62,13 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
 
             logging.info(f"Searching for {job.id}")
             db = self.config["mongo-database"]
-            coll = self.config['mongo-jobs-collection']
+            coll = self.config["mongo-jobs-collection"]
             saved_job = pc[db][coll].find_one({"_id": ObjectId(job.id)})
             logging.info("Found")
             logging.info(saved_job)
 
             print(job.wsid)
-            print(saved_job['wsid'])
+            print(saved_job["wsid"])
             self.assertEqual(job.wsid, saved_job["wsid"])
             self.assertEqual(
                 job.job_input.narrative_cell_info.cell_id,

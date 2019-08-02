@@ -25,8 +25,6 @@ class SDKMethodRunner_test(unittest.TestCase):
         for nameval in config_parser.items("execution_engine2"):
             cls.cfg[nameval[0]] = nameval[1]
 
-
-
         cls.cfg["mongo-collection"] = "jobs"
 
         cls.method_runner = SDKMethodRunner(cls.cfg)

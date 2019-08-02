@@ -6,8 +6,8 @@ import subprocess
 class MongoTestHelper:
     @classmethod
     def _start_service(self, cfg):
-        if not cfg['start-local-mongo'] == '1':
-           return
+        if not cfg["start-local-mongo"] == "1":
+            return
 
         logging.info("starting mongod service")
 
@@ -174,32 +174,33 @@ class MongoTestHelper:
 
         return jobs
 
-    def __init__(self,cfg):
+    def __init__(self, cfg):
         self.cfg = cfg
         self._start_service(cfg)
 
-    def create_test_db(self, db="ee2", col="jobs", ):
-
-
+    def create_test_db(self, db="ee2", col="jobs"):
 
         logging.info("creating collection and dbs")
 
         cfg = self.cfg
-        col = cfg['mongo-jobs-collection']
+        col = cfg["mongo-jobs-collection"]
         print(cfg)
         try:
-            my_client = MongoClient(cfg['mongo-host'], cfg['mongo-port'])
+            my_client = MongoClient(cfg["mongo-host"], cfg["mongo-port"])
             my_client.ee2.command(
-                "createUser", cfg['mongo-user'], pwd=cfg['mongo-password'], roles=["readWrite"]
+                "createUser",
+                cfg["mongo-user"],
+                pwd=cfg["mongo-password"],
+                roles=["readWrite"],
             )
         except Exception:
             pass
 
         my_client = MongoClient(
-            cfg['mongo-host'],
-            int(cfg['mongo-port']),
-            username=cfg['mongo-user'],
-            password=cfg['mongo-password'],
+            cfg["mongo-host"],
+            int(cfg["mongo-port"]),
+            username=cfg["mongo-user"],
+            password=cfg["mongo-password"],
             authSource=db,
             authMechanism="DEFAULT",
         )
