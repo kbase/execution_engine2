@@ -5,7 +5,6 @@ import unittest
 logging.basicConfig(level=logging.INFO)
 
 from pymongo import MongoClient
-
 from test.test_utils import read_config_into_dict, bootstrap
 from pymongo.errors import OperationFailure
 
@@ -57,10 +56,11 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         except OperationFailure:
             logging.info("Couldn't add user")
 
+        logging.info("Done running mongo setup")
 
 
     def test_database_configured(self):
-        logging.info("Checking privileged user")
+        logging.info("\nChecking privileged user exists")
         users_info = self.db.command("usersInfo")
         success = 0
         for user in users_info["users"]:

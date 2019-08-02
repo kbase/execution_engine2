@@ -65,7 +65,7 @@ TEST_FILES = test/MongoUtil_test.py test/SDKMethodRunner_test.py
 
 setup-database:
 	# Set up travis user in mongo
-	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_check_configure_mongo_docker.py
+	nosetests -x -v --nocapture --nologcapture test/ee2_check_configure_mongo_docker.py
 
 test:
 	# Requires htcondor python bindings
