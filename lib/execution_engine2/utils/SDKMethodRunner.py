@@ -7,7 +7,7 @@ from enum import Enum
 
 from mongoengine import connect, disconnect
 
-from execution_engine2.models.models import Job, JobInput, JobLog, LogLines
+from execution_engine2.models.models import Job, JobInput, JobLog, LogLines, Meta
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.MongoUtil import MongoUtil
 from installed_clients.CatalogClient import Catalog
@@ -78,13 +78,13 @@ class SDKMethodRunner:
     def _init_job_rec(self, user_id, params):
 
         job = Job()
-        # output = JobOutput()
+
         inputs = JobInput()
 
         job.user = user_id
         job.authstrat = "kbaseworkspace"
         job.wsid = params.get("wsid")
-        job.status = 'created'
+        job.status = "created"
 
         inputs.wsid = job.wsid
         inputs.method = params.get("method")
@@ -92,8 +92,10 @@ class SDKMethodRunner:
         inputs.service_ver = params.get("service_ver")
         inputs.app_id = params.get("app_id")
 
+        # TODO Add Meta Fields From Params
+        job.meta = Meta()
+
         job.job_input = inputs
-        # job.job_output = output
 
         with self.get_mongo_util().me_collection():
             job.save()
