@@ -5,10 +5,11 @@ import unittest
 logging.basicConfig(level=logging.INFO)
 
 from execution_engine2.utils.Condor import Condor
+from test.test_utils import bootstrap
 
 import os
-from dotenv import load_dotenv
-load_dotenv("env/test.env", verbose=True)
+bootstrap()
+
 
 
 class ExecutionEngine2SchedulerTest(unittest.TestCase):

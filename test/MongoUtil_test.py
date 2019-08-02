@@ -11,9 +11,8 @@ from execution_engine2.utils.MongoUtil import MongoUtil
 from test.mongo_test_helper import MongoTestHelper
 
 logging.basicConfig(level=logging.INFO)
-from dotenv import load_dotenv
-
-load_dotenv("env/test.env", verbose=True)
+from test.test_utils import bootstrap
+bootstrap()
 
 
 class MongoUtilTest(unittest.TestCase):

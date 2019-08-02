@@ -1,6 +1,10 @@
 from configparser import ConfigParser
 import os
 from dotenv import load_dotenv
+import pathlib
+from shutil import copyfile
+
+
 
 def _create_sample_params(self):
     params = dict()
@@ -19,4 +23,8 @@ def read_config_into_dict(config='deploy.cfg', section='execution_engine2'):
     return config
 
 def bootstrap():
-    load_dotenv("env/test.env", verbose=True)
+    test_env = "test.env"
+    pwd = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
+    if not os.path.exists(test_env):
+        copyfile(f"{pwd}/test/env/{test_env}", f"{test_env}")
+    load_dotenv("test.env", verbose=True)

@@ -7,6 +7,7 @@ logging.basicConfig(level=logging.INFO)
 from execution_engine2.models.models import JobInput, Job, Meta, LogLines, JobLog
 from execution_engine2.utils.MongoUtil import MongoUtil
 from test.test_utils import read_config_into_dict, bootstrap
+bootstrap()
 from bson import ObjectId
 
 import os
@@ -15,7 +16,6 @@ import os
 class ExecutionEngine2SchedulerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        bootstrap()
         deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", 'test/deploy.cfg')
         config = read_config_into_dict(deploy)
         # Should this just be added into read_config_into_dict function?

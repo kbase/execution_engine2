@@ -7,6 +7,7 @@ logging.basicConfig(level=logging.INFO)
 from pymongo import MongoClient
 
 from test.test_utils import read_config_into_dict, bootstrap
+bootstrap()
 
 import os
 
