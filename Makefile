@@ -57,21 +57,21 @@ build-test-script:
 	echo 'echo "...done removing temp files."' >> $(TEST_DIR)/$(TEST_SCRIPT_NAME)
 	echo 'export PYTHONPATH=$$script_dir/../$(LIB_DIR):$$PATH:$$PYTHONPATH' >> $(TEST_DIR)/$(TEST_SCRIPT_NAME)
 	echo 'cd $$script_dir/../$(TEST_DIR)' >> $(TEST_DIR)/$(TEST_SCRIPT_NAME)
-	echo 'python -m nose --with-coverage --cover-package=$(SERVICE_CAPS) --cover-html --cover-html-dir=/kb/module/work/test_coverage --nocapture  --nologcapture .' >> $(TEST_DIR)/$(TEST_SCRIPT_NAME)
+	echo 'python -m nose --with-coverage --cover-package=$(SERVICE_CAPS) --cover-html --cover-html-dir=/kb/module/work/test_coverage --nocapture --nologcapture .' >> $(TEST_DIR)/$(TEST_SCRIPT_NAME)
 	chmod +x $(TEST_DIR)/$(TEST_SCRIPT_NAME)
 
-TEST_FILES = test/ee2_scheduler_test.py test/MongoUtil_test.py test/SDKMethodRunner_test.py
+TEST_FILES = test/MongoUtil_test.py test/SDKMethodRunner_test.py
 test:
 	# Test with local mongo and condor
-	nosetests -x -v  --nocapture --nologcapture  --with-coverage --cover-html --cover-package=execution_engine2 $(TEST_FILES)
+	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_scheduler_test.py
 
 
 test-models:
 	# For Testing In Travis
 
 	# Set up travis user in mongo
-	nosetests -x -v  --nocapture --nologcapture  --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_check_configure_mongo_docker.py
-	nosetests -x -v  --nocapture --nologcapture  --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_models_test.py
+	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_check_configure_mongo_docker.py
+	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_models_test.py
 
 
 test-with-docker:
@@ -79,15 +79,15 @@ test-with-docker:
 	# Test with docker-compose versions of condor and mongo
 	./test/dockerfiles/condor/start_condor_mongo_for_tests.sh
 	# Set up travis user in mongo
-	nosetests -x -v  --nocapture --nologcapture  --with-coverage --cover-html --cover-package=execution_engine2 ee2_check_configure_mongo_docker
+	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 ee2_check_configure_mongo_docker
 	# Run tests using python installed in travis, but with mongo and condor running in docker containers
-	nosetests -x -v  --nocapture --nologcapture  --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_scheduler_test.py
-	nosetests -x -v  --nocapture --nologcapture  --with-coverage --cover-html --cover-package=execution_engine2 ee2_models_test
+	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_scheduler_test.py
+	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 ee2_models_test
 
 
 integration_test:
 	./test/dockerfiles/condor/start_condor_docker_travis.sh
-	nosetests -x -v  --nocapture --nologcapture  --with-coverage --cover-html  test/ee2_scheduler_integration_test.py
+	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html test/ee2_scheduler_integration_test.py
 
 clean:
 	rm -rfv $(LBIN_DIR)

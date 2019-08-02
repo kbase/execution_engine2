@@ -16,7 +16,7 @@ from bson import ObjectId
 class ExecutionEngine2SchedulerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        config = read_config_into_dict()
+        config = read_config_into_dict('test/deploy.cfg')
         # Should this just be added into read_config_into_dict function?
         mongo_in_docker = config.get('mongo-in-docker-compose', None)
         if mongo_in_docker is not None:
