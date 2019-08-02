@@ -127,18 +127,20 @@ class SDKMethodRunner_test(unittest.TestCase):
             "user",
             "authstrat",
             "wsid",
-            # "created",
+            "status",
             "updated",
-            # "creation_time",
             "complete",
             "error",
             "job_input",
         ]
+        print(expected_keys)
+        print(result.keys())
+
         self.assertCountEqual(result.keys(), expected_keys)
         self.assertEqual(result["user"], self.user_id)
         self.assertEqual(result["authstrat"], "kbaseworkspace")
         self.assertEqual(result["wsid"], self.ws_id)
-        self.assertFalse(result["complete"])
+
         self.assertFalse(result["error"])
 
         job_input = result["job_input"]
