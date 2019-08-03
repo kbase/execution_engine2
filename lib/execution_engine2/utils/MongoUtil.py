@@ -110,9 +110,6 @@ class MongoUtil:
         self.mongo_pass = config["mongo-password"]
         self.mongo_authmechanism = config["mongo-authmechanism"]
 
-        # self.mongo_jobs_collection = config["mongo-jobs-collection"]
-        # self.mongo_logs_collection = config["mongo-logs-collection"]
-
         self.mongo_collection = None
 
         self._start_local_service()
