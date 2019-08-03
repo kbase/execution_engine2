@@ -97,7 +97,7 @@ class SDKMethodRunner:
 
         job.job_input = inputs
 
-        with self.get_mongo_util().me_collection():
+        with self.get_mongo_util().me_collection(self.config["mongo-jobs-collection"]):
             job.save()
 
         return str(job.id)
@@ -172,7 +172,7 @@ class SDKMethodRunner:
         # Return the log
 
     def add_job_logs(self, job_id, lines, ctx):
-        with self.get_mongo_util().me_collection():
+        with self.get_mongo_util().me_collection(self.config["mongo-logs-collection"]):
             jl = JobLog.objects(id=job_id)[0]  # type: JobLog
             p = self.get_workspace_permissions(wsid=jl.wsid, ctx=ctx)
             if p not in [

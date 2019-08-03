@@ -24,14 +24,14 @@ class SDKMethodRunner_test(unittest.TestCase):
         for nameval in config_parser.items("execution_engine2"):
             cls.cfg[nameval[0]] = nameval[1]
 
-        cls.cfg["mongo-collection"] = "jobs"
+        cls.cfg["start-local-mongo"] = "1"
 
         cls.method_runner = SDKMethodRunner(cls.cfg)
         cls.mongo_util = MongoUtil(cls.cfg)
         cls.mongo_helper = MongoTestHelper(cls.cfg)
 
         cls.test_collection = cls.mongo_helper.create_test_db(
-            db=cls.cfg["mongo-database"], col=cls.cfg["mongo-collection"]
+            db=cls.cfg["mongo-database"], col=cls.cfg["mongo-jobs-collection"]
         )
 
         cls.user_id = "fake_test_user"
@@ -122,36 +122,22 @@ class SDKMethodRunner_test(unittest.TestCase):
 
         result = list(self.test_collection.find({"_id": ObjectId(job_id)}))[0]
 
-        expected_keys = [
-            "_id",
-            "user",
-            "authstrat",
-            "wsid",
-            "status",
-            "updated",
-            "complete",
-            "error",
-            "job_input",
-        ]
-        print(expected_keys)
-        print(result.keys())
+        expected_keys = ['_id', 'user', 'authstrat', 'wsid', 'status', 'updated', 'job_input']
 
-        # self.assertCountEqual(result.keys(), expected_keys)
-        # self.assertEqual(result["user"], self.user_id)
-        # self.assertEqual(result["authstrat"], "kbaseworkspace")
-        # self.assertEqual(result["wsid"], self.ws_id)
-        #
-        # self.assertFalse(result["error"])
-        #
-        # job_input = result["job_input"]
-        # expected_ji_keys = ["wsid", "method", "params", "service_ver", "app_id"]
-        # self.assertCountEqual(job_input.keys(), expected_ji_keys)
-        # self.assertEqual(job_input["wsid"], self.ws_id)
-        # self.assertEqual(job_input["method"], "MEGAHIT.run_megahit")
-        # self.assertEqual(job_input["app_id"], "MEGAHIT/run_megahit")
-        # self.assertEqual(job_input["service_ver"], "2.2.1")
-        #
-        # self.assertFalse(result.get("job_output"))
-        #
-        # self.test_collection.delete_one({"_id": ObjectId(job_id)})
-        # self.assertEqual(self.test_collection.count(), 0)
+        self.assertCountEqual(result.keys(), expected_keys)
+        self.assertEqual(result["user"], self.user_id)
+        self.assertEqual(result["authstrat"], "kbaseworkspace")
+        self.assertEqual(result["wsid"], self.ws_id)
+
+        job_input = result["job_input"]
+        expected_ji_keys = ["wsid", "method", "params", "service_ver", "app_id", "narrative_cell_info"]
+        self.assertCountEqual(job_input.keys(), expected_ji_keys)
+        self.assertEqual(job_input["wsid"], self.ws_id)
+        self.assertEqual(job_input["method"], "MEGAHIT.run_megahit")
+        self.assertEqual(job_input["app_id"], "MEGAHIT/run_megahit")
+        self.assertEqual(job_input["service_ver"], "2.2.1")
+
+        self.assertFalse(result.get("job_output"))
+
+        self.test_collection.delete_one({"_id": ObjectId(job_id)})
+        self.assertEqual(self.test_collection.count(), 0)
