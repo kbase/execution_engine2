@@ -109,9 +109,11 @@ class MongoUtil:
         self.mongo_user = config["mongo-user"]
         self.mongo_pass = config["mongo-password"]
         self.mongo_authmechanism = config["mongo-authmechanism"]
-        self.mongo_collection = config["mongo-collection"]
-        self.mongo_jobs_collection = config["mongo-jobs-collection"]
-        self.mongo_logs_collection = config["mongo-logs-collection"]
+
+        # self.mongo_jobs_collection = config["mongo-jobs-collection"]
+        # self.mongo_logs_collection = config["mongo-logs-collection"]
+
+        self.mongo_collection = None
 
         self._start_local_service()
         logging.basicConfig(
@@ -119,12 +121,14 @@ class MongoUtil:
         )
 
     @contextmanager
-    def pymongo_client(self):
+    def pymongo_client(self, mongo_collection):
         """
         Instantiates a mongo client to be used as a context manager
         Closes the connection at the end
         :return:
         """
+        self.mongo_collection = mongo_collection
+
         mc = MongoClient(
             self.mongo_host,
             self.mongo_port,
@@ -140,7 +144,8 @@ class MongoUtil:
             mc.close()
 
     @contextmanager
-    def mongo_engine_connection(self):
+    def mongo_engine_connection(self, mongo_collection):
+        self.mongo_collection = mongo_collection
         mongoengine_client = connect(
             db=self.mongo_database,
             host=self.mongo_host,
@@ -156,7 +161,8 @@ class MongoUtil:
             mongoengine_client.close()
 
     @contextmanager
-    def me_collection(self):
+    def me_collection(self, mongo_collection):
+        self.mongo_collection = mongo_collection
         try:
             pymongo_client, mongoengine_client = self._get_collection(
                 self.mongo_host,
@@ -177,7 +183,7 @@ class MongoUtil:
         """
         logging.info("start inserting document")
 
-        with self.me_collection() as (pymongo_client, mongoengine_client):
+        with self.me_collection(self.mongo_collection) as (pymongo_client, mongoengine_client):
             try:
                 rec = pymongo_client[self.mongo_database][
                     self.mongo_collection
@@ -198,7 +204,7 @@ class MongoUtil:
         """
         logging.info("start updating document")
 
-        with self.me_collection() as (pymongo_client, mongoengine_client):
+        with self.me_collection(self.mongo_collection) as (pymongo_client, mongoengine_client):
             job_col = pymongo_client[self.mongo_database][self.mongo_collection]
             try:
                 update_filter = {"_id": ObjectId(job_id)}
@@ -218,7 +224,7 @@ class MongoUtil:
         delete a doc by _id
         """
         logging.info("start deleting document")
-        with self.me_collection() as (pymongo_client, mongoengine_client):
+        with self.me_collection(self.mongo_collection) as (pymongo_client, mongoengine_client):
             job_col = pymongo_client[self.mongo_database][self.mongo_collection]
             try:
                 delete_filter = {"_id": ObjectId(job_id)}
@@ -238,7 +244,7 @@ class MongoUtil:
         """
         logging.info("start querying MongoDB")
 
-        with self.me_collection() as (pymongo_client, mongoengine_client):
+        with self.me_collection(self.mongo_collection) as (pymongo_client, mongoengine_client):
             job_col = pymongo_client[self.mongo_database][self.mongo_collection]
             try:
                 result = job_col.find(

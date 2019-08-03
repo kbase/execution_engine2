@@ -178,15 +178,13 @@ class MongoTestHelper:
         self.cfg = cfg
         self._start_service(cfg)
 
-    def create_test_db(self, db="ee2", col="jobs"):
+    def create_test_db(self, db="ee2", col="ee2_jobs"):
 
         logging.info("creating collection and dbs")
 
         cfg = self.cfg
-        col = cfg["mongo-jobs-collection"]
-        print(cfg)
         try:
-            my_client = MongoClient(cfg["mongo-host"], cfg["mongo-port"])
+            my_client = MongoClient(cfg["mongo-host"], int(cfg["mongo-port"]))
             my_client.ee2.command(
                 "createUser",
                 cfg["mongo-user"],
