@@ -222,6 +222,7 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: params, config
         #BEGIN get_job_params
+        params,  config = self.method_runner.get_job_params(job_id)
         #END get_job_params
 
         # At some point might do deeper type checking...

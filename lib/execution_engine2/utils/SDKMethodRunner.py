@@ -4,6 +4,7 @@ import os
 import re
 from datetime import datetime
 from enum import Enum
+import traceback
 
 from mongoengine import connect, disconnect
 
@@ -91,6 +92,8 @@ class SDKMethodRunner:
         inputs.params = params.get("params")
         inputs.service_ver = params.get("service_ver")
         inputs.app_id = params.get("app_id")
+        inputs.source_ws_objects = params.get("source_ws_objects")
+        inputs.parent_job_id = str(params.get("parent_job_id"))
 
         # TODO Add Meta Fields From Params
         inputs.narrative_cell_info = Meta()
@@ -261,3 +264,26 @@ class SDKMethodRunner:
         logging.info(condor_job_id)
         logging.info(type(condor_job_id))
         return condor_job_id
+
+    def get_job_params(self, job_id):
+        job_params = dict()
+        job_config = dict()
+
+        with self.get_mongo_util().me_collection(self.config["mongo-jobs-collection"]):
+
+            try:
+                job = Job.objects(id=job_id)[0]
+            except Exception:
+                raise ValueError("Unable to find job:\nError:\n{}".format(traceback.format_exc()))
+
+            job_input = job.job_input
+
+            job_params["method"] = job_input.method
+            job_params["params"] = job_input.params
+            job_params["service_ver"] = job_input.service_ver
+            job_params["app_id"] = job_input.app_id
+            job_params["wsid"] = job_input.wsid
+            job_params["parent_job_id"] = job_input.parent_job_id
+            job_params["source_ws_objects"] = job_input.source_ws_objects
+
+        return job_params, job_config

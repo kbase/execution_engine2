@@ -7,6 +7,7 @@ from bson.objectid import ObjectId
 
 from execution_engine2.utils.MongoUtil import MongoUtil
 from execution_engine2.utils.SDKMethodRunner import SDKMethodRunner
+from execution_engine2.models.models import Job, JobInput, Meta
 from test.mongo_test_helper import MongoTestHelper
 from test.test_utils import bootstrap
 
@@ -114,6 +115,8 @@ class SDKMethodRunner_test(unittest.TestCase):
                     "output_contigset_name": "MEGAHIT.contigs",
                 }
             ],
+            "source_ws_objects": ["a/b/c", "e/d"],
+            "parent_job_id": "9998"
         }
 
         job_id = runner._init_job_rec(self.user_id, job_params)
@@ -122,7 +125,7 @@ class SDKMethodRunner_test(unittest.TestCase):
 
         result = list(self.test_collection.find({"_id": ObjectId(job_id)}))[0]
 
-        expected_keys = ['_id', 'user', 'authstrat', 'wsid', 'status', 'updated', 'job_input']
+        expected_keys = ["_id", "user", "authstrat", "wsid", "status", "updated", "job_input"]
 
         self.assertCountEqual(result.keys(), expected_keys)
         self.assertEqual(result["user"], self.user_id)
@@ -130,14 +133,82 @@ class SDKMethodRunner_test(unittest.TestCase):
         self.assertEqual(result["wsid"], self.ws_id)
 
         job_input = result["job_input"]
-        expected_ji_keys = ["wsid", "method", "params", "service_ver", "app_id", "narrative_cell_info"]
+        expected_ji_keys = ["wsid", "method", "params", "service_ver", "app_id",
+                            "narrative_cell_info", "source_ws_objects", "parent_job_id"]
         self.assertCountEqual(job_input.keys(), expected_ji_keys)
         self.assertEqual(job_input["wsid"], self.ws_id)
         self.assertEqual(job_input["method"], "MEGAHIT.run_megahit")
         self.assertEqual(job_input["app_id"], "MEGAHIT/run_megahit")
         self.assertEqual(job_input["service_ver"], "2.2.1")
+        self.assertCountEqual(job_input["source_ws_objects"], ["a/b/c", "e/d"])
+        self.assertEqual(job_input["parent_job_id"], "9998")
 
         self.assertFalse(result.get("job_output"))
+
+        self.test_collection.delete_one({"_id": ObjectId(job_id)})
+        self.assertEqual(self.test_collection.count(), 0)
+
+    def test_get_job_params(self):
+
+        runner = self.getRunner()
+
+        self.assertEqual(self.test_collection.count(), 0)
+
+        job = Job()
+
+        inputs = JobInput()
+
+        job.user = "tgu2"
+        job.authstrat = "kbaseworkspace"
+        job.wsid = 9999
+        job.status = "created"
+
+        job_params = {
+            "wsid": self.ws_id,
+            "method": "MEGAHIT.run_megahit",
+            "app_id": "MEGAHIT/run_megahit",
+            "service_ver": "2.2.1",
+            "params": [
+                {
+                    "k_list": [],
+                    "k_max": None,
+                    "output_contigset_name": "MEGAHIT.contigs",
+                }
+            ],
+            "source_ws_objects": ["a/b/c", "e/d"],
+            "parent_job_id": "9998"
+        }
+
+        inputs.wsid = job.wsid
+        inputs.method = job_params.get("method")
+        inputs.params = job_params.get("params")
+        inputs.service_ver = job_params.get("service_ver")
+        inputs.app_id = job_params.get("app_id")
+        inputs.source_ws_objects = job_params.get("source_ws_objects")
+        inputs.parent_job_id = job_params.get("parent_job_id")
+
+        inputs.narrative_cell_info = Meta()
+
+        job.job_input = inputs
+
+        with self.mongo_util.me_collection(self.cfg["mongo-jobs-collection"]):
+            job.save()
+
+        job_id = str(job.id)
+
+        self.assertEqual(self.test_collection.count(), 1)
+
+        params,  config = runner.get_job_params(job_id)
+
+        expected_params_keys = ["wsid", "method", "params", "service_ver", "app_id",
+                                "source_ws_objects", "parent_job_id"]
+        self.assertCountEqual(params.keys(), expected_params_keys)
+        self.assertEqual(params["wsid"], self.ws_id)
+        self.assertEqual(params["method"], "MEGAHIT.run_megahit")
+        self.assertEqual(params["app_id"], "MEGAHIT/run_megahit")
+        self.assertEqual(params["service_ver"], "2.2.1")
+        self.assertCountEqual(params["source_ws_objects"], ["a/b/c", "e/d"])
+        self.assertEqual(params["parent_job_id"], "9998")
 
         self.test_collection.delete_one({"_id": ObjectId(job_id)})
         self.assertEqual(self.test_collection.count(), 0)
