@@ -210,5 +210,7 @@ class SDKMethodRunner_test(unittest.TestCase):
         self.assertCountEqual(params["source_ws_objects"], ["a/b/c", "e/d"])
         self.assertEqual(params["parent_job_id"], "9998")
 
+        self.assertFalse(config)
+
         self.test_collection.delete_one({"_id": ObjectId(job_id)})
         self.assertEqual(self.test_collection.count(), 0)
