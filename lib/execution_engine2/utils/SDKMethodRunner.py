@@ -287,3 +287,19 @@ class SDKMethodRunner:
             job_params["source_ws_objects"] = job_input.source_ws_objects
 
         return job_params, job_config
+
+    def update_job_status(self, job_id, status):
+
+        with self.get_mongo_util().me_collection(self.config["mongo-jobs-collection"]):
+
+            try:
+                job = Job.objects(id=job_id)[0]
+            except Exception:
+                raise ValueError("Unable to find job:\nError:\n{}".format(traceback.format_exc()))
+
+            job.status = status
+            job.updated = datetime.utcnow()
+
+            job.save()
+
+        return str(job.id)

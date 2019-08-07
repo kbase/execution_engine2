@@ -2,6 +2,7 @@
 import os
 import unittest
 from configparser import ConfigParser
+from mongoengine import ValidationError
 
 from bson.objectid import ObjectId
 
@@ -40,6 +41,49 @@ class SDKMethodRunner_test(unittest.TestCase):
 
     def getRunner(self):
         return self.__class__.method_runner
+
+    def create_job_rec(self):
+        job = Job()
+
+        inputs = JobInput()
+
+        job.user = "tgu2"
+        job.authstrat = "kbaseworkspace"
+        job.wsid = 9999
+        job.status = "created"
+
+        job_params = {
+            "wsid": self.ws_id,
+            "method": "MEGAHIT.run_megahit",
+            "app_id": "MEGAHIT/run_megahit",
+            "service_ver": "2.2.1",
+            "params": [
+                {
+                    "k_list": [],
+                    "k_max": None,
+                    "output_contigset_name": "MEGAHIT.contigs",
+                }
+            ],
+            "source_ws_objects": ["a/b/c", "e/d"],
+            "parent_job_id": "9998"
+        }
+
+        inputs.wsid = job.wsid
+        inputs.method = job_params.get("method")
+        inputs.params = job_params.get("params")
+        inputs.service_ver = job_params.get("service_ver")
+        inputs.app_id = job_params.get("app_id")
+        inputs.source_ws_objects = job_params.get("source_ws_objects")
+        inputs.parent_job_id = job_params.get("parent_job_id")
+
+        inputs.narrative_cell_info = Meta()
+
+        job.job_input = inputs
+
+        with self.mongo_util.me_collection(self.cfg["mongo-jobs-collection"]):
+            job.save()
+
+        return str(job.id)
 
     def test_init_ok(self):
         class_attri = ["config", "catalog", "workspace", "mongo_util", "condor"]
@@ -150,54 +194,11 @@ class SDKMethodRunner_test(unittest.TestCase):
 
     def test_get_job_params(self):
 
-        runner = self.getRunner()
-
         self.assertEqual(self.test_collection.count(), 0)
-
-        job = Job()
-
-        inputs = JobInput()
-
-        job.user = "tgu2"
-        job.authstrat = "kbaseworkspace"
-        job.wsid = 9999
-        job.status = "created"
-
-        job_params = {
-            "wsid": self.ws_id,
-            "method": "MEGAHIT.run_megahit",
-            "app_id": "MEGAHIT/run_megahit",
-            "service_ver": "2.2.1",
-            "params": [
-                {
-                    "k_list": [],
-                    "k_max": None,
-                    "output_contigset_name": "MEGAHIT.contigs",
-                }
-            ],
-            "source_ws_objects": ["a/b/c", "e/d"],
-            "parent_job_id": "9998"
-        }
-
-        inputs.wsid = job.wsid
-        inputs.method = job_params.get("method")
-        inputs.params = job_params.get("params")
-        inputs.service_ver = job_params.get("service_ver")
-        inputs.app_id = job_params.get("app_id")
-        inputs.source_ws_objects = job_params.get("source_ws_objects")
-        inputs.parent_job_id = job_params.get("parent_job_id")
-
-        inputs.narrative_cell_info = Meta()
-
-        job.job_input = inputs
-
-        with self.mongo_util.me_collection(self.cfg["mongo-jobs-collection"]):
-            job.save()
-
-        job_id = str(job.id)
-
+        job_id = self.create_job_rec()
         self.assertEqual(self.test_collection.count(), 1)
 
+        runner = self.getRunner()
         params,  config = runner.get_job_params(job_id)
 
         expected_params_keys = ["wsid", "method", "params", "service_ver", "app_id",
@@ -211,6 +212,28 @@ class SDKMethodRunner_test(unittest.TestCase):
         self.assertEqual(params["parent_job_id"], "9998")
 
         self.assertFalse(config)
+
+        self.test_collection.delete_one({"_id": ObjectId(job_id)})
+        self.assertEqual(self.test_collection.count(), 0)
+
+    def test_update_job_status(self):
+
+        self.assertEqual(self.test_collection.count(), 0)
+        job_id = self.create_job_rec()
+        self.assertEqual(self.test_collection.count(), 1)
+
+        runner = self.getRunner()
+
+        # test invalid status
+        with self.assertRaises(ValidationError) as context:
+            runner.update_job_status(job_id, "invalid_status")
+
+        self.assertIn("is not a valid status", str(context.exception))
+
+        job_id = runner.update_job_status(job_id, "estimating")
+        result = list(self.test_collection.find({"_id": ObjectId(job_id)}))[0]
+
+        self.assertEqual(result["status"], "estimating")
 
         self.test_collection.delete_one({"_id": ObjectId(job_id)})
         self.assertEqual(self.test_collection.count(), 0)
