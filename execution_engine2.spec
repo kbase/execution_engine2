@@ -2,7 +2,7 @@ module execution_engine2 {
 
     /* @range [0,1] */
     typedef int boolean;
-    /* 
+    /*
         A time in the format YYYY-MM-DDThh:mm:ssZ, where Z is either the
         character Z (representing the UTC timezone) or the difference
         in time to UTC in the format +/-HHMM, eg:
@@ -50,7 +50,7 @@ module execution_engine2 {
         job_id job_id;
     } MethodCall;
     /*
-        call_stack - upstream calls details including nested service calls and 
+        call_stack - upstream calls details including nested service calls and
             parent jobs where calls are listed in order from outer to inner.
     */
     typedef structure {
@@ -59,11 +59,11 @@ module execution_engine2 {
     } RpcContext;
     /*
         method - service defined in standard JSON RPC way, typically it's
-            module name from spec-file followed by '.' and name of funcdef 
+            module name from spec-file followed by '.' and name of funcdef
             from spec-file corresponding to running method (e.g.
             'KBaseTrees.construct_species_tree' from trees service);
         params - the parameters of the method that performed this call;
-        
+
         Optional parameters:
         service_ver - specific version of deployed service, last version is
             used if this parameter is not defined
@@ -97,7 +97,7 @@ module execution_engine2 {
         int wsid;
         string parent_job_id;
     } RunJobParams;
-    /* 
+    /*
         Start a new job (long running method of service registered in ServiceRegistery).
         Such job runs Docker image for this service in script mode.
     */
@@ -107,12 +107,13 @@ module execution_engine2 {
     /*
         Get job params necessary for job execution
     */
-    funcdef get_job_params(job_id job_id) returns (RunJobParams params, 
+    funcdef get_job_params(job_id job_id) returns (RunJobParams params,
         mapping<string, string> config) authentication required;
     /*
         is_started - optional flag marking job as started (and triggering exec_start_time
             statistics to be stored).
     */
+    /*
     typedef structure {
         job_id job_id;
         boolean is_started;
@@ -120,16 +121,25 @@ module execution_engine2 {
     typedef structure {
         list<string> messages;
     } UpdateJobResults;
-    funcdef update_job(UpdateJobParams params) returns (UpdateJobResults) 
+    funcdef update_job(UpdateJobParams params) returns (UpdateJobResults)
+        authentication required;
+    */
+
+    typedef structure {
+        job_id job_id;
+        string status;
+    } UpdateJobStatusParams;
+
+    funcdef update_job_status(UpdateJobStatusParams params) returns (job_id job_id)
         authentication required;
     typedef structure {
         string line;
         boolean is_error;
     } LogLine;
-    funcdef add_job_logs(job_id job_id, list<LogLine> lines) 
+    funcdef add_job_logs(job_id job_id, list<LogLine> lines)
         returns (int line_number) authentication required;
     /*
-        skip_lines - optional parameter, number of lines to skip (in case they were 
+        skip_lines - optional parameter, number of lines to skip (in case they were
             already loaded before).
     */
     typedef structure {
@@ -137,7 +147,7 @@ module execution_engine2 {
         int skip_lines;
     } GetJobLogsParams;
     /*
-        last_line_number - common number of lines (including those in skip_lines 
+        last_line_number - common number of lines (including those in skip_lines
             parameter), this number can be used as next skip_lines value to
             skip already loaded lines next time.
     */
@@ -160,7 +170,7 @@ module execution_engine2 {
             in result block of JSON RPC response;
         error - keeps exact copy of what original server method puts
             in error block of JSON RPC response;
-        is_cancelled - Deprecated (field is kept for backward 
+        is_cancelled - Deprecated (field is kept for backward
             compatibility), please use 'is_canceled' instead.
     */
     typedef structure {
@@ -186,7 +196,7 @@ module execution_engine2 {
             in error block of JSON RPC response;
         job_state - 'queued', 'in-progress', 'completed', or 'suspend';
         position - position of the job in execution waiting queue;
-        creation_time, exec_start_time and finish_time - time moments of submission, execution 
+        creation_time, exec_start_time and finish_time - time moments of submission, execution
             start and finish events in milliseconds since Unix Epoch,
         canceled - whether the job is canceled or not.
         cancelled - Deprecated field, please use 'canceled' field instead.
@@ -228,7 +238,7 @@ module execution_engine2 {
         mapping<job_id, RunJobParams> job_params;
         mapping<job_id, JsonRpcError> check_error;
     } CheckJobsResults;
-    
+
     funcdef check_jobs(CheckJobsParams params) returns (CheckJobsResults)
         authentication required;
     typedef structure {

@@ -290,6 +290,9 @@ class SDKMethodRunner:
 
     def update_job_status(self, job_id, status):
 
+        if not (job_id and status):
+            raise ValueError("Please provide both job_id and status")
+
         with self.get_mongo_util().me_collection(self.config["mongo-jobs-collection"]):
 
             try:

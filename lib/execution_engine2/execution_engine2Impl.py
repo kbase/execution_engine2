@@ -22,7 +22,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "89faeb4c73aab8545f6bc74ad8c910559fa1856d"
+    GIT_COMMIT_HASH = "d501b0f1f89163c3c309fe35e5cd9a8f07b7606b"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -40,8 +40,6 @@ class execution_engine2:
         self.method_runner = SDKMethodRunner(self.config)
         #END_CONSTRUCTOR
         pass
-
-
 
 
     def list_config(self, ctx):
@@ -235,27 +233,29 @@ class execution_engine2:
         # return the results
         return [params, config]
 
-    def update_job(self, ctx, params):
+    def update_job_status(self, ctx, params):
         """
-        :param params: instance of type "UpdateJobParams" (is_started -
-           optional flag marking job as started (and triggering
-           exec_start_time statistics to be stored).) -> structure: parameter
-           "job_id" of type "job_id" (A job id.), parameter "is_started" of
-           type "boolean" (@range [0,1])
-        :returns: instance of type "UpdateJobResults" -> structure: parameter
-           "messages" of list of String
+        :param params: instance of type "UpdateJobStatusParams" (typedef
+           structure { job_id job_id; boolean is_started; } UpdateJobParams;
+           typedef structure { list<string> messages; } UpdateJobResults;
+           funcdef update_job(UpdateJobParams params) returns
+           (UpdateJobResults) authentication required;) -> structure:
+           parameter "job_id" of type "job_id" (A job id.), parameter
+           "status" of String
+        :returns: instance of type "job_id" (A job id.)
         """
         # ctx is the context object
-        # return variables are: returnVal
-        #BEGIN update_job
-        #END update_job
+        # return variables are: job_id
+        #BEGIN update_job_status
+        job_id = self.method_runner.update_job_status(params.get('job_id'), params.get('status'))
+        #END update_job_status
 
         # At some point might do deeper type checking...
-        if not isinstance(returnVal, dict):
-            raise ValueError('Method update_job return value ' +
-                             'returnVal is not type dict as required.')
+        if not isinstance(job_id, str):
+            raise ValueError('Method update_job_status return value ' +
+                             'job_id is not type str as required.')
         # return the results
-        return [returnVal]
+        return [job_id]
 
     def add_job_logs(self, ctx, job_id, lines):
         """

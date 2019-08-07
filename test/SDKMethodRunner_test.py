@@ -224,12 +224,19 @@ class SDKMethodRunner_test(unittest.TestCase):
 
         runner = self.getRunner()
 
+        # test missing status
+        with self.assertRaises(ValueError) as context:
+            runner.update_job_status(None, "invalid_status")
+
+        self.assertEqual("Please provide both job_id and status", str(context.exception))
+
         # test invalid status
         with self.assertRaises(ValidationError) as context:
             runner.update_job_status(job_id, "invalid_status")
 
         self.assertIn("is not a valid status", str(context.exception))
 
+        # test update job status
         job_id = runner.update_job_status(job_id, "estimating")
         result = list(self.test_collection.find({"_id": ObjectId(job_id)}))[0]
 
