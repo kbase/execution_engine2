@@ -199,7 +199,7 @@ class SDKMethodRunner_test(unittest.TestCase):
         self.assertEqual(self.test_collection.count(), 1)
 
         runner = self.getRunner()
-        params,  config = runner.get_job_params(job_id)
+        params = runner.get_job_params(job_id)
 
         expected_params_keys = ["wsid", "method", "params", "service_ver", "app_id",
                                 "source_ws_objects", "parent_job_id"]
@@ -210,8 +210,6 @@ class SDKMethodRunner_test(unittest.TestCase):
         self.assertEqual(params["service_ver"], "2.2.1")
         self.assertCountEqual(params["source_ws_objects"], ["a/b/c", "e/d"])
         self.assertEqual(params["parent_job_id"], "9998")
-
-        self.assertFalse(config)
 
         self.test_collection.delete_one({"_id": ObjectId(job_id)})
         self.assertEqual(self.test_collection.count(), 0)
@@ -227,19 +225,16 @@ class SDKMethodRunner_test(unittest.TestCase):
         # test missing status
         with self.assertRaises(ValueError) as context:
             runner.update_job_status(None, "invalid_status")
-
         self.assertEqual("Please provide both job_id and status", str(context.exception))
 
         # test invalid status
         with self.assertRaises(ValidationError) as context:
             runner.update_job_status(job_id, "invalid_status")
-
         self.assertIn("is not a valid status", str(context.exception))
 
         # test update job status
         job_id = runner.update_job_status(job_id, "estimating")
         result = list(self.test_collection.find({"_id": ObjectId(job_id)}))[0]
-
         self.assertEqual(result["status"], "estimating")
 
         self.test_collection.delete_one({"_id": ObjectId(job_id)})

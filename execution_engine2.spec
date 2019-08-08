@@ -107,8 +107,7 @@ module execution_engine2 {
     /*
         Get job params necessary for job execution
     */
-    funcdef get_job_params(job_id job_id) returns (RunJobParams params,
-        mapping<string, string> config) authentication required;
+    funcdef get_job_params(job_id job_id) returns (RunJobParams params) authentication required;
     /*
         is_started - optional flag marking job as started (and triggering exec_start_time
             statistics to be stored).

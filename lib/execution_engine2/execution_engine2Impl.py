@@ -22,7 +22,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "d501b0f1f89163c3c309fe35e5cd9a8f07b7606b"
+    GIT_COMMIT_HASH = "3d7d11ac2fc50950fe0ef692a5dab3813da06ba0"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -169,10 +169,10 @@ class execution_engine2:
         """
         Get job params necessary for job execution
         :param job_id: instance of type "job_id" (A job id.)
-        :returns: multiple set - (1) parameter "params" of type
-           "RunJobParams" (method - service defined in standard JSON RPC way,
-           typically it's module name from spec-file followed by '.' and name
-           of funcdef from spec-file corresponding to running method (e.g.
+        :returns: instance of type "RunJobParams" (method - service defined
+           in standard JSON RPC way, typically it's module name from
+           spec-file followed by '.' and name of funcdef from spec-file
+           corresponding to running method (e.g.
            'KBaseTrees.construct_species_tree' from trees service); params -
            the parameters of the method that performed this call; Optional
            parameters: service_ver - specific version of deployed service,
@@ -214,24 +214,20 @@ class execution_engine2:
            Y is the object name or id, Z is the version, which is optional.),
            parameter "app_id" of String, parameter "meta" of mapping from
            String to String, parameter "wsid" of Long, parameter
-           "parent_job_id" of String, (2) parameter "config" of mapping from
-           String to String
+           "parent_job_id" of String
         """
         # ctx is the context object
-        # return variables are: params, config
+        # return variables are: params
         #BEGIN get_job_params
-        params,  config = self.method_runner.get_job_params(job_id)
+        params = self.method_runner.get_job_params(job_id)
         #END get_job_params
 
         # At some point might do deeper type checking...
         if not isinstance(params, dict):
             raise ValueError('Method get_job_params return value ' +
                              'params is not type dict as required.')
-        if not isinstance(config, dict):
-            raise ValueError('Method get_job_params return value ' +
-                             'config is not type dict as required.')
         # return the results
-        return [params, config]
+        return [params]
 
     def update_job_status(self, ctx, params):
         """

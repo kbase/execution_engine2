@@ -267,7 +267,6 @@ class SDKMethodRunner:
 
     def get_job_params(self, job_id):
         job_params = dict()
-        job_config = dict()
 
         with self.get_mongo_util().me_collection(self.config["mongo-jobs-collection"]):
 
@@ -286,7 +285,7 @@ class SDKMethodRunner:
             job_params["parent_job_id"] = job_input.parent_job_id
             job_params["source_ws_objects"] = job_input.source_ws_objects
 
-        return job_params, job_config
+        return job_params
 
     def update_job_status(self, job_id, status):
 
