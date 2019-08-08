@@ -41,6 +41,10 @@ class JobLog(Document):
     # meta = {"db_alias": "logs"}
     meta = {"collection": "ee2_logs"}
 
+    def save(self, *args, **kwargs):
+        self.updated = datetime.datetime.utcnow()
+        return super(JobLog, self).save(*args, **kwargs)
+
 
 class Meta(EmbeddedDocument):
     run_id = StringField()
@@ -109,7 +113,7 @@ class Job(Document):
     authstrat = StringField(required=True, default="kbaseworkspace", validation=valid_authstrat)
     wsid = IntField(required=True)
     status = StringField(required=True, validation=valid_status)
-    updated = DateTimeField(default=datetime.datetime.utcnow, auto_now=True)
+    updated = DateTimeField(default=datetime.datetime.utcnow)
     started = DateTimeField(default=None)
     errormsg = StringField()
     scheduler_type = StringField()
@@ -118,6 +122,10 @@ class Job(Document):
     job_output = EmbeddedDocumentField(JobOutput)
     # meta = {"db_alias": "ee2"}
     meta = {"collection": "ee2_jobs"}
+
+    def save(self, *args, **kwargs):
+        self.updated = datetime.datetime.utcnow()
+        return super(Job, self).save(*args, **kwargs)
 
 
 ###

@@ -300,8 +300,6 @@ class SDKMethodRunner:
                 raise ValueError("Unable to find job:\nError:\n{}".format(traceback.format_exc()))
 
             job.status = status
-            job.updated = datetime.utcnow()
-
             job.save()
 
         return str(job.id)
