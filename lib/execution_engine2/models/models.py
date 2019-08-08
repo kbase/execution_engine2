@@ -109,7 +109,7 @@ class Job(Document):
     authstrat = StringField(required=True, default="kbaseworkspace", validation=valid_authstrat)
     wsid = IntField(required=True)
     status = StringField(required=True, validation=valid_status)
-    updated = DateTimeField(default=datetime.datetime.utcnow)
+    updated = DateTimeField(default=datetime.datetime.utcnow, auto_now=True)
     started = DateTimeField(default=None)
     errormsg = StringField()
     scheduler_type = StringField()

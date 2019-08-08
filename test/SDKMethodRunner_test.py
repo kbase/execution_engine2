@@ -232,10 +232,17 @@ class SDKMethodRunner_test(unittest.TestCase):
             runner.update_job_status(job_id, "invalid_status")
         self.assertIn("is not a valid status", str(context.exception))
 
-        # test update job status
-        job_id = runner.update_job_status(job_id, "estimating")
-        result = list(self.test_collection.find({"_id": ObjectId(job_id)}))[0]
-        self.assertEqual(result["status"], "estimating")
+        with self.mongo_util.me_collection(self.cfg["mongo-jobs-collection"]):
+            ori_job = Job.objects(id=job_id)[0]
+            ori_updated_time = ori_job.updated
+
+            # test update job status
+            job_id = runner.update_job_status(job_id, "estimating")
+            updated_job = Job.objects(id=job_id)[0]
+            self.assertEqual(updated_job.status, "estimating")
+            updated_time = updated_job.updated
+
+            self.assertTrue(ori_updated_time < updated_time)
 
         self.test_collection.delete_one({"_id": ObjectId(job_id)})
         self.assertEqual(self.test_collection.count(), 0)
