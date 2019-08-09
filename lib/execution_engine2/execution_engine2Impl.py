@@ -535,6 +535,7 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: result
         #BEGIN check_job_canceled
+        result = MethodRunner(ctx).check_job_cancelled(params)
         #END check_job_canceled
 
         # At some point might do deeper type checking...
