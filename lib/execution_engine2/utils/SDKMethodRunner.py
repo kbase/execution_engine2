@@ -303,3 +303,20 @@ class SDKMethodRunner:
             job.save()
 
         return str(job.id)
+
+    def get_job_status(self, job_id):
+        returnVal = dict()
+
+        if not job_id:
+            raise ValueError("Please provide valid job_id")
+
+        with self.get_mongo_util().me_collection(self.config["mongo-jobs-collection"]):
+
+            try:
+                job = Job.objects(id=job_id)[0]
+            except Exception:
+                raise ValueError("Unable to find job:\nError:\n{}".format(traceback.format_exc()))
+
+            returnVal['status'] = job.status
+
+        return returnVal

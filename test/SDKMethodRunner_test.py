@@ -4,8 +4,6 @@ import unittest
 from configparser import ConfigParser
 from mongoengine import ValidationError
 
-from bson.objectid import ObjectId
-
 from execution_engine2.utils.MongoUtil import MongoUtil
 from execution_engine2.utils.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.models.models import Job, JobInput, Meta
@@ -143,96 +141,94 @@ class SDKMethodRunner_test(unittest.TestCase):
 
     def test_init_job_rec(self):
 
-        runner = self.getRunner()
+        with self.mongo_util.me_collection(self.cfg["mongo-jobs-collection"]):
+            ori_job_count = Job.objects.count()
+            runner = self.getRunner()
 
-        self.assertEqual(self.test_collection.count(), 0)
+            job_params = {
+                "wsid": self.ws_id,
+                "method": "MEGAHIT.run_megahit",
+                "app_id": "MEGAHIT/run_megahit",
+                "service_ver": "2.2.1",
+                "params": [
+                    {
+                        "k_list": [],
+                        "k_max": None,
+                        "output_contigset_name": "MEGAHIT.contigs",
+                    }
+                ],
+                "source_ws_objects": ["a/b/c", "e/d"],
+                "parent_job_id": "9998"
+            }
 
-        job_params = {
-            "wsid": self.ws_id,
-            "method": "MEGAHIT.run_megahit",
-            "app_id": "MEGAHIT/run_megahit",
-            "service_ver": "2.2.1",
-            "params": [
-                {
-                    "k_list": [],
-                    "k_max": None,
-                    "output_contigset_name": "MEGAHIT.contigs",
-                }
-            ],
-            "source_ws_objects": ["a/b/c", "e/d"],
-            "parent_job_id": "9998"
-        }
+            job_id = runner._init_job_rec(self.user_id, job_params)
 
-        job_id = runner._init_job_rec(self.user_id, job_params)
+            self.assertEqual(ori_job_count, Job.objects.count()-1)
 
-        self.assertEqual(self.test_collection.count(), 1)
+            job = Job.objects.get(id=job_id)
 
-        result = list(self.test_collection.find({"_id": ObjectId(job_id)}))[0]
+            self.assertEqual(job.user, self.user_id)
+            self.assertEqual(job.authstrat, "kbaseworkspace")
+            self.assertEqual(job.wsid, self.ws_id)
 
-        expected_keys = ["_id", "user", "authstrat", "wsid", "status", "updated", "job_input"]
+            job_input = job.job_input
 
-        self.assertCountEqual(result.keys(), expected_keys)
-        self.assertEqual(result["user"], self.user_id)
-        self.assertEqual(result["authstrat"], "kbaseworkspace")
-        self.assertEqual(result["wsid"], self.ws_id)
+            self.assertEqual(job_input.wsid, self.ws_id)
+            self.assertEqual(job_input.method, "MEGAHIT.run_megahit")
+            self.assertEqual(job_input.app_id, "MEGAHIT/run_megahit")
+            self.assertEqual(job_input.service_ver, "2.2.1")
+            self.assertCountEqual(job_input.source_ws_objects, ["a/b/c", "e/d"])
+            self.assertEqual(job_input.parent_job_id, "9998")
 
-        job_input = result["job_input"]
-        expected_ji_keys = ["wsid", "method", "params", "service_ver", "app_id",
-                            "narrative_cell_info", "source_ws_objects", "parent_job_id"]
-        self.assertCountEqual(job_input.keys(), expected_ji_keys)
-        self.assertEqual(job_input["wsid"], self.ws_id)
-        self.assertEqual(job_input["method"], "MEGAHIT.run_megahit")
-        self.assertEqual(job_input["app_id"], "MEGAHIT/run_megahit")
-        self.assertEqual(job_input["service_ver"], "2.2.1")
-        self.assertCountEqual(job_input["source_ws_objects"], ["a/b/c", "e/d"])
-        self.assertEqual(job_input["parent_job_id"], "9998")
+            self.assertFalse(job.job_output)
 
-        self.assertFalse(result.get("job_output"))
-
-        self.test_collection.delete_one({"_id": ObjectId(job_id)})
-        self.assertEqual(self.test_collection.count(), 0)
+            Job.objects.get(id=job_id).delete()
+            self.assertEqual(ori_job_count, Job.objects.count())
 
     def test_get_job_params(self):
 
-        self.assertEqual(self.test_collection.count(), 0)
-        job_id = self.create_job_rec()
-        self.assertEqual(self.test_collection.count(), 1)
+        with self.mongo_util.me_collection(self.cfg["mongo-jobs-collection"]):
+            ori_job_count = Job.objects.count()
+            job_id = self.create_job_rec()
+            self.assertEqual(ori_job_count, Job.objects.count()-1)
 
-        runner = self.getRunner()
-        params = runner.get_job_params(job_id)
+            runner = self.getRunner()
 
-        expected_params_keys = ["wsid", "method", "params", "service_ver", "app_id",
-                                "source_ws_objects", "parent_job_id"]
-        self.assertCountEqual(params.keys(), expected_params_keys)
-        self.assertEqual(params["wsid"], self.ws_id)
-        self.assertEqual(params["method"], "MEGAHIT.run_megahit")
-        self.assertEqual(params["app_id"], "MEGAHIT/run_megahit")
-        self.assertEqual(params["service_ver"], "2.2.1")
-        self.assertCountEqual(params["source_ws_objects"], ["a/b/c", "e/d"])
-        self.assertEqual(params["parent_job_id"], "9998")
+            params = runner.get_job_params(job_id)
 
-        self.test_collection.delete_one({"_id": ObjectId(job_id)})
-        self.assertEqual(self.test_collection.count(), 0)
+            expected_params_keys = ["wsid", "method", "params", "service_ver", "app_id",
+                                    "source_ws_objects", "parent_job_id"]
+            self.assertCountEqual(params.keys(), expected_params_keys)
+            self.assertEqual(params["wsid"], self.ws_id)
+            self.assertEqual(params["method"], "MEGAHIT.run_megahit")
+            self.assertEqual(params["app_id"], "MEGAHIT/run_megahit")
+            self.assertEqual(params["service_ver"], "2.2.1")
+            self.assertCountEqual(params["source_ws_objects"], ["a/b/c", "e/d"])
+            self.assertEqual(params["parent_job_id"], "9998")
+
+            Job.objects.get(id=job_id).delete()
+            self.assertEqual(ori_job_count, Job.objects.count())
 
     def test_update_job_status(self):
 
-        self.assertEqual(self.test_collection.count(), 0)
-        job_id = self.create_job_rec()
-        self.assertEqual(self.test_collection.count(), 1)
-
-        runner = self.getRunner()
-
-        # test missing status
-        with self.assertRaises(ValueError) as context:
-            runner.update_job_status(None, "invalid_status")
-        self.assertEqual("Please provide both job_id and status", str(context.exception))
-
-        # test invalid status
-        with self.assertRaises(ValidationError) as context:
-            runner.update_job_status(job_id, "invalid_status")
-        self.assertIn("is not a valid status", str(context.exception))
-
         with self.mongo_util.me_collection(self.cfg["mongo-jobs-collection"]):
+
+            ori_job_count = Job.objects.count()
+            job_id = self.create_job_rec()
+            self.assertEqual(ori_job_count, Job.objects.count()-1)
+
+            runner = self.getRunner()
+
+            # test missing status
+            with self.assertRaises(ValueError) as context:
+                runner.update_job_status(None, "invalid_status")
+            self.assertEqual("Please provide both job_id and status", str(context.exception))
+
+            # test invalid status
+            with self.assertRaises(ValidationError) as context:
+                runner.update_job_status(job_id, "invalid_status")
+            self.assertIn("is not a valid status", str(context.exception))
+
             ori_job = Job.objects(id=job_id)[0]
             ori_updated_time = ori_job.updated
 
@@ -244,5 +240,28 @@ class SDKMethodRunner_test(unittest.TestCase):
 
             self.assertTrue(ori_updated_time < updated_time)
 
-        self.test_collection.delete_one({"_id": ObjectId(job_id)})
-        self.assertEqual(self.test_collection.count(), 0)
+            Job.objects.get(id=job_id).delete()
+            self.assertEqual(ori_job_count, Job.objects.count())
+
+    def test_get_job_status(self):
+
+        with self.mongo_util.me_collection(self.cfg["mongo-jobs-collection"]):
+
+            ori_job_count = Job.objects.count()
+            job_id = self.create_job_rec()
+            self.assertEqual(ori_job_count, Job.objects.count()-1)
+
+            runner = self.getRunner()
+
+            # test missing job_id input
+            with self.assertRaises(ValueError) as context:
+                runner.get_job_status(None)
+            self.assertEqual("Please provide valid job_id", str(context.exception))
+
+            returnVal = runner.get_job_status(job_id)
+
+            self.assertTrue("status" in returnVal)
+            self.assertEqual(returnVal["status"], "created")
+
+            Job.objects.get(id=job_id).delete()
+            self.assertEqual(ori_job_count, Job.objects.count())
