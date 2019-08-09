@@ -22,7 +22,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "0d43ba3c245a1dcd729f1f4efc83c44224fe5f6b"
+    GIT_COMMIT_HASH = "1f8375de58ec6b64a5a1ba5f8efd0402859b4f4d"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -232,7 +232,11 @@ class execution_engine2:
 
     def update_job_status(self, ctx, params):
         """
-        :param params: instance of type "UpdateJobStatusParams" -> structure:
+        :param params: instance of type "UpdateJobStatusParams" (typedef
+           structure { job_id job_id; boolean is_started; } UpdateJobParams;
+           typedef structure { list<string> messages; } UpdateJobResults;
+           funcdef update_job(UpdateJobParams params) returns
+           (UpdateJobResults) authentication required;) -> structure:
            parameter "job_id" of type "job_id" (A job id.), parameter
            "status" of String
         :returns: instance of type "job_id" (A job id.)
@@ -297,6 +301,29 @@ class execution_engine2:
         # return the results
         return [returnVal]
 
+    def finish_job(self, ctx, job_id, params):
+        """
+        Register results of already started job
+        :param job_id: instance of type "job_id" (A job id.)
+        :param params: instance of type "FinishJobParams" (Either 'result',
+           'error' or 'is_canceled' field should be defined; result - keeps
+           exact copy of what original server method puts in result block of
+           JSON RPC response; error - keeps exact copy of what original
+           server method puts in error block of JSON RPC response;
+           is_cancelled - Deprecated (field is kept for backward
+           compatibility), please use 'is_canceled' instead.) -> structure:
+           parameter "result" of unspecified object, parameter "error" of
+           type "JsonRpcError" (Error block of JSON RPC response) ->
+           structure: parameter "name" of String, parameter "code" of Long,
+           parameter "message" of String, parameter "error" of String,
+           parameter "is_cancelled" of type "boolean" (@range [0,1]),
+           parameter "is_canceled" of type "boolean" (@range [0,1])
+        """
+        # ctx is the context object
+        #BEGIN finish_job
+        #END finish_job
+        pass
+
     def check_job(self, ctx, job_id):
         """
         Check if a job is finished and get results/error
@@ -314,7 +341,8 @@ class execution_engine2:
            position of the job in execution waiting queue; creation_time,
            exec_start_time and finish_time - time moments of submission,
            execution start and finish events in milliseconds since Unix
-           Epoch, canceled - whether the job is canceled or not.) ->
+           Epoch, canceled - whether the job is canceled or not. cancelled -
+           Deprecated field, please use 'canceled' field instead.) ->
            structure: parameter "job_id" of String, parameter "finished" of
            type "boolean" (@range [0,1]), parameter "ujs_url" of String,
            parameter "status" of unspecified object, parameter "result" of
@@ -324,7 +352,8 @@ class execution_engine2:
            String, parameter "error" of String, parameter "job_state" of
            String, parameter "position" of Long, parameter "creation_time" of
            Long, parameter "exec_start_time" of Long, parameter "finish_time"
-           of Long, parameter "canceled" of type "boolean" (@range [0,1])
+           of Long, parameter "cancelled" of type "boolean" (@range [0,1]),
+           parameter "canceled" of type "boolean" (@range [0,1])
         """
         # ctx is the context object
         # return variables are: job_state
@@ -355,7 +384,8 @@ class execution_engine2:
            position of the job in execution waiting queue; creation_time,
            exec_start_time and finish_time - time moments of submission,
            execution start and finish events in milliseconds since Unix
-           Epoch, canceled - whether the job is canceled or not.) ->
+           Epoch, canceled - whether the job is canceled or not. cancelled -
+           Deprecated field, please use 'canceled' field instead.) ->
            structure: parameter "job_id" of String, parameter "finished" of
            type "boolean" (@range [0,1]), parameter "ujs_url" of String,
            parameter "status" of unspecified object, parameter "result" of
@@ -365,7 +395,8 @@ class execution_engine2:
            String, parameter "error" of String, parameter "job_state" of
            String, parameter "position" of Long, parameter "creation_time" of
            Long, parameter "exec_start_time" of Long, parameter "finish_time"
-           of Long, parameter "canceled" of type "boolean" (@range [0,1])
+           of Long, parameter "cancelled" of type "boolean" (@range [0,1]),
+           parameter "canceled" of type "boolean" (@range [0,1])
         """
         # ctx is the context object
         # return variables are: job_states
@@ -401,7 +432,8 @@ class execution_engine2:
            position of the job in execution waiting queue; creation_time,
            exec_start_time and finish_time - time moments of submission,
            execution start and finish events in milliseconds since Unix
-           Epoch, canceled - whether the job is canceled or not.) ->
+           Epoch, canceled - whether the job is canceled or not. cancelled -
+           Deprecated field, please use 'canceled' field instead.) ->
            structure: parameter "job_id" of String, parameter "finished" of
            type "boolean" (@range [0,1]), parameter "ujs_url" of String,
            parameter "status" of unspecified object, parameter "result" of
@@ -411,57 +443,58 @@ class execution_engine2:
            String, parameter "error" of String, parameter "job_state" of
            String, parameter "position" of Long, parameter "creation_time" of
            Long, parameter "exec_start_time" of Long, parameter "finish_time"
-           of Long, parameter "canceled" of type "boolean" (@range [0,1]),
-           parameter "job_params" of mapping from type "job_id" (A job id.)
-           to type "RunJobParams" (method - service defined in standard JSON
-           RPC way, typically it's module name from spec-file followed by '.'
-           and name of funcdef from spec-file corresponding to running method
-           (e.g. 'KBaseTrees.construct_species_tree' from trees service);
-           params - the parameters of the method that performed this call;
-           Optional parameters: service_ver - specific version of deployed
-           service, last version is used if this parameter is not defined
-           rpc_context - context of current method call including nested call
-           history remote_url - run remote service call instead of local
-           command line execution. source_ws_objects - denotes the workspace
-           objects that will serve as a source of data when running the SDK
-           method. These references will be added to the autogenerated
-           provenance. app_id - the id of the Narrative application running
-           this job (e.g. repo/name) mapping<string, string> meta - user
-           defined metadata to associate with the job. This data is passed to
-           the User and Job State (UJS) service. wsid - a workspace id to
-           associate with the job. This is passed to the UJS service, which
-           will share the job based on the permissions of the workspace
-           rather than UJS ACLs. parent_job_id - UJS id of the parent of a
-           batch job. Sub jobs will add this id to the NJS database under the
-           field "parent_job_id") -> structure: parameter "method" of String,
-           parameter "params" of list of unspecified object, parameter
-           "service_ver" of String, parameter "rpc_context" of type
-           "RpcContext" (call_stack - upstream calls details including nested
-           service calls and parent jobs where calls are listed in order from
-           outer to inner.) -> structure: parameter "call_stack" of list of
-           type "MethodCall" (time - the time the call was started; method -
-           service defined in standard JSON RPC way, typically it's module
-           name from spec-file followed by '.' and name of funcdef from
-           spec-file corresponding to running method (e.g.
-           'KBaseTrees.construct_species_tree' from trees service); job_id -
-           job id if method is asynchronous (optional field).) -> structure:
-           parameter "time" of type "timestamp" (A time in the format
-           YYYY-MM-DDThh:mm:ssZ, where Z is either the character Z
-           (representing the UTC timezone) or the difference in time to UTC
-           in the format +/-HHMM, eg: 2012-12-17T23:24:06-0500 (EST time)
-           2013-04-03T08:56:32+0000 (UTC time) 2013-04-03T08:56:32Z (UTC
-           time)), parameter "method" of String, parameter "job_id" of type
-           "job_id" (A job id.), parameter "run_id" of String, parameter
-           "remote_url" of String, parameter "source_ws_objects" of list of
-           type "wsref" (A workspace object reference of the form X/Y/Z,
-           where X is the workspace name or id, Y is the object name or id, Z
-           is the version, which is optional.), parameter "app_id" of String,
-           parameter "meta" of mapping from String to String, parameter
-           "wsid" of Long, parameter "parent_job_id" of String, parameter
-           "check_error" of mapping from type "job_id" (A job id.) to type
-           "JsonRpcError" (Error block of JSON RPC response) -> structure:
-           parameter "name" of String, parameter "code" of Long, parameter
-           "message" of String, parameter "error" of String
+           of Long, parameter "cancelled" of type "boolean" (@range [0,1]),
+           parameter "canceled" of type "boolean" (@range [0,1]), parameter
+           "job_params" of mapping from type "job_id" (A job id.) to type
+           "RunJobParams" (method - service defined in standard JSON RPC way,
+           typically it's module name from spec-file followed by '.' and name
+           of funcdef from spec-file corresponding to running method (e.g.
+           'KBaseTrees.construct_species_tree' from trees service); params -
+           the parameters of the method that performed this call; Optional
+           parameters: service_ver - specific version of deployed service,
+           last version is used if this parameter is not defined rpc_context
+           - context of current method call including nested call history
+           remote_url - run remote service call instead of local command line
+           execution. source_ws_objects - denotes the workspace objects that
+           will serve as a source of data when running the SDK method. These
+           references will be added to the autogenerated provenance. app_id -
+           the id of the Narrative application running this job (e.g.
+           repo/name) mapping<string, string> meta - user defined metadata to
+           associate with the job. This data is passed to the User and Job
+           State (UJS) service. wsid - a workspace id to associate with the
+           job. This is passed to the UJS service, which will share the job
+           based on the permissions of the workspace rather than UJS ACLs.
+           parent_job_id - UJS id of the parent of a batch job. Sub jobs will
+           add this id to the NJS database under the field "parent_job_id")
+           -> structure: parameter "method" of String, parameter "params" of
+           list of unspecified object, parameter "service_ver" of String,
+           parameter "rpc_context" of type "RpcContext" (call_stack -
+           upstream calls details including nested service calls and parent
+           jobs where calls are listed in order from outer to inner.) ->
+           structure: parameter "call_stack" of list of type "MethodCall"
+           (time - the time the call was started; method - service defined in
+           standard JSON RPC way, typically it's module name from spec-file
+           followed by '.' and name of funcdef from spec-file corresponding
+           to running method (e.g. 'KBaseTrees.construct_species_tree' from
+           trees service); job_id - job id if method is asynchronous
+           (optional field).) -> structure: parameter "time" of type
+           "timestamp" (A time in the format YYYY-MM-DDThh:mm:ssZ, where Z is
+           either the character Z (representing the UTC timezone) or the
+           difference in time to UTC in the format +/-HHMM, eg:
+           2012-12-17T23:24:06-0500 (EST time) 2013-04-03T08:56:32+0000 (UTC
+           time) 2013-04-03T08:56:32Z (UTC time)), parameter "method" of
+           String, parameter "job_id" of type "job_id" (A job id.), parameter
+           "run_id" of String, parameter "remote_url" of String, parameter
+           "source_ws_objects" of list of type "wsref" (A workspace object
+           reference of the form X/Y/Z, where X is the workspace name or id,
+           Y is the object name or id, Z is the version, which is optional.),
+           parameter "app_id" of String, parameter "meta" of mapping from
+           String to String, parameter "wsid" of Long, parameter
+           "parent_job_id" of String, parameter "check_error" of mapping from
+           type "job_id" (A job id.) to type "JsonRpcError" (Error block of
+           JSON RPC response) -> structure: parameter "name" of String,
+           parameter "code" of Long, parameter "message" of String, parameter
+           "error" of String
         """
         # ctx is the context object
         # return variables are: returnVal
@@ -474,6 +507,42 @@ class execution_engine2:
                              'returnVal is not type dict as required.')
         # return the results
         return [returnVal]
+
+    def cancel_job(self, ctx, params):
+        """
+        :param params: instance of type "CancelJobParams" -> structure:
+           parameter "job_id" of type "job_id" (A job id.)
+        """
+        # ctx is the context object
+        #BEGIN cancel_job
+        #END cancel_job
+        pass
+
+    def check_job_canceled(self, ctx, params):
+        """
+        Check whether a job has been canceled. This method is lightweight compared to check_job.
+        :param params: instance of type "CancelJobParams" -> structure:
+           parameter "job_id" of type "job_id" (A job id.)
+        :returns: instance of type "CheckJobCanceledResult" (job_id - id of
+           job running method finished - indicates whether job is done
+           (including error/cancel cases) or not canceled - whether the job
+           is canceled or not. ujs_url - url of UserAndJobState service used
+           by job service) -> structure: parameter "job_id" of type "job_id"
+           (A job id.), parameter "finished" of type "boolean" (@range
+           [0,1]), parameter "canceled" of type "boolean" (@range [0,1]),
+           parameter "ujs_url" of String
+        """
+        # ctx is the context object
+        # return variables are: result
+        #BEGIN check_job_canceled
+        #END check_job_canceled
+
+        # At some point might do deeper type checking...
+        if not isinstance(result, dict):
+            raise ValueError('Method check_job_canceled return value ' +
+                             'result is not type dict as required.')
+        # return the results
+        return [result]
 
     def get_job_status(self, ctx, job_id):
         """

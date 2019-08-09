@@ -108,6 +108,21 @@ module execution_engine2 {
         Get job params necessary for job execution
     */
     funcdef get_job_params(job_id job_id) returns (RunJobParams params) authentication required;
+    /*
+        is_started - optional flag marking job as started (and triggering exec_start_time
+            statistics to be stored).
+    */
+    /*
+    typedef structure {
+        job_id job_id;
+        boolean is_started;
+    } UpdateJobParams;
+    typedef structure {
+        list<string> messages;
+    } UpdateJobResults;
+    funcdef update_job(UpdateJobParams params) returns (UpdateJobResults)
+        authentication required;
+    */
 
     typedef structure {
         job_id job_id;
@@ -157,7 +172,16 @@ module execution_engine2 {
         is_cancelled - Deprecated (field is kept for backward
             compatibility), please use 'is_canceled' instead.
     */
-
+    typedef structure {
+        UnspecifiedObject result;
+        JsonRpcError error;
+        boolean is_cancelled;
+        boolean is_canceled;
+    } FinishJobParams;
+    /*
+        Register results of already started job
+    */
+    funcdef finish_job(job_id job_id, FinishJobParams params) returns () authentication required;
     /*
         job_id - id of job running method
         finished - indicates whether job is done (including error/cancel cases) or not,
@@ -174,6 +198,7 @@ module execution_engine2 {
         creation_time, exec_start_time and finish_time - time moments of submission, execution
             start and finish events in milliseconds since Unix Epoch,
         canceled - whether the job is canceled or not.
+        cancelled - Deprecated field, please use 'canceled' field instead.
     */
     typedef structure {
         string job_id;
@@ -187,6 +212,7 @@ module execution_engine2 {
         int creation_time;
         int exec_start_time;
         int finish_time;
+        boolean cancelled;
         boolean canceled;
     } JobState;
     /*
@@ -214,11 +240,28 @@ module execution_engine2 {
 
     funcdef check_jobs(CheckJobsParams params) returns (CheckJobsResults)
         authentication required;
+    typedef structure {
+        job_id job_id;
+    } CancelJobParams;
+    funcdef cancel_job(CancelJobParams params) returns () authentication required;
+    /*
+        job_id - id of job running method
+        finished - indicates whether job is done (including error/cancel cases) or not
+        canceled - whether the job is canceled or not.
+        ujs_url - url of UserAndJobState service used by job service
+    */
+    typedef structure {
+        job_id job_id;
+        boolean finished;
+        boolean canceled;
+        string ujs_url;
+    } CheckJobCanceledResult;
+    /* Check whether a job has been canceled. This method is lightweight compared to check_job. */
+    funcdef check_job_canceled(CancelJobParams params) returns (CheckJobCanceledResult result)
+        authentication required;
 
     typedef structure {
         string status;
     } GetJobStatusResult;
-    funcdef get_job_status(job_id job_id) returns (GetJobStatusResult result)
-        authentication required;
-
+    funcdef get_job_status(job_id job_id) returns (GetJobStatusResult result) authentication required;
 };
