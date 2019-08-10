@@ -88,7 +88,7 @@ class SDKMethodRunner_test(unittest.TestCase):
 
         job.job_input = inputs
 
-        with self.mongo_util.me_collection(self.cfg["mongo-jobs-collection"]):
+        with self.mongo_util.mongo_engine_connection():
             job.save()
 
         return str(job.id)
@@ -150,7 +150,7 @@ class SDKMethodRunner_test(unittest.TestCase):
         self.assertNotEqual(git_commit_1, git_commit_2)
 
     def test_init_job_rec(self):
-        with self.mongo_util.me_collection(self.cfg["mongo-jobs-collection"]):
+        with self.mongo_util.mongo_engine_connection():
             ori_job_count = Job.objects.count()
             runner = self.getRunner()
 
