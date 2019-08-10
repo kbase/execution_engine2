@@ -142,7 +142,7 @@ class MongoUtil:
         finally:
             mc.close()
 
-    def get_job_log(self, job_id=None) -> JobLog:
+    def get_job_log(self, job_id=None, allow_none_return=False) -> JobLog:
         if job_id is None:
             raise ValueError("Please provide a job id")
         with self.mongo_engine_connection():
@@ -153,9 +153,12 @@ class MongoUtil:
                     "Unable to find job:\nError:\n{}".format(traceback.format_exc())
                 )
 
+            if not (allow_none_return or job_log):
+                raise ValueError("Cannot find job log with id: {}".format(job_id))
+
         return job_log
 
-    def get_job(self, job_id=None) -> Job:
+    def get_job(self, job_id=None, allow_none_return=False) -> Job:
         if job_id is None:
             raise ValueError("Please provide a job id")
         with self.mongo_engine_connection():
@@ -165,6 +168,9 @@ class MongoUtil:
                 raise ValueError(
                     "Unable to find job:\nError:\n{}".format(traceback.format_exc())
                 )
+
+            if not (allow_none_return or job):
+                raise ValueError("Cannot find job with id: {}".format(job_id))
 
         return job
 

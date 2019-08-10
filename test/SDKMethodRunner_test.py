@@ -365,7 +365,9 @@ class SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(ori_job_count, Job.objects.count() - 1)
 
             runner = self.getRunner()
-            params = runner.get_job_params(job_id)
+            runner.check_permission_for_job = MagicMock(return_value=True)
+            ctx = {"foo": "bar"}
+            params = runner.get_job_params(job_id, ctx)
 
             expected_params_keys = ["wsid", "method", "params", "service_ver", "app_id",
                                     "source_ws_objects", "parent_job_id"]
@@ -389,22 +391,24 @@ class SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(ori_job_count, Job.objects.count() - 1)
 
             runner = self.getRunner()
+            runner.check_permission_for_job = MagicMock(return_value=True)
+            ctx = {"foo": "bar"}
 
             # test missing status
             with self.assertRaises(ValueError) as context:
-                runner.update_job_status(None, "invalid_status")
+                runner.update_job_status(None, "invalid_status", ctx)
             self.assertEqual("Please provide both job_id and status", str(context.exception))
 
             # test invalid status
             with self.assertRaises(ValidationError) as context:
-                runner.update_job_status(job_id, "invalid_status")
+                runner.update_job_status(job_id, "invalid_status", ctx)
             self.assertIn("is not a valid status", str(context.exception))
 
             ori_job = Job.objects(id=job_id)[0]
             ori_updated_time = ori_job.updated
 
             # test update job status
-            job_id = runner.update_job_status(job_id, "estimating")
+            job_id = runner.update_job_status(job_id, "estimating", ctx)
             updated_job = Job.objects(id=job_id)[0]
             self.assertEqual(updated_job.status, "estimating")
             updated_time = updated_job.updated
@@ -423,13 +427,15 @@ class SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(ori_job_count, Job.objects.count() - 1)
 
             runner = self.getRunner()
+            runner.check_permission_for_job = MagicMock(return_value=True)
+            ctx = {"foo": "bar"}
 
             # test missing job_id input
             with self.assertRaises(ValueError) as context:
-                runner.get_job_status(None)
+                runner.get_job_status(None, ctx)
             self.assertEqual("Please provide valid job_id", str(context.exception))
 
-            returnVal = runner.get_job_status(job_id)
+            returnVal = runner.get_job_status(job_id, ctx)
 
             self.assertTrue("status" in returnVal)
             self.assertEqual(returnVal["status"], "created")
@@ -450,22 +456,35 @@ class SDKMethodRunner_test(unittest.TestCase):
             self.assertFalse(job.finished)
 
             runner = self.getRunner()
+            runner.check_permission_for_job = MagicMock(return_value=True)
+            ctx = {"foo": "bar"}
 
             # test missing job_id input
             with self.assertRaises(ValueError) as context:
-                runner.finish_job(None)
+                runner.finish_job(None, ctx)
             self.assertEqual("Please provide valid job_id", str(context.exception))
 
+            # test finish job with invalid status
+            with self.assertRaises(ValueError) as context:
+                runner.finish_job(job_id, ctx)
+            self.assertIn("Unexpected job status", str(context.exception))
+
+            # update job status to running
+            self.mongo_util.update_job_status(job_id=job_id, status=Status.running.value)
+
             # test finish job without error
-            runner.finish_job(job_id)
+            runner.finish_job(job_id, ctx)
 
             job = self.mongo_util.get_job(job_id=job_id)
             self.assertEqual(job.status, "finished")
             self.assertFalse(job.errormsg)
             self.assertTrue(job.finished)
 
+            # update job status to running
+            self.mongo_util.update_job_status(job_id=job_id, status=Status.running.value)
+
             # test finish job with error message
-            runner.finish_job(job_id, error_message="error message")
+            runner.finish_job(job_id, ctx, error_message="error message")
 
             job = self.mongo_util.get_job(job_id=job_id)
             self.assertEqual(job.status, "error")
@@ -490,14 +509,16 @@ class SDKMethodRunner_test(unittest.TestCase):
             self.assertFalse(job.estimating)
 
             runner = self.getRunner()
+            runner.check_permission_for_job = MagicMock(return_value=True)
+            ctx = {"foo": "bar"}
 
             # test missing job_id input
             with self.assertRaises(ValueError) as context:
-                runner.start_job(None)
+                runner.start_job(None, ctx)
             self.assertEqual("Please provide valid job_id", str(context.exception))
 
             # start a created job, set job to estimation status
-            runner.start_job(job_id)
+            runner.start_job(job_id, ctx)
 
             job = self.mongo_util.get_job(job_id=job_id)
             self.assertEqual(job.status, "estimating")
@@ -505,7 +526,7 @@ class SDKMethodRunner_test(unittest.TestCase):
             self.assertTrue(job.estimating)
 
             # start a estimating job, set job to running status
-            runner.start_job(job_id)
+            runner.start_job(job_id, ctx)
 
             job = self.mongo_util.get_job(job_id=job_id)
             self.assertEqual(job.status, "running")
@@ -514,7 +535,7 @@ class SDKMethodRunner_test(unittest.TestCase):
 
             # test start a job with invalid status
             with self.assertRaises(ValueError) as context:
-                runner.start_job(job_id)
+                runner.start_job(job_id, ctx)
             self.assertIn("Unexpected job status", str(context.exception))
 
             self.mongo_util.get_job(job_id=job_id).delete()

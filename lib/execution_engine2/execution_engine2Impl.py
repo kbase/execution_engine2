@@ -12,7 +12,7 @@ class execution_engine2:
     execution_engine2
 
     Module Description:
-    
+
     '''
 
     ######## WARNING FOR GEVENT USERS ####### noqa
@@ -223,7 +223,7 @@ class execution_engine2:
         # return variables are: params
         #BEGIN get_job_params
         mr = SDKMethodRunner(self.config)
-        params = mr.get_job_params(job_id)
+        params = mr.get_job_params(job_id, ctx)
         #END get_job_params
 
         # At some point might do deeper type checking...
@@ -248,7 +248,7 @@ class execution_engine2:
         # return variables are: job_id
         #BEGIN update_job_status
         mr = SDKMethodRunner(self.config)
-        job_id = mr.update_job_status(params.get('job_id'), params.get('status'))
+        job_id = mr.update_job_status(params.get('job_id'), params.get('status'), ctx)
         #END update_job_status
 
         # At some point might do deeper type checking...
@@ -321,7 +321,7 @@ class execution_engine2:
         # ctx is the context object
         #BEGIN finish_job
         mr = SDKMethodRunner(self.config)
-        mr.finish_job(params.get('job_id'), error_message=params.get('error_message'))
+        mr.finish_job(params.get('job_id'), ctx, error_message=params.get('error_message'))
         #END finish_job
         pass
 
@@ -336,7 +336,7 @@ class execution_engine2:
         # ctx is the context object
         #BEGIN start_job
         mr = SDKMethodRunner(self.config)
-        mr.start_job(params.get('job_id'), skip_estimation=params.get('skip_estimation', False))
+        mr.start_job(params.get('job_id'), ctx, skip_estimation=params.get('skip_estimation', False))
         #END start_job
         pass
 
@@ -574,7 +574,7 @@ class execution_engine2:
         # return variables are: result
         #BEGIN get_job_status
         mr = SDKMethodRunner(self.config)
-        result = mr.get_job_status(job_id)
+        result = mr.get_job_status(job_id, ctx)
         #END get_job_status
 
         # At some point might do deeper type checking...
