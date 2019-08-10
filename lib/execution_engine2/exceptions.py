@@ -12,3 +12,7 @@ class MissingCondorRequirementsException(ValueError):
 
 class MalformedJobIdException(Exception):
     pass
+
+
+class RecordNotFoundException(Exception):
+    pass

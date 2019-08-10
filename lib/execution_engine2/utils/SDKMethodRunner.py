@@ -17,6 +17,7 @@ from execution_engine2.models.models import (
 )
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.MongoUtil import MongoUtil
+from execution_engine2.exceptions import RecordNotFoundException
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
 
@@ -213,8 +214,9 @@ class SDKMethodRunner:
         self.check_permission_for_job(job_id=job_id, ctx=ctx, write=True)
         logging.debug("Success, you have permission to view logs for " + job_id)
 
-        log = self.get_mongo_util().get_job_log(job_id=job_id, allow_none_return=True)
-        if log is None:
+        try:
+            log = self.get_mongo_util().get_job_log(job_id=job_id)
+        except RecordNotFoundException:
             log = self._create_new_log(pk=job_id)
 
         olc = log.original_line_count
