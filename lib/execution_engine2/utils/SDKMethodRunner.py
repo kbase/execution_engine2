@@ -140,11 +140,11 @@ class SDKMethodRunner:
         READ = "r"
         NONE = "n"
 
-    def get_job_status(self, job_id, ctx):
-        logging.debug(f"About to view logs for {job_id}")
-        self.check_permission_for_job(job_id=job_id, ctx=ctx, write=False)
-        logging.debug("Success, you have permission to view job status for " + job_id)
-        return {}
+    # def get_job_status(self, job_id, ctx):
+    #     logging.debug(f"About to view logs for {job_id}")
+    #     self.check_permission_for_job(job_id=job_id, ctx=ctx, write=False)
+    #     logging.debug("Success, you have permission to view job status for " + job_id)
+    #     return {}
 
     def _get_job_log(self, job_id, skip_lines):
         """
@@ -428,24 +428,22 @@ class SDKMethodRunner:
     def get_job_params(self, job_id):
         job_params = dict()
 
-        with self.get_mongo_util().me_collection(self.config["mongo-jobs-collection"]):
+        try:
+            job = self.get_mongo_util().get_job(job_id=job_id)
+        except Exception:
+            raise ValueError(
+                "Unable to find job:\nError:\n{}".format(traceback.format_exc())
+            )
 
-            try:
-                job = Job.objects(id=job_id)[0]
-            except Exception:
-                raise ValueError(
-                    "Unable to find job:\nError:\n{}".format(traceback.format_exc())
-                )
+        job_input = job.job_input
 
-            job_input = job.job_input
-
-            job_params["method"] = job_input.method
-            job_params["params"] = job_input.params
-            job_params["service_ver"] = job_input.service_ver
-            job_params["app_id"] = job_input.app_id
-            job_params["wsid"] = job_input.wsid
-            job_params["parent_job_id"] = job_input.parent_job_id
-            job_params["source_ws_objects"] = job_input.source_ws_objects
+        job_params["method"] = job_input.method
+        job_params["params"] = job_input.params
+        job_params["service_ver"] = job_input.service_ver
+        job_params["app_id"] = job_input.app_id
+        job_params["wsid"] = job_input.wsid
+        job_params["parent_job_id"] = job_input.parent_job_id
+        job_params["source_ws_objects"] = job_input.source_ws_objects
 
         return job_params
 
@@ -454,33 +452,32 @@ class SDKMethodRunner:
         if not (job_id and status):
             raise ValueError("Please provide both job_id and status")
 
-        with self.get_mongo_util().me_collection(self.config["mongo-jobs-collection"]):
+        try:
+            job = self.get_mongo_util().get_job(job_id=job_id)
+        except Exception:
+            raise ValueError(
+                "Unable to find job:\nError:\n{}".format(traceback.format_exc())
+            )
 
-            try:
-                job = Job.objects(id=job_id)[0]
-            except Exception:
-                raise ValueError(
-                    "Unable to find job:\nError:\n{}".format(traceback.format_exc())
-                )
-
-            job.status = status
-            job.save()
+        job.status = status
+        job.save()
 
         return str(job.id)
 
     def get_job_status(self, job_id):
+
         returnVal = dict()
 
         if not job_id:
             raise ValueError("Please provide valid job_id")
 
-        with self.get_mongo_util().me_collection(self.config["mongo-jobs-collection"]):
+        try:
+            job = self.get_mongo_util().get_job(job_id=job_id)
+        except Exception:
+            raise ValueError(
+                "Unable to find job:\nError:\n{}".format(traceback.format_exc())
+            )
 
-            try:
-                job = Job.objects(id=job_id)[0]
-            except Exception:
-                raise ValueError("Unable to find job:\nError:\n{}".format(traceback.format_exc()))
-
-            returnVal['status'] = job.status
+        returnVal['status'] = job.status
 
         return returnVal

@@ -359,7 +359,7 @@ class SDKMethodRunner_test(unittest.TestCase):
 
     def test_get_job_params(self):
 
-        with self.mongo_util.me_collection(self.cfg["mongo-jobs-collection"]):
+        with self.mongo_util.mongo_engine_connection():
             ori_job_count = Job.objects.count()
             job_id = self.create_job_rec()
             self.assertEqual(ori_job_count, Job.objects.count() - 1)
@@ -382,7 +382,7 @@ class SDKMethodRunner_test(unittest.TestCase):
 
     def test_update_job_status(self):
 
-        with self.mongo_util.me_collection(self.cfg["mongo-jobs-collection"]):
+        with self.mongo_util.mongo_engine_connection():
 
             ori_job_count = Job.objects.count()
             job_id = self.create_job_rec()
@@ -416,7 +416,7 @@ class SDKMethodRunner_test(unittest.TestCase):
 
     def test_get_job_status(self):
 
-        with self.mongo_util.me_collection(self.cfg["mongo-jobs-collection"]):
+        with self.mongo_util.mongo_engine_connection():
 
             ori_job_count = Job.objects.count()
             job_id = self.create_job_rec()

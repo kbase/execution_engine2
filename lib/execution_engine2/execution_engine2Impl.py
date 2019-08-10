@@ -567,7 +567,7 @@ class execution_engine2:
         # return variables are: result
         #BEGIN get_job_status
         mr = SDKMethodRunner(self.config)
-        result = mr.get_job_status(job_id)
+        result = mr.get_job_status(job_id, ctx)
         #END get_job_status
 
         # At some point might do deeper type checking...
