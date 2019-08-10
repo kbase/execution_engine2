@@ -5,8 +5,9 @@ import unittest
 
 logging.basicConfig(level=logging.INFO)
 
-from execution_engine2.utils.Condor import Condor
+from lib.execution_engine2.utils.Condor import Condor
 from lib.installed_clients.execution_engine2Client import execution_engine2
+from lib.installed_clients.WorkspaceClient import Workspace
 import os, sys
 
 from dotenv import load_dotenv
@@ -29,7 +30,10 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
             sys.exit(1)
 
         cls.ee2 = execution_engine2(
-            url=os.environ["ENDPOINT"], token=os.environ["KB_AUTH_TOKEN"]
+            url=os.environ["EE2_ENDPOINT"], token=os.environ["KB_AUTH_TOKEN"]
+        )
+        cls.ws = Workspace(
+            url=os.environ["WS_ENDPOINT"], token=os.environ["KB_AUTH_TOKEN"]
         )
 
     @classmethod
@@ -43,11 +47,12 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         Test to see if the ee2 service is up
         :return:
         """
+        logging.info("Checking server time")
         self.assertIn("servertime", self.ee2.status())
 
     def test_run_job(self):
         """
-        Test a simple job baed on runjob params from the spec file
+        Test a simple job based on runjob params from the spec file
 
         typedef structure {
             string method;
@@ -69,6 +74,49 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
             "method": "simpleapp.simple_add",
             "params": params,
             "service_ver": "dev",
+            "wsid": "42896",
+            "app_id": "simpleapp",
         }
 
-        print(self.ee2.run_job(runjob_params))
+        # print(self.ee2.run_job(runjob_params))
+
+    def test_get_logs(self):
+        job_log_params = {"job_id": "5d48821bfc8e83248c0d2cff"}
+        print("About to get logs for", job_log_params)
+        print(self.ee2.get_job_logs(job_log_params))
+
+    # def test_get_permissions(self):
+    #     username = 'bsadkhin'
+    #     perms = self.ws.get_permissions_mass({'workspaces': [{'id': '42896'}]})['perms']
+    #     permission = "n"
+    #     for p in perms:
+    #         if username in p:
+    #             permission = p[username]
+    #     print("Permission is")
+    #     print(permission)
+    #
+    # from enum import Enum
+    #
+    # class WorkspacePermissions(Enum):
+    #     ADMINISTRATOR = "a"
+    #     READ_WRITE = "w"
+    #     READ = "r"
+    #     NONE = "n"
+
+    # def test_get_workspace_permissions(self):
+    #     job_id='5d48821bfc8e83248c0d2cff'
+    #     wsid=42896
+    #     username="bsadkhin"
+    #     perms = self.ws.get_permissions_mass({'workspaces': [{'id': wsid}]})['perms']
+    #     permission = "n"
+    #     for p in perms:
+    #         if username in p:
+    #             permission = p[username]
+    #     print(self.WorkspacePermissions(permission))
+
+    # def get_workspace_permissions(self, wsid, ctx):
+    #         # Look up permissions for this workspace
+    #         logging.info(f"Checking for permissions for {wsid} of type {type(wsid)}")
+    #         gpmp = {'workspaces' : [int(wsid)]}
+    #         permission = self.get_workspace(ctx).get_permissions_mass(gpmp)[0]
+    #         return self.WorkspacePermissions(permission)

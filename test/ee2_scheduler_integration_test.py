@@ -8,7 +8,7 @@ import htcondor
 
 logging.basicConfig(level=logging.INFO)
 
-from execution_engine2.utils.Condor import Condor
+from lib.execution_engine2.utils.Condor import Condor
 
 
 class ExecutionEngine2SchedulerIntegrationTest(unittest.TestCase):

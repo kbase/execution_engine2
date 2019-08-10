@@ -19,7 +19,9 @@ bootstrap()
 class MongoUtilTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", os.path.join("test", "deploy.cfg"))
+        config_file = os.environ.get(
+            "KB_DEPLOYMENT_CONFIG", os.path.join("test", "deploy.cfg")
+        )
 
         logging.info("Reading from " + config_file)
         config_parser = ConfigParser()
@@ -29,7 +31,9 @@ class MongoUtilTest(unittest.TestCase):
         for nameval in config_parser.items("execution_engine2"):
             cls.config[nameval[0]] = nameval[1]
 
-        cls.config["start-local-mongo"] = "1"
+        mongo_in_docker = cls.config.get("mongo-in-docker-compose", None)
+        if mongo_in_docker is not None:
+            cls.config["mongo-host"] = cls.config["mongo-in-docker-compose"]
 
         logging.info("Setting up mongo test helper")
         cls.mongo_helper = MongoTestHelper(cls.config)
@@ -58,7 +62,7 @@ class MongoUtilTest(unittest.TestCase):
             "mongo_user",
             "mongo_pass",
             "mongo_authmechanism",
-            "mongo_collection"
+            "mongo_collection",
         ]
         mongo_util = self.getMongoUtil()
         self.assertTrue(set(class_attri) <= set(mongo_util.__dict__.keys()))
@@ -119,7 +123,10 @@ class MongoUtilTest(unittest.TestCase):
     def test_insert_one_ok(self):
         mongo_util = self.getMongoUtil()
 
-        with mongo_util.me_collection(self.config["mongo-jobs-collection"]) as (pymongo_client, mongoengine_client):
+        with mongo_util.me_collection(self.config["mongo-jobs-collection"]) as (
+            pymongo_client,
+            mongoengine_client,
+        ):
             col = pymongo_client[self.config["mongo-database"]][
                 self.config["mongo-jobs-collection"]
             ]
@@ -138,7 +145,10 @@ class MongoUtilTest(unittest.TestCase):
     def test_find_in_ok(self):
         mongo_util = self.getMongoUtil()
 
-        with mongo_util.me_collection(self.config["mongo-jobs-collection"]) as (pymongo_client, mongoengine_client):
+        with mongo_util.me_collection(self.config["mongo-jobs-collection"]) as (
+            pymongo_client,
+            mongoengine_client,
+        ):
             col = pymongo_client[self.config["mongo-database"]][
                 self.config["mongo-jobs-collection"]
             ]
@@ -168,7 +178,10 @@ class MongoUtilTest(unittest.TestCase):
     def test_update_one_ok(self):
         mongo_util = self.getMongoUtil()
 
-        with mongo_util.me_collection(self.config["mongo-jobs-collection"]) as (pymongo_client, mongoengine_client):
+        with mongo_util.me_collection(self.config["mongo-jobs-collection"]) as (
+            pymongo_client,
+            mongoengine_client,
+        ):
             col = pymongo_client[self.config["mongo-database"]][
                 self.config["mongo-jobs-collection"]
             ]

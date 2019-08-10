@@ -134,6 +134,7 @@ module execution_engine2 {
     typedef structure {
         string line;
         boolean is_error;
+        string ts;
     } LogLine;
     funcdef add_job_logs(job_id job_id, list<LogLine> lines)
         returns (int line_number) authentication required;

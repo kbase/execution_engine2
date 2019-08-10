@@ -60,6 +60,8 @@ build-test-script:
 	echo 'python -m nose --with-coverage --cover-package=$(SERVICE_CAPS) --cover-html --cover-html-dir=/kb/module/work/test_coverage --nocapture --nologcapture .' >> $(TEST_DIR)/$(TEST_SCRIPT_NAME)
 	chmod +x $(TEST_DIR)/$(TEST_SCRIPT_NAME)
 
+TEST_FILES = test/ee2_scheduler_test.py test/SDKMethodRunner_test.py test/MongoUtil_test.py test/ee2_models_test.py
+
 setup-database:
 	# Set up travis user in mongo
 	nosetests -x -v --nocapture --nologcapture test/ee2_check_configure_mongo_docker.py
@@ -71,8 +73,12 @@ test:
 	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/MongoUtil_test.py
 
 test-models:
-    # Requires travis user to be set up
+	# Requires travis user to be set up
 	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_models_test.py
+
+test-coverage:
+	# Assumes setup-database run in previous step
+	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 $(TEST_FILES)
 
 #test-in-docker:
 #    docker-compose up -d -f test/dockerfiles/condor/docker-compose.yml

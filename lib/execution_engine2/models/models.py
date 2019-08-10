@@ -30,11 +30,12 @@ class LogLines(EmbeddedDocument):
     line = StringField()
     linepos = IntField()
     error = BooleanField()
+    ts = DateTimeField(default=datetime.datetime.utcnow())
 
 
 class JobLog(Document):
-    primary_key = ObjectIdField(primary_key=True)
-    updated = DateTimeField(default=datetime.datetime.utcnow)
+    primary_key = ObjectIdField(primary_key=True, required=True)
+    updated = DateTimeField(default=datetime.datetime.utcnow, autonow=True)
     original_line_count = IntField()
     stored_line_count = IntField()
     lines = EmbeddedDocumentListField(LogLines)
@@ -79,8 +80,9 @@ class Status(Enum):
     estimating = "estimating"
     queued = "queued"
     running = "running"
-    finished = "finished"
-    error = "error"
+    finished = "finished"  # Successful termination
+    error = "error"  # Something went wrong
+    terminated = "terminated"  # Canceled by user
 
 
 class AuthStrat(Enum):
@@ -110,11 +112,16 @@ def valid_authstrat(strat):
 
 class Job(Document):
     user = StringField(required=True)
-    authstrat = StringField(required=True, default="kbaseworkspace", validation=valid_authstrat)
+    authstrat = StringField(
+        required=True, default="kbaseworkspace", validation=valid_authstrat
+    )
     wsid = IntField(required=True)
     status = StringField(required=True, validation=valid_status)
-    updated = DateTimeField(default=datetime.datetime.utcnow)
+    updated = DateTimeField(default=datetime.datetime.utcnow, autonow=True)
     started = DateTimeField(default=None)
+    estimating = DateTimeField(default=None)
+    running = DateTimeField(default=None)
+    finished = DateTimeField(default=None)
     errormsg = StringField()
     scheduler_type = StringField()
     scheduler_id = StringField()

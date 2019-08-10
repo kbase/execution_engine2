@@ -3,6 +3,29 @@ import os
 from dotenv import load_dotenv
 import pathlib
 from shutil import copyfile
+from execution_engine2.models.models import Job, JobInput, Meta
+
+
+def get_example_job():
+    j = Job()
+    j.user = "boris"
+    j.wsid = 123
+    job_input = JobInput()
+    job_input.wsid = j.wsid
+
+    job_input.method = "method"
+    job_input.requested_release = "requested_release"
+    job_input.params = {}
+    job_input.service_ver = "dev"
+    job_input.app_id = "super_module.super_function"
+
+    m = Meta()
+    m.cell_id = "ApplePie"
+    job_input.narrative_cell_info = m
+    j.job_input = job_input
+    j.status = "queued"
+
+    return j
 
 
 def _create_sample_params(self):

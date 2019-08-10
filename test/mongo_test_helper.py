@@ -181,8 +181,8 @@ class MongoTestHelper:
     def create_test_db(self, db="ee2", col="ee2_jobs"):
 
         logging.info("creating collection and dbs")
-
         cfg = self.cfg
+        logging.info(cfg)
         try:
             my_client = MongoClient(cfg["mongo-host"], int(cfg["mongo-port"]))
             my_client.ee2.command(

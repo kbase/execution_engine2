@@ -28,3 +28,4 @@ mock==3.0.5
 mongoengine==0.18.2
 codecov==2.0.15
 python-dotenv
+pre-commit==1.18.0

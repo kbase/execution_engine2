@@ -33,8 +33,7 @@ install:
 
 
 script:
-  - make test
-  - make test-models
+  - make test-coverage
   # - make integration_test Doesn't yet work in travis
 
 after_success:
