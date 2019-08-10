@@ -165,24 +165,25 @@ module execution_engine2 {
         string error;
     } JsonRpcError;
     /*
-        Either 'result', 'error' or 'is_canceled' field should be defined;
-        result - keeps exact copy of what original server method puts
-            in result block of JSON RPC response;
-        error - keeps exact copy of what original server method puts
-            in error block of JSON RPC response;
-        is_cancelled - Deprecated (field is kept for backward
-            compatibility), please use 'is_canceled' instead.
+        error_message: optional if job is finished with error
     */
     typedef structure {
-        UnspecifiedObject result;
-        JsonRpcError error;
-        boolean is_cancelled;
-        boolean is_canceled;
+        job_id job_id;
+        string error_message;
     } FinishJobParams;
     /*
         Register results of already started job
     */
-    funcdef finish_job(job_id job_id, FinishJobParams params) returns () authentication required;
+    funcdef finish_job(FinishJobParams params) returns () authentication required;
+
+    /*
+        skip_estimation: default false. If set true, job will set to running status skipping estimation step
+    */
+    typedef structure {
+        job_id job_id;
+        boolean skip_estimation;
+    } StartJobParams;
+    funcdef start_job(StartJobParams params) returns () authentication required;
     /*
         job_id - id of job running method
         finished - indicates whether job is done (including error/cancel cases) or not,

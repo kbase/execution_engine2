@@ -482,3 +482,40 @@ class SDKMethodRunner:
         returnVal['status'] = job.status
 
         return returnVal
+
+    def finish_job(self, job_id, error_message=None):
+
+        if not job_id:
+            raise ValueError("Please provide valid job_id")
+
+        job = self.get_mongo_util().get_job(job_id=job_id)
+
+        if error_message:
+            job.errormsg = error_message
+            self.get_mongo_util().update_job_status(job_id=job_id, status=Status.error.value)
+        else:
+            self.get_mongo_util().update_job_status(job_id=job_id, status=Status.finished.value)
+
+        job.finished = datetime.utcnow()
+        job.save()
+
+    def start_job(self, job_id, skip_estimation=False):
+
+        if not job_id:
+            raise ValueError("Please provide valid job_id")
+
+        job = self.get_mongo_util().get_job(job_id=job_id)
+        job_status = job.status
+
+        if job_status == Status.estimating.value or skip_estimation:
+            # set job to running status
+            job.running = datetime.utcnow()
+            self.get_mongo_util().update_job_status(job_id=job_id, status=Status.running.value)
+        elif job_status in [Status.created.value, Status.queued.value]:
+            # set job to estimating status
+            job.estimating = datetime.utcnow()
+            self.get_mongo_util().update_job_status(job_id=job_id, status=Status.estimating.value)
+        else:
+            raise ValueError("Unexpected job status: {}".format(job_status))
+
+        job.save()

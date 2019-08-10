@@ -436,3 +436,86 @@ class SDKMethodRunner_test(unittest.TestCase):
 
             self.mongo_util.get_job(job_id=job_id).delete()
             self.assertEqual(ori_job_count, Job.objects.count())
+
+    def test_finish_job(self):
+
+        with self.mongo_util.mongo_engine_connection():
+
+            ori_job_count = Job.objects.count()
+            job_id = self.create_job_rec()
+            self.assertEqual(ori_job_count, Job.objects.count() - 1)
+
+            job = self.mongo_util.get_job(job_id=job_id)
+            self.assertEqual(job.status, "created")
+            self.assertFalse(job.finished)
+
+            runner = self.getRunner()
+
+            # test missing job_id input
+            with self.assertRaises(ValueError) as context:
+                runner.finish_job(None)
+            self.assertEqual("Please provide valid job_id", str(context.exception))
+
+            # test finish job without error
+            runner.finish_job(job_id)
+
+            job = self.mongo_util.get_job(job_id=job_id)
+            self.assertEqual(job.status, "finished")
+            self.assertFalse(job.errormsg)
+            self.assertTrue(job.finished)
+
+            # test finish job with error message
+            runner.finish_job(job_id, error_message="error message")
+
+            job = self.mongo_util.get_job(job_id=job_id)
+            self.assertEqual(job.status, "error")
+            self.assertEqual(job.errormsg, "error message")
+            self.assertTrue(job.finished)
+
+            self.mongo_util.get_job(job_id=job_id).delete()
+            self.assertEqual(ori_job_count, Job.objects.count())
+
+    def test_start_job(self):
+
+        with self.mongo_util.mongo_engine_connection():
+
+            ori_job_count = Job.objects.count()
+            job_id = self.create_job_rec()
+            self.assertEqual(ori_job_count, Job.objects.count() - 1)
+
+            job = self.mongo_util.get_job(job_id=job_id)
+            self.assertEqual(job.status, "created")
+            self.assertFalse(job.finished)
+            self.assertFalse(job.running)
+            self.assertFalse(job.estimating)
+
+            runner = self.getRunner()
+
+            # test missing job_id input
+            with self.assertRaises(ValueError) as context:
+                runner.start_job(None)
+            self.assertEqual("Please provide valid job_id", str(context.exception))
+
+            # start a created job, set job to estimation status
+            runner.start_job(job_id)
+
+            job = self.mongo_util.get_job(job_id=job_id)
+            self.assertEqual(job.status, "estimating")
+            self.assertFalse(job.running)
+            self.assertTrue(job.estimating)
+
+            # start a estimating job, set job to running status
+            runner.start_job(job_id)
+
+            job = self.mongo_util.get_job(job_id=job_id)
+            self.assertEqual(job.status, "running")
+            self.assertTrue(job.running)
+            self.assertTrue(job.estimating)
+
+            # test start a job with invalid status
+            with self.assertRaises(ValueError) as context:
+                runner.start_job(job_id)
+            self.assertIn("Unexpected job status", str(context.exception))
+
+            self.mongo_util.get_job(job_id=job_id).delete()
+            self.assertEqual(ori_job_count, Job.objects.count())

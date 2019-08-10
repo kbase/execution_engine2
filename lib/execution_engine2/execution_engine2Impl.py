@@ -12,7 +12,7 @@ class execution_engine2:
     execution_engine2
 
     Module Description:
-
+    
     '''
 
     ######## WARNING FOR GEVENT USERS ####### noqa
@@ -23,7 +23,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "9913bac743b4cf63dc509e9c1c2e2d9167bbafb3"
+    GIT_COMMIT_HASH = "7c23dd2e9196e3afb9f15f044ec5522991860dc4"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -310,27 +310,34 @@ class execution_engine2:
         # return the results
         return [returnVal]
 
-    def finish_job(self, ctx, job_id, params):
+    def finish_job(self, ctx, params):
         """
         Register results of already started job
-        :param job_id: instance of type "job_id" (A job id.)
-        :param params: instance of type "FinishJobParams" (Either 'result',
-           'error' or 'is_canceled' field should be defined; result - keeps
-           exact copy of what original server method puts in result block of
-           JSON RPC response; error - keeps exact copy of what original
-           server method puts in error block of JSON RPC response;
-           is_cancelled - Deprecated (field is kept for backward
-           compatibility), please use 'is_canceled' instead.) -> structure:
-           parameter "result" of unspecified object, parameter "error" of
-           type "JsonRpcError" (Error block of JSON RPC response) ->
-           structure: parameter "name" of String, parameter "code" of Long,
-           parameter "message" of String, parameter "error" of String,
-           parameter "is_cancelled" of type "boolean" (@range [0,1]),
-           parameter "is_canceled" of type "boolean" (@range [0,1])
+        :param params: instance of type "FinishJobParams" (error_message:
+           optional if job is finished with error) -> structure: parameter
+           "job_id" of type "job_id" (A job id.), parameter "error_message"
+           of String
         """
         # ctx is the context object
         #BEGIN finish_job
+        mr = SDKMethodRunner(self.config)
+        mr.finish_job(params.get('job_id'), error_message=params.get('error_message'))
         #END finish_job
+        pass
+
+    def start_job(self, ctx, params):
+        """
+        :param params: instance of type "StartJobParams" (skip_estimation:
+           default false. If set true, job will set to running status
+           skipping estimation step) -> structure: parameter "job_id" of type
+           "job_id" (A job id.), parameter "skip_estimation" of type
+           "boolean" (@range [0,1])
+        """
+        # ctx is the context object
+        #BEGIN start_job
+        mr = SDKMethodRunner(self.config)
+        mr.start_job(params.get('job_id'), skip_estimation=params.get('skip_estimation', False))
+        #END start_job
         pass
 
     def check_job(self, ctx, job_id):
@@ -567,7 +574,7 @@ class execution_engine2:
         # return variables are: result
         #BEGIN get_job_status
         mr = SDKMethodRunner(self.config)
-        result = mr.get_job_status(job_id, ctx)
+        result = mr.get_job_status(job_id)
         #END get_job_status
 
         # At some point might do deeper type checking...
