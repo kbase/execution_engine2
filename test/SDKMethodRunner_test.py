@@ -191,7 +191,7 @@ class SDKMethodRunner_test(unittest.TestCase):
 
             self.assertFalse(job.job_output)
 
-            Job.objects.get(id=job_id).delete()
+            self.mongo_util.get_job(job_id=job_id).delete()
             self.assertEqual(ori_job_count, Job.objects.count())
 
     @patch("execution_engine2.utils.SDKMethodRunner.SDKMethodRunner", autospec=True)
@@ -377,7 +377,7 @@ class SDKMethodRunner_test(unittest.TestCase):
             self.assertCountEqual(params["source_ws_objects"], ["a/b/c", "e/d"])
             self.assertEqual(params["parent_job_id"], "9998")
 
-            Job.objects.get(id=job_id).delete()
+            self.mongo_util.get_job(job_id=job_id).delete()
             self.assertEqual(ori_job_count, Job.objects.count())
 
     def test_update_job_status(self):
@@ -411,7 +411,7 @@ class SDKMethodRunner_test(unittest.TestCase):
 
             self.assertTrue(ori_updated_time < updated_time)
 
-            Job.objects.get(id=job_id).delete()
+            self.mongo_util.get_job(job_id=job_id).delete()
             self.assertEqual(ori_job_count, Job.objects.count())
 
     def test_get_job_status(self):
@@ -434,5 +434,5 @@ class SDKMethodRunner_test(unittest.TestCase):
             self.assertTrue("status" in returnVal)
             self.assertEqual(returnVal["status"], "created")
 
-            Job.objects.get(id=job_id).delete()
+            self.mongo_util.get_job(job_id=job_id).delete()
             self.assertEqual(ori_job_count, Job.objects.count())
