@@ -294,7 +294,14 @@ class SDKMethodRunner:
         Check to see if job is terminated by the user
         :return: job_id, whether or not job is canceled, and whether or not job is finished
         """
-        job_status = self.get_mongo_util().get_job(job_id=job_id).status
+
+        job = self.get_mongo_util().get_job(job_id=job_id)
+
+        if not job:
+            raise ValueError("Cannot find job with id: {}".format(job_id))
+
+        job_status = job.status
+
         rv = {"job_id": job_id, "canceled": False, "finished": False}
 
         if Status(job_status) is Status.terminated:
@@ -428,12 +435,10 @@ class SDKMethodRunner:
     def get_job_params(self, job_id):
         job_params = dict()
 
-        try:
-            job = self.get_mongo_util().get_job(job_id=job_id)
-        except Exception:
-            raise ValueError(
-                "Unable to find job:\nError:\n{}".format(traceback.format_exc())
-            )
+        job = self.get_mongo_util().get_job(job_id=job_id)
+
+        if not job:
+            raise ValueError("Cannot find job with id: {}".format(job_id))
 
         job_input = job.job_input
 
@@ -452,12 +457,10 @@ class SDKMethodRunner:
         if not (job_id and status):
             raise ValueError("Please provide both job_id and status")
 
-        try:
-            job = self.get_mongo_util().get_job(job_id=job_id)
-        except Exception:
-            raise ValueError(
-                "Unable to find job:\nError:\n{}".format(traceback.format_exc())
-            )
+        job = self.get_mongo_util().get_job(job_id=job_id)
+
+        if not job:
+            raise ValueError("Cannot find job with id: {}".format(job_id))
 
         job.status = status
         job.save()
@@ -471,12 +474,10 @@ class SDKMethodRunner:
         if not job_id:
             raise ValueError("Please provide valid job_id")
 
-        try:
-            job = self.get_mongo_util().get_job(job_id=job_id)
-        except Exception:
-            raise ValueError(
-                "Unable to find job:\nError:\n{}".format(traceback.format_exc())
-            )
+        job = self.get_mongo_util().get_job(job_id=job_id)
+
+        if not job:
+            raise ValueError("Cannot find job with id: {}".format(job_id))
 
         returnVal['status'] = job.status
 

@@ -146,13 +146,27 @@ class MongoUtil:
         if job_id is None:
             raise ValueError("Please provide a job id")
         with self.mongo_engine_connection():
-            return JobLog.objects.with_id(job_id)
+            try:
+                job_log = JobLog.objects.with_id(job_id)
+            except Exception:
+                raise ValueError(
+                    "Unable to find job:\nError:\n{}".format(traceback.format_exc())
+                )
+
+        return job_log
 
     def get_job(self, job_id=None) -> Job:
         if job_id is None:
             raise ValueError("Please provide a job id")
         with self.mongo_engine_connection():
-            return Job.objects.with_id(job_id)
+            try:
+                job = Job.objects.with_id(job_id)
+            except Exception:
+                raise ValueError(
+                    "Unable to find job:\nError:\n{}".format(traceback.format_exc())
+                )
+
+        return job
 
     def update_job_status(self, job_id, status):
         """
