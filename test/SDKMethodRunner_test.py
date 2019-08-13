@@ -12,7 +12,7 @@ from bson import ObjectId
 from execution_engine2.utils.Condor import submission_info
 from execution_engine2.utils.MongoUtil import MongoUtil
 from execution_engine2.utils.SDKMethodRunner import SDKMethodRunner
-from execution_engine2.models.models import Job, JobInput, Meta, Status
+from execution_engine2.models.models import Job, JobInput, Meta, Status, JobLog
 from test.mongo_test_helper import MongoTestHelper
 from test.test_utils import bootstrap, get_example_job
 
@@ -356,6 +356,48 @@ class SDKMethodRunner_test(unittest.TestCase):
         self.test_collection.delete_one({"_id": ObjectId(job_id)})
         # TODO FIX THIS ASSERT AS DOCUMENT COUNT IS TOO FLAKY
         # self.assertEqual(self.test_collection.count_documents({}), 0)
+
+    def test_add_job_logs_ok(self):
+        with self.mongo_util.mongo_engine_connection():
+            ori_job_log_count = JobLog.objects.count()
+            ori_job_count = Job.objects.count()
+            job_id = self.create_job_rec()
+            self.assertEqual(ori_job_count, Job.objects.count() - 1)
+
+            runner = self.getRunner()
+            runner.check_permission_for_job = MagicMock(return_value=True)
+            ctx = {"foo": "bar"}
+
+            # create new log
+            lines = [{"error": False, "line": "Hello world"}]
+            runner.add_job_logs(job_id=job_id, lines=lines, ctx=ctx)
+
+            updated_job_log_count = JobLog.objects.count()
+            self.assertEqual(ori_job_log_count, updated_job_log_count - 1)
+
+            log = self.mongo_util.get_job_log(job_id=job_id)
+            ori_updated_time = log.updated
+            self.assertTrue(ori_updated_time)
+            self.assertEqual(log.original_line_count, 1)
+            self.assertEqual(log.stored_line_count, 1)
+            ori_lines = log.lines
+            self.assertEqual(ori_lines.count(), 1)
+
+            ori_line = ori_lines.first()
+
+            self.assertEqual(ori_line.line, "Hello world")
+            self.assertEqual(ori_line.linepos, 1)
+            self.assertFalse(ori_line.error)
+
+            # add job log
+            lines = [{"error": False, "line": "Hello Kbase"}]
+            runner.add_job_logs(job_id=job_id, lines=lines, ctx=ctx)
+
+            self.mongo_util.get_job(job_id=job_id).delete()
+            self.assertEqual(ori_job_count, Job.objects.count())
+
+            self.mongo_util.get_job_log(job_id=job_id).delete()
+            self.assertEqual(ori_job_log_count, JobLog.objects.count())
 
     def test_get_job_params(self):
 
