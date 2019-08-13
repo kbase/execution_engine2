@@ -369,7 +369,7 @@ class SDKMethodRunner_test(unittest.TestCase):
             ctx = {"foo": "bar"}
 
             # create new log
-            lines = [{"error": False, "line": "Hello world"}]
+            lines = [{"line": "Hello world"}]
             runner.add_job_logs(job_id=job_id, lines=lines, ctx=ctx)
 
             updated_job_log_count = JobLog.objects.count()
@@ -381,17 +381,45 @@ class SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(log.original_line_count, 1)
             self.assertEqual(log.stored_line_count, 1)
             ori_lines = log.lines
-            self.assertEqual(ori_lines.count(), 1)
+            self.assertEqual(len(ori_lines), 1)
 
-            ori_line = ori_lines.first()
+            test_line = ori_lines[0]
 
-            self.assertEqual(ori_line.line, "Hello world")
-            self.assertEqual(ori_line.linepos, 1)
-            self.assertFalse(ori_line.error)
+            self.assertEqual(test_line.line, "Hello world")
+            self.assertEqual(test_line.linepos, 1)
+            self.assertFalse(test_line.error)
 
             # add job log
-            lines = [{"error": False, "line": "Hello Kbase"}]
+            lines = [{"error": True, "line": "Hello Kbase"}, {"line": "Hello Wrold Kbase"}]
             runner.add_job_logs(job_id=job_id, lines=lines, ctx=ctx)
+
+            log = self.mongo_util.get_job_log(job_id=job_id)
+            self.assertTrue(log.updated)
+            self.assertTrue(ori_updated_time < log.updated)
+            self.assertEqual(log.original_line_count, 3)
+            self.assertEqual(log.stored_line_count, 3)
+            ori_lines = log.lines
+            self.assertEqual(len(ori_lines), 3)
+
+            # original line
+            test_line = ori_lines[0]
+
+            self.assertEqual(test_line.line, "Hello world")
+            self.assertEqual(test_line.linepos, 1)
+            self.assertFalse(test_line.error)
+
+            # new line
+            test_line = ori_lines[1]
+
+            self.assertEqual(test_line.line, "Hello Kbase")
+            self.assertEqual(test_line.linepos, 2)
+            self.assertTrue(test_line.error)
+
+            test_line = ori_lines[2]
+
+            self.assertEqual(test_line.line, "Hello Wrold Kbase")
+            self.assertEqual(test_line.linepos, 3)
+            self.assertFalse(test_line.error)
 
             self.mongo_util.get_job(job_id=job_id).delete()
             self.assertEqual(ori_job_count, Job.objects.count())

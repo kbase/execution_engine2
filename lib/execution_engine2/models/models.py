@@ -30,7 +30,7 @@ class LogLines(EmbeddedDocument):
     line = StringField()
     linepos = IntField()
     error = BooleanField()
-    ts = DateTimeField(default=datetime.datetime.utcnow())
+    ts = DateTimeField(default=datetime.datetime.utcnow)
 
 
 class JobLog(Document):
@@ -38,7 +38,7 @@ class JobLog(Document):
     updated = DateTimeField(default=datetime.datetime.utcnow, autonow=True)
     original_line_count = IntField()
     stored_line_count = IntField()
-    lines = EmbeddedDocumentListField(LogLines)
+    lines = ListField()
     # meta = {"db_alias": "logs"}
     meta = {"collection": "ee2_logs"}
 
