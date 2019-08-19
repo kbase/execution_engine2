@@ -373,7 +373,7 @@ class execution_engine2:
         job_state = mr.check_job(
             params.get("job_id"),
             ctx,
-            project=params.get("project"),
+            project=params.get("project", ["job_output"]),
         )
         #END check_job
 
@@ -401,7 +401,7 @@ class execution_engine2:
         returnVal = mr.check_jobs(
             params.get("job_ids"),
             ctx,
-            project=params.get("project"),
+            project=params.get("project", ["job_output"]),
         )
         #END check_jobs
 
@@ -428,7 +428,7 @@ class execution_engine2:
         returnVal = mr.check_workspace_jobs(
             params.get("workspace_id"),
             ctx,
-            project=params.get("project"),
+            project=params.get("project", ["job_output"]),
         )
         #END check_workspace_jobs
 

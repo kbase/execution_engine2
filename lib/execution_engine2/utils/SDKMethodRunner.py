@@ -707,7 +707,7 @@ class SDKMethodRunner:
         with self.get_mongo_util().mongo_engine_connection():
             job.save()
 
-    def check_job(self, job_id, ctx, check_permission=True, project=["job_output"]):
+    def check_job(self, job_id, ctx, check_permission=True, project=[]):
         """
         check_job: check and return job status for a given job_id
 
@@ -733,7 +733,7 @@ class SDKMethodRunner:
 
         return job_state
 
-    def check_jobs(self, job_ids, ctx, check_permission=True, project=["job_output"]):
+    def check_jobs(self, job_ids, ctx, check_permission=True, project=[]):
         """
         check_jobs: check and return job status for a given of list job_ids
 
@@ -751,7 +751,7 @@ class SDKMethodRunner:
 
         return job_states
 
-    def check_workspace_jobs(self, workspace_id, ctx, project=["job_output"]):
+    def check_workspace_jobs(self, workspace_id, ctx, project=[]):
         """
         check_workspace_jobs: check job status for all jobs in a given workspace
         """
