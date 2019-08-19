@@ -734,7 +734,6 @@ class SDKMethodRunner_test(unittest.TestCase):
 
             # test list_job_statuses
             job_states = runner.list_job_statuses(9999, ctx)
-            self.assertEqual(len(job_states), 1)
             self.assertTrue(job_id in job_states)
             self.assertEqual(job_states[job_id]["status"], "created")
             self.assertEqual(job_states[job_id]["wsid"], 9999)
