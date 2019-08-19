@@ -635,6 +635,7 @@ class SDKMethodRunner_test(unittest.TestCase):
 
         runner = self.getRunner()
         runner.check_permission_for_job = MagicMock(return_value=True)
+        runner.catalog.log_exec_stats = MagicMock(return_value=True)
         ctx = {"foo": "bar"}
 
         with self.assertRaises(InvalidStatusTransitionException):
