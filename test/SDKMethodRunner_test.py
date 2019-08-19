@@ -10,7 +10,6 @@ from unittest.mock import patch
 
 from mock import MagicMock
 from bson import ObjectId
-from datetime import datetime
 from mongoengine import ValidationError
 
 from execution_engine2.exceptions import InvalidStatusTransitionException
@@ -425,7 +424,7 @@ class SDKMethodRunner_test(unittest.TestCase):
 
             # create new log
             lines = [{"line": "Hello world"}]
-            runner.add_job_logs(job_id=job_id, lines=lines, ctx=ctx)
+            runner.add_job_logs(job_id=job_id, log_lines=lines, ctx=ctx)
 
             updated_job_log_count = JobLog.objects.count()
             self.assertEqual(ori_job_log_count, updated_job_log_count - 1)
@@ -446,7 +445,7 @@ class SDKMethodRunner_test(unittest.TestCase):
 
             # add job log
             lines = [{"error": True, "line": "Hello Kbase"}, {"line": "Hello Wrold Kbase"}]
-            runner.add_job_logs(job_id=job_id, lines=lines, ctx=ctx)
+            runner.add_job_logs(job_id=job_id, log_lines=lines, ctx=ctx)
 
             log = self.mongo_util.get_job_log(job_id=job_id)
             self.assertTrue(log.updated)
@@ -603,7 +602,7 @@ class SDKMethodRunner_test(unittest.TestCase):
 
             # update job status to running
             self.mongo_util.update_job_status(job_id=job_id, status=Status.running.value)
-            job.running = datetime.utcnow()
+            job.running = datetime.datetime.utcnow()
             job.save()
 
             # test finish job without error
@@ -694,6 +693,42 @@ class SDKMethodRunner_test(unittest.TestCase):
             with self.assertRaises(ValueError) as context:
                 runner.start_job(job_id, ctx)
             self.assertIn("Unexpected job status", str(context.exception))
+
+            self.mongo_util.get_job(job_id=job_id).delete()
+            self.assertEqual(ori_job_count, Job.objects.count())
+
+    def test_check_job_ok(self):
+
+        with self.mongo_util.mongo_engine_connection():
+            ori_job_count = Job.objects.count()
+            job_id = self.create_job_rec()
+            self.assertEqual(ori_job_count, Job.objects.count() - 1)
+
+            job = self.mongo_util.get_job(job_id=job_id)
+            self.assertEqual(job.status, "created")
+            self.assertFalse(job.finished)
+            self.assertFalse(job.running)
+            self.assertFalse(job.estimating)
+
+            runner = self.getRunner()
+            runner.check_permission_for_job = MagicMock(return_value=True)
+            ctx = {"foo": "bar"}
+
+            # test missing job_id input
+            with self.assertRaises(ValueError) as context:
+                runner.check_job(None, ctx)
+                self.assertEqual("Please provide valid job_id", str(context.exception))
+
+            # test check_job
+            job_state = runner.check_job(job_id, ctx)
+            self.assertEqual(job_state["status"], "created")
+            self.assertEqual(job_state["wsid"], 9999)
+
+            # test check_jobs
+            job_states = runner.check_jobs([job_id], ctx)
+            self.assertTrue(job_id in job_states)
+            self.assertEqual(job_states[job_id]["status"], "created")
+            self.assertEqual(job_states[job_id]["wsid"], 9999)
 
             self.mongo_util.get_job(job_id=job_id).delete()
             self.assertEqual(ori_job_count, Job.objects.count())

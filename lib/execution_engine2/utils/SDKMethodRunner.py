@@ -706,3 +706,28 @@ class SDKMethodRunner:
 
         with self.get_mongo_util().mongo_engine_connection():
             job.save()
+
+    def check_job(self, job_id, ctx):
+        """
+        check_job: check and return job status
+
+        Parameters:
+        job_id: id of job
+        """
+
+        if not job_id:
+            raise ValueError("Please provide valid job_id")
+
+        self.check_permission_for_job(job_id=job_id, ctx=ctx, write=False)
+
+        job_state = self.get_mongo_util().get_job(job_id=job_id).to_mongo().to_dict()
+
+        return job_state
+
+    def check_jobs(self, job_ids, ctx):
+        job_states = dict()
+
+        for job_id in job_ids:
+            job_states[job_id] = self.check_job(job_id, ctx)
+
+        return job_states

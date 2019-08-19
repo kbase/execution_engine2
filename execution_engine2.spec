@@ -186,60 +186,23 @@ module execution_engine2 {
         boolean skip_estimation;
     } StartJobParams;
     funcdef start_job(StartJobParams params) returns () authentication required;
+
     /*
-        job_id - id of job running method
-        finished - indicates whether job is done (including error/cancel cases) or not,
-            if the value is true then either of 'returned_data' or 'detailed_error'
-            should be defined;
-        ujs_url - url of UserAndJobState service used by job service
-        status - tuple returned by UserAndJobState.get_job_status method
-        result - keeps exact copy of what original server method puts
-            in result block of JSON RPC response;
-        error - keeps exact copy of what original server method puts
-            in error block of JSON RPC response;
-        job_state - 'queued', 'in-progress', 'completed', or 'suspend';
-        position - position of the job in execution waiting queue;
-        creation_time, exec_start_time and finish_time - time moments of submission, execution
-            start and finish events in milliseconds since Unix Epoch,
-        canceled - whether the job is canceled or not.
-        cancelled - Deprecated field, please use 'canceled' field instead.
+        get current status of a job
     */
-    typedef structure {
-        string job_id;
-        boolean finished;
-        string ujs_url;
-        UnspecifiedObject status;
-        UnspecifiedObject result;
-        JsonRpcError error;
-        string job_state;
-        int position;
-        int creation_time;
-        int exec_start_time;
-        int finish_time;
-        boolean cancelled;
-        boolean canceled;
-    } JobState;
-    /*
-        Check if a job is finished and get results/error
-    */
-    funcdef check_job(job_id job_id) returns (JobState job_state) authentication required;
+    funcdef check_job(job_id job_id) returns (UnspecifiedObject job_state) authentication required;
     /*
       Check job for all jobs in a given workspace
     */
-    funcdef list_job_statuses(string workspace_id) returns (list<JobState> job_states) authentication required;
+    funcdef list_job_statuses(string workspace_id) returns (list<UnspecifiedObject> job_states) authentication required;
     typedef structure {
         list<job_id> job_ids;
-        boolean with_job_params;
     } CheckJobsParams;
     /*
-        job_states - states of jobs,
-        job_params - parameters of jobs,
-        check_error - this map includes info about errors happening during job checking.
+        job_states - states of jobs
     */
     typedef structure {
-        mapping<job_id, JobState> job_states;
-        mapping<job_id, RunJobParams> job_params;
-        mapping<job_id, JsonRpcError> check_error;
+        mapping<job_id, UnspecifiedObject> job_states;
     } CheckJobsResults;
 
     funcdef check_jobs(CheckJobsParams params) returns (CheckJobsResults)
