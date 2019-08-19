@@ -188,9 +188,17 @@ module execution_engine2 {
     funcdef start_job(StartJobParams params) returns () authentication required;
 
     /*
+        project: projecct certain fields to return. default None.
+    */
+    typedef structure {
+        job_id job_id;
+        list<string> project;
+    } CheckJobParams;
+
+    /*
         get current status of a job
     */
-    funcdef check_job(job_id job_id) returns (UnspecifiedObject job_state) authentication required;
+    funcdef check_job(CheckJobParams params) returns (UnspecifiedObject job_state) authentication required;
 
     /*
         job_states - states of jobs
@@ -199,11 +207,20 @@ module execution_engine2 {
         mapping<job_id, UnspecifiedObject> job_states;
     } CheckJobsResults;
 
-    funcdef check_jobs(list<job_id> job_ids) returns (CheckJobsResults) authentication required;
+    typedef structure {
+        list<job_id> job_ids;
+        list<string> project;
+    } CheckJobsParams;
+
+    funcdef check_jobs(CheckJobsParams params) returns (CheckJobsResults) authentication required;
     /*
       Check job for all jobs in a given workspace
     */
-    funcdef list_job_statuses(string workspace_id) returns (CheckJobsResults) authentication required;
+    typedef structure {
+        string workspace_id;
+        list<string> project;
+    } CheckWorkspaceJobsParams;
+    funcdef check_workspace_jobs(CheckWorkspaceJobsParams params) returns (CheckJobsResults) authentication required;
     typedef structure {
         job_id job_id;
     } CancelJobParams;

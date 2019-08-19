@@ -707,7 +707,7 @@ class SDKMethodRunner:
         with self.get_mongo_util().mongo_engine_connection():
             job.save()
 
-    def check_job(self, job_id, ctx):
+    def check_job(self, job_id, ctx, check_permission=True, project=None):
         """
         check_job: check and return job status for a given job_id
 
@@ -719,13 +719,17 @@ class SDKMethodRunner:
         if not job_id:
             raise ValueError("Please provide valid job_id")
 
-        self.check_permission_for_job(job_id=job_id, ctx=ctx, write=False)
+        if check_permission:
+            self.check_permission_for_job(job_id=job_id, ctx=ctx, write=False)
 
         job_state = self.get_mongo_util().get_job(job_id=job_id).to_mongo().to_dict()
 
+        if project:
+            job_state = {key: job_state[key] for key in project}
+
         return job_state
 
-    def check_jobs(self, job_ids, ctx):
+    def check_jobs(self, job_ids, ctx, check_permission=True, project=None):
         """
         check_jobs: check and return job status for a given of list job_ids
 
@@ -736,13 +740,16 @@ class SDKMethodRunner:
         job_states = dict()
 
         for job_id in job_ids:
-            job_states[job_id] = self.check_job(job_id, ctx)
+            job_states[job_id] = self.check_job(job_id,
+                                                ctx,
+                                                check_permission=check_permission,
+                                                project=project)
 
         return job_states
 
-    def list_job_statuses(self, workspace_id, ctx):
+    def check_workspace_jobs(self, workspace_id, ctx, project=None):
         """
-        list_job_statuses: check job status for all jobs in a given workspace
+        check_workspace_jobs: check job status for all jobs in a given workspace
         """
         logging.info("Start fetching all jobs status in workspace: {}".format(workspace_id))
 
@@ -752,6 +759,6 @@ class SDKMethodRunner:
             )
 
         job_ids = [str(job.id) for job in Job.objects(wsid=workspace_id)]
-        job_states = self.check_jobs(job_ids, ctx)
+        job_states = self.check_jobs(job_ids, ctx, check_permission=False, project=project)
 
         return job_states

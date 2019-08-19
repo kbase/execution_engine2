@@ -726,19 +726,36 @@ class SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_state["status"], "created")
             self.assertEqual(job_state["wsid"], 9999)
 
+            # test check_job with project
+            job_state = runner.check_job(job_id, ctx, project=["status"])
+            self.assertCountEqual(job_state.keys(), ["status"])
+            self.assertEqual(job_state["status"], "created")
+
             # test check_jobs
             job_states = runner.check_jobs([job_id], ctx)
             self.assertTrue(job_id in job_states)
             self.assertEqual(job_states[job_id]["status"], "created")
             self.assertEqual(job_states[job_id]["wsid"], 9999)
 
-            # test list_job_statuses
-            job_states = runner.list_job_statuses(9999, ctx)
+            # test check_jobs with project
+            job_states = runner.check_jobs([job_id], ctx, project=["wsid"])
+            self.assertTrue(job_id in job_states)
+            self.assertCountEqual(job_states[job_id].keys(), ["wsid"])
+            self.assertEqual(job_states[job_id]["wsid"], 9999)
+
+            # test check_workspace_jobs
+            job_states = runner.check_workspace_jobs(9999, ctx)
             self.assertTrue(job_id in job_states)
             self.assertEqual(job_states[job_id]["status"], "created")
             self.assertEqual(job_states[job_id]["wsid"], 9999)
 
-            job_states = runner.list_job_statuses(1234, ctx)
+            # test check_workspace_jobs with project
+            job_states = runner.check_workspace_jobs(9999, ctx, project=["wsid", "updated"])
+            self.assertTrue(job_id in job_states)
+            self.assertCountEqual(job_states[job_id].keys(), ["wsid", "updated"])
+            self.assertEqual(job_states[job_id]["wsid"], 9999)
+
+            job_states = runner.check_workspace_jobs(1234, ctx)
             self.assertFalse(job_states)
 
             self.mongo_util.get_job(job_id=job_id).delete()
