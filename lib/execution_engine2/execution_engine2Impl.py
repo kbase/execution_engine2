@@ -24,7 +24,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "a3abad9a50ba185e4afb63f017edd6a2a37e6554"
+    GIT_COMMIT_HASH = "32429d5c431eecae2220459f0f70f23279a1b206"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -380,28 +380,9 @@ class execution_engine2:
         # return the results
         return [job_state]
 
-    def list_job_statuses(self, ctx, workspace_id):
+    def check_jobs(self, ctx, job_ids):
         """
-        Check job for all jobs in a given workspace
-        :param workspace_id: instance of String
-        :returns: instance of list of unspecified object
-        """
-        # ctx is the context object
-        # return variables are: job_states
-        #BEGIN list_job_statuses
-        #END list_job_statuses
-
-        # At some point might do deeper type checking...
-        if not isinstance(job_states, list):
-            raise ValueError('Method list_job_statuses return value ' +
-                             'job_states is not type list as required.')
-        # return the results
-        return [job_states]
-
-    def check_jobs(self, ctx, params):
-        """
-        :param params: instance of type "CheckJobsParams" -> structure:
-           parameter "job_ids" of list of type "job_id" (A job id.)
+        :param job_ids: instance of list of type "job_id" (A job id.)
         :returns: instance of type "CheckJobsResults" (job_states - states of
            jobs) -> structure: parameter "job_states" of mapping from type
            "job_id" (A job id.) to unspecified object
@@ -412,7 +393,7 @@ class execution_engine2:
 
         mr = SDKMethodRunner(self.config)
         returnVal = mr.check_jobs(
-            params.get("job_ids"),
+            job_ids,
             ctx,
         )
         #END check_jobs
@@ -420,6 +401,31 @@ class execution_engine2:
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
             raise ValueError('Method check_jobs return value ' +
+                             'returnVal is not type dict as required.')
+        # return the results
+        return [returnVal]
+
+    def list_job_statuses(self, ctx, workspace_id):
+        """
+        Check job for all jobs in a given workspace
+        :param workspace_id: instance of String
+        :returns: instance of type "CheckJobsResults" (job_states - states of
+           jobs) -> structure: parameter "job_states" of mapping from type
+           "job_id" (A job id.) to unspecified object
+        """
+        # ctx is the context object
+        # return variables are: returnVal
+        #BEGIN list_job_statuses
+        mr = SDKMethodRunner(self.config)
+        returnVal = mr.list_job_statuses(
+            workspace_id,
+            ctx,
+        )
+        #END list_job_statuses
+
+        # At some point might do deeper type checking...
+        if not isinstance(returnVal, dict):
+            raise ValueError('Method list_job_statuses return value ' +
                              'returnVal is not type dict as required.')
         # return the results
         return [returnVal]

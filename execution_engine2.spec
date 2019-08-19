@@ -191,13 +191,7 @@ module execution_engine2 {
         get current status of a job
     */
     funcdef check_job(job_id job_id) returns (UnspecifiedObject job_state) authentication required;
-    /*
-      Check job for all jobs in a given workspace
-    */
-    funcdef list_job_statuses(string workspace_id) returns (list<UnspecifiedObject> job_states) authentication required;
-    typedef structure {
-        list<job_id> job_ids;
-    } CheckJobsParams;
+
     /*
         job_states - states of jobs
     */
@@ -205,8 +199,11 @@ module execution_engine2 {
         mapping<job_id, UnspecifiedObject> job_states;
     } CheckJobsResults;
 
-    funcdef check_jobs(CheckJobsParams params) returns (CheckJobsResults)
-        authentication required;
+    funcdef check_jobs(list<job_id> job_ids) returns (CheckJobsResults) authentication required;
+    /*
+      Check job for all jobs in a given workspace
+    */
+    funcdef list_job_statuses(string workspace_id) returns (CheckJobsResults) authentication required;
     typedef structure {
         job_id job_id;
     } CancelJobParams;

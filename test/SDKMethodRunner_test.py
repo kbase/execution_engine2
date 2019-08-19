@@ -713,6 +713,7 @@ class SDKMethodRunner_test(unittest.TestCase):
 
             runner = self.getRunner()
             runner.check_permission_for_job = MagicMock(return_value=True)
+            runner.get_permissions_for_workspace = MagicMock(return_value=SDKMethodRunner.WorkspacePermissions.ADMINISTRATOR)
             ctx = {"foo": "bar"}
 
             # test missing job_id input
@@ -730,6 +731,16 @@ class SDKMethodRunner_test(unittest.TestCase):
             self.assertTrue(job_id in job_states)
             self.assertEqual(job_states[job_id]["status"], "created")
             self.assertEqual(job_states[job_id]["wsid"], 9999)
+
+            # test list_job_statuses
+            job_states = runner.list_job_statuses(9999, ctx)
+            self.assertEqual(len(job_states), 1)
+            self.assertTrue(job_id in job_states)
+            self.assertEqual(job_states[job_id]["status"], "created")
+            self.assertEqual(job_states[job_id]["wsid"], 9999)
+
+            job_states = runner.list_job_statuses(1234, ctx)
+            self.assertFalse(job_states)
 
             self.mongo_util.get_job(job_id=job_id).delete()
             self.assertEqual(ori_job_count, Job.objects.count())

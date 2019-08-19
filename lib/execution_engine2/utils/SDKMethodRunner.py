@@ -709,11 +709,12 @@ class SDKMethodRunner:
 
     def check_job(self, job_id, ctx):
         """
-        check_job: check and return job status
+        check_job: check and return job status for a given job_id
 
         Parameters:
         job_id: id of job
         """
+        logging.info("Start fetching status for job: {}".format(job_id))
 
         if not job_id:
             raise ValueError("Please provide valid job_id")
@@ -725,9 +726,32 @@ class SDKMethodRunner:
         return job_state
 
     def check_jobs(self, job_ids, ctx):
+        """
+        check_jobs: check and return job status for a given of list job_ids
+
+        """
+
+        logging.info("Start fetching status for jobs: {}".format(job_ids))
+
         job_states = dict()
 
         for job_id in job_ids:
             job_states[job_id] = self.check_job(job_id, ctx)
+
+        return job_states
+
+    def list_job_statuses(self, workspace_id, ctx):
+        """
+        list_job_statuses: check job status for all jobs in a given workspace
+        """
+        logging.info("Start fetching all jobs status in workspace: {}".format(workspace_id))
+
+        if not self._can_read_ws(self.get_permissions_for_workspace(wsid=workspace_id, ctx=ctx)):
+            raise PermissionError(
+                "User {} does not have permissions to get status for wsid: {}".format(ctx['user_id'], workspace_id)
+            )
+
+        job_ids = [str(job.id) for job in Job.objects(wsid=workspace_id)]
+        job_states = self.check_jobs(job_ids, ctx)
 
         return job_states
