@@ -164,12 +164,17 @@ class MongoUtil:
 
         return job_log
 
-    def get_job(self, job_id=None) -> Job:
+    def get_job(self, job_id=None, projection=None) -> Job:
         if job_id is None:
             raise ValueError("Please provide a job id")
         with self.mongo_engine_connection():
             try:
-                job = Job.objects.with_id(job_id)
+                if projection:
+                    if not isinstance(projection, list):
+                        raise ValueError("Please input a list type projection")
+                    job = Job.objects.exclude(*projection).with_id(job_id)
+                else:
+                    job = Job.objects.with_id(job_id)
             except Exception:
                 raise ValueError(
                     "Unable to find job:\nError:\n{}".format(traceback.format_exc())

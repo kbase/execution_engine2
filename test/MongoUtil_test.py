@@ -11,7 +11,7 @@ from execution_engine2.utils.MongoUtil import MongoUtil
 from test.mongo_test_helper import MongoTestHelper
 
 logging.basicConfig(level=logging.INFO)
-from test.test_utils import bootstrap
+from test.test_utils import bootstrap, get_example_job
 
 bootstrap()
 
@@ -67,58 +67,84 @@ class MongoUtilTest(unittest.TestCase):
         mongo_util = self.getMongoUtil()
         self.assertTrue(set(class_attri) <= set(mongo_util.__dict__.keys()))
 
+    def test_get_job_ok(self):
+
+        mongo_util = self.getMongoUtil()
+
+        with mongo_util.mongo_engine_connection():
+            ori_job_count = Job.objects.count()
+            job = get_example_job()
+            job_id = job.save().id
+            self.assertEqual(ori_job_count, Job.objects.count() - 1)
+
+            # get job with no projection
+            job = mongo_util.get_job(job_id=job_id).to_mongo().to_dict()
+
+            expected_keys = [
+                "_id",
+                "user",
+                "authstrat",
+                "wsid",
+                "status",
+                "updated",
+                "job_input",
+            ]
+            self.assertCountEqual(job.keys(), expected_keys)
+
+            # get job with projection
+            job = mongo_util.get_job(job_id=job_id, projection=["job_input"]).to_mongo().to_dict()
+
+            expected_keys = [
+                "_id",
+                "user",
+                "authstrat",
+                "wsid",
+                "status",
+                "updated",
+            ]
+            self.assertCountEqual(job.keys(), expected_keys)
+
+            # get job with multiple projection
+            job = mongo_util.get_job(job_id=job_id, projection=["user", "wsid"]).to_mongo().to_dict()
+
+            expected_keys = [
+                "_id",
+                "authstrat",
+                "status",
+                "updated",
+                "job_input",
+            ]
+            self.assertCountEqual(job.keys(), expected_keys)
+
     def test_connection_ok(self):
-        j = Job()
-        user = "boris"
-        j.user = "boris"
-        j.wsid = 123
-        job_input = JobInput()
-        job_input.wsid = j.wsid
 
-        job_input.method = "method"
-        job_input.requested_release = "requested_release"
-        job_input.params = {}
-        job_input.service_ver = "dev"
-        job_input.app_id = "apple"
+        mongo_util = self.getMongoUtil()
 
-        m = Meta()
-        m.cell_id = "ApplePie"
-        job_input.narrative_cell_info = m
-        j.job_input = job_input
-        j.status = "queued"
-
-        self.assertEqual(self.test_collection.count_documents({}), 0)
-        with self.getMongoUtil().me_collection(self.config["mongo-jobs-collection"]):
+        with mongo_util.mongo_engine_connection():
+            ori_job_count = Job.objects.count()
+            j = get_example_job()
             j.save()
+            self.assertEqual(ori_job_count, Job.objects.count() - 1)
 
-        print(self.test_collection.name)
-        self.assertEqual(self.test_collection.count_documents({}), 1)
+            job = mongo_util.get_job(job_id=j.id).to_mongo().to_dict()
 
-        result = list(self.test_collection.find({"_id": j.id}))[0]
+            expected_keys = [
+                "_id",
+                "user",
+                "authstrat",
+                "wsid",
+                "status",
+                "updated",
+                "job_input",
+            ]
 
-        expected_keys = [
-            "_id",
-            "user",
-            "authstrat",
-            "wsid",
-            "status",
-            "updated",
-            "job_input",
-        ]
+            self.assertCountEqual(job.keys(), expected_keys)
+            self.assertEqual(job["user"], j.user)
+            self.assertEqual(job["authstrat"], "kbaseworkspace")
+            self.assertEqual(job["wsid"], j.wsid)
 
-        meta = {"collection": "ee2_jobs"}
-
-        self.assertCountEqual(result.keys(), expected_keys)
-        self.assertEqual(result["user"], j.user)
-        self.assertEqual(result["authstrat"], "kbaseworkspace")
-        self.assertEqual(result["wsid"], j.wsid)
-
-        # self.assertFalse(result["error"])
-        # self.assertFalse(result.get("job_input"))
-        # self.assertFalse(result.get("job_output"))
-
-        self.test_collection.delete_one({"_id": j.id})
-        self.assertEqual(self.test_collection.count_documents({}), 0)
+            mongo_util.get_job(job_id=j.id).delete()
+            self.assertEqual(ori_job_count, Job.objects.count())
 
     def test_insert_one_ok(self):
         mongo_util = self.getMongoUtil()
@@ -131,16 +157,16 @@ class MongoUtilTest(unittest.TestCase):
                 self.config["mongo-jobs-collection"]
             ]
 
-            self.assertEqual(col.count_documents({}), 0)
+            ori_job_count = col.count_documents({})
             doc = {"test_key": "foo"}
             job_id = mongo_util.insert_one(doc)
-            self.assertEqual(col.count_documents({}), 1)
+            self.assertEqual(ori_job_count, col.count_documents({}) - 1)
 
             result = list(col.find({"_id": ObjectId(job_id)}))[0]
             self.assertEqual(result["test_key"], "foo")
 
             col.delete_one({"_id": ObjectId(job_id)})
-            self.assertEqual(col.count_documents({}), 0)
+            self.assertEqual(col.count_documents({}), ori_job_count)
 
     def test_find_in_ok(self):
         mongo_util = self.getMongoUtil()
@@ -153,10 +179,10 @@ class MongoUtilTest(unittest.TestCase):
                 self.config["mongo-jobs-collection"]
             ]
 
-            self.assertEqual(col.count_documents({}), 0)
+            ori_job_count = col.count_documents({})
             doc = {"test_key_1": "foo", "test_key_2": "bar"}
             job_id = mongo_util.insert_one(doc)
-            self.assertEqual(col.count_documents({}), 1)
+            self.assertEqual(ori_job_count, col.count_documents({}) - 1)
 
             # test query empty field
             elements = ["foobar"]
@@ -173,7 +199,7 @@ class MongoUtilTest(unittest.TestCase):
             self.assertEqual(doc.get("test_key_1"), "foo")
 
             col.delete_one({"_id": ObjectId(job_id)})
-            self.assertEqual(col.count_documents({}), 0)
+            self.assertEqual(col.count_documents({}), ori_job_count)
 
     def test_update_one_ok(self):
         mongo_util = self.getMongoUtil()
@@ -186,10 +212,10 @@ class MongoUtilTest(unittest.TestCase):
                 self.config["mongo-jobs-collection"]
             ]
 
-            self.assertEqual(col.count_documents({}), 0)
+            ori_job_count = col.count_documents({})
             doc = {"test_key_1": "foo"}
             job_id = mongo_util.insert_one(doc)
-            self.assertEqual(col.count_documents({}), 1)
+            self.assertEqual(ori_job_count, col.count_documents({}) - 1)
 
             elements = ["foo"]
             docs = mongo_util.find_in(elements, "test_key_1")
@@ -210,7 +236,7 @@ class MongoUtilTest(unittest.TestCase):
             self.assertEqual(docs.count(), 1)
 
             col.delete_one({"_id": ObjectId(job_id)})
-            self.assertEqual(col.count_documents({}), 0)
+            self.assertEqual(col.count_documents({}), ori_job_count)
 
     def test_delete_one_ok(self):
         mongo_util = MongoUtil(self.config)

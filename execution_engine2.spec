@@ -188,11 +188,11 @@ module execution_engine2 {
     funcdef start_job(StartJobParams params) returns () authentication required;
 
     /*
-        project: projecct certain fields to return. default None.
+        projection: projecct certain fields to return. default None.
     */
     typedef structure {
         job_id job_id;
-        list<string> project;
+        list<string> projection;
     } CheckJobParams;
 
     /*
@@ -209,7 +209,7 @@ module execution_engine2 {
 
     typedef structure {
         list<job_id> job_ids;
-        list<string> project;
+        list<string> projection;
     } CheckJobsParams;
 
     funcdef check_jobs(CheckJobsParams params) returns (CheckJobsResults) authentication required;
@@ -218,7 +218,7 @@ module execution_engine2 {
     */
     typedef structure {
         string workspace_id;
-        list<string> project;
+        list<string> projection;
     } CheckWorkspaceJobsParams;
     funcdef check_workspace_jobs(CheckWorkspaceJobsParams params) returns (CheckJobsResults) authentication required;
     typedef structure {

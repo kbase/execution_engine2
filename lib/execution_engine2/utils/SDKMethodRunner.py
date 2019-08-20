@@ -707,7 +707,7 @@ class SDKMethodRunner:
         with self.get_mongo_util().mongo_engine_connection():
             job.save()
 
-    def check_job(self, job_id, ctx, check_permission=True, project=[]):
+    def check_job(self, job_id, ctx, check_permission=True, projection=[]):
         """
         check_job: check and return job status for a given job_id
 
@@ -722,18 +722,11 @@ class SDKMethodRunner:
         if check_permission:
             self.check_permission_for_job(job_id=job_id, ctx=ctx, write=False)
 
-        job_state = self.get_mongo_util().get_job(job_id=job_id).to_mongo().to_dict()
-
-        if project:
-            for key in project:
-                try:
-                    del job_state[key]
-                except KeyError:
-                    pass
+        job_state = self.get_mongo_util().get_job(job_id=job_id, projection=projection).to_mongo().to_dict()
 
         return job_state
 
-    def check_jobs(self, job_ids, ctx, check_permission=True, project=[]):
+    def check_jobs(self, job_ids, ctx, check_permission=True, projection=[]):
         """
         check_jobs: check and return job status for a given of list job_ids
 
@@ -747,11 +740,11 @@ class SDKMethodRunner:
             job_states[job_id] = self.check_job(job_id,
                                                 ctx,
                                                 check_permission=check_permission,
-                                                project=project)
+                                                projection=projection)
 
         return job_states
 
-    def check_workspace_jobs(self, workspace_id, ctx, project=[]):
+    def check_workspace_jobs(self, workspace_id, ctx, projection=[]):
         """
         check_workspace_jobs: check job status for all jobs in a given workspace
         """
@@ -763,6 +756,6 @@ class SDKMethodRunner:
             )
 
         job_ids = [str(job.id) for job in Job.objects(wsid=workspace_id)]
-        job_states = self.check_jobs(job_ids, ctx, check_permission=False, project=project)
+        job_states = self.check_jobs(job_ids, ctx, check_permission=False, projection=projection)
 
         return job_states

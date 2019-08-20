@@ -13,7 +13,7 @@ class execution_engine2:
     execution_engine2
 
     Module Description:
-
+    
     '''
 
     ######## WARNING FOR GEVENT USERS ####### noqa
@@ -24,7 +24,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "d09046654faf1bb170c7e4f90728d77965668f22"
+    GIT_COMMIT_HASH = "f113452757d11a979ae138ab77c64d7a7fb60f0b"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -360,10 +360,10 @@ class execution_engine2:
     def check_job(self, ctx, params):
         """
         get current status of a job
-        :param params: instance of type "CheckJobParams" (project: projecct
-           certain fields to return. default None.) -> structure: parameter
-           "job_id" of type "job_id" (A job id.), parameter "project" of list
-           of String
+        :param params: instance of type "CheckJobParams" (projection:
+           projecct certain fields to return. default None.) -> structure:
+           parameter "job_id" of type "job_id" (A job id.), parameter
+           "projection" of list of String
         :returns: instance of unspecified object
         """
         # ctx is the context object
@@ -373,7 +373,7 @@ class execution_engine2:
         job_state = mr.check_job(
             params.get("job_id"),
             ctx,
-            project=params.get("project", ["job_output"]),
+            projection=params.get("projection", ["job_output"]),
         )
         #END check_job
 
@@ -388,7 +388,7 @@ class execution_engine2:
         """
         :param params: instance of type "CheckJobsParams" -> structure:
            parameter "job_ids" of list of type "job_id" (A job id.),
-           parameter "project" of list of String
+           parameter "projection" of list of String
         :returns: instance of type "CheckJobsResults" (job_states - states of
            jobs) -> structure: parameter "job_states" of mapping from type
            "job_id" (A job id.) to unspecified object
@@ -401,7 +401,7 @@ class execution_engine2:
         returnVal = mr.check_jobs(
             params.get("job_ids"),
             ctx,
-            project=params.get("project", ["job_output"]),
+            projection=params.get("projection", ["job_output"]),
         )
         #END check_jobs
 
@@ -416,7 +416,7 @@ class execution_engine2:
         """
         :param params: instance of type "CheckWorkspaceJobsParams" (Check job
            for all jobs in a given workspace) -> structure: parameter
-           "workspace_id" of String, parameter "project" of list of String
+           "workspace_id" of String, parameter "projection" of list of String
         :returns: instance of type "CheckJobsResults" (job_states - states of
            jobs) -> structure: parameter "job_states" of mapping from type
            "job_id" (A job id.) to unspecified object
@@ -428,7 +428,7 @@ class execution_engine2:
         returnVal = mr.check_workspace_jobs(
             params.get("workspace_id"),
             ctx,
-            project=params.get("project", ["job_output"]),
+            projection=params.get("projection", ["job_output"]),
         )
         #END check_workspace_jobs
 
