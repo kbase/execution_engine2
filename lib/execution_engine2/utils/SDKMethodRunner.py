@@ -719,10 +719,10 @@ class SDKMethodRunner:
         if not job_id:
             raise ValueError("Please provide valid job_id")
 
-        if check_permission:
-            self.check_permission_for_job(job_id=job_id, ctx=ctx, write=False)
-
-        job_state = self.get_mongo_util().get_job(job_id=job_id, projection=projection).to_mongo().to_dict()
+        job_state = self.check_jobs([job_id],
+                                    ctx,
+                                    check_permission=check_permission,
+                                    projection=projection).get(job_id)
 
         return job_state
 
@@ -734,13 +734,13 @@ class SDKMethodRunner:
 
         logging.info("Start fetching status for jobs: {}".format(job_ids))
 
-        job_states = dict()
+        if check_permission:
+            for job_id in job_ids:
+                self.check_permission_for_job(job_id=job_id, ctx=ctx, write=False)
 
-        for job_id in job_ids:
-            job_states[job_id] = self.check_job(job_id,
-                                                ctx,
-                                                check_permission=check_permission,
-                                                projection=projection)
+        jobs = self.get_mongo_util().get_jobs(job_ids=job_ids, projection=projection)
+
+        job_states = {str(job.id): job.to_mongo().to_dict() for job in jobs}
 
         return job_states
 
@@ -756,6 +756,10 @@ class SDKMethodRunner:
             )
 
         job_ids = [str(job.id) for job in Job.objects(wsid=workspace_id)]
+
+        if not job_ids:
+            return {}
+
         job_states = self.check_jobs(job_ids, ctx, check_permission=False, projection=projection)
 
         return job_states

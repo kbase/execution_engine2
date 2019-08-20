@@ -187,6 +187,29 @@ class MongoUtil:
 
         return job
 
+    def get_jobs(self, job_ids=None, projection=None):
+        if not (job_ids and isinstance(job_ids, list)):
+            raise ValueError("Please provide a non empty list of job ids")
+        with self.mongo_engine_connection():
+            try:
+                if projection:
+                    if not isinstance(projection, list):
+                        raise ValueError("Please input a list type projection")
+                    jobs = Job.objects(id__in=job_ids).exclude(*projection)
+                else:
+                    jobs = Job.objects(id__in=job_ids)
+            except Exception:
+                raise ValueError(
+                    "Unable to find job:\nError:\n{}".format(traceback.format_exc())
+                )
+
+            if not jobs:
+                raise RecordNotFoundException(
+                    "Cannot find job with ids: {}".format(job_ids)
+                )
+
+        return jobs
+
     def update_job_status(self, job_id, status):
         """
         A job in status created can be estimating/running/error/terminated

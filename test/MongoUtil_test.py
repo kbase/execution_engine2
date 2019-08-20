@@ -116,6 +116,47 @@ class MongoUtilTest(unittest.TestCase):
             ]
             self.assertCountEqual(job.keys(), expected_keys)
 
+    def test_get_jobs_ok(self):
+
+        mongo_util = self.getMongoUtil()
+
+        with mongo_util.mongo_engine_connection():
+            ori_job_count = Job.objects.count()
+            job = get_example_job()
+            job_id_1 = job.save().id
+            job = get_example_job()
+            job_id_2 = job.save().id
+            self.assertEqual(ori_job_count, Job.objects.count() - 2)
+
+            # get jobs with no projection
+            jobs = mongo_util.get_jobs(job_ids=[job_id_1, job_id_2])
+
+            expected_keys = [
+                "_id",
+                "user",
+                "authstrat",
+                "wsid",
+                "status",
+                "updated",
+                "job_input",
+            ]
+
+            for job in jobs:
+                self.assertCountEqual(job.to_mongo().to_dict().keys(), expected_keys)
+
+            # get jobs with multiple projection
+            jobs = mongo_util.get_jobs(job_ids=[job_id_1, job_id_2], projection=["user", "wsid"])
+
+            expected_keys = [
+                "_id",
+                "authstrat",
+                "status",
+                "updated",
+                "job_input",
+            ]
+            for job in jobs:
+                self.assertCountEqual(job.to_mongo().to_dict().keys(), expected_keys)
+
     def test_connection_ok(self):
 
         mongo_util = self.getMongoUtil()
