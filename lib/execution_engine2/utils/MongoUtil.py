@@ -170,11 +170,6 @@ class MongoUtil:
 
         job = self.get_jobs(job_ids=[job_id], projection=projection)[0]
 
-        if not job:
-            raise RecordNotFoundException(
-                "Cannot find job with id: {}".format(job_id)
-            )
-
         return job
 
     def get_jobs(self, job_ids=None, projection=None):
