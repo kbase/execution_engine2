@@ -755,7 +755,8 @@ class SDKMethodRunner:
                 "User {} does not have permissions to get status for wsid: {}".format(ctx['user_id'], workspace_id)
             )
 
-        job_ids = [str(job.id) for job in Job.objects(wsid=workspace_id)]
+        with self.get_mongo_util().mongo_engine_connection():
+            job_ids = [str(job.id) for job in Job.objects(wsid=workspace_id)]
 
         if not job_ids:
             return {}
