@@ -116,6 +116,9 @@ class MongoUtilTest(unittest.TestCase):
             ]
             self.assertCountEqual(job.keys(), expected_keys)
 
+            mongo_util.get_job(job_id=job_id).delete()
+            self.assertEqual(ori_job_count, Job.objects.count())
+
     def test_get_jobs_ok(self):
 
         mongo_util = self.getMongoUtil()
@@ -156,6 +159,10 @@ class MongoUtilTest(unittest.TestCase):
             ]
             for job in jobs:
                 self.assertCountEqual(job.to_mongo().to_dict().keys(), expected_keys)
+
+            mongo_util.get_job(job_id=job_id_1).delete()
+            mongo_util.get_job(job_id=job_id_2).delete()
+            self.assertEqual(ori_job_count, Job.objects.count())
 
     def test_connection_ok(self):
 

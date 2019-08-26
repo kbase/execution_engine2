@@ -7,6 +7,7 @@ import unittest
 from configparser import ConfigParser
 from datetime import timedelta
 from unittest.mock import patch
+import json
 
 from mock import MagicMock
 from bson import ObjectId
@@ -723,19 +724,21 @@ class SDKMethodRunner_test(unittest.TestCase):
 
             # test check_job
             job_state = runner.check_job(job_id, ctx)
+            json.dumps(job_state)  # make sure it's JSON serializable
             self.assertEqual(job_state["status"], "created")
-            self.assertEqual(job_state["wsid"], 9999)
+            self.assertEqual(job_state["wsid"], "9999")
 
             # test check_job with projection
             job_state = runner.check_job(job_id, ctx, projection=["status"])
             self.assertFalse("status" in job_state.keys())
-            self.assertEqual(job_state["wsid"], 9999)
+            self.assertEqual(job_state["wsid"], "9999")
 
             # test check_jobs
             job_states = runner.check_jobs([job_id], ctx)
+            json.dumps(job_states)  # make sure it's JSON serializable
             self.assertTrue(job_id in job_states)
             self.assertEqual(job_states[job_id]["status"], "created")
-            self.assertEqual(job_states[job_id]["wsid"], 9999)
+            self.assertEqual(job_states[job_id]["wsid"], "9999")
 
             # test check_jobs with projection
             job_states = runner.check_jobs([job_id], ctx, projection=["wsid"])
@@ -745,9 +748,10 @@ class SDKMethodRunner_test(unittest.TestCase):
 
             # test check_workspace_jobs
             job_states = runner.check_workspace_jobs(9999, ctx)
+            json.dumps(job_states)  # make sure it's JSON serializable
             self.assertTrue(job_id in job_states)
             self.assertEqual(job_states[job_id]["status"], "created")
-            self.assertEqual(job_states[job_id]["wsid"], 9999)
+            self.assertEqual(job_states[job_id]["wsid"], "9999")
 
             # test check_workspace_jobs with projection
             job_states = runner.check_workspace_jobs(9999, ctx, projection=["wsid"])

@@ -740,7 +740,7 @@ class SDKMethodRunner:
 
         jobs = self.get_mongo_util().get_jobs(job_ids=job_ids, projection=projection)
 
-        job_states = {str(job.id): job.to_mongo().to_dict() for job in jobs}
+        job_states = {str(job.id): {k: str(v) for k, v in job.to_mongo().to_dict().items()} for job in jobs}
 
         return job_states
 
