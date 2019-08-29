@@ -181,6 +181,21 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 "source_ws_objects": ["a/b/c", "e/d"],
                 "parent_job_id": "9998",
             }
+            job_params = {
+                "wsid": self.ws_id,
+                "method": "MEGAHIT.run_megahit",
+                "app_id": "MEGAHIT/run_megahit",
+                "service_ver": "2.2.1",
+                "params": [{"workspace_name": "wjriehl:1475006266615",
+                            "read_library_refs": ["18836/5/1"],
+                            "output_contigset_name": "rhodo_contigs",
+                            "recipe": "auto",
+                            "assembler": None,
+                            "pipeline": None,
+                            "min_contig_len": None}],
+                "source_ws_objects": ["a/b/c", "e/d"],
+                "parent_job_id": "9998",
+                'meta': {'tag': 'dev', 'token_id': '12345'}}
 
             job_id = runner._init_job_rec(self.user_id, job_params)
 
@@ -200,6 +215,11 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_input.service_ver, "2.2.1")
             self.assertCountEqual(job_input.source_ws_objects, ["a/b/c", "e/d"])
             self.assertEqual(job_input.parent_job_id, "9998")
+
+            narrative_cell_info = job_input.narrative_cell_info
+            self.assertEqual(narrative_cell_info.tag, 'dev')
+            self.assertEqual(narrative_cell_info.token_id, '12345')
+            self.assertFalse(narrative_cell_info.status)
 
             self.assertFalse(job.job_output)
 

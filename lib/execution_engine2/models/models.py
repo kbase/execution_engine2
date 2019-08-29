@@ -237,7 +237,6 @@ class Job(Document):
     status = StringField(required=True, validation=valid_status)
 
     updated = DateTimeField(default=datetime.datetime.utcnow, autonow=True)
-    started = DateTimeField(default=None)
     # id.generation_time = created
     estimating = DateTimeField(default=None)  # Time when job began estimating
     running = DateTimeField(default=None)  # Time when job started
