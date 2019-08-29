@@ -171,21 +171,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 "method": "MEGAHIT.run_megahit",
                 "app_id": "MEGAHIT/run_megahit",
                 "service_ver": "2.2.1",
-                "params": [
-                    {
-                        "k_list": [],
-                        "k_max": None,
-                        "output_contigset_name": "MEGAHIT.contigs",
-                    }
-                ],
-                "source_ws_objects": ["a/b/c", "e/d"],
-                "parent_job_id": "9998",
-            }
-            job_params = {
-                "wsid": self.ws_id,
-                "method": "MEGAHIT.run_megahit",
-                "app_id": "MEGAHIT/run_megahit",
-                "service_ver": "2.2.1",
                 "params": [{"workspace_name": "wjriehl:1475006266615",
                             "read_library_refs": ["18836/5/1"],
                             "output_contigset_name": "rhodo_contigs",
