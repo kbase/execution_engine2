@@ -1,8 +1,8 @@
 version: "3.2"
 
 services:
-  condor:
-    image: kbase/ee2:local_condor
+  ee2:
+    image: kbase/execution_engine2:test 
     ports: ["23:22"]
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup
@@ -10,22 +10,19 @@ services:
     privileged: true
     environment:
       - POOL_PASSWORD=password
-    #entrypoint: /start_condor.sh
-    entrypoint: /start_condor_dummy.sh
-
 
   mongo:
     image: mongo:latest
     ports: ["27017:27017"]
     env_file: docker-compose.env
 
-  interpreter:
-    image: kbase/ee2:local_condor
-    volumes:
-      - ./condor_config:/etc/condor/config.d/
-    environment:
-      - POOL_PASSWORD=password
-    entrypoint: /start_condor_dummy.sh
+  #condor:
+  #  image: kbase/ee2:local_condor
+  #  volumes:
+  #    - ./condor_config:/etc/condor/config.d/
+  #  environment:
+  #    - POOL_PASSWORD=password
+  #  entrypoint: /start_condor_dummy.sh
   
 
 
