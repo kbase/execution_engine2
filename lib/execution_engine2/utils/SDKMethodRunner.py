@@ -771,10 +771,19 @@ class SDKMethodRunner:
 
         jobs = self.get_mongo_util().get_jobs(job_ids=job_ids, projection=projection)
 
-        job_states = {
-            str(job.id): {k: str(v) for k, v in job.to_mongo().to_dict().items()}
-            for job in jobs
-        }
+        for job in jobs:
+            mongo_rec = job.to_mongo().to_dict()
+            mongo_rec['_id'] = str(job.id)
+            mongo_rec['created'] = str(job.id.generation_time)
+            mongo_rec['updated'] = str(job.updated)
+            if job.estimating:
+                mongo_rec['estimating'] = str(job.estimating)
+            if job.running:
+                mongo_rec['running'] = str(job.running)
+            if job.finished:
+                mongo_rec['finished'] = str(job.finished)
+
+            job_states[str(job.id)] = mongo_rec
 
         return job_states
 
