@@ -771,6 +771,7 @@ class SDKMethodRunner:
 
         jobs = self.get_mongo_util().get_jobs(job_ids=job_ids, projection=projection)
 
+        job_states = dict()
         for job in jobs:
             mongo_rec = job.to_mongo().to_dict()
             mongo_rec['_id'] = str(job.id)
