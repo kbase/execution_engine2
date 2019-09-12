@@ -739,14 +739,18 @@ class SDKMethodRunner:
         with self.get_mongo_util().mongo_engine_connection():
             job.save()
 
-    def check_job(self, job_id, ctx, check_permission=True, projection=[]):
+    def check_job(self, job_id, ctx, check_permission=True, projection=None):
         """
         check_job: check and return job status for a given job_id
 
         Parameters:
         job_id: id of job
         """
+
         logging.info("Start fetching status for job: {}".format(job_id))
+
+        if not projection:
+            projection = []
 
         if not job_id:
             raise ValueError("Please provide valid job_id")
@@ -757,13 +761,16 @@ class SDKMethodRunner:
 
         return job_state
 
-    def check_jobs(self, job_ids, ctx, check_permission=True, projection=[]):
+    def check_jobs(self, job_ids, ctx, check_permission=True, projection=None):
         """
         check_jobs: check and return job status for a given of list job_ids
 
         """
 
         logging.info("Start fetching status for jobs: {}".format(job_ids))
+
+        if not projection:
+            projection = []
 
         if check_permission:
             for job_id in job_ids:
@@ -788,13 +795,16 @@ class SDKMethodRunner:
 
         return job_states
 
-    def check_workspace_jobs(self, workspace_id, ctx, projection=[]):
+    def check_workspace_jobs(self, workspace_id, ctx, projection=None):
         """
         check_workspace_jobs: check job status for all jobs in a given workspace
         """
         logging.info(
             "Start fetching all jobs status in workspace: {}".format(workspace_id)
         )
+
+        if not projection:
+            projection = []
 
         if not self._can_read_ws(
             self.get_permissions_for_workspace(wsid=workspace_id, ctx=ctx)
