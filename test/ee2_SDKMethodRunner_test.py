@@ -706,7 +706,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             ori_job_count = Job.objects.count()
             job_id = self.create_job_rec()
             job = self.mongo_util.get_job(job_id=job_id)
-            print(job.status)
+            self.assertEqual(ori_job_count, Job.objects.count() - 1)
 
         runner = self.getRunner()
         runner.check_permission_for_job = MagicMock(return_value=True)
@@ -722,9 +722,29 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner.finish_job(job_id, ctx, error_message="error message")
 
         job = self.mongo_util.get_job(job_id=job_id)
+
         self.assertEqual(job.status, "error")
         self.assertEqual(job.errormsg, "error message")
+        self.assertEqual(job.error_code, 1)
+        self.assertIsNone(job.error)
         self.assertTrue(job.finished)
+
+        with self.mongo_util.mongo_engine_connection():
+            job_id = runner.update_job_status(job_id, "running", ctx)  # put job back to running status
+
+        error = {"message": "error message",
+                 "code'": -32000,
+                 "name": "Server error",
+                 "error": """Traceback (most recent call last):\n  File "/kb/module/bin/../lib/simpleapp/simpleappServer.py"""}
+
+        runner.finish_job(job_id, ctx, error_message="error message", error=error, error_code=0)
+
+        job = self.mongo_util.get_job(job_id=job_id)
+
+        self.assertEqual(job.status, "error")
+        self.assertEqual(job.errormsg, "error message")
+        self.assertEqual(job.error_code, 0)
+        self.assertCountEqual(job.error, error)
 
         self.mongo_util.get_job(job_id=job_id).delete()
         self.assertEqual(ori_job_count, Job.objects.count())

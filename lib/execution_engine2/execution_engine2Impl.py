@@ -24,9 +24,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "e8d5a7b9c26bea9dbcfb5f30dd79b43335f43143"
-
-
+    GIT_COMMIT_HASH = "57951e6ea54aa02d2da166e0acc62ceaef620e11"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -327,7 +325,11 @@ class execution_engine2:
            optional if job is finished with error job_output: job output if
            job completed successfully) -> structure: parameter "job_id" of
            type "job_id" (A job id.), parameter "error_message" of String,
-           parameter "job_output" of unspecified object
+           parameter "error_code" of Long, parameter "error" of type
+           "JsonRpcError" (Error block of JSON RPC response) -> structure:
+           parameter "name" of String, parameter "code" of Long, parameter
+           "message" of String, parameter "error" of String, parameter
+           "job_output" of unspecified object
         """
         # ctx is the context object
         #BEGIN finish_job
@@ -335,6 +337,8 @@ class execution_engine2:
         mr.finish_job(params.get('job_id'),
                       ctx,
                       error_message=params.get('error_message'),
+                      error_code=params.get('error_code'),
+                      error=params.get('error'),
                       job_output=params.get('job_output'))
 
         #END finish_job

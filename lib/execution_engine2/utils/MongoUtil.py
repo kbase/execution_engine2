@@ -227,7 +227,7 @@ class MongoUtil:
             j.status = Status.terminated.value
             j.save()
 
-    def finish_job_with_error(self, job_id, error_message, error_code):
+    def finish_job_with_error(self, job_id, error_message, error_code, error):
         """
         #TODO Should we check for a valid state transition here also?
         :param job_id:
@@ -240,6 +240,7 @@ class MongoUtil:
             j = self.get_job(job_id, projection=None)
             j.error_code = error_code
             j.errormsg = error_message
+            j.error = error
             j.status = Status.error.value
             j.finished = datetime.datetime.utcnow()
             j.save()

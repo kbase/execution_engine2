@@ -184,6 +184,17 @@ class ErrorCode(Enum):
     token_expired = 5
 
 
+class Error(EmbeddedDocument):
+    """
+    Storing detailed error information. Possibly coming from the JobRunner
+    """
+
+    message = StringField()
+    code = IntField()
+    name = StringField()
+    error = StringField()
+
+
 class TerminatedCode(Enum):
     """
     Reasons for why the job was cancelled
@@ -246,6 +257,7 @@ class Job(Document):
     finished = DateTimeField(default=None)
     errormsg = StringField()
     msg = StringField()
+    error = DynamicField()
 
     terminated_code = IntField(validation=valid_termination_code)
     error_code = IntField(validation=valid_errorcode)

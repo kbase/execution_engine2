@@ -171,6 +171,8 @@ module execution_engine2 {
     typedef structure {
         job_id job_id;
         string error_message;
+        int error_code;
+        JsonRpcError error;
         UnspecifiedObject job_output;
     } FinishJobParams;
     /*
