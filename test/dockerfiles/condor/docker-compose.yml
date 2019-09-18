@@ -1,6 +1,18 @@
 version: "3.2"
 
 services:
+  ee2-dev:
+    image: kbase/execution_engine2:develop
+    volumes:
+        - /sys/fs/cgroup:/sys/fs/cgroup
+        - /Users:/Users
+    privileged: true
+    environment:
+        - POOL_PASSWORD=password
+    depends_on: ["mongo"]
+    links:
+        - mongo
+
   condor:
     image: kbase/ee2:local_condor
     ports: ["23:22"]
@@ -26,7 +38,7 @@ services:
     environment:
       - POOL_PASSWORD=password
     entrypoint: /start_condor_dummy.sh
-  
+
 
 
 ##########################################
