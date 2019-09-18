@@ -40,7 +40,7 @@ class Condor(Scheduler):
     AUTH_TOKEN = "KB_ADMIN_AUTH_TOKEN"
     DOCKER_TIMEOUT = "docker_timeout"
     POOL_USER = "pool_user"
-    INITIAL_DIR = "initial_dir"
+    INITIAL_DIR = "initialdir"
     LEAVE_JOB_IN_QUEUE = "leavejobinqueue"
     TRANSFER_INPUT_FILES = "transfer_input_files"
     PYTHON_EXECUTABLE = "PYTHON_EXECUTABLE"

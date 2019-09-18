@@ -13,7 +13,7 @@ class execution_engine2:
     execution_engine2
 
     Module Description:
-    
+
     '''
 
     ######## WARNING FOR GEVENT USERS ####### noqa
@@ -54,7 +54,7 @@ class execution_engine2:
                        'shock-url', 'handle-url', 'auth-service-url', 'auth-service-url-v2',
                        'auth-service-url-allow-insecure',
                        'scratch', 'executable', 'docker_timeout',
-                       'intialdir', 'transfer_input_files']
+                       'initialdir', 'transfer_input_files']
 
         returnVal = {key: self.config.get(key) for key in public_keys}
 
