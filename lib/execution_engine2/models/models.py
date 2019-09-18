@@ -240,8 +240,6 @@ class Job(Document):
     the job and the portal process for the rest of the time
     """
 
-    assert False
-
     # id.generation_time = created
     user = StringField(required=True)
     authstrat = StringField(
