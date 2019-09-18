@@ -31,6 +31,10 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         cls.ctx = {"job_id": "test", "user_id": "test", "token": "test"}
         cls.mongo_util = MongoUtil(cls.config)
 
+    def test_MUST_FAIL(self):
+        "bwahahaha"
+        self.assertTrue(False)
+
     def test_insert_job(self):
         logging.info("Testing insert job")
         with self.mongo_util.mongo_engine_connection(), self.mongo_util.pymongo_client(
