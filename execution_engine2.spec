@@ -34,6 +34,7 @@ module execution_engine2 {
         int tasks_in_queue;
         mapping<string, string> config;
         string git_commit;
+        timestamp servertime;
     } Status;
 
     /*

@@ -13,7 +13,6 @@ STARTUP_SCRIPT_NAME = start_server.sh
 TEST_SCRIPT_NAME = run_tests.sh
 CONDOR_DOCKER_IMAGE_TAG_NAME = kbase/ee2:condor_test_instance
 
-
 .PHONY: test
 
 default: compile
@@ -60,7 +59,7 @@ build-test-script:
 	echo 'python -m nose --with-coverage --cover-package=$(SERVICE_CAPS) --cover-html --cover-html-dir=/kb/module/work/test_coverage --nocapture --nologcapture .' >> $(TEST_DIR)/$(TEST_SCRIPT_NAME)
 	chmod +x $(TEST_DIR)/$(TEST_SCRIPT_NAME)
 
-TEST_FILES = test/ee2_scheduler_test.py test/ee2_SDKMethodRunner_test.py test/ee2_MongoUtil_test.py test/ee2_models_test.py
+TEST_FILES = test/ee2_scheduler_test.py test/ee2_SDKMethodRunner_test.py test/ee2_MongoUtil_test.py test/ee2_models_test.py test/ee2_server_test.py
 
 setup-database:
 	# Set up travis user in mongo
@@ -71,6 +70,7 @@ test:
 	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_scheduler_test.py
 	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_SDKMethodRunner_test.py
 	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_MongoUtil_test.py
+	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_server_test.py
 
 test-models:
 	# Requires travis user to be set up

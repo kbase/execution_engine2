@@ -2,7 +2,7 @@
 #BEGIN_HEADER
 
 from execution_engine2.utils.SDKMethodRunner import SDKMethodRunner
-
+from datetime import datetime
 
 #END_HEADER
 
@@ -13,7 +13,7 @@ class execution_engine2:
     execution_engine2
 
     Module Description:
-    
+
     '''
 
     ######## WARNING FOR GEVENT USERS ####### noqa
@@ -123,8 +123,11 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: returnVal
         #BEGIN status
-        mr = SDKMethodRunner(self.config)
-        returnVal = mr.status()
+        returnVal = {
+            "servertime": datetime.now().isoformat(),
+            "gitcommit": self.GIT_COMMIT_HASH
+        }
+
         #END status
 
         # At some point might do deeper type checking...

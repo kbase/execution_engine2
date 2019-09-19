@@ -150,7 +150,7 @@ def validate_job_state(state):
     # 3. Make sure timestamps are really timestamps
     bad_ts = list()
     for ts_type in timestamp_fields:
-        if ts_type in state and not _is_timestamp(state[ts_type]):
+        if ts_type in state and not is_timestamp(state[ts_type]):
             bad_ts.append(ts_type)
     if bad_ts:
         for ts_type in bad_ts:
@@ -158,7 +158,7 @@ def validate_job_state(state):
 
     return True
 
-def _is_timestamp(ts: str):
+def is_timestamp(ts: str):
     """
     Simple enough - if dateutil.parser likes the string, it's a time string and we return True.
     Otherwise, return False.

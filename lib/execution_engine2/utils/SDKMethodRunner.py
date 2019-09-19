@@ -4,7 +4,6 @@ import os
 import re
 from datetime import datetime
 from enum import Enum
-from time import time
 
 import dateutil
 import requests
@@ -323,10 +322,6 @@ class SDKMethodRunner:
         logging.basicConfig(
             format="%(created)s %(levelname)s: %(message)s", level=logging.debug
         )
-
-    @staticmethod
-    def status():
-        return {"servertime": f"{time()}"}
 
     def cancel_job(self, job_id, ctx, terminated_code=None):
         """
