@@ -1,6 +1,5 @@
 import unittest
 import os
-import json
 from configparser import ConfigParser
 
 from lib.execution_engine2.execution_engine2Impl import execution_engine2
