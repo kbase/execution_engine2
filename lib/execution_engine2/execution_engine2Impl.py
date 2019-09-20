@@ -126,8 +126,8 @@ class execution_engine2:
         # return variables are: returnVal
         #BEGIN status
         returnVal = {
-            "servertime": datetime.now().isoformat(),
-            "gitcommit": self.GIT_COMMIT_HASH,
+            "server_time": datetime.now().isoformat(),
+            "git_commit": self.GIT_COMMIT_HASH,
             "version": self.VERSION,
             "service": self.SERVICE_NAME
         }

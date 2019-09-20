@@ -18,23 +18,23 @@ module execution_engine2 {
 
     /*
         A structure representing the Execution Engine status
+        git_commit - the Git hash of the version of the module.
+        version - the semantic version for the module.
+        service - the name of the service.
+        server_time - the current server timestamp (as a timestamp, above)
+
+        # TODO - add some or all of the following
         reboot_mode - if 1, then in the process of rebooting
         stopping_mode - if 1, then in the process of stopping
         running_tasks_total - number of total running jobs
         running_tasks_per_user - mapping from user id to number of running jobs for that user
         tasks_in_queue - number of jobs in the queue that are not running
-        config - the current service configuration (see also list_config())
-        git_commit - the Git commit string denoting the deployed version of EE2
     */
     typedef structure {
-        boolean reboot_mode;
-        boolean stopping_mode;
-        int running_tasks_total;
-        mapping<string, int> running_tasks_per_user;
-        int tasks_in_queue;
-        mapping<string, string> config;
         string git_commit;
-        timestamp servertime;
+        string version;
+        string service;
+        timestamp server_time;
     } Status;
 
     /*

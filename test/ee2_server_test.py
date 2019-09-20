@@ -1,9 +1,9 @@
 import unittest
 import os
 from configparser import ConfigParser
-
 from lib.execution_engine2.execution_engine2Impl import execution_engine2
 from .test_utils import is_timestamp
+
 
 class EE2ServerTest(unittest.TestCase):
 
@@ -21,8 +21,8 @@ class EE2ServerTest(unittest.TestCase):
 
     def test_status(self):
         status = self.impl.status(self.ctx)[0]
-        self.assertTrue(is_timestamp(status.get('servertime')))
-        self.assertIsNotNone(status.get('gitcommit'))
+        self.assertTrue(is_timestamp(status.get('server_time')))
+        self.assertIsNotNone(status.get('git_commit'))
         self.assertIsNotNone(status.get('version'))
         self.assertEqual(status.get('version'), self.impl.VERSION)
         self.assertEqual(status.get('service'), self.impl.SERVICE_NAME)
