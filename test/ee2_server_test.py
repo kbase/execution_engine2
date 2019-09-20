@@ -24,3 +24,10 @@ class EE2ServerTest(unittest.TestCase):
         status = self.impl.status(self.ctx)[0]
         self.assertTrue(is_timestamp(status.get('servertime')))
         self.assertIsNotNone(status.get('gitcommit'))
+        self.assertIsNotNone(status.get('version'))
+        self.assertEqual(status.get('version'), self.impl.VERSION)
+        self.assertEqual(status.get('service'), self.impl.SERVICE_NAME)
+
+    def test_version(self):
+        version = self.impl.ver(self.ctx)[0]
+        self.assertEqual(version, self.impl.VERSION)

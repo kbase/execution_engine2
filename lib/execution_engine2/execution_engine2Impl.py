@@ -30,6 +30,8 @@ class execution_engine2:
     MONGO_COLLECTION = "jobs"
     MONGO_AUTHMECHANISM = "DEFAULT"
 
+    SERVICE_NAME = "KBase Execution Engine"
+
     #END_CLASS_HEADER
 
     # config contains contents of config file in a hash or None if it couldn't
@@ -125,7 +127,9 @@ class execution_engine2:
         #BEGIN status
         returnVal = {
             "servertime": datetime.now().isoformat(),
-            "gitcommit": self.GIT_COMMIT_HASH
+            "gitcommit": self.GIT_COMMIT_HASH,
+            "version": self.VERSION,
+            "service": self.SERVICE_NAME
         }
 
         #END status
