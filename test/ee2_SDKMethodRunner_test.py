@@ -1019,101 +1019,99 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                     self.assertTrue(ts <= tomorrow.timestamp())
             self.assertEqual(2, count)
 
-            # print(
-            #     "Test case 2A. Retrieving Jobs from last_month and tomorrow_max (last_month, last_week, yesterday and now jobs) "
-            # )
-            #
-            # job_state = runner.check_jobs_date_range_for_user(
-            #     ctx=ctx,
-            #     creation_end_date=str(tomorrow),
-            #     creation_start_date=str(last_month_and_1_hour),
-            #     user='ALL'
-            # )
-            #
-            # count = 0
-            # for key in job_state.keys():
-            #     js = job_state[key]
-            #     print("Job is id", key, js["_id"])
-            #
-            #     if key in new_job_ids:
-            #         count += 1
-            #         self.assertEqual(js["status"], "created")
-            #         date = dateutil.parser.parse(js["created"])
-            #         ts = date.timestamp()
-            #         print(date, last_week, tomorrow)
-            #         print(ts, last_week.timestamp(), tomorrow.timestamp())
-            #         self.assertTrue(ts > last_month_and_1_hour.timestamp())
-            #         self.assertTrue(ts < tomorrow.timestamp())
-            # self.assertEqual(4, count)
-            #
-            # print("Found all of the jobs", len(new_job_ids))
-            #
-            # with self.assertRaises(Exception) as context:
-            #     job_state = runner.check_jobs_date_range_for_user(
-            #         ctx=ctx,
-            #         creation_end_date=str(yesterday),
-            #         creation_start_date=str(tomorrow),
-            #         user='ALL'
-            #     )
-            #     self.assertEqual(
-            #         "The start date cannot be greater than the end date.",
-            #         str(context.exception),
-            #     )
-            #
-            # print(
-            #     "Test case 2B. Same as above but with FAKE_TEST_USER) "
-            # )
-            #
-            # job_state = runner.check_jobs_date_range_for_user(
-            #     ctx=ctx,
-            #     creation_end_date=str(tomorrow),
-            #     creation_start_date=str(last_month_and_1_hour),
-            #     user='fake_test_user'
-            # )
-            #
-            # count = 0
-            # for key in job_state.keys():
-            #     js = job_state[key]
-            #     print("Job is id", key, js["_id"])
-            #
-            #     if key in new_job_ids:
-            #         count += 1
-            #         self.assertEqual(js["status"], "created")
-            #         date = dateutil.parser.parse(js["created"])
-            #         ts = date.timestamp()
-            #         print(date, last_week, tomorrow)
-            #         print(ts, last_week.timestamp(), tomorrow.timestamp())
-            #         self.assertTrue(ts > last_month_and_1_hour.timestamp())
-            #         self.assertTrue(ts < tomorrow.timestamp())
-            # self.assertEqual(4, count)
-            #
-            # print("Found all of the jobs", len(new_job_ids))
-            #
-            # print("Test case 3. Assert Raises error")
-            #
-            # with self.assertRaises(Exception) as context:
-            #     job_state = runner.check_jobs_date_range_for_user(
-            #         ctx=ctx,
-            #         creation_end_date=str(yesterday),
-            #         creation_start_date=str(tomorrow),
-            #         user='ALL'
-            #     )
-            #     self.assertEqual(
-            #         "The start date cannot be greater than the end date.",
-            #         str(context.exception),
-            #     )
-            #
-            # print("Test 4, find the original job")
-            # job_state = runner.check_jobs_date_range_for_user(
-            #     ctx=ctx,
-            #     creation_end_date=str(tomorrow),
-            #     creation_start_date=str(last_month_and_1_hour),
-            #     user='tgu2'
-            # )
-            # self.assertTrue(len(job_state.keys()) > 0)
-            # print(f"Checking {job_id}")
-            # self.assertEqual(job_state[job_id]['_id'], job_id)
-            # print(job_state)
+            print(
+                "Test case 2A. Retrieving Jobs from last_month and tomorrow_max (last_month, last_week, yesterday and now jobs) "
+            )
+
+            job_state = runner.check_jobs_date_range_for_user(
+                ctx=ctx,
+                creation_end_date=str(tomorrow),
+                creation_start_date=str(last_month_and_1_hour),
+                user="ALL",
+            )
+
+            count = 0
+            for key in job_state.keys():
+                js = job_state[key]
+                print("Job is id", key, js["_id"])
+
+                if key in new_job_ids:
+                    count += 1
+                    self.assertEqual(js["status"], "created")
+                    date = dateutil.parser.parse(js["created"])
+                    ts = date.timestamp()
+                    print(date, last_week, tomorrow)
+                    print(ts, last_week.timestamp(), tomorrow.timestamp())
+                    self.assertTrue(ts > last_month_and_1_hour.timestamp())
+                    self.assertTrue(ts < tomorrow.timestamp())
+            self.assertEqual(4, count)
+
+            print("Found all of the jobs", len(new_job_ids))
+
+            with self.assertRaises(Exception) as context:
+                job_state = runner.check_jobs_date_range_for_user(
+                    ctx=ctx,
+                    creation_end_date=str(yesterday),
+                    creation_start_date=str(tomorrow),
+                    user="ALL",
+                )
+                self.assertEqual(
+                    "The start date cannot be greater than the end date.",
+                    str(context.exception),
+                )
+
+            print("Test case 2B. Same as above but with FAKE_TEST_USER) ")
+
+            job_state = runner.check_jobs_date_range_for_user(
+                ctx=ctx,
+                creation_end_date=str(tomorrow),
+                creation_start_date=str(last_month_and_1_hour),
+                user="fake_test_user",
+            )
+
+            count = 0
+            for key in job_state.keys():
+                js = job_state[key]
+                print("Job is id", key, js["_id"])
+
+                if key in new_job_ids:
+                    count += 1
+                    self.assertEqual(js["status"], "created")
+                    date = dateutil.parser.parse(js["created"])
+                    ts = date.timestamp()
+                    print(date, last_week, tomorrow)
+                    print(ts, last_week.timestamp(), tomorrow.timestamp())
+                    self.assertTrue(ts > last_month_and_1_hour.timestamp())
+                    self.assertTrue(ts < tomorrow.timestamp())
+            self.assertEqual(4, count)
+
+            print("Found all of the jobs", len(new_job_ids))
+
+            print("Test case 3. Assert Raises error")
+
+            with self.assertRaises(Exception) as context:
+                job_state = runner.check_jobs_date_range_for_user(
+                    ctx=ctx,
+                    creation_end_date=str(yesterday),
+                    creation_start_date=str(tomorrow),
+                    user="ALL",
+                )
+                self.assertEqual(
+                    "The start date cannot be greater than the end date.",
+                    str(context.exception),
+                )
+
+            print("Test 4, find the original job")
+            job_state = runner.check_jobs_date_range_for_user(
+                ctx=ctx,
+                creation_end_date=str(tomorrow),
+                creation_start_date=str(last_month_and_1_hour),
+                user="tgu2",
+            )
+            self.assertTrue(len(job_state.keys()) > 0)
+            print(f"Checking {job_id}")
+            self.assertEqual(job_state[job_id]["_id"], job_id)
+            print(job_state)
 
             print("Test 5, find the original job, but with projections")
             job_state_with_proj = runner.check_jobs_date_range_for_user(
