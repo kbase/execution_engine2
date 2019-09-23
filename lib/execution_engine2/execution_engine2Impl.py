@@ -11,9 +11,8 @@ class execution_engine2:
     '''
     Module Name:
     execution_engine2
-
     Module Description:
-    
+    The backbone for the KBase Job Submission Portal
     '''
 
     ######## WARNING FOR GEVENT USERS ####### noqa

@@ -837,7 +837,8 @@ class SDKMethodRunner:
 
         return job_states
 
-    def _job_state_from_jobs(self, jobs):
+    @staticmethod
+    def _job_state_from_jobs(jobs):
         job_states = dict()
         for job in jobs:
             mongo_rec = job.to_mongo().to_dict()
@@ -938,7 +939,8 @@ class SDKMethodRunner:
         # TODO USE AS_PYMONGO() FOR SPEED
         # TODO Better define default fields
 
-    def _get_dummy_dates(self, creation_start_date, creation_end_date):
+    @staticmethod
+    def _get_dummy_dates(creation_start_date, creation_end_date):
         creation_start_date = dateutil.parser.parse(creation_start_date)
 
         if creation_start_date is None:

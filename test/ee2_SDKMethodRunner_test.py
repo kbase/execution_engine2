@@ -881,7 +881,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.mongo_util.get_job(job_id=job_id).delete()
             self.assertEqual(ori_job_count, Job.objects.count())
 
-    def create_job_from_job(self, job, new_job_id):
+    @staticmethod
+    def create_job_from_job(job, new_job_id):
         j = Job()
         j.id = new_job_id
         j.wsid = job.wsid
@@ -889,7 +890,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         j.authstrat = job.authstrat
         j.status = job.status
         j.finished = new_job_id.generation_time
-
         j.job_input = job.job_input
         return j
 
