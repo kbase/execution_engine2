@@ -374,4 +374,58 @@ module execution_engine2 {
 
     /* Just returns the status string for a job of a given id. */
     funcdef get_job_status(job_id job_id) returns (GetJobStatusResult result) authentication required;
+
+
+        /*
+    Projection Fields
+        user = StringField(required=True)
+        authstrat = StringField(
+            required=True, default="kbaseworkspace", validation=valid_authstrat
+        )
+        wsid = IntField(required=True)
+        status = StringField(required=True, validation=valid_status)
+        updated = DateTimeField(default=datetime.datetime.utcnow, autonow=True)
+        estimating = DateTimeField(default=None)  # Time when job began estimating
+        running = DateTimeField(default=None)  # Time when job started
+        # Time when job finished, errored out, or was terminated by the user/admin
+        finished = DateTimeField(default=None)
+        errormsg = StringField()
+        msg = StringField()
+        error = DynamicField()
+
+        terminated_code = IntField(validation=valid_termination_code)
+        error_code = IntField(validation=valid_errorcode)
+        scheduler_type = StringField()
+        scheduler_id = StringField()
+        scheduler_estimator_id = StringField()
+        job_input = EmbeddedDocumentField(JobInput, required=True)
+        job_output = DynamicField()
+    /*
+
+
+
+    /*
+      Check job for all jobs in a given date range for all users (Admin function)
+        string start_date; # Filter based on creation date
+        string end_date; # Filter based on creation date
+        list<string> projection; # A list of fields to include in the projection, default ALL See "Projection Fields"
+        list<string> filter; # A list of simple filters to "AND" together, such as error_code=1, wsid=1234, terminated_code = 1
+        int limit; # The maximum number of records to return
+        string user; # Optional. Defaults off of your token
+        @optional projection
+        @optional filter
+        @optional limit
+        @optional user
+    */
+    typedef structure {
+        string start_date;
+        string end_date;
+        list<string> projection;
+        list<string> filter;
+        int limit;
+        string user;
+    } CheckJobsDateRangeParams;
+    funcdef check_jobs_date_range_for_user(CheckJobsDateRangeParams params) returns (CheckJobsResults) authentication required;
+    funcdef check_jobs_date_range_for_all(CheckJobsDateRangeParams params) returns (CheckJobsResults) authentication required;
+
 };

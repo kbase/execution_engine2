@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import re
+from collections import namedtuple
 from datetime import datetime
 from enum import Enum
 
@@ -114,13 +115,13 @@ class SDKMethodRunner:
         inputs.parent_job_id = str(params.get("parent_job_id"))
 
         inputs.narrative_cell_info = Meta()
-        meta = params.get('meta')
+        meta = params.get("meta")
         if meta:
-            inputs.narrative_cell_info.run_id = meta.get('run_id')
-            inputs.narrative_cell_info.token_id = meta.get('token_id')
-            inputs.narrative_cell_info.tag = meta.get('tag')
-            inputs.narrative_cell_info.cell_id = meta.get('cell_id')
-            inputs.narrative_cell_info.status = meta.get('status')
+            inputs.narrative_cell_info.run_id = meta.get("run_id")
+            inputs.narrative_cell_info.token_id = meta.get("token_id")
+            inputs.narrative_cell_info.tag = meta.get("tag")
+            inputs.narrative_cell_info.cell_id = meta.get("cell_id")
+            inputs.narrative_cell_info.status = meta.get("status")
 
         job.job_input = inputs
         logging.info(job.job_input.to_mongo().to_dict())
@@ -626,7 +627,10 @@ class SDKMethodRunner:
             error_code = ErrorCode.unknown_error.value
 
         self.get_mongo_util().finish_job_with_error(
-            job_id=job_id, error_message=error_message, error_code=error_code, error=error
+            job_id=job_id,
+            error_message=error_message,
+            error_code=error_code,
+            error=error,
         )
 
     def _finish_job_with_success(self, job_id, job_output):
@@ -650,7 +654,13 @@ class SDKMethodRunner:
         )
 
     def finish_job(
-        self, job_id, ctx, error_message=None, error_code=None, error=None, job_output=None
+        self,
+        job_id,
+        ctx,
+        error_message=None,
+        error_code=None,
+        error=None,
+        job_output=None,
     ):
 
         """
@@ -675,7 +685,10 @@ class SDKMethodRunner:
             if error_code is None:
                 error_code = ErrorCode.job_crashed.value
             self._finish_job_with_error(
-                job_id=job_id, error_message=error_message, error_code=error_code, error=error
+                job_id=job_id,
+                error_message=error_message,
+                error_code=error_code,
+                error=error,
             )
         elif job_output is None:
             if error_code is None:
@@ -777,16 +790,16 @@ class SDKMethodRunner:
         job_states = dict()
         for job in jobs:
             mongo_rec = job.to_mongo().to_dict()
-            del mongo_rec['_id']
-            mongo_rec['job_id'] = str(job.id)
-            mongo_rec['created'] = str(job.id.generation_time)
-            mongo_rec['updated'] = str(job.updated)
+            del mongo_rec["_id"]
+            mongo_rec["job_id"] = str(job.id)
+            mongo_rec["created"] = str(job.id.generation_time)
+            mongo_rec["updated"] = str(job.updated)
             if job.estimating:
-                mongo_rec['estimating'] = str(job.estimating)
+                mongo_rec["estimating"] = str(job.estimating)
             if job.running:
-                mongo_rec['running'] = str(job.running)
+                mongo_rec["running"] = str(job.running)
             if job.finished:
-                mongo_rec['finished'] = str(job.finished)
+                mongo_rec["finished"] = str(job.finished)
 
             job_states[str(job.id)] = mongo_rec
 
@@ -823,3 +836,125 @@ class SDKMethodRunner:
         )
 
         return job_states
+
+    def _job_state_from_jobs(self, jobs):
+        job_states = dict()
+        for job in jobs:
+            mongo_rec = job.to_mongo().to_dict()
+            mongo_rec["_id"] = str(job.id)
+            mongo_rec["job_id"] = str(job.id)
+            mongo_rec["created"] = str(job.id.generation_time)
+            mongo_rec["updated"] = str(job.updated)
+            if job.estimating:
+                mongo_rec["estimating"] = str(job.estimating)
+            if job.running:
+                mongo_rec["running"] = str(job.running)
+            if job.finished:
+                mongo_rec["finished"] = str(job.finished)
+
+            job_states[str(job.id)] = mongo_rec
+        return job_states
+
+    def check_jobs_date_range_for_user(
+        self,
+        ctx,
+        creation_start_date,
+        creation_end_date,
+        job_projection=None,
+        job_filter=None,
+        limit=None,
+        user=None,
+    ):
+        """
+
+        :param ctx: Context Object
+        :param creation_start_date: Start Date for Creation
+        :param creation_end_date: Stop Date for Creation
+        :param job_projection:  List of fields to project alongside [_id, authstrat, updated, created, job_id]
+        :param job_filter:  List of simple job fields of format key=value
+        :param limit: Limit of records to return, default 2000
+        :param user: Optional Username or "ALL" for all users
+        :return:
+        """
+
+        if user is None:
+            user = ctx[
+                "user_id"
+            ]  # Can this be spoofed? Do I need to verify this by calling to AUTH?
+            # user = self.get_auth().get_user(ctx['token'])
+
+        # Admins can view "ALL" or check_jobs for other users
+        if user == "ALL" or user != ctx["user_id"]:
+            if not self._is_admin(ctx["token"]):
+                raise Exception(
+                    f"You are not authorized to view all records or records for others. (Requested user = {user})"
+                    f"Please request a role from {self.admin_roles}"
+                )
+
+        dummy_ids = self._get_dummy_dates(creation_start_date, creation_end_date)
+
+        if job_projection is None:
+            # Maybe set a default here?
+            job_projection = []
+
+        if not isinstance(job_projection, list):
+            raise Exception("Invalid job projection type. Must be list")
+
+        if limit is None:
+            # Maybe put this in config
+            limit = 2000
+
+        job_filter_temp = {}
+        if isinstance(job_filter, list):
+            for item in job_filter:
+                (k, v) = item.split("=")
+                job_filter_temp[k] = v
+        elif isinstance(job_filter, dict):
+            job_filter_temp = job_filter
+        elif job_filter is None:
+            pass
+        else:
+            raise Exception(
+                "Job filter must be a dictionary or a list of key=value pairs"
+            )
+
+        job_filter_temp["id__gt"] = dummy_ids.start
+        job_filter_temp["id__lt"] = dummy_ids.stop
+
+        if user != "ALL":
+            job_filter_temp["user"] = user
+        print("About to filter the jobs with", job_filter_temp)
+        jobs = Job.objects[:limit].filter(**job_filter_temp).only(*job_projection)
+
+        logging.info(
+            f"Searching for jobs with id_gt {dummy_ids.start} id_lt {dummy_ids.stop}"
+        )
+
+        return self._job_state_from_jobs(jobs)
+
+        # TODO Move to MongoUtils?
+        # TODO Add support for projection (validate the allowed fields to project?) (Need better api design)
+        # TODO Add support for filter (validate the allowed fields to project?) (Need better api design)
+        # TODO USE AS_PYMONGO() FOR SPEED
+        # TODO Better define default fields
+
+    def _get_dummy_dates(self, creation_start_date, creation_end_date):
+        creation_start_date = dateutil.parser.parse(creation_start_date)
+
+        if creation_start_date is None:
+            raise Exception(
+                "Please provide a valid start date for when job was created"
+            )
+        dummy_start_id = ObjectId.from_datetime(creation_start_date)
+
+        creation_end_date = dateutil.parser.parse(creation_end_date)
+        if creation_end_date is None:
+            raise Exception("Please provide a valid end date for when job was created")
+        dummy_end_id = ObjectId.from_datetime(creation_end_date)
+
+        if creation_start_date.timestamp() > creation_end_date.timestamp():
+            raise Exception("The start date cannot be greater than the end date.")
+
+        dummy_ids = namedtuple("dummy_ids", "start stop")
+
+        return dummy_ids(start=dummy_start_id, stop=dummy_end_id)
