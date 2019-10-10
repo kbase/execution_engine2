@@ -251,7 +251,8 @@ class Job(Document):
     updated = DateTimeField(default=datetime.datetime.utcnow, autonow=True)
 
     # id.generation_time = created
-    estimating = DateTimeField(default=None)  # Time when job began estimating
+    queued = DateTimeField(default=None)  # Time when job was submitted to the queue to be run
+    estimating = DateTimeField(default=None)  # Time when job was submitted to begin estimating
     running = DateTimeField(default=None)  # Time when job started
     # Time when job finished, errored out, or was terminated by the user/admin
     finished = DateTimeField(default=None)
