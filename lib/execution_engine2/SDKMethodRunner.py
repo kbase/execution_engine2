@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 import dateutil
@@ -746,14 +746,14 @@ class SDKMethodRunner:
             mongo_rec = job.to_mongo().to_dict()
             del mongo_rec['_id']
             mongo_rec['job_id'] = str(job.id)
-            mongo_rec['created'] = str(job.id.generation_time)
-            mongo_rec['updated'] = str(job.updated)
+            mongo_rec['created'] = job.id.generation_time.utcnow().replace(tzinfo=timezone.utc).isoformat()
+            mongo_rec['updated'] = job.updated.utcnow().replace(tzinfo=timezone.utc).isoformat()
             if job.estimating:
-                mongo_rec['estimating'] = str(job.estimating)
+                mongo_rec['estimating'] = job.estimating.utcnow().replace(tzinfo=timezone.utc).isoformat()
             if job.running:
-                mongo_rec['running'] = str(job.running)
+                mongo_rec['running'] = job.running.utcnow().replace(tzinfo=timezone.utc).isoformat()
             if job.finished:
-                mongo_rec['finished'] = str(job.finished)
+                mongo_rec['finished'] = job.finished.utcnow().replace(tzinfo=timezone.utc).isoformat()
 
             job_states[str(job.id)] = mongo_rec
 
