@@ -5,13 +5,16 @@ from datetime import datetime, timezone
 from enum import Enum
 
 import dateutil
-import requests
 from bson import ObjectId
 
-from execution_engine2.exceptions import (
-    RecordNotFoundException,
-    InvalidStatusTransitionException,
+from execution_engine2.authorization.authstrategy import (
+    can_read_job,
+    can_read_jobs,
+    can_write_job
 )
+from execution_engine2.authorization.roles import AdminAuthUtil
+from execution_engine2.authorization.workspaceauth import WorkspaceAuth
+from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import (
     Job,
     JobInput,
@@ -22,20 +25,14 @@ from execution_engine2.db.models.models import (
     LogLines,
     ErrorCode,
 )
+from execution_engine2.exceptions import AuthError
+from execution_engine2.exceptions import (
+    RecordNotFoundException,
+    InvalidStatusTransitionException,
+)
+from execution_engine2.utils.Condor import Condor
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
-from installed_clients.authclient import KBaseAuth
-from execution_engine2.utils.Condor import Condor
-from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.authorization.roles import AdminAuthUtil
-from execution_engine2.exceptions import AuthError
-from execution_engine2.authorization.authstrategy import (
-    can_read_job,
-    can_read_jobs,
-    can_write_job
-)
-from execution_engine2.authorization.workspaceauth import WorkspaceAuth
-
 
 debug = json.loads(os.environ.get("debug", "False").lower())
 
@@ -358,8 +355,10 @@ class SDKMethodRunner:
         """
         ws_auth = WorkspaceAuth(self.token, self.user_id, self.workspace_url)
         if not ws_auth.can_write(params["wsid"]):
-            logging.debug(f"User {self.user_id} doesn't have permission to run jobs in workspace {params['wsid']}.")
-            raise PermissionError(f"User {self.user_id} doesn't have permission to run jobs in workspace {params['wsid']}.")
+            logging.debug(
+                f"User {self.user_id} doesn't have permission to run jobs in workspace {params['wsid']}.")
+            raise PermissionError(
+                f"User {self.user_id} doesn't have permission to run jobs in workspace {params['wsid']}.")
 
         method = params.get("method")
         logging.info(f"User {self.user_id} attempting to run job {method}")
@@ -416,7 +415,8 @@ class SDKMethodRunner:
             )
         commands = {"cancel_job": self.cancel_job, "view_job_logs": self.view_job_logs}
         p = {
-            "cancel_job": {"job_id": params.get("job_id"), "terminated_code": params.get("terminated_code")},
+            "cancel_job": {"job_id": params.get("job_id"),
+                           "terminated_code": params.get("terminated_code")},
             "view_job_logs": {"job_id": params.get("job_id")},
         }
         return commands[command](**p[command])
@@ -612,7 +612,7 @@ class SDKMethodRunner:
         )
 
     def finish_job(
-        self, job_id, error_message=None, error_code=None, error=None, job_output=None
+            self, job_id, error_message=None, error_code=None, error=None, job_output=None
     ):
 
         """
@@ -746,14 +746,17 @@ class SDKMethodRunner:
             mongo_rec = job.to_mongo().to_dict()
             del mongo_rec['_id']
             mongo_rec['job_id'] = str(job.id)
-            mongo_rec['created'] = job.id.generation_time.utcnow().replace(tzinfo=timezone.utc).isoformat()
+            mongo_rec['created'] = job.id.generation_time.utcnow().replace(
+                tzinfo=timezone.utc).isoformat()
             mongo_rec['updated'] = job.updated.utcnow().replace(tzinfo=timezone.utc).isoformat()
             if job.estimating:
-                mongo_rec['estimating'] = job.estimating.utcnow().replace(tzinfo=timezone.utc).isoformat()
+                mongo_rec['estimating'] = job.estimating.utcnow().replace(
+                    tzinfo=timezone.utc).isoformat()
             if job.running:
                 mongo_rec['running'] = job.running.utcnow().replace(tzinfo=timezone.utc).isoformat()
             if job.finished:
-                mongo_rec['finished'] = job.finished.utcnow().replace(tzinfo=timezone.utc).isoformat()
+                mongo_rec['finished'] = job.finished.utcnow().replace(
+                    tzinfo=timezone.utc).isoformat()
 
             job_states[str(job.id)] = mongo_rec
 
@@ -772,7 +775,8 @@ class SDKMethodRunner:
 
         ws_auth = WorkspaceAuth(self.token, self.user_id, self.workspace_url)
         if not ws_auth.can_read(workspace_id):
-            logging.debug(f"User {self.user_id} doesn't have permission to read jobs in workspace {workspace_id}.")
+            logging.debug(
+                f"User {self.user_id} doesn't have permission to read jobs in workspace {workspace_id}.")
             raise PermissionError(
                 f"User {self.user_id} does not have permission to read jobs in workspace {workspace_id}"
             )
@@ -788,3 +792,126 @@ class SDKMethodRunner:
         )
 
         return job_states
+
+    @staticmethod
+    def _job_state_from_jobs(jobs):
+        job_states = dict()
+        for job in jobs:
+            mongo_rec = job.to_mongo().to_dict()
+            mongo_rec["_id"] = str(job.id)
+            mongo_rec["job_id"] = str(job.id)
+            mongo_rec["created"] = str(job.id.generation_time)
+            mongo_rec["updated"] = str(job.updated)
+            if job.estimating:
+                mongo_rec["estimating"] = str(job.estimating)
+            if job.running:
+                mongo_rec["running"] = str(job.running)
+            if job.finished:
+                mongo_rec["finished"] = str(job.finished)
+
+            job_states[str(job.id)] = mongo_rec
+        return job_states
+
+    def check_jobs_date_range_for_user(
+            self,
+            ctx,
+            creation_start_date,
+            creation_end_date,
+            job_projection=None,
+            job_filter=None,
+            limit=None,
+            user=None,
+    ):
+        """
+        :param ctx: Context Object
+        :param creation_start_date: Start Date for Creation
+        :param creation_end_date: Stop Date for Creation
+        :param job_projection:  List of fields to project alongside [_id, authstrat, updated, created, job_id]
+        :param job_filter:  List of simple job fields of format key=value
+        :param limit: Limit of records to return, default 2000
+        :param user: Optional Username or "ALL" for all users
+        :return:
+        """
+
+        if user is None:
+            user = ctx[
+                "user_id"
+            ]  # Can this be spoofed? Do I need to verify this by calling to AUTH?
+            # user = self.get_auth().get_user(ctx['token'])
+
+        # Admins can view "ALL" or check_jobs for other users
+        if user == "ALL" or user != ctx["user_id"]:
+            if not self._is_admin(ctx["token"]):
+                raise Exception(
+                    f"You are not authorized to view all records or records for others. (Requested user = {user})"
+                    f"Please request a role from {self.admin_roles}"
+                )
+
+        dummy_ids = self._get_dummy_dates(creation_start_date, creation_end_date)
+
+        if job_projection is None:
+            # Maybe set a default here?
+            job_projection = []
+
+        if not isinstance(job_projection, list):
+            raise Exception("Invalid job projection type. Must be list")
+
+        if limit is None:
+            # Maybe put this in config
+            limit = 2000
+
+        job_filter_temp = {}
+        if isinstance(job_filter, list):
+            for item in job_filter:
+                (k, v) = item.split("=")
+                job_filter_temp[k] = v
+        elif isinstance(job_filter, dict):
+            job_filter_temp = job_filter
+        elif job_filter is None:
+            pass
+        else:
+            raise Exception(
+                "Job filter must be a dictionary or a list of key=value pairs"
+            )
+
+        job_filter_temp["id__gt"] = dummy_ids.start
+        job_filter_temp["id__lt"] = dummy_ids.stop
+
+        if user != "ALL":
+            job_filter_temp["user"] = user
+        print("About to filter the jobs with", job_filter_temp)
+        jobs = Job.objects[:limit].filter(**job_filter_temp).only(*job_projection)
+
+        logging.info(
+            f"Searching for jobs with id_gt {dummy_ids.start} id_lt {dummy_ids.stop}"
+        )
+
+        return self._job_state_from_jobs(jobs)
+
+        # TODO Move to MongoUtils?
+        # TODO Add support for projection (validate the allowed fields to project?) (Need better api design)
+        # TODO Add support for filter (validate the allowed fields to project?) (Need better api design)
+        # TODO USE AS_PYMONGO() FOR SPEED
+        # TODO Better define default fields
+
+    @staticmethod
+    def _get_dummy_dates(creation_start_date, creation_end_date):
+        creation_start_date = dateutil.parser.parse(creation_start_date)
+
+        if creation_start_date is None:
+            raise Exception(
+                "Please provide a valid start date for when job was created"
+            )
+        dummy_start_id = ObjectId.from_datetime(creation_start_date)
+
+        creation_end_date = dateutil.parser.parse(creation_end_date)
+        if creation_end_date is None:
+            raise Exception("Please provide a valid end date for when job was created")
+        dummy_end_id = ObjectId.from_datetime(creation_end_date)
+
+        if creation_start_date.timestamp() > creation_end_date.timestamp():
+            raise Exception("The start date cannot be greater than the end date.")
+
+        dummy_ids = namedtuple("dummy_ids", "start stop")
+
+        return dummy_ids(start=dummy_start_id, stop=dummy_end_id)
