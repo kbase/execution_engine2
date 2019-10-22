@@ -320,7 +320,7 @@ class SDKMethodRunner:
 
         self.auth_url = config.get("auth-url")
         self.legacy_auth_url = config.get("auth-service-url")
-        self.auth = KBaseAuth(auth_url=self.auth_url)
+        self.auth = KBaseAuth(auth_url=self.legacy_auth_url)
 
         self.user_id = user_id
         self.token = token
