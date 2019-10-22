@@ -1,22 +1,23 @@
 # -*- coding: utf-8 -*-
 import copy
-import datetime
 import json
 import logging
 import os
 import time
 import unittest
-from configparser import ConfigParser
-from datetime import timedelta
-from typing import Dict, List
-from unittest.mock import patch
 
+import datetime
 import dateutil
 import requests
 import requests_mock
 from bson import ObjectId
+from configparser import ConfigParser
+from datetime import timedelta
 from mock import MagicMock
 from mongoengine import ValidationError
+from typing import Dict, List
+from unittest.mock import patch
+from execution_engine2.exceptions import AuthError
 
 from execution_engine2.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.db.MongoUtil import MongoUtil
@@ -901,12 +902,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             job1.delete()
 
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
-
     def test_check_jobs_date_range(self, condor_mock, ):
-        ctx = {"foo": "bar", "token": "false", "user": "fake_test_User"}
+        user_name = "Fake_Test_User"
 
         runner = self.getRunner()
         runner.workspace_auth = MagicMock()
+        runner.auth.get_user = MagicMock(return_value=user_name)
         runner.is_admin = True
         runner._is_admin = MagicMock(return_value=True)
 
@@ -1002,7 +1003,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 "Test case 1. Retrieving Jobs from last_week and tomorrow_max (yesterday and now jobs) "
             )
             job_state = runner.check_jobs_date_range_for_user(
-                ctx=ctx,
+                token=ctx['token'],
                 creation_end_date=str(tomorrow),
                 creation_start_date=str(last_week),
                 user="ALL",
@@ -1029,7 +1030,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             )
 
             job_state = runner.check_jobs_date_range_for_user(
-                ctx=ctx,
+                token=ctx['token'],
                 creation_end_date=str(tomorrow),
                 creation_start_date=str(last_month_and_1_hour),
                 user="ALL",
@@ -1055,7 +1056,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             with self.assertRaises(Exception) as context:
                 job_state = runner.check_jobs_date_range_for_user(
-                    ctx=ctx,
+                    token=ctx['token'],
                     creation_end_date=str(yesterday),
                     creation_start_date=str(tomorrow),
                     user="ALL",
@@ -1065,10 +1066,28 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                     str(context.exception),
                 )
 
-            print("Test case 2B. Same as above but with FAKE_TEST_USER) ")
+            print("Test case 2B. Same as above but with FAKE user (NO ADMIN) ")
+            runner.is_admin = False
+            runner._is_admin = MagicMock(return_value=False)
+            with self.assertRaisesRegex(
+                    AuthError,
+                    "You are not authorized to view all records or records for others."
+                    ) as error:
+                job_state = runner.check_jobs_date_range_for_user(
+                    token=ctx['token'],
+                    creation_end_date=str(tomorrow),
+                    creation_start_date=str(last_month_and_1_hour),
+                    user="FAKE",
+                )
+                print("Exception raised is", error)
 
+
+
+            print("Test case 2C. Same as above but with FAKE_TEST_USER + ADMIN) ")
+            runner.is_admin = True
+            runner._is_admin = MagicMock(return_value=True)
             job_state = runner.check_jobs_date_range_for_user(
-                ctx=ctx,
+                token=ctx['token'],
                 creation_end_date=str(tomorrow),
                 creation_start_date=str(last_month_and_1_hour),
                 user="fake_test_user",
@@ -1096,7 +1115,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             with self.assertRaises(Exception) as context:
                 job_state = runner.check_jobs_date_range_for_user(
-                    ctx=ctx,
+                    token=ctx['token'],
                     creation_end_date=str(yesterday),
                     creation_start_date=str(tomorrow),
                     user="ALL",
@@ -1108,7 +1127,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             print("Test case 4, find the original job")
             job_state = runner.check_jobs_date_range_for_user(
-                ctx=ctx,
+                token=ctx['token'],
                 creation_end_date=str(tomorrow),
                 creation_start_date=str(last_month_and_1_hour),
                 user="fake_test_user",
@@ -1120,7 +1139,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             print("Test 5, find the original job, but with projections")
             job_state_with_proj = runner.check_jobs_date_range_for_user(
-                ctx=ctx,
+                token=ctx['token'],
                 creation_end_date=str(tomorrow),
                 creation_start_date=str(last_month_and_1_hour),
                 user="fake_test_user",
@@ -1145,7 +1164,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             print("Test 6a, find the original job, but with projections and filters")
             job_state = runner.check_jobs_date_range_for_user(
-                ctx=ctx,
+                token=ctx['token'],
                 creation_end_date=str(tomorrow),
                 creation_start_date=str(last_month_and_1_hour),
                 user="ALL",
@@ -1164,7 +1183,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             print("Test 6b, find the original job, but with projections and filters")
             job_state2 = runner.check_jobs_date_range_for_user(
-                ctx=ctx,
+                token=ctx['token'],
                 creation_end_date=str(tomorrow),
                 creation_start_date=str(last_month_and_1_hour),
                 user="ALL",
@@ -1183,7 +1202,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             print("Test 6c, find the original job, but with projections and filters")
             job_state3 = runner.check_jobs_date_range_for_user(
-                ctx=ctx,
+                token=ctx['token'],
                 creation_end_date=str(tomorrow),
                 creation_start_date=str(last_month_and_1_hour),
                 user="ALL",
@@ -1197,7 +1216,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 "Test 7, find same jobs as test 2 or 3, but also filter, project, and limit"
             )
             job_state_limit = runner.check_jobs_date_range_for_user(
-                ctx=ctx,
+                token=ctx['token'],
                 creation_end_date=str(tomorrow),
                 creation_start_date=str(last_month_and_1_hour),
                 user="ALL",

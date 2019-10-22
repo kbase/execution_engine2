@@ -1007,9 +1007,8 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: returnVal
         #BEGIN check_jobs_date_range_for_user
-        mr = SDKMethodRunner(self.config)
+        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
         returnVal = mr.check_jobs_date_range_for_user(
-            ctx=ctx,
             creation_start_date=params.get("start_date"),
             creation_end_date=params.get("end_date"),
             job_projection=params.get("projection"),
@@ -1170,9 +1169,8 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: returnVal
         #BEGIN check_jobs_date_range_for_all
-        mr = SDKMethodRunner(self.config)
+        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
         returnVal = mr.check_jobs_date_range_for_user(
-            ctx=ctx,
             creation_start_date=params.get("start_date"),
             creation_end_date=params.get("end_date"),
             job_projection=params.get("projection"),

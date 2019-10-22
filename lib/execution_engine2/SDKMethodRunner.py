@@ -8,6 +8,7 @@ from bson import ObjectId
 from datetime import datetime, timezone
 from enum import Enum
 
+from installed_clients.authclient import KBaseAuth
 from execution_engine2.authorization.authstrategy import (
     can_read_job,
     can_read_jobs,
@@ -141,6 +142,7 @@ class SDKMethodRunner:
             job.save()
 
         return str(job.id)
+
 
     def get_workspace_auth(self):
         if self.workspace_auth is None:
@@ -308,14 +310,17 @@ class SDKMethodRunner:
         self.condor = None
         self.workspace = None
         self.workspace_auth = None
-        self.auth = None
+
         self.admin_roles = config.get("admin_roles", ["EE2_ADMIN"])
 
         catalog_url = config.get("catalog-url")
         self.catalog = Catalog(catalog_url)
 
         self.workspace_url = config.get("workspace-url")
+
         self.auth_url = config.get("auth-url")
+        self.auth = KBaseAuth(auth_url=self.auth_url)
+
         self.user_id = user_id
         self.token = token
         self.is_admin = False
@@ -823,13 +828,13 @@ class SDKMethodRunner:
 
     def check_jobs_date_range_for_user(
             self,
-            ctx,
             creation_start_date,
             creation_end_date,
             job_projection=None,
             job_filter=None,
             limit=None,
             user=None,
+            token=None,
     ):
         """
         :param ctx: Context Object
@@ -841,20 +846,19 @@ class SDKMethodRunner:
         :param user: Optional Username or "ALL" for all users
         :return:
         """
+        if token is None:
+            raise AuthError("Please provide a token to check jobs date range")
 
-        if user is None:
-            user = ctx[
-                "user_id"
-            ]  # Can this be spoofed? Do I need to verify this by calling to AUTH?
-            # user = self.get_auth().get_user(ctx['token'])
+        token_user = self.auth.get_user(token)
 
         # Admins can view "ALL" or check_jobs for other users
-        if user == "ALL" or user != ctx["user_id"]:
-            if not self._is_admin(ctx["token"]):
-                raise Exception(
-                    f"You are not authorized to view all records or records for others. (Requested user = {user})"
-                    f"Please request a role from {self.admin_roles}"
+        if user != token_user:
+            if not self._is_admin(token):
+                raise AuthError(
+                    f"You are not authorized to view all records or records for others."
                 )
+
+
 
         dummy_ids = self._get_dummy_dates(creation_start_date, creation_end_date)
 
