@@ -614,7 +614,6 @@ class SDKMethodRunner:
     def finish_job(
         self, job_id, error_message=None, error_code=None, error=None, job_output=None
     ):
-
         """
         #TODO Fix too many open connections to mongoengine
 
@@ -623,8 +622,11 @@ class SDKMethodRunner:
                     raise error if job is not found or current job status is not "running"
                     (general work flow for job status created -> queued -> estimating -> running -> finished/error/terminated)
         Parameters:
-        job_id: id of job
-        error_message: default None, if given set job to error status
+        :param job_id: string - id of job
+        :param error_message: string - default None, if given set job to error status
+        :param error_code: int - default None, if given give this job an error code
+        :param error: dict - default None, if given, set the error to this structure
+        :param job_output: dict - default None, if given this job has some output
         """
 
         if not job_id:

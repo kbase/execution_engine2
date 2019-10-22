@@ -39,6 +39,7 @@ bootstrap()
 
 
 def _run_job_adapter(ws_perms_info: Dict = None,
+                     ws_perms_global: List = [],
                      client_groups_info: Dict = None,
                      module_versions: Dict = None,
                      user_roles: List = None):
@@ -57,6 +58,7 @@ def _run_job_adapter(ws_perms_info: Dict = None,
             ws_perms: dict of permissions, keys are ws ids, values are permission. Example:
                 {123: "a", 456: "w"} means workspace id 123 has admin permissions, and 456 has
                 write permission
+    :param ws_perms_global: list - list of global workspaces - gives those workspaces a global (user "*") permission of "r"
     :param client_groups_info: dict - keys client_groups (list), function_name, module_name
     :param module_versions: dict - key git_commit_hash (str), others aren't used
     :return: an adapter function to be passed to request_mock
@@ -76,8 +78,12 @@ def _run_job_adapter(ws_perms_info: Dict = None,
                 user_id = ws_perms_info.get("user_id")
                 ws_perms = ws_perms_info.get("ws_perms", {})
                 for ws in perms_req:
-                    ret_perms.append({user_id: ws_perms.get(ws["id"], "n")})
+                    perms = {user_id: ws_perms.get(ws["id"], "n")}
+                    if ws["id"] in ws_perms_global:
+                        perms["*"] = "r"
+                    ret_perms.append(perms)
                 result = [{"perms": ret_perms}]
+                print(result)
             elif method == "Catalog.list_client_group_configs":
                 result = []
                 if client_groups_info is not None:
@@ -797,6 +803,43 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             self.mongo_util.get_job(job_id=job_id).delete()
             self.assertEqual(ori_job_count, Job.objects.count())
+
+    @requests_mock.Mocker()
+    def test_check_job_global_perm(self, rq_mock):
+        rq_mock.add_matcher(_run_job_adapter(
+            ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "n"}},
+            ws_perms_global=[self.ws_id],
+            user_roles=[]
+        ))
+        with self.mongo_util.mongo_engine_connection():
+            ori_job_count = Job.objects.count()
+            job_id = self.create_job_rec()
+            self.assertEqual(ori_job_count, Job.objects.count() - 1)
+
+            job = self.mongo_util.get_job(job_id=job_id)
+            self.assertEqual(job.status, "created")
+            self.assertFalse(job.finished)
+            self.assertFalse(job.running)
+            self.assertFalse(job.estimating)
+
+            # test check_job
+            runner = self.getRunner()
+            job_state = runner.check_job(job_id)
+            json.dumps(job_state)  # make sure it's JSON serializable
+            self.assertTrue(validate_job_state(job_state))
+            self.assertEqual(job_state["status"], "created")
+            self.assertEqual(job_state["wsid"], self.ws_id)
+
+            # test globally
+            job_states = runner.check_workspace_jobs(self.ws_id)
+            self.assertTrue(job_id in job_states)
+            self.assertEqual(job_states[job_id]["status"], "created")
+
+            # now test with a different user
+            other_method_runner = SDKMethodRunner(self.cfg, user_id="some_other_user", token="other_token")
+            job_states = other_method_runner.check_workspace_jobs(self.ws_id)
+            self.assertTrue(job_id in job_states)
+            self.assertEqual(job_states[job_id]["status"], "created")
 
     @requests_mock.Mocker()
     def test_check_job_ok(self, rq_mock):
