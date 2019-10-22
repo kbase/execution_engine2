@@ -834,7 +834,7 @@ class SDKMethodRunner:
             job_filter=None,
             limit=None,
             user=None,
-            token=None,
+
     ):
         """
         :param ctx: Context Object
@@ -846,19 +846,17 @@ class SDKMethodRunner:
         :param user: Optional Username or "ALL" for all users
         :return:
         """
-        if token is None:
+        if self.token is None:
             raise AuthError("Please provide a token to check jobs date range")
 
-        token_user = self.auth.get_user(token)
+        token_user = self.auth.get_user(self.token)
 
         # Admins can view "ALL" or check_jobs for other users
         if user != token_user:
-            if not self._is_admin(token):
+            if not self._is_admin(self.token):
                 raise AuthError(
                     f"You are not authorized to view all records or records for others."
                 )
-
-
 
         dummy_ids = self._get_dummy_dates(creation_start_date, creation_end_date)
 
