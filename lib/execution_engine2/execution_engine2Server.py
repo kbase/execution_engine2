@@ -402,6 +402,14 @@ class Application(object):
                              name='execution_engine2.get_job_status',
                              types=[str])
         self.method_authentication['execution_engine2.get_job_status'] = 'required'  # noqa
+        self.rpc_service.add(impl_execution_engine2.check_jobs_date_range_for_user,
+                             name='execution_engine2.check_jobs_date_range_for_user',
+                             types=[dict])
+        self.method_authentication['execution_engine2.check_jobs_date_range_for_user'] = 'required'  # noqa
+        self.rpc_service.add(impl_execution_engine2.check_jobs_date_range_for_all,
+                             name='execution_engine2.check_jobs_date_range_for_all',
+                             types=[dict])
+        self.method_authentication['execution_engine2.check_jobs_date_range_for_all'] = 'required'  # noqa
         authurl = config.get(AUTH) if config else None
         self.auth_client = _KBaseAuth(authurl)
 

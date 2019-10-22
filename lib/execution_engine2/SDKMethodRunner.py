@@ -1,11 +1,12 @@
 import json
 import logging
 import os
-from datetime import datetime, timezone
-from enum import Enum
+from collections import namedtuple
 
 import dateutil
 from bson import ObjectId
+from datetime import datetime, timezone
+from enum import Enum
 
 from execution_engine2.authorization.authstrategy import (
     can_read_job,
@@ -49,6 +50,8 @@ class JobPermissions(Enum):
 
 
 class SDKMethodRunner:
+
+
     def _get_client_groups(self, method):
         """
         get client groups info from Catalog
@@ -138,6 +141,11 @@ class SDKMethodRunner:
             job.save()
 
         return str(job.id)
+
+    def get_workspace_auth(self):
+        if self.workspace_auth is None:
+            self.workspace_auth = WorkspaceAuth(self.token, self.user_id, self.workspace_url)
+        return self.workspace_auth
 
     def get_mongo_util(self):
         if self.mongo_util is None:
@@ -299,6 +307,7 @@ class SDKMethodRunner:
         self.mongo_util = None
         self.condor = None
         self.workspace = None
+        self.workspace_auth = None
         self.auth = None
         self.admin_roles = config.get("admin_roles", ["EE2_ADMIN"])
 
@@ -353,7 +362,7 @@ class SDKMethodRunner:
         :param params: RunJobParams object (See spec file)
         :return: The condor job id
         """
-        ws_auth = WorkspaceAuth(self.token, self.user_id, self.workspace_url)
+        ws_auth = self.get_workspace_auth()
         if not ws_auth.can_write(params["wsid"]):
             logging.debug(
                 f"User {self.user_id} doesn't have permission to run jobs in workspace {params['wsid']}.")
@@ -773,7 +782,7 @@ class SDKMethodRunner:
         if projection is None:
             projection = []
 
-        ws_auth = WorkspaceAuth(self.token, self.user_id, self.workspace_url)
+        ws_auth = self.get_workspace_auth()
         if not ws_auth.can_read(workspace_id):
             logging.debug(
                 f"User {self.user_id} doesn't have permission to read jobs in workspace {workspace_id}.")

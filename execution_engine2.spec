@@ -374,7 +374,7 @@ module execution_engine2 {
 
     /* Just returns the status string for a job of a given id. */
     funcdef get_job_status(job_id job_id) returns (GetJobStatusResult result) authentication required;
-};
+
 
     /*
     Projection Fields
@@ -427,3 +427,5 @@ module execution_engine2 {
     } CheckJobsDateRangeParams;
     funcdef check_jobs_date_range_for_user(CheckJobsDateRangeParams params) returns (CheckJobsResults) authentication required;
     funcdef check_jobs_date_range_for_all(CheckJobsDateRangeParams params) returns (CheckJobsResults) authentication required;
+
+};

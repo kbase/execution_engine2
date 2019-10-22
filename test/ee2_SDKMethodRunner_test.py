@@ -901,10 +901,16 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             job1.delete()
 
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
-    def test_check_jobs_date_range(self, condor_mock):
+
+    def test_check_jobs_date_range(self, condor_mock, ):
         ctx = {"foo": "bar", "token": "false", "user": "fake_test_User"}
 
         runner = self.getRunner()
+        runner.workspace_auth = MagicMock()
+        runner.is_admin = True
+        runner._is_admin = MagicMock(return_value=True)
+
+        runner.workspace_auth.can_read = MagicMock(return_value=True)
         runner.get_permissions_for_workspace = MagicMock(return_value=True)
         runner._get_module_git_commit = MagicMock(return_value="git_commit_goes_here")
         runner.get_condor = MagicMock(return_value=condor_mock)
@@ -916,12 +922,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         si = submission_info(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
 
-        job_id1 = runner.run_job(params=job, ctx=ctx)
-        job_id2 = runner.run_job(params=job, ctx=ctx)
-        job_id3 = runner.run_job(params=job, ctx=ctx)
-        job_id4 = runner.run_job(params=job, ctx=ctx)
-        job_id5 = runner.run_job(params=job, ctx=ctx)
-        job_id6 = runner.run_job(params=job, ctx=ctx)
+        job_id1 = runner.run_job(params=job, )
+        job_id2 = runner.run_job(params=job, )
+        job_id3 = runner.run_job(params=job, )
+        job_id4 = runner.run_job(params=job, )
+        job_id5 = runner.run_job(params=job, )
+        job_id6 = runner.run_job(params=job, )
         time.sleep(1)
 
         new_job_ids = []
@@ -983,13 +989,13 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             job = self.mongo_util.get_job(job_id=job_id)
             self.assertEqual(job.status, "created")
             self.assertFalse(job.finished)
-            self.assertFalse(job.running)
+            self.false = self.assertFalse(job.running)
             self.assertFalse(job.estimating)
 
             runner.check_permission_for_job = MagicMock(return_value=True)
-            runner.get_permissions_for_workspace = MagicMock(
-                return_value=SDKMethodRunner.WorkspacePermissions.ADMINISTRATOR
-            )
+            # runner.get_permissions_for_workspace = MagicMock(
+            #     return_value=SDKMethodRunner.WorkspacePermissions.ADMINISTRATOR
+            # )
             runner.is_admin = MagicMock(return_value=True)
 
             print(
@@ -1100,12 +1106,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                     str(context.exception),
                 )
 
-            print("Test 4, find the original job")
+            print("Test case 4, find the original job")
             job_state = runner.check_jobs_date_range_for_user(
                 ctx=ctx,
                 creation_end_date=str(tomorrow),
                 creation_start_date=str(last_month_and_1_hour),
-                user="tgu2",
+                user="fake_test_user",
             )
             self.assertTrue(len(job_state.keys()) > 0)
             print(f"Checking {job_id}")
@@ -1117,7 +1123,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 ctx=ctx,
                 creation_end_date=str(tomorrow),
                 creation_start_date=str(last_month_and_1_hour),
-                user="tgu2",
+                user="fake_test_user",
                 job_projection=["wsid"],
             )[job_id]
 
