@@ -889,7 +889,9 @@ class SDKMethodRunner:
         if user != "ALL":
             job_filter_temp["user"] = user
         print("About to filter the jobs with", job_filter_temp)
-        jobs = Job.objects[:limit].filter(**job_filter_temp).only(*job_projection)
+
+        with self.get_mongo_util().mongo_engine_connection() as mec:
+            jobs = Job.objects[:limit].filter(**job_filter_temp).only(*job_projection)
 
         logging.info(
             f"Searching for jobs with id_gt {dummy_ids.start} id_lt {dummy_ids.stop}"
