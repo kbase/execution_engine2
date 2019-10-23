@@ -465,6 +465,7 @@ class SDKMethodRunner:
     def _is_admin(self, token: str) -> bool:
         try:
             self.is_admin = AdminAuthUtil(self.auth_url, self.admin_roles).is_admin(token)
+            return self.is_admin
         except AuthError as e:
             logging.error(f"An auth error occurred: {str(e)}")
             raise e
