@@ -685,13 +685,13 @@ class SDKMethodRunner:
 
         if job_status == Status.estimating.value or skip_estimation:
             # set job to running status
-            job.running = datetime.utcnow()
+            job.running = datetime.utcnow().timestamp()
             self.get_mongo_util().update_job_status(
                 job_id=job_id, status=Status.running.value
             )
         else:
             # set job to estimating status
-            job.estimating = datetime.utcnow()
+            job.estimating = datetime.utcnow().timestamp()
             self.get_mongo_util().update_job_status(
                 job_id=job_id, status=Status.estimating.value
             )
@@ -748,14 +748,14 @@ class SDKMethodRunner:
             mongo_rec = job.to_mongo().to_dict()
             del mongo_rec['_id']
             mongo_rec['job_id'] = str(job.id)
-            mongo_rec['created'] = job.id.generation_time.utcnow().replace(tzinfo=timezone.utc).isoformat()
-            mongo_rec['updated'] = job.updated.utcnow().replace(tzinfo=timezone.utc).isoformat()
+            mongo_rec['created'] = job.id.generation_time.utcnow().timestamp()
+            mongo_rec['updated'] = job.updated
             if job.estimating:
-                mongo_rec['estimating'] = job.estimating.utcnow().replace(tzinfo=timezone.utc).isoformat()
+                mongo_rec['estimating'] = job.estimating
             if job.running:
-                mongo_rec['running'] = job.running.utcnow().replace(tzinfo=timezone.utc).isoformat()
+                mongo_rec['running'] = job.running
             if job.finished:
-                mongo_rec['finished'] = job.finished.utcnow().replace(tzinfo=timezone.utc).isoformat()
+                mongo_rec['finished'] = job.finished
 
             job_states[str(job.id)] = mongo_rec
 

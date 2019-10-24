@@ -1,10 +1,12 @@
-import datetime
+
+from datetime import datetime
 from enum import Enum
 from mongoengine import ValidationError
 
 from mongoengine import (
     StringField,
     IntField,
+    FloatField,
     EmbeddedDocument,
     Document,
     DateTimeField,
@@ -75,7 +77,7 @@ class LogLines(EmbeddedDocument):
     line = StringField(required=True)
     linepos = IntField(required=True)
     error = BooleanField(default=False)
-    ts = DateTimeField(default=datetime.datetime.utcnow())
+    ts = DateTimeField(default=datetime.utcnow())
 
 
 class JobLog(Document):
@@ -85,15 +87,15 @@ class JobLog(Document):
     """
 
     primary_key = ObjectIdField(primary_key=True, required=True)
-    updated = DateTimeField(default=datetime.datetime.utcnow, autonow=True)
+    updated = FloatField(default=datetime.utcnow().timestamp())
     original_line_count = IntField()
     stored_line_count = IntField()
     lines = ListField()
-    # meta = {"db_alias": "logs"}
+
     meta = {"collection": "ee2_logs"}
 
     def save(self, *args, **kwargs):
-        self.updated = datetime.datetime.utcnow()
+        self.updated = datetime.utcnow().timestamp()
         return super(JobLog, self).save(*args, **kwargs)
 
 
@@ -248,14 +250,15 @@ class Job(Document):
     wsid = IntField(required=True)
     status = StringField(required=True, validation=valid_status)
 
-    updated = DateTimeField(default=datetime.datetime.utcnow, autonow=True)
+    # updated = DateTimeField(default=datetime.datetime.utcnow, autonow=True)
+    updated = FloatField(default=datetime.utcnow().timestamp())
 
     # id.generation_time = created
-    queued = DateTimeField(default=None)  # Time when job was submitted to the queue to be run
-    estimating = DateTimeField(default=None)  # Time when job was submitted to begin estimating
-    running = DateTimeField(default=None)  # Time when job started
+    queued = FloatField(default=None)  # Time when job was submitted to the queue to be run
+    estimating = FloatField(default=None)  # Time when job was submitted to begin estimating
+    running = FloatField(default=None)  # Time when job started
     # Time when job finished, errored out, or was terminated by the user/admin
-    finished = DateTimeField(default=None)
+    finished = FloatField(default=None)
     errormsg = StringField()
     msg = StringField()
     error = DynamicField()
@@ -273,7 +276,7 @@ class Job(Document):
     meta = {"collection": "ee2_jobs"}
 
     def save(self, *args, **kwargs):
-        self.updated = datetime.datetime.utcnow()
+        self.updated = datetime.utcnow().timestamp()
         return super(Job, self).save(*args, **kwargs)
 
 

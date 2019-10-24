@@ -183,7 +183,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         class_attri = ["config", "catalog", "workspace", "mongo_util", "condor"]
         runner = self.getRunner()
         self.assertTrue(set(class_attri) <= set(runner.__dict__.keys()))
-        
+
     #TODO Think about what we want to do here, as this is an integration test and not a unit test
     # def test_get_client_groups(self):
     #     runner = self.getRunner()
