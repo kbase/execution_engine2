@@ -77,7 +77,7 @@ class LogLines(EmbeddedDocument):
     line = StringField(required=True)
     linepos = IntField(required=True)
     error = BooleanField(default=False)
-    ts = DateTimeField(default=datetime.utcnow())
+    ts = FloatField(default=datetime.utcnow().timestamp())
 
 
 class JobLog(Document):
@@ -122,7 +122,7 @@ class CondorResourceUsage(EmbeddedDocument):
 
     # Maybe remove this if we always want to make timestamp required
     def save(self, *args, **kwargs):
-        self.timestamp.append(datetime.datetime.utcnow())
+        self.timestamp.append(datetime.utcnow().timestamp())
         return super(CondorResourceUsage, self).save(*args, **kwargs)
 
 

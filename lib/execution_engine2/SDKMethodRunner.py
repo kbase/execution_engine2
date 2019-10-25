@@ -192,7 +192,7 @@ class SDKMethodRunner:
                     "line": log_line.line,
                     "linepos": log_line.linepos,
                     "error": log_line.error,
-                    "ts": str(log_line.ts),
+                    "ts": log_line.ts,
                 }
             )
 
@@ -280,8 +280,14 @@ class SDKMethodRunner:
             ts = input_line.get("ts")
             # TODO Maybe use strpos for efficiency?
             if ts is not None:
-                if type(ts) == str:
-                    ts = dateutil.parser.parse(ts)
+                try:     # input ts as float/int/str epoch timestamp
+                    ts = float(ts)
+                except Exception:
+                    try:  # input ts as datetime string
+                        ts = dateutil.parser.parse(ts).timestamp()
+                    except Exception:
+                        ts = None  # TODO raise error?
+
             ll.ts = ts
 
             ll.line = input_line.get("line")

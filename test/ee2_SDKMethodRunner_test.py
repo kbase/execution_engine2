@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 from typing import Dict, List
 import copy
-import datetime
 import json
 import logging
 import os
 import unittest
 from configparser import ConfigParser
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest.mock import patch
 
 from mock import MagicMock
@@ -420,22 +419,22 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         line1 = {
             "error": False,
             "line": "This is the read deal",
-            "ts": datetime.datetime.now(),
+            "ts": datetime.now().timestamp(),
         }
         line2 = {
             "error": False,
             "line": "This is the read deal2",
-            "ts": datetime.datetime.now(),
+            "ts": datetime.now().timestamp(),
         }
         line3 = {
             "error": False,
             "line": "This is the read deal3",
-            "ts": datetime.datetime.now(),
+            "ts": datetime.now().timestamp(),
         }
         line4 = {
             "error": False,
             "line": "This is the read deal4",
-            "ts": datetime.datetime.now(),
+            "ts": datetime.now().timestamp(),
         }
         input_lines2 = [line1, line2, line3, line4]
 
@@ -459,10 +458,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(inserted_line["line"], input_lines2[i - log_pos_1]["line"])
             # TODO FIX THIS WHY AREN"T THEY EQUAL?!
             # self.assertEqual(inserted_line['ts'], input_lines2[i - log_pos_1]['ts'])
-            time1 = datetime.datetime.strptime(
-                inserted_line["ts"], "%Y-%m-%d %H:%M:%S.%f"
-            )
-            time2 = input_lines2[i - log_pos_1]["ts"]
+            time1 = datetime.fromtimestamp(inserted_line["ts"])
+            time2 = datetime.fromtimestamp(input_lines2[i - log_pos_1]["ts"])
             # print("Time 1 is:",time1, type(time1))
             # print("Time 2 is:",time2, type(time2))
             error1 = line["error"]
