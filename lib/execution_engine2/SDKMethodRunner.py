@@ -286,7 +286,7 @@ class SDKMethodRunner:
                     try:  # input ts as datetime string
                         ts = dateutil.parser.parse(ts).timestamp()
                     except Exception:
-                        ts = None  # TODO raise error?
+                        ts = datetime.utcnow().timestamp()
 
             ll.ts = ts
 
