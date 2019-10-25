@@ -250,7 +250,6 @@ class Job(Document):
     wsid = IntField(required=True)
     status = StringField(required=True, validation=valid_status)
 
-    # updated = DateTimeField(default=datetime.datetime.utcnow, autonow=True)
     updated = FloatField(default=datetime.utcnow().timestamp())
 
     # id.generation_time = created
