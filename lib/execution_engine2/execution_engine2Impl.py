@@ -24,7 +24,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "fec6d6c69061899d9dc241608d366f054d3de8a6"
+    GIT_COMMIT_HASH = "44544103879ce2b9f4261e56f33bb8bfc69dd347"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -889,11 +889,12 @@ class execution_engine2:
            together, such as error_code=1, wsid=1234, terminated_code = 1 int
            limit; # The maximum number of records to return string user; #
            Optional. Defaults off of your token @optional projection
-           @optional filter @optional limit @optional user) -> structure:
-           parameter "start_date" of String, parameter "end_date" of String,
-           parameter "projection" of list of String, parameter "filter" of
-           list of String, parameter "limit" of Long, parameter "user" of
-           String
+           @optional filter @optional limit @optional user @optional offset
+           @optional ascending) -> structure: parameter "start_date" of
+           String, parameter "end_date" of String, parameter "projection" of
+           list of String, parameter "filter" of list of String, parameter
+           "limit" of Long, parameter "user" of String, parameter "offset" of
+           Long, parameter "ascending" of type "boolean" (@range [0,1])
         :returns: instance of type "CheckJobsResults" (job_states - states of
            jobs) -> structure: parameter "job_states" of mapping from type
            "job_id" (A job id.) to type "JobState" (job_id - string - id of
@@ -1014,7 +1015,9 @@ class execution_engine2:
             job_projection=params.get("projection"),
             job_filter=params.get("filter"),
             limit=params.get("limit"),
-            user=params.get("user")
+            user=params.get("user"),
+            offset=params.get("offset"),
+            ascending=params.get("ascending")
         )
         #END check_jobs_date_range_for_user
 
@@ -1051,11 +1054,12 @@ class execution_engine2:
            together, such as error_code=1, wsid=1234, terminated_code = 1 int
            limit; # The maximum number of records to return string user; #
            Optional. Defaults off of your token @optional projection
-           @optional filter @optional limit @optional user) -> structure:
-           parameter "start_date" of String, parameter "end_date" of String,
-           parameter "projection" of list of String, parameter "filter" of
-           list of String, parameter "limit" of Long, parameter "user" of
-           String
+           @optional filter @optional limit @optional user @optional offset
+           @optional ascending) -> structure: parameter "start_date" of
+           String, parameter "end_date" of String, parameter "projection" of
+           list of String, parameter "filter" of list of String, parameter
+           "limit" of Long, parameter "user" of String, parameter "offset" of
+           Long, parameter "ascending" of type "boolean" (@range [0,1])
         :returns: instance of type "CheckJobsResults" (job_states - states of
            jobs) -> structure: parameter "job_states" of mapping from type
            "job_id" (A job id.) to type "JobState" (job_id - string - id of
@@ -1176,6 +1180,8 @@ class execution_engine2:
             job_projection=params.get("projection"),
             job_filter=params.get("filter"),
             limit=params.get("limit"),
+            offset=params.get("offset"),
+            ascending=params.get("ascending"),
             user='ALL'
         )
         #END check_jobs_date_range_for_all

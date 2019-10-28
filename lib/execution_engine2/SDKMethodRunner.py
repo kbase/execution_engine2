@@ -4,11 +4,11 @@ import os
 from collections import namedtuple
 
 import dateutil
+import pymongo
 from bson import ObjectId
 from datetime import datetime, timezone
 from enum import Enum
 
-from installed_clients.authclient import KBaseAuth
 from execution_engine2.authorization.authstrategy import (
     can_read_job,
     can_read_jobs,
@@ -35,6 +35,7 @@ from execution_engine2.exceptions import (
 from execution_engine2.utils.Condor import Condor
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
+from installed_clients.authclient import KBaseAuth
 
 debug = json.loads(os.environ.get("debug", "False").lower())
 
@@ -51,7 +52,6 @@ class JobPermissions(Enum):
 
 
 class SDKMethodRunner:
-
 
     def _get_client_groups(self, method):
         """
@@ -142,7 +142,6 @@ class SDKMethodRunner:
             job.save()
 
         return str(job.id)
-
 
     def get_workspace_auth(self):
         if self.workspace_auth is None:
@@ -811,7 +810,7 @@ class SDKMethodRunner:
 
     @staticmethod
     def _job_state_from_jobs(jobs):
-        job_states = dict()
+        job_states = []
         for job in jobs:
             mongo_rec = job.to_mongo().to_dict()
             mongo_rec["_id"] = str(job.id)
@@ -824,8 +823,7 @@ class SDKMethodRunner:
                 mongo_rec["running"] = str(job.running)
             if job.finished:
                 mongo_rec["finished"] = str(job.finished)
-
-            job_states[str(job.id)] = mongo_rec
+            job_states.append(mongo_rec)
         return job_states
 
     def check_jobs_date_range_for_user(
@@ -836,8 +834,11 @@ class SDKMethodRunner:
             job_filter=None,
             limit=None,
             user=None,
+            offset=None,
+            ascending=True
 
     ):
+
         """
         :param ctx: Context Object
         :param creation_start_date: Start Date for Creation
@@ -846,8 +847,21 @@ class SDKMethodRunner:
         :param job_filter:  List of simple job fields of format key=value
         :param limit: Limit of records to return, default 2000
         :param user: Optional Username or "ALL" for all users
+        :param offset: Optional offset for skipping records
+        :param ascending: Sort by id ascending or descending
         :return:
         """
+
+        sort_order = "+"
+        if type(ascending) == bool:
+            if ascending is False:
+                sort_order = "-"
+        else:
+            raise Exception("Ascending must be a true or false value")
+
+        if offset is None:
+            offset = 0
+
         if self.token is None:
             raise AuthError("Please provide a token to check jobs date range")
 
@@ -895,19 +909,31 @@ class SDKMethodRunner:
         print("About to filter the jobs with", job_filter_temp)
 
         with self.get_mongo_util().mongo_engine_connection() as mec:
-            jobs = Job.objects[:limit].filter(**job_filter_temp).only(*job_projection)
+            jobs = Job.objects[:limit].filter(**job_filter_temp).order_by(f"{sort_order}_id").skip(
+                offset).only(*job_projection)
 
         logging.info(
             f"Searching for jobs with id_gt {dummy_ids.start} id_lt {dummy_ids.stop}"
         )
 
-        return self._job_state_from_jobs(jobs)
+        job_states = self._job_state_from_jobs(jobs)
+
+        return {
+            'jobs': job_states,
+            'count': len(job_states),
+            'filter': job_filter_temp,
+            'skip': offset,
+            'projection': job_projection,
+            'limit': limit,
+            'sort_order': sort_order
+        }
 
         # TODO Move to MongoUtils?
         # TODO Add support for projection (validate the allowed fields to project?) (Need better api design)
         # TODO Add support for filter (validate the allowed fields to project?) (Need better api design)
         # TODO USE AS_PYMONGO() FOR SPEED
         # TODO Better define default fields
+        # TODO Instead of SKIP use ID GT LT https://www.codementor.io/arpitbhayani/fast-and-efficient-pagination-in-mongodb-9095flbqr
 
     @staticmethod
     def _get_dummy_dates(creation_start_date, creation_end_date):
