@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import logging
 import subprocess
 import traceback
@@ -241,7 +241,7 @@ class MongoUtil:
             j.errormsg = error_message
             j.error = error
             j.status = Status.error.value
-            j.finished = datetime.datetime.utcnow()
+            j.finished = datetime.utcnow().timestamp()
             j.save()
 
     def finish_job_with_success(self, job_id, job_output):
@@ -256,7 +256,7 @@ class MongoUtil:
             j = self.get_job(job_id, projection=None)
             j.job_output = job_output
             j.status = Status.finished.value
-            j.finished = datetime.datetime.utcnow()
+            j.finished = datetime.utcnow().timestamp()
             j.save()
 
     def update_job_status(self, job_id, status, msg=None, error_message=None):

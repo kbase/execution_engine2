@@ -105,5 +105,11 @@ class WorkspaceAuth(AuthStrategy):
 
         perms = dict()
         for idx, ws_id in enumerate(ws_ids):
-            perms[ws_id] = WorkspacePermission(perm_list[idx].get(self.user_id, 'n'))
+            perm = WorkspacePermission.NONE
+            cur_ws_perm = perm_list[idx]
+            if self.user_id in cur_ws_perm:
+                perm = WorkspacePermission(cur_ws_perm[self.user_id])
+            if "*" in cur_ws_perm and perm == WorkspacePermission.NONE:
+                perm = WorkspacePermission(cur_ws_perm["*"])
+            perms[ws_id] = perm
         return perms
