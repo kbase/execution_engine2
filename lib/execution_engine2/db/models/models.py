@@ -258,6 +258,7 @@ class Job(Document):
     running = IntField(default=None)  # Time when job started
     # Time when job finished, errored out, or was terminated by the user/admin
     finished = IntField(default=None)
+
     errormsg = StringField()
     msg = StringField()
     error = DynamicField()
