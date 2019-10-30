@@ -8,6 +8,7 @@ import unittest
 from configparser import ConfigParser
 from datetime import datetime, timedelta
 from unittest.mock import patch
+import dateutil
 
 from mock import MagicMock
 from mongoengine import ValidationError
@@ -419,7 +420,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         line1 = {
             "error": False,
             "line": "This is the read deal",
-            "ts": int(datetime.now().timestamp() * 1000),
+            "ts": str(datetime.now()),
         }
         line2 = {
             "error": False,
@@ -429,12 +430,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         line3 = {
             "error": False,
             "line": "This is the read deal3",
-            "ts": int(datetime.now().timestamp() * 1000),
+            "ts": datetime.now().timestamp(),
         }
         line4 = {
             "error": False,
             "line": "This is the read deal4",
-            "ts": int(datetime.now().timestamp() * 1000),
+            "ts": str(datetime.now().timestamp()),
         }
         input_lines2 = [line1, line2, line3, line4]
 
@@ -456,20 +457,20 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 continue
 
             self.assertEqual(inserted_line["line"], input_lines2[i - log_pos_1]["line"])
-            # TODO FIX THIS WHY AREN"T THEY EQUAL?!
-            # self.assertEqual(inserted_line['ts'], input_lines2[i - log_pos_1]['ts'])
-            time1 = datetime.fromtimestamp(inserted_line["ts"] / 1000.0)
-            time2 = datetime.fromtimestamp(input_lines2[i - log_pos_1]["ts"] / 1000.0)
-            # print("Time 1 is:",time1, type(time1))
-            # print("Time 2 is:",time2, type(time2))
+
+            time_input = input_lines2[i - log_pos_1]["ts"]
+            if isinstance(time_input, str):
+                if time_input.replace('.', '', 1).isdigit():
+                    time_input = int(float(time_input) * 1000) if '.' in time_input else int(time_input)
+                else:
+                    time_input = int(dateutil.parser.parse(time_input).timestamp() * 1000)
+            elif isinstance(time_input, float):
+                time_input = int(time_input * 1000)
+
+            self.assertEqual(inserted_line['ts'], time_input)
+
             error1 = line["error"]
             error2 = input_lines2[i - log_pos_1]["error"]
-            print("error1 1 is:", error1, type(error1))
-            print("error2 2 is:", error2, type(error2))
-
-            self.assertAlmostEqual(
-                first=time1, second=time2, delta=timedelta(seconds=1)
-            )
             self.assertEqual(error1, error2)
 
         # TODO IMPLEMENT SKIPLINES AND TEST

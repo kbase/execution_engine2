@@ -281,23 +281,19 @@ class SDKMethodRunner:
             ts = input_line.get("ts")
             # TODO Maybe use strpos for efficiency?
             if ts is not None:
-                if isinstance(ts, int):  # input ts as epoch in milliseconds
-                    try:
-                        datetime.fromtimestamp(ts / 1000.0)
-                    except Exception:
-                        ts = int(time.time() * 1000)
-                elif isinstance(ts, float):  # input ts as float epoch
-                    try:
-                        datetime.fromtimestamp(ts)
+
+                try:
+                    if isinstance(ts, str):  # input ts as string
+                        if ts.replace('.', '', 1).isdigit():  # input ts as numeric string
+                            ts = int(float(ts) * 1000) if '.' in ts else int(ts)
+                        else:   # input ts as datetime string
+                            ts = int(dateutil.parser.parse(ts).timestamp() * 1000)
+                    elif isinstance(ts, float):  # input ts as float epoch
                         ts = int(ts * 1000)
-                    except Exception:
-                        ts = int(time.time() * 1000)
-                elif isinstance(ts, str):  # input ts as datetime string
-                    try:
-                        ts = int(dateutil.parser.parse(ts).timestamp() * 1000)
-                    except Exception:
-                        ts = int(time.time() * 1000)
-                else:
+
+                    datetime.fromtimestamp(ts / 1000.0)  # check current ts is valid
+                except Exception:
+                    logging.info("Cannot convert ts into timestamps: {}".format(ts))
                     ts = int(time.time() * 1000)
 
             ll.ts = ts
