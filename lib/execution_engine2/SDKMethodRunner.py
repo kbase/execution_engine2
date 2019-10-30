@@ -280,13 +280,24 @@ class SDKMethodRunner:
             ts = input_line.get("ts")
             # TODO Maybe use strpos for efficiency?
             if ts is not None:
-                try:     # input ts as float/int/str epoch timestamp
-                    ts = float(ts)
-                except Exception:
-                    try:  # input ts as datetime string
-                        ts = dateutil.parser.parse(ts).timestamp()
+                if isinstance(ts, int):  # input ts as epoch in milliseconds
+                    try:
+                        datetime.fromtimestamp(ts / 1000.0)
                     except Exception:
-                        ts = datetime.utcnow().timestamp()
+                        ts = int(datetime.utcnow().timestamp() * 1000)
+                elif isinstance(ts, float):  # input ts as float epoch
+                    try:
+                        datetime.fromtimestamp(ts)
+                        ts = int(ts * 1000)
+                    except Exception:
+                        ts = int(datetime.utcnow().timestamp() * 1000)
+                elif isinstance(ts, str):  # input ts as datetime string
+                    try:
+                        ts = int(dateutil.parser.parse(ts).timestamp() * 1000)
+                    except Exception:
+                        ts = int(datetime.utcnow().timestamp() * 1000)
+                else:
+                    ts = int(datetime.utcnow().timestamp() * 1000)
 
             ll.ts = ts
 
