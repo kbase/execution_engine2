@@ -36,7 +36,8 @@ RUN echo "mongodb-org hold" | dpkg --set-selections \
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
 && bash ~/miniconda.sh -b -p /miniconda3.7
 
-ENV PATH=/miniconda3.7/bin:$PATH
+# Need to change startup scripts to match this in MAKEFILE
+#ENV PATH=/miniconda3.7/bin:$PATH
 
 #RUN conda update -n base -c defaults conda && conda install python=3.7 anaconda=custom
 
