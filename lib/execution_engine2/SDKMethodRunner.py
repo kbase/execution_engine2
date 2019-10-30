@@ -2,6 +2,7 @@ import json
 import logging
 import os
 from datetime import datetime, timezone
+import time
 from enum import Enum
 
 import dateutil
@@ -284,20 +285,20 @@ class SDKMethodRunner:
                     try:
                         datetime.fromtimestamp(ts / 1000.0)
                     except Exception:
-                        ts = int(datetime.utcnow().timestamp() * 1000)
+                        ts = int(time.time() * 1000)
                 elif isinstance(ts, float):  # input ts as float epoch
                     try:
                         datetime.fromtimestamp(ts)
                         ts = int(ts * 1000)
                     except Exception:
-                        ts = int(datetime.utcnow().timestamp() * 1000)
+                        ts = int(time.time() * 1000)
                 elif isinstance(ts, str):  # input ts as datetime string
                     try:
                         ts = int(dateutil.parser.parse(ts).timestamp() * 1000)
                     except Exception:
-                        ts = int(datetime.utcnow().timestamp() * 1000)
+                        ts = int(time.time() * 1000)
                 else:
-                    ts = int(datetime.utcnow().timestamp() * 1000)
+                    ts = int(time.time() * 1000)
 
             ll.ts = ts
 
@@ -702,13 +703,13 @@ class SDKMethodRunner:
 
         if job_status == Status.estimating.value or skip_estimation:
             # set job to running status
-            job.running = int(datetime.utcnow().timestamp() * 1000)
+            job.running = int(time.time() * 1000)
             self.get_mongo_util().update_job_status(
                 job_id=job_id, status=Status.running.value
             )
         else:
             # set job to estimating status
-            job.estimating = int(datetime.utcnow().timestamp() * 1000)
+            job.estimating = int(time.time() * 1000)
             self.get_mongo_util().update_job_status(
                 job_id=job_id, status=Status.estimating.value
             )

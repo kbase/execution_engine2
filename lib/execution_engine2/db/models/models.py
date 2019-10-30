@@ -2,6 +2,7 @@
 from datetime import datetime
 from enum import Enum
 from mongoengine import ValidationError
+import time
 
 from mongoengine import (
     StringField,
@@ -77,7 +78,7 @@ class LogLines(EmbeddedDocument):
     line = StringField(required=True)
     linepos = IntField(required=True)
     error = BooleanField(default=False)
-    ts = IntField(default=int(datetime.utcnow().timestamp() * 1000))
+    ts = IntField(default=int(time.time() * 1000))
 
 
 class JobLog(Document):
@@ -87,7 +88,7 @@ class JobLog(Document):
     """
 
     primary_key = ObjectIdField(primary_key=True, required=True)
-    updated = IntField(default=int(datetime.utcnow().timestamp() * 1000))
+    updated = IntField(default=int(time.time() * 1000))
     original_line_count = IntField()
     stored_line_count = IntField()
     lines = ListField()
@@ -95,7 +96,7 @@ class JobLog(Document):
     meta = {"collection": "ee2_logs"}
 
     def save(self, *args, **kwargs):
-        self.updated = int(datetime.utcnow().timestamp() * 1000)
+        self.updated = int(time.time() * 1000)
         return super(JobLog, self).save(*args, **kwargs)
 
 
@@ -250,7 +251,7 @@ class Job(Document):
     wsid = IntField(required=True)
     status = StringField(required=True, validation=valid_status)
 
-    updated = IntField(default=int(datetime.utcnow().timestamp() * 1000))
+    updated = IntField(default=int(time.time()* 1000))
 
     # id.generation_time = created
     queued = IntField(default=None)  # Time when job was submitted to the queue to be run
@@ -276,7 +277,7 @@ class Job(Document):
     meta = {"collection": "ee2_jobs"}
 
     def save(self, *args, **kwargs):
-        self.updated = int(datetime.utcnow().timestamp() * 1000)
+        self.updated = int(time.time()* 1000)
         return super(Job, self).save(*args, **kwargs)
 
 
