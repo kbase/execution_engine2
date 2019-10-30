@@ -419,22 +419,22 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         line1 = {
             "error": False,
             "line": "This is the read deal",
-            "ts": datetime.now().timestamp(),
+            "ts": int(datetime.now().timestamp() * 1000),
         }
         line2 = {
             "error": False,
             "line": "This is the read deal2",
-            "ts": datetime.now().timestamp(),
+            "ts": int(datetime.now().timestamp() * 1000),
         }
         line3 = {
             "error": False,
             "line": "This is the read deal3",
-            "ts": datetime.now().timestamp(),
+            "ts": int(datetime.now().timestamp() * 1000),
         }
         line4 = {
             "error": False,
             "line": "This is the read deal4",
-            "ts": datetime.now().timestamp(),
+            "ts": int(datetime.now().timestamp() * 1000),
         }
         input_lines2 = [line1, line2, line3, line4]
 
@@ -458,8 +458,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(inserted_line["line"], input_lines2[i - log_pos_1]["line"])
             # TODO FIX THIS WHY AREN"T THEY EQUAL?!
             # self.assertEqual(inserted_line['ts'], input_lines2[i - log_pos_1]['ts'])
-            time1 = datetime.fromtimestamp(inserted_line["ts"])
-            time2 = datetime.fromtimestamp(input_lines2[i - log_pos_1]["ts"])
+            time1 = datetime.fromtimestamp(inserted_line["ts"] / 1000.0)
+            time2 = datetime.fromtimestamp(input_lines2[i - log_pos_1]["ts"] / 1000.0)
             # print("Time 1 is:",time1, type(time1))
             # print("Time 2 is:",time2, type(time2))
             error1 = line["error"]

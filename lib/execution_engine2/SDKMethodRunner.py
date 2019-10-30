@@ -691,13 +691,13 @@ class SDKMethodRunner:
 
         if job_status == Status.estimating.value or skip_estimation:
             # set job to running status
-            job.running = datetime.utcnow().timestamp()
+            job.running = int(datetime.utcnow().timestamp() * 1000)
             self.get_mongo_util().update_job_status(
                 job_id=job_id, status=Status.running.value
             )
         else:
             # set job to estimating status
-            job.estimating = datetime.utcnow().timestamp()
+            job.estimating = int(datetime.utcnow().timestamp() * 1000)
             self.get_mongo_util().update_job_status(
                 job_id=job_id, status=Status.estimating.value
             )
@@ -754,7 +754,7 @@ class SDKMethodRunner:
             mongo_rec = job.to_mongo().to_dict()
             del mongo_rec['_id']
             mongo_rec['job_id'] = str(job.id)
-            mongo_rec['created'] = job.id.generation_time.utcnow().timestamp()
+            mongo_rec['created'] = int(job.id.generation_time.utcnow().timestamp() * 1000)
             mongo_rec['updated'] = job.updated
             if job.estimating:
                 mongo_rec['estimating'] = job.estimating
