@@ -977,7 +977,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         new_job_ids = []
 
-        now = datetime.datetime.utcnow()
+        now = datetime.utcnow()
         last_month = now - timedelta(days=30)
         last_month_and_1_hour = now - timedelta(days=30) - timedelta(hours=1)
 
