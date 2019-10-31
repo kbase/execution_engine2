@@ -1255,7 +1255,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 self.assertIn("status", record)
                 self.assertNotIn("service_ver", record)
 
-            self.assertTrue(len(job_state["jobs"]) == 1)
+            self.assertTrue(len(job_state["jobs"]) > 1)
 
             print("Test 6b, find the original job, but with projections and filters")
             job_state2 = runner.check_jobs_date_range_for_user(

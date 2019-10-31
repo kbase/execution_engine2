@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 #BEGIN_HEADER
-
 from execution_engine2.SDKMethodRunner import SDKMethodRunner
 import time
-
 #END_HEADER
 
 
@@ -12,8 +10,7 @@ class execution_engine2:
     Module Name:
     execution_engine2
 
-    Module Description:
-    
+    Module Description: The Heart Of Job Submission
     '''
 
     ######## WARNING FOR GEVENT USERS ####### noqa
