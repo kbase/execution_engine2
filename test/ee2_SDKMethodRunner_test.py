@@ -6,7 +6,6 @@ import os
 import time
 import unittest
 
-
 import dateutil
 import requests
 import requests_mock
@@ -973,6 +972,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             print("Saved job with id", job2.id, job2.id.generation_time)
             job1.delete()
 
+    # flake8: noqa: C901
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_check_jobs_date_range(self, condor_mock):
         user_name = "Fake_Test_User"
@@ -1293,3 +1293,53 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             )
 
             self.assertTrue(2 >= len(job_state_limit["jobs"]) > 0)
+
+            print(
+                "Test 8, ascending and descending (maybe should verify jobs count > 2)"
+            )
+            job_state_limit_asc = runner.check_jobs_date_range_for_user(
+                creation_end_date=str(tomorrow),
+                creation_start_date=str(last_month_and_1_hour),
+                user="ALL",
+                job_projection=["wsid", "status"],
+                ascending="True",
+            )
+
+            epoch = datetime.utcfromtimestamp(0)
+
+            job_id_temp = str(ObjectId.from_datetime(epoch))
+            for item in job_state_limit_asc["jobs"]:
+                job_id = item["job_id"]
+                if ObjectId(job_id) > ObjectId(job_id_temp):
+                    job_id_temp = job_id
+                else:
+                    raise Exception(
+                        "Not ascending"
+                        + "JobIdPrev"
+                        + str(job_id_temp)
+                        + "JobIdNext"
+                        + str(job_id)
+                    )
+
+            job_state_limit_desc = runner.check_jobs_date_range_for_user(
+                creation_end_date=str(tomorrow),
+                creation_start_date=str(last_month_and_1_hour),
+                user="ALL",
+                job_projection=["wsid", "status"],
+                ascending="False",
+            )
+
+            job_id_temp = str(ObjectId.from_datetime(now + timedelta(days=999999)))
+
+            for item in job_state_limit_desc["jobs"]:
+                job_id = item["job_id"]
+                if ObjectId(job_id) < ObjectId(job_id_temp):
+                    job_id_temp = job_id
+                else:
+                    raise Exception(
+                        "Not Descending"
+                        + "JobIdPrev:"
+                        + str(job_id_temp)
+                        + "JobIdNext:"
+                        + str(job_id)
+                    )

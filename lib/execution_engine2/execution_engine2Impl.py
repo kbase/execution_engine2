@@ -10,7 +10,8 @@ class execution_engine2:
     Module Name:
     execution_engine2
 
-    Module Description: The Heart Of Job Submission
+    Module Description:
+    
     '''
 
     ######## WARNING FOR GEVENT USERS ####### noqa
@@ -21,7 +22,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "44544103879ce2b9f4261e56f33bb8bfc69dd347"
+    GIT_COMMIT_HASH = "f037747627f01fc663bf9b9f3e6378f7058aad50"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"

@@ -422,9 +422,6 @@ class SDKMethodRunner:
             ## delete job from database? Or mark it to a state it will never run?
             logging.error(e)
             raise e
-        print("error is")
-        print(type(submission_info))
-        print(submission_info.error, type(submission_info.error))
 
         if submission_info.error is not None:
             raise submission_info.error
@@ -866,6 +863,13 @@ class SDKMethodRunner:
             job_states.append(mongo_rec)
         return job_states
 
+    def parse_bool_from_string(self, str_or_bool):
+        if isinstance(str_or_bool, bool):
+            return str_or_bool
+
+        if isinstance(json.loads(str_or_bool.lower()), bool):
+            return json.loads(str_or_bool.lower())
+
     def check_jobs_date_range_for_user(
         self,
         creation_start_date,
@@ -891,12 +895,10 @@ class SDKMethodRunner:
         :return:
         """
 
-        sort_order = "+"
-        if isinstance(ascending, bool):
-            if ascending is False:
-                sort_order = "-"
+        if self.parse_bool_from_string(ascending):
+            sort_order = "+"
         else:
-            raise Exception("Ascending must be a true or false value")
+            sort_order = "-"
 
         if offset is None:
             offset = 0
@@ -945,9 +947,7 @@ class SDKMethodRunner:
 
         if user != "ALL":
             job_filter_temp["user"] = user
-        print("About to filter the jobs with", job_filter_temp)
-        print("Filter")
-        print(job_filter_temp)
+
         with self.get_mongo_util().mongo_engine_connection():
             jobs = (
                 Job.objects[:limit]
