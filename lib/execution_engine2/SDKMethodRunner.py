@@ -892,7 +892,7 @@ class SDKMethodRunner:
         """
 
         sort_order = "+"
-        if isinstance(ascending) == bool:
+        if isinstance(ascending, bool):
             if ascending is False:
                 sort_order = "-"
         else:

@@ -961,7 +961,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         j.user = job.user
         j.authstrat = job.authstrat
         j.status = job.status
-        j.finished = new_job_id.generation_time
+        j.finished = new_job_id.generation_time.timestamp()
         j.job_input = job.job_input
         return j
 
@@ -987,7 +987,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner.get_permissions_for_workspace = MagicMock(return_value=True)
         runner._get_module_git_commit = MagicMock(return_value="git_commit_goes_here")
         runner.get_condor = MagicMock(return_value=condor_mock)
-        ctx = {"user_id": self.user_id, "wsid": self.ws_id, "token": self.token}
+        # ctx = {"user_id": self.user_id, "wsid": self.ws_id, "token": self.token}
         job = get_example_job().to_mongo().to_dict()
         job["method"] = job["job_input"]["app_id"]
         job["app_id"] = job["job_input"]["app_id"]
@@ -1020,6 +1020,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             new_id_last_month = ObjectId.from_datetime(last_month)
             print(last_month, new_id_last_month, new_id_last_month.generation_time)
 
+            print("About to replace job id")
+            print(job)
+            print(new_id_last_month)
             self.replace_job_id(job, new_id_last_month)
             new_job_ids.append(str(new_id_last_month))
 
@@ -1075,7 +1078,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 "Test case 1. Retrieving Jobs from last_week and tomorrow_max (yesterday and now jobs) "
             )
             job_state = runner.check_jobs_date_range_for_user(
-                token=ctx["token"],
                 creation_end_date=str(tomorrow),
                 creation_start_date=str(last_week),
                 user="ALL",
