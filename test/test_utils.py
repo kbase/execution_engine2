@@ -7,6 +7,7 @@ from execution_engine2.db.models.models import Job, JobInput, Meta
 from dateutil import parser as dateparser
 import requests
 import json
+from datetime import datetime
 
 
 def get_example_job(user: str = "boris", wsid: int = 123, authstrat: str = "kbaseworkspace") -> Job:
@@ -71,16 +72,16 @@ def validate_job_state(state):
         "wsid": int,
         "authstrat": str,
         "job_input": dict,
-        "updated": str,
-        "created": str,
+        "updated": float,
+        "created": float,
         "status": str,
     }
 
     optional_fields = {
-        "estimating": str,
-        "queued": str,
-        "running": str,
-        "finished": str,
+        "estimating": float,
+        "queued": float,
+        "running": float,
+        "finished": float,
         "error_code": int,
         "terminated_code": int,
         "errormsg": str,
@@ -162,13 +163,13 @@ def validate_job_state(state):
     return True
 
 
-def is_timestamp(ts: str):
+def is_timestamp(ts: float):
     """
     Simple enough - if dateutil.parser likes the string, it's a time string and we return True.
     Otherwise, return False.
     """
     try:
-        dateparser.parse(ts)
+        datetime.fromtimestamp(ts)
         return True
     except ValueError:
         return False

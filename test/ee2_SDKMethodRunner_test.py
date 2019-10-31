@@ -12,11 +12,14 @@ import requests
 import requests_mock
 from bson import ObjectId
 from configparser import ConfigParser
-from datetime import timedelta
+from datetime import datetime, timedelta
+from unittest.mock import patch
+
 from mock import MagicMock
 from mongoengine import ValidationError
 from typing import Dict, List
 from unittest.mock import patch
+from execution_engine2.exceptions import AuthError
 
 from execution_engine2.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.db.MongoUtil import MongoUtil
@@ -28,7 +31,6 @@ from execution_engine2.db.models.models import (
     JobLog,
     TerminatedCode,
 )
-from execution_engine2.exceptions import AuthError
 from execution_engine2.exceptions import InvalidStatusTransitionException
 from execution_engine2.utils.Condor import submission_info
 from test.mongo_test_helper import MongoTestHelper
@@ -43,6 +45,7 @@ bootstrap()
 
 
 def _run_job_adapter(ws_perms_info: Dict = None,
+                     ws_perms_global: List = [],
                      client_groups_info: Dict = None,
                      module_versions: Dict = None,
                      user_roles: List = None):
@@ -61,6 +64,7 @@ def _run_job_adapter(ws_perms_info: Dict = None,
             ws_perms: dict of permissions, keys are ws ids, values are permission. Example:
                 {123: "a", 456: "w"} means workspace id 123 has admin permissions, and 456 has
                 write permission
+    :param ws_perms_global: list - list of global workspaces - gives those workspaces a global (user "*") permission of "r"
     :param client_groups_info: dict - keys client_groups (list), function_name, module_name
     :param module_versions: dict - key git_commit_hash (str), others aren't used
     :return: an adapter function to be passed to request_mock
@@ -81,8 +85,12 @@ def _run_job_adapter(ws_perms_info: Dict = None,
                 user_id = ws_perms_info.get("user_id")
                 ws_perms = ws_perms_info.get("ws_perms", {})
                 for ws in perms_req:
-                    ret_perms.append({user_id: ws_perms.get(ws["id"], "n")})
+                    perms = {user_id: ws_perms.get(ws["id"], "n")}
+                    if ws["id"] in ws_perms_global:
+                        perms["*"] = "r"
+                    ret_perms.append(perms)
                 result = [{"perms": ret_perms}]
+                print(result)
             elif method == "Catalog.list_client_group_configs":
                 result = []
                 if client_groups_info is not None:
@@ -183,6 +191,38 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         class_attri = ["config", "catalog", "workspace", "mongo_util", "condor"]
         runner = self.getRunner()
         self.assertTrue(set(class_attri) <= set(runner.__dict__.keys()))
+
+    #TODO Think about what we want to do here, as this is an integration test and not a unit test
+    # def test_get_client_groups(self):
+    #     runner = self.getRunner()
+    #
+    #     client_groups = runner._get_client_groups(
+    #         "kb_uploadmethods.import_sra_from_staging"
+    #     )
+    #
+    #     expected_groups = "kb_upload"  # expected to fail if CI catalog is updated
+    #     self.assertCountEqual(expected_groups, client_groups)
+    #     client_groups = runner._get_client_groups("MEGAHIT.run_megahit")
+    #     self.assertEqual(0, len(client_groups))
+    #
+    #     with self.assertRaises(ValueError) as context:
+    #         runner._get_client_groups("kb_uploadmethods")
+    #
+    #     self.assertIn("unrecognized method:", str(context.exception.args))
+    #
+    # def test_get_module_git_commit(self):
+    #
+    #     runner = self.getRunner()
+    #
+    #     git_commit_1 = runner._get_module_git_commit("MEGAHIT.run_megahit", "2.2.1")
+    #     self.assertEqual(
+    #         "048baf3c2b76cb923b3b4c52008ed77dbe20292d", git_commit_1
+    #     )  # TODO: works only in CI
+    #
+    #     git_commit_2 = runner._get_module_git_commit("MEGAHIT.run_megahit")
+    #     self.assertTrue(isinstance(git_commit_2, str))
+    #     self.assertEqual(len(git_commit_1), len(git_commit_2))
+    #    self.assertNotEqual(git_commit_1, git_commit_2)
 
     def test_init_job_rec(self):
         with self.mongo_util.mongo_engine_connection():
@@ -390,22 +430,22 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         line1 = {
             "error": False,
             "line": "This is the read deal",
-            "ts": datetime.datetime.now(),
+            "ts": datetime.now().timestamp(),
         }
         line2 = {
             "error": False,
             "line": "This is the read deal2",
-            "ts": datetime.datetime.now(),
+            "ts": datetime.now().timestamp(),
         }
         line3 = {
             "error": False,
             "line": "This is the read deal3",
-            "ts": datetime.datetime.now(),
+            "ts": datetime.now().timestamp(),
         }
         line4 = {
             "error": False,
             "line": "This is the read deal4",
-            "ts": datetime.datetime.now(),
+            "ts": datetime.now().timestamp(),
         }
         input_lines2 = [line1, line2, line3, line4]
 
@@ -429,10 +469,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(inserted_line["line"], input_lines2[i - log_pos_1]["line"])
             # TODO FIX THIS WHY AREN"T THEY EQUAL?!
             # self.assertEqual(inserted_line['ts'], input_lines2[i - log_pos_1]['ts'])
-            time1 = datetime.datetime.strptime(
-                inserted_line["ts"], "%Y-%m-%d %H:%M:%S.%f"
-            )
-            time2 = input_lines2[i - log_pos_1]["ts"]
+            time1 = datetime.fromtimestamp(inserted_line["ts"])
+            time2 = datetime.fromtimestamp(input_lines2[i - log_pos_1]["ts"])
             # print("Time 1 is:",time1, type(time1))
             # print("Time 2 is:",time2, type(time2))
             error1 = line["error"]
@@ -776,6 +814,43 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(ori_job_count, Job.objects.count())
 
     @requests_mock.Mocker()
+    def test_check_job_global_perm(self, rq_mock):
+        rq_mock.add_matcher(_run_job_adapter(
+            ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "n"}},
+            ws_perms_global=[self.ws_id],
+            user_roles=[]
+        ))
+        with self.mongo_util.mongo_engine_connection():
+            ori_job_count = Job.objects.count()
+            job_id = self.create_job_rec()
+            self.assertEqual(ori_job_count, Job.objects.count() - 1)
+
+            job = self.mongo_util.get_job(job_id=job_id)
+            self.assertEqual(job.status, "created")
+            self.assertFalse(job.finished)
+            self.assertFalse(job.running)
+            self.assertFalse(job.estimating)
+
+            # test check_job
+            runner = self.getRunner()
+            job_state = runner.check_job(job_id)
+            json.dumps(job_state)  # make sure it's JSON serializable
+            self.assertTrue(validate_job_state(job_state))
+            self.assertEqual(job_state["status"], "created")
+            self.assertEqual(job_state["wsid"], self.ws_id)
+
+            # test globally
+            job_states = runner.check_workspace_jobs(self.ws_id)
+            self.assertTrue(job_id in job_states)
+            self.assertEqual(job_states[job_id]["status"], "created")
+
+            # now test with a different user
+            other_method_runner = SDKMethodRunner(self.cfg, user_id="some_other_user", token="other_token")
+            job_states = other_method_runner.check_workspace_jobs(self.ws_id)
+            self.assertTrue(job_id in job_states)
+            self.assertEqual(job_states[job_id]["status"], "created")
+
+    @requests_mock.Mocker()
     def test_check_job_ok(self, rq_mock):
         rq_mock.add_matcher(_run_job_adapter(
             ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}},
@@ -871,8 +946,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             job1.delete()
 
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
-    @patch("lib.installed_clients.CatalogClient.Catalog", autospec=True)
-    def test_check_jobs_date_range(self, condor_mock, catalog_mock):
+    def test_check_jobs_date_range(self, condor_mock, ):
         user_name = "Fake_Test_User"
 
         runner = self.getRunner()
@@ -892,8 +966,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         si = submission_info(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-        catalog_mock.list_client_group_configs = MagicMock(return_value=[])
-        runner.catalog = catalog_mock
 
         job_id1 = runner.run_job(params=job, )
         job_id2 = runner.run_job(params=job, )
@@ -975,7 +1047,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 "Test case 1. Retrieving Jobs from last_week and tomorrow_max (yesterday and now jobs) "
             )
             job_state = runner.check_jobs_date_range_for_user(
-
+                token=ctx['token'],
                 creation_end_date=str(tomorrow),
                 creation_start_date=str(last_week),
                 user="ALL",
@@ -1051,6 +1123,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                     user="FAKE",
                 )
                 print("Exception raised is", error)
+
+
 
             print("Test case 2C. Same as above but with FAKE_TEST_USER + ADMIN) ")
             runner.is_admin = True
@@ -1181,6 +1255,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                     raise Exception("Only records with wsid 123 should be allowed", )
                 self.assertIn("wsid", record)
                 self.assertIn("status", record)
+                self.assertNotIn("service_ver", record)
 
             print(len(job_state2['jobs']))
             self.assertTrue(4 >= len(job_state2['jobs']) > 0)
