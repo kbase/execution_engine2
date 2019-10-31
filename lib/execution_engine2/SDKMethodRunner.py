@@ -1,18 +1,18 @@
 import json
 import logging
 import os
-from collections import namedtuple
 import time
+from collections import namedtuple
+
 import dateutil
-import pymongo
 from bson import ObjectId
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
 
 from execution_engine2.authorization.authstrategy import (
     can_read_job,
     can_read_jobs,
-    can_write_job
+    can_write_job,
 )
 from execution_engine2.authorization.roles import AdminAuthUtil
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
@@ -52,7 +52,6 @@ class JobPermissions(Enum):
 
 
 class SDKMethodRunner:
-
     def _get_client_groups(self, method):
         """
         get client groups info from Catalog
@@ -128,13 +127,13 @@ class SDKMethodRunner:
         inputs.parent_job_id = str(params.get("parent_job_id"))
 
         inputs.narrative_cell_info = Meta()
-        meta = params.get('meta')
+        meta = params.get("meta")
         if meta:
-            inputs.narrative_cell_info.run_id = meta.get('run_id')
-            inputs.narrative_cell_info.token_id = meta.get('token_id')
-            inputs.narrative_cell_info.tag = meta.get('tag')
-            inputs.narrative_cell_info.cell_id = meta.get('cell_id')
-            inputs.narrative_cell_info.status = meta.get('status')
+            inputs.narrative_cell_info.run_id = meta.get("run_id")
+            inputs.narrative_cell_info.token_id = meta.get("token_id")
+            inputs.narrative_cell_info.tag = meta.get("tag")
+            inputs.narrative_cell_info.cell_id = meta.get("cell_id")
+            inputs.narrative_cell_info.status = meta.get("status")
 
         job.job_input = inputs
         logging.info(job.job_input.to_mongo().to_dict())
@@ -145,7 +144,9 @@ class SDKMethodRunner:
 
     def get_workspace_auth(self):
         if self.workspace_auth is None:
-            self.workspace_auth = WorkspaceAuth(self.token, self.user_id, self.workspace_url)
+            self.workspace_auth = WorkspaceAuth(
+                self.token, self.user_id, self.workspace_url
+            )
         return self.workspace_auth
 
     def get_mongo_util(self):
@@ -289,9 +290,11 @@ class SDKMethodRunner:
 
                 try:
                     if isinstance(ts, str):  # input ts as string
-                        if ts.replace('.', '', 1).isdigit():  # input ts as numeric string
-                            ts = int(float(ts) * 1000) if '.' in ts else int(ts)
-                        else:   # input ts as datetime string
+                        if ts.replace(
+                            ".", "", 1
+                        ).isdigit():  # input ts as numeric string
+                            ts = int(float(ts) * 1000) if "." in ts else int(ts)
+                        else:  # input ts as datetime string
                             ts = int(dateutil.parser.parse(ts).timestamp() * 1000)
                     elif isinstance(ts, float):  # input ts as float epoch
                         ts = int(ts * 1000)
@@ -383,9 +386,11 @@ class SDKMethodRunner:
         ws_auth = self.get_workspace_auth()
         if not ws_auth.can_write(params["wsid"]):
             logging.debug(
-                f"User {self.user_id} doesn't have permission to run jobs in workspace {params['wsid']}.")
+                f"User {self.user_id} doesn't have permission to run jobs in workspace {params['wsid']}."
+            )
             raise PermissionError(
-                f"User {self.user_id} doesn't have permission to run jobs in workspace {params['wsid']}.")
+                f"User {self.user_id} doesn't have permission to run jobs in workspace {params['wsid']}."
+            )
 
         method = params.get("method")
         logging.info(f"User {self.user_id} attempting to run job {method}")
@@ -442,8 +447,10 @@ class SDKMethodRunner:
             )
         commands = {"cancel_job": self.cancel_job, "view_job_logs": self.view_job_logs}
         p = {
-            "cancel_job": {"job_id": params.get("job_id"),
-                           "terminated_code": params.get("terminated_code")},
+            "cancel_job": {
+                "job_id": params.get("job_id"),
+                "terminated_code": params.get("terminated_code"),
+            },
             "view_job_logs": {"job_id": params.get("job_id")},
         }
         return commands[command](**p[command])
@@ -464,7 +471,9 @@ class SDKMethodRunner:
         :param token: The auth token (Will be checked for the correct auth role)
         :return:
         """
-        logging.info(f'Attempting to run administrative command "{command}" as user {self.user_id}')
+        logging.info(
+            f'Attempting to run administrative command "{command}" as user {self.user_id}'
+        )
         # set admin privs, one way or the other
         self.is_admin = self._is_admin(token)
         if not self.is_admin:
@@ -476,16 +485,22 @@ class SDKMethodRunner:
 
     def _is_admin(self, token: str) -> bool:
         try:
-            self.is_admin = AdminAuthUtil(self.auth_url, self.admin_roles).is_admin(token)
+            self.is_admin = AdminAuthUtil(self.auth_url, self.admin_roles).is_admin(
+                token
+            )
             return self.is_admin
         except AuthError as e:
             logging.error(f"An auth error occurred: {str(e)}")
             raise e
         except RuntimeError as e:
-            logging.error(f"A runtime error occurred while looking up user roles: {str(e)}")
+            logging.error(
+                f"A runtime error occurred while looking up user roles: {str(e)}"
+            )
             raise e
 
-    def _test_job_permissions(self, job: Job, job_id: str, level: JobPermissions) -> bool:
+    def _test_job_permissions(
+        self, job: Job, job_id: str, level: JobPermissions
+    ) -> bool:
         """
         Tests if the currently loaded token has the requested permissions for the given job.
         Returns True if so. Raises a PermissionError if not.
@@ -518,7 +533,9 @@ class SDKMethodRunner:
                     f"User {self.user_id} does not have permission to {level} job {job_id}"
                 )
         except RuntimeError as e:
-            logging.error(f"An error occurred while checking permissions for job {job_id}")
+            logging.error(
+                f"An error occurred while checking permissions for job {job_id}"
+            )
             raise e
 
     def get_job_params(self, job_id):
@@ -616,7 +633,10 @@ class SDKMethodRunner:
             error_code = ErrorCode.unknown_error.value
 
         self.get_mongo_util().finish_job_with_error(
-            job_id=job_id, error_message=error_message, error_code=error_code, error=error
+            job_id=job_id,
+            error_message=error_message,
+            error_code=error_code,
+            error=error,
         )
 
     def _finish_job_with_success(self, job_id, job_output):
@@ -640,7 +660,7 @@ class SDKMethodRunner:
         )
 
     def finish_job(
-            self, job_id, error_message=None, error_code=None, error=None, job_output=None
+        self, job_id, error_message=None, error_code=None, error=None, job_output=None
     ):
         """
         #TODO Fix too many open connections to mongoengine
@@ -668,7 +688,10 @@ class SDKMethodRunner:
             if error_code is None:
                 error_code = ErrorCode.job_crashed.value
             self._finish_job_with_error(
-                job_id=job_id, error_message=error_message, error_code=error_code, error=error
+                job_id=job_id,
+                error_message=error_message,
+                error_code=error_code,
+                error=error,
             )
         elif job_output is None:
             if error_code is None:
@@ -764,7 +787,9 @@ class SDKMethodRunner:
             try:
                 perms = can_read_jobs(jobs, self.user_id, self.token, self.config)
             except RuntimeError as e:
-                logging.error(f"An error occurred while checking read permissions for jobs")
+                logging.error(
+                    f"An error occurred while checking read permissions for jobs"
+                )
                 raise e
         else:
             perms = [True] * len(jobs)
@@ -774,17 +799,18 @@ class SDKMethodRunner:
             if not perms[idx]:
                 job_states[str(job.id)] = {"error": "Cannot read this job"}
             mongo_rec = job.to_mongo().to_dict()
-            del mongo_rec['_id']
-            mongo_rec['job_id'] = str(job.id)
-            mongo_rec['created'] = int(job.id.generation_time.utcnow().timestamp() * 1000)
-            mongo_rec['updated'] = job.updated
+            del mongo_rec["_id"]
+            mongo_rec["job_id"] = str(job.id)
+            mongo_rec["created"] = int(
+                job.id.generation_time.utcnow().timestamp() * 1000
+            )
+            mongo_rec["updated"] = job.updated
             if job.estimating:
-                mongo_rec['estimating'] = job.estimating
+                mongo_rec["estimating"] = job.estimating
             if job.running:
-                mongo_rec['running'] = job.running
+                mongo_rec["running"] = job.running
             if job.finished:
-                mongo_rec['finished'] = job.finished
-
+                mongo_rec["finished"] = job.finished
 
             job_states[str(job.id)] = mongo_rec
 
@@ -804,7 +830,8 @@ class SDKMethodRunner:
         ws_auth = self.get_workspace_auth()
         if not ws_auth.can_read(workspace_id):
             logging.debug(
-                f"User {self.user_id} doesn't have permission to read jobs in workspace {workspace_id}.")
+                f"User {self.user_id} doesn't have permission to read jobs in workspace {workspace_id}."
+            )
             raise PermissionError(
                 f"User {self.user_id} does not have permission to read jobs in workspace {workspace_id}"
             )
@@ -840,16 +867,15 @@ class SDKMethodRunner:
         return job_states
 
     def check_jobs_date_range_for_user(
-            self,
-            creation_start_date,
-            creation_end_date,
-            job_projection=None,
-            job_filter=None,
-            limit=None,
-            user=None,
-            offset=None,
-            ascending=True
-
+        self,
+        creation_start_date,
+        creation_end_date,
+        job_projection=None,
+        job_filter=None,
+        limit=None,
+        user=None,
+        offset=None,
+        ascending=True,
     ):
 
         """
@@ -866,7 +892,7 @@ class SDKMethodRunner:
         """
 
         sort_order = "+"
-        if type(ascending) == bool:
+        if isinstance(ascending) == bool:
             if ascending is False:
                 sort_order = "-"
         else:
@@ -922,9 +948,14 @@ class SDKMethodRunner:
         print("About to filter the jobs with", job_filter_temp)
         print("Filter")
         print(job_filter_temp)
-        with self.get_mongo_util().mongo_engine_connection() as mec:
-            jobs = Job.objects[:limit].filter(**job_filter_temp).order_by(f"{sort_order}_id").skip(
-                offset).only(*job_projection)
+        with self.get_mongo_util().mongo_engine_connection():
+            jobs = (
+                Job.objects[:limit]
+                .filter(**job_filter_temp)
+                .order_by(f"{sort_order}_id")
+                .skip(offset)
+                .only(*job_projection)
+            )
 
         logging.info(
             f"Searching for jobs with id_gt {dummy_ids.start} id_lt {dummy_ids.stop}"
@@ -933,13 +964,13 @@ class SDKMethodRunner:
         job_states = self._job_state_from_jobs(jobs)
 
         return {
-            'jobs': job_states,
-            'count': len(job_states),
-            'filter': job_filter_temp,
-            'skip': offset,
-            'projection': job_projection,
-            'limit': limit,
-            'sort_order': sort_order
+            "jobs": job_states,
+            "count": len(job_states),
+            "filter": job_filter_temp,
+            "skip": offset,
+            "projection": job_projection,
+            "limit": limit,
+            "sort_order": sort_order,
         }
 
         # TODO Move to MongoUtils?
