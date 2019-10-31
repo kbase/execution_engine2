@@ -72,16 +72,16 @@ def validate_job_state(state):
         "wsid": int,
         "authstrat": str,
         "job_input": dict,
-        "updated": float,
-        "created": float,
+        "updated": int,
+        "created": int,
         "status": str,
     }
 
     optional_fields = {
-        "estimating": float,
-        "queued": float,
-        "running": float,
-        "finished": float,
+        "estimating": int,
+        "queued": int,
+        "running": int,
+        "finished": int,
         "error_code": int,
         "terminated_code": int,
         "errormsg": str,
@@ -163,13 +163,13 @@ def validate_job_state(state):
     return True
 
 
-def is_timestamp(ts: float):
+def is_timestamp(ts: int):
     """
     Simple enough - if dateutil.parser likes the string, it's a time string and we return True.
     Otherwise, return False.
     """
     try:
-        datetime.fromtimestamp(ts)
+        datetime.fromtimestamp(ts / 1000.0)
         return True
     except ValueError:
         return False

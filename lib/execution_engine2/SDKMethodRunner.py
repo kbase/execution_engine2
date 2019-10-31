@@ -2,7 +2,7 @@ import json
 import logging
 import os
 from collections import namedtuple
-
+import time
 import dateutil
 import pymongo
 from bson import ObjectId
@@ -286,13 +286,20 @@ class SDKMethodRunner:
             ts = input_line.get("ts")
             # TODO Maybe use strpos for efficiency?
             if ts is not None:
-                try:     # input ts as float/int/str epoch timestamp
-                    ts = float(ts)
+
+                try:
+                    if isinstance(ts, str):  # input ts as string
+                        if ts.replace('.', '', 1).isdigit():  # input ts as numeric string
+                            ts = int(float(ts) * 1000) if '.' in ts else int(ts)
+                        else:   # input ts as datetime string
+                            ts = int(dateutil.parser.parse(ts).timestamp() * 1000)
+                    elif isinstance(ts, float):  # input ts as float epoch
+                        ts = int(ts * 1000)
+
+                    datetime.fromtimestamp(ts / 1000.0)  # check current ts is valid
                 except Exception:
-                    try:  # input ts as datetime string
-                        ts = dateutil.parser.parse(ts).timestamp()
-                    except Exception:
-                        ts = datetime.utcnow().timestamp()
+                    logging.info("Cannot convert ts into timestamps: {}".format(ts))
+                    ts = int(time.time() * 1000)
 
             ll.ts = ts
 
@@ -706,13 +713,13 @@ class SDKMethodRunner:
 
         if job_status == Status.estimating.value or skip_estimation:
             # set job to running status
-            job.running = datetime.utcnow().timestamp()
+            job.running = int(time.time() * 1000)
             self.get_mongo_util().update_job_status(
                 job_id=job_id, status=Status.running.value
             )
         else:
             # set job to estimating status
-            job.estimating = datetime.utcnow().timestamp()
+            job.estimating = int(time.time() * 1000)
             self.get_mongo_util().update_job_status(
                 job_id=job_id, status=Status.estimating.value
             )
@@ -769,7 +776,7 @@ class SDKMethodRunner:
             mongo_rec = job.to_mongo().to_dict()
             del mongo_rec['_id']
             mongo_rec['job_id'] = str(job.id)
-            mongo_rec['created'] = job.id.generation_time.utcnow().timestamp()
+            mongo_rec['created'] = int(job.id.generation_time.utcnow().timestamp() * 1000)
             mongo_rec['updated'] = job.updated
             if job.estimating:
                 mongo_rec['estimating'] = job.estimating
