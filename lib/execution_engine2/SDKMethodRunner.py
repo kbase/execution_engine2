@@ -907,7 +907,8 @@ class SDKMethodRunner:
         if user != "ALL":
             job_filter_temp["user"] = user
         print("About to filter the jobs with", job_filter_temp)
-
+        print("Filter")
+        print(job_filter_temp)
         with self.get_mongo_util().mongo_engine_connection() as mec:
             jobs = Job.objects[:limit].filter(**job_filter_temp).order_by(f"{sort_order}_id").skip(
                 offset).only(*job_projection)

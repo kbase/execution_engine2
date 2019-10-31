@@ -416,6 +416,8 @@ module execution_engine2 {
         @optional filter
         @optional limit
         @optional user
+        @optional offset
+        @optional ascending
     */
     typedef structure {
         string start_date;
@@ -424,6 +426,8 @@ module execution_engine2 {
         list<string> filter;
         int limit;
         string user;
+        int offset;
+        boolean ascending;
     } CheckJobsDateRangeParams;
     funcdef check_jobs_date_range_for_user(CheckJobsDateRangeParams params) returns (CheckJobsResults) authentication required;
     funcdef check_jobs_date_range_for_all(CheckJobsDateRangeParams params) returns (CheckJobsResults) authentication required;
