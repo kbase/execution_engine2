@@ -132,7 +132,7 @@ class Condor(Scheduler):
             "DOCKER_JOB_TIMEOUT": self.docker_timeout,
             "KB_ADMIN_AUTH_TOKEN": self.kb_auth_token,
             "KB_AUTH_TOKEN": params.get("token"),
-            "CLIENTGROUP": params.get("clientgroup"),
+            "CLIENTGROUP": params.get("extracted_client_group"),
             "JOB_ID": params.get("job_id"),
             # "WORKDIR": f"{config.get('WORKDIR')}/{params.get('USER')}/{params.get('JOB_ID')}",
             "CONDOR_ID": "$(Cluster).$(Process)",
@@ -264,7 +264,7 @@ class Condor(Scheduler):
         sub["initial_dir"] = self.initial_dir
         sub["executable"] = f"{self.initial_dir}/{self.executable}"  # Must exist
         sub["arguments"] = " ".join([params.get("job_id"), self.ee_endpoint])
-        sub["environment"] = self.setup_environment_vars(params)
+
         sub["universe"] = "vanilla"
         sub["+AccountingGroup"] = f'{params.get("user_id")}'
         sub["Concurrency_Limits"] = params.get("user_id")
@@ -286,6 +286,9 @@ class Condor(Scheduler):
         # Set requirements statement
         requirements = self.extract_requirements(cgrr=cgrr, client_group=client_group)
         sub["requirements"] = " && ".join(requirements)
+
+        params["extracted_client_group"] = client_group
+        sub["environment"] = self.setup_environment_vars(params)
 
         return sub
 

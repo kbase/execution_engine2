@@ -7,6 +7,7 @@ set -x
 export HOME=$(pwd)
 
 env > envf
+echo "export CLIENTGROUP=$CLIENTGROUP ">> env_file
 echo "export PYTHON_EXECUTABLE=$PYTHON_EXECUTABLE ">> env_file
 echo "export KB_ADMIN_AUTH_TOKEN=$KB_ADMIN_AUTH_TOKEN ">> env_file
 echo "export KB_AUTH_TOKEN=$KB_AUTH_TOKEN ">> env_file
