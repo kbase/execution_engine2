@@ -122,7 +122,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         if mongo_in_docker is not None:
             cls.cfg["mongo-host"] = cls.cfg["mongo-in-docker-compose"]
 
-        cls.user_id = "fake_test_user"
+        cls.user_id = "wsadmin"
         cls.ws_id = 9999
         cls.token = "token"
 
@@ -967,7 +967,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     def replace_job_id(self, job1, new_id):
         with self.mongo_util.mongo_engine_connection():
             job2 = self.create_job_from_job(job1, new_id)
-
             job2.save()
             print("Saved job with id", job2.id, job2.id.generation_time)
             job1.delete()
@@ -975,7 +974,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     # flake8: noqa: C901
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_check_jobs_date_range(self, condor_mock):
-        user_name = "Fake_Test_User"
+        user_name = "wsadmin"
 
         runner = self.getRunner()
         runner.workspace_auth = MagicMock()
@@ -1157,7 +1156,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             job_state = runner.check_jobs_date_range_for_user(
                 creation_end_date=str(tomorrow),
                 creation_start_date=str(last_month_and_1_hour),
-                user="fake_test_user",
+                user=user_name,
             )
 
             count = 0
@@ -1173,6 +1172,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                     print(ts, last_week.timestamp(), tomorrow.timestamp())
                     self.assertTrue(ts > last_month_and_1_hour.timestamp())
                     self.assertTrue(ts < tomorrow.timestamp())
+
+            # May need to change this if other db entries get added
             self.assertEqual(4, count)
 
             print("Found all of the jobs", len(new_job_ids))
@@ -1194,7 +1195,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             job_state = runner.check_jobs_date_range_for_user(
                 creation_end_date=str(tomorrow),
                 creation_start_date=str(last_month_and_1_hour),
-                user="fake_test_user",
+                user=user_name,
             )
             self.assertTrue(len(job_state["jobs"][0].keys()) > 0)
             print(f"Checking {job_id}")
@@ -1213,7 +1214,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             job_states = runner.check_jobs_date_range_for_user(
                 creation_end_date=str(tomorrow),
                 creation_start_date=str(last_month_and_1_hour),
-                user="fake_test_user",
+                user=user_name,
                 job_projection=["wsid"],
             )
             job_state_with_proj = None
@@ -1329,7 +1330,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 ascending="False",
             )
 
-            job_id_temp = str(ObjectId.from_datetime(now + timedelta(days=999999)))
+            # TimeDelta Over 9999 days
+            job_id_temp = str(ObjectId.from_datetime(now + timedelta(days=9999)))
 
             for item in job_state_limit_desc["jobs"]:
                 job_id = item["job_id"]
@@ -1343,3 +1345,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                         + "JobIdNext:"
                         + str(job_id)
                     )
+
+            for key in job_state_limit_desc.keys():
+                print(key)
+                print(job_state_limit_desc[key])

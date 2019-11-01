@@ -863,12 +863,25 @@ class SDKMethodRunner:
             job_states.append(mongo_rec)
         return job_states
 
-    def parse_bool_from_string(self, str_or_bool):
+    @staticmethod
+    def parse_bool_from_string(str_or_bool):
         if isinstance(str_or_bool, bool):
             return str_or_bool
 
         if isinstance(json.loads(str_or_bool.lower()), bool):
             return json.loads(str_or_bool.lower())
+
+        raise Exception("Not a boolean value")
+
+    @staticmethod
+    def get_sort_order(ascending):
+        if ascending is None:
+            return "+"
+        else:
+            if SDKMethodRunner.parse_bool_from_string(ascending):
+                return "+"
+            else:
+                return "-"
 
     def check_jobs_date_range_for_user(
         self,
@@ -879,11 +892,10 @@ class SDKMethodRunner:
         limit=None,
         user=None,
         offset=None,
-        ascending=True,
+        ascending=None,
     ):
 
         """
-        :param ctx: Context Object
         :param creation_start_date: Start Date for Creation
         :param creation_end_date: Stop Date for Creation
         :param job_projection:  List of fields to project alongside [_id, authstrat, updated, created, job_id]
@@ -894,11 +906,7 @@ class SDKMethodRunner:
         :param ascending: Sort by id ascending or descending
         :return:
         """
-
-        if self.parse_bool_from_string(ascending):
-            sort_order = "+"
-        else:
-            sort_order = "-"
+        sort_order = self.get_sort_order(ascending)
 
         if offset is None:
             offset = 0
@@ -907,12 +915,14 @@ class SDKMethodRunner:
             raise AuthError("Please provide a token to check jobs date range")
 
         token_user = self.auth.get_user(self.token)
+        if user is None:
+            user = token_user
 
         # Admins can view "ALL" or check_jobs for other users
         if user != token_user:
             if not self._is_admin(self.token):
                 raise AuthError(
-                    f"You are not authorized to view all records or records for others."
+                    f"You are not authorized to view all records or records for others. user={user} token={token_user}"
                 )
 
         dummy_ids = self._get_dummy_dates(creation_start_date, creation_end_date)
@@ -962,6 +972,10 @@ class SDKMethodRunner:
         )
 
         job_states = self._job_state_from_jobs(jobs)
+
+        # Remove ObjectIds
+        for item in job_filter_temp:
+            job_filter_temp[item] = str(job_filter_temp[item])
 
         return {
             "jobs": job_states,
