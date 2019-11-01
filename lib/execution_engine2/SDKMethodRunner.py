@@ -959,6 +959,7 @@ class SDKMethodRunner:
             job_filter_temp["user"] = user
 
         with self.get_mongo_util().mongo_engine_connection():
+            count = Job.objects.filter(**job_filter_temp).count()
             jobs = (
                 Job.objects[:limit]
                 .filter(**job_filter_temp)
@@ -980,6 +981,7 @@ class SDKMethodRunner:
         return {
             "jobs": job_states,
             "count": len(job_states),
+            "query_count": count,
             "filter": job_filter_temp,
             "skip": offset,
             "projection": job_projection,

@@ -22,7 +22,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "b36314f538ae59bf9ce69b9ff89cb1cc0170d1a4"
+    GIT_COMMIT_HASH = "b0c1ac8e49b7e10a9d45df932c3ee2f1c07be496"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -863,36 +863,22 @@ class execution_engine2:
 
     def check_jobs_date_range_for_user(self, ctx, params):
         """
-        :param params: instance of type "CheckJobsDateRangeParams"
-           (Projection Fields user = StringField(required=True) authstrat =
-           StringField( required=True, default="kbaseworkspace",
-           validation=valid_authstrat ) wsid = IntField(required=True) status
-           = StringField(required=True, validation=valid_status) updated =
-           DateTimeField(default=datetime.datetime.utcnow, autonow=True)
-           estimating = DateTimeField(default=None)  # Time when job began
-           estimating running = DateTimeField(default=None)  # Time when job
-           started # Time when job finished, errored out, or was terminated
-           by the user/admin finished = DateTimeField(default=None) errormsg
-           = StringField() msg = StringField() error = DynamicField()
-           terminated_code = IntField(validation=valid_termination_code)
-           error_code = IntField(validation=valid_errorcode) scheduler_type =
-           StringField() scheduler_id = StringField() scheduler_estimator_id
-           = StringField() job_input = EmbeddedDocumentField(JobInput,
-           required=True) job_output = DynamicField() /* /* Check job for all
-           jobs in a given date range for all users (Admin function) string
-           start_date; # Filter based on creation date string end_date; #
-           Filter based on creation date list<string> projection; # A list of
-           fields to include in the projection, default ALL See "Projection
-           Fields" list<string> filter; # A list of simple filters to "AND"
-           together, such as error_code=1, wsid=1234, terminated_code = 1 int
-           limit; # The maximum number of records to return string user; #
-           Optional. Defaults off of your token @optional projection
-           @optional filter @optional limit @optional user @optional offset
-           @optional ascending) -> structure: parameter "start_date" of
-           String, parameter "end_date" of String, parameter "projection" of
-           list of String, parameter "filter" of list of String, parameter
-           "limit" of Long, parameter "user" of String, parameter "offset" of
-           Long, parameter "ascending" of type "boolean" (@range [0,1])
+        :param params: instance of type "CheckJobsDateRangeParams" (Check job
+           for all jobs in a given date range for all users (Admin function)
+           string start_date; # Filter based on creation date string
+           end_date; # Filter based on creation date list<string> projection;
+           # A list of fields to include in the projection, default ALL See
+           "Projection Fields" list<string> filter; # A list of simple
+           filters to "AND" together, such as error_code=1, wsid=1234,
+           terminated_code = 1 int limit; # The maximum number of records to
+           return string user; # Optional. Defaults off of your token
+           @optional projection @optional filter @optional limit @optional
+           user @optional offset @optional ascending) -> structure: parameter
+           "start_date" of String, parameter "end_date" of String, parameter
+           "projection" of list of String, parameter "filter" of list of
+           String, parameter "limit" of Long, parameter "user" of String,
+           parameter "offset" of Long, parameter "ascending" of type
+           "boolean" (@range [0,1])
         :returns: instance of type "CheckJobsResults" (job_states - states of
            jobs) -> structure: parameter "job_states" of mapping from type
            "job_id" (A job id.) to type "JobState" (job_id - string - id of
@@ -1028,36 +1014,22 @@ class execution_engine2:
 
     def check_jobs_date_range_for_all(self, ctx, params):
         """
-        :param params: instance of type "CheckJobsDateRangeParams"
-           (Projection Fields user = StringField(required=True) authstrat =
-           StringField( required=True, default="kbaseworkspace",
-           validation=valid_authstrat ) wsid = IntField(required=True) status
-           = StringField(required=True, validation=valid_status) updated =
-           DateTimeField(default=datetime.datetime.utcnow, autonow=True)
-           estimating = DateTimeField(default=None)  # Time when job began
-           estimating running = DateTimeField(default=None)  # Time when job
-           started # Time when job finished, errored out, or was terminated
-           by the user/admin finished = DateTimeField(default=None) errormsg
-           = StringField() msg = StringField() error = DynamicField()
-           terminated_code = IntField(validation=valid_termination_code)
-           error_code = IntField(validation=valid_errorcode) scheduler_type =
-           StringField() scheduler_id = StringField() scheduler_estimator_id
-           = StringField() job_input = EmbeddedDocumentField(JobInput,
-           required=True) job_output = DynamicField() /* /* Check job for all
-           jobs in a given date range for all users (Admin function) string
-           start_date; # Filter based on creation date string end_date; #
-           Filter based on creation date list<string> projection; # A list of
-           fields to include in the projection, default ALL See "Projection
-           Fields" list<string> filter; # A list of simple filters to "AND"
-           together, such as error_code=1, wsid=1234, terminated_code = 1 int
-           limit; # The maximum number of records to return string user; #
-           Optional. Defaults off of your token @optional projection
-           @optional filter @optional limit @optional user @optional offset
-           @optional ascending) -> structure: parameter "start_date" of
-           String, parameter "end_date" of String, parameter "projection" of
-           list of String, parameter "filter" of list of String, parameter
-           "limit" of Long, parameter "user" of String, parameter "offset" of
-           Long, parameter "ascending" of type "boolean" (@range [0,1])
+        :param params: instance of type "CheckJobsDateRangeParams" (Check job
+           for all jobs in a given date range for all users (Admin function)
+           string start_date; # Filter based on creation date string
+           end_date; # Filter based on creation date list<string> projection;
+           # A list of fields to include in the projection, default ALL See
+           "Projection Fields" list<string> filter; # A list of simple
+           filters to "AND" together, such as error_code=1, wsid=1234,
+           terminated_code = 1 int limit; # The maximum number of records to
+           return string user; # Optional. Defaults off of your token
+           @optional projection @optional filter @optional limit @optional
+           user @optional offset @optional ascending) -> structure: parameter
+           "start_date" of String, parameter "end_date" of String, parameter
+           "projection" of list of String, parameter "filter" of list of
+           String, parameter "limit" of Long, parameter "user" of String,
+           parameter "offset" of Long, parameter "ascending" of type
+           "boolean" (@range [0,1])
         :returns: instance of type "CheckJobsResults" (job_states - states of
            jobs) -> structure: parameter "job_states" of mapping from type
            "job_id" (A job id.) to type "JobState" (job_id - string - id of

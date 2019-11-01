@@ -403,6 +403,21 @@ module execution_engine2 {
     /*
 
 
+    /*
+        Results of check_jobs_date_range
+    */
+    typedef structure {
+        mapping<job_id, JobState> jobs;
+        int count;
+        int query_count;
+        list<string> filter;
+        int skip;
+        list<string> projection;
+        int limit;
+        string sort_order;
+    } CheckJobsDateRangeResults;
+
+
 
     /*
       Check job for all jobs in a given date range for all users (Admin function)
