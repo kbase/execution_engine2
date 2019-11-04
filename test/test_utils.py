@@ -169,7 +169,7 @@ def is_timestamp(ts: int):
     Otherwise, return False.
     """
     try:
-        datetime.fromtimestamp(ts / 1000.0)
+        datetime.fromtimestamp(ts)
         return True
     except ValueError:
         return False

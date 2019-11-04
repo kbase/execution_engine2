@@ -21,7 +21,7 @@ module execution_engine2 {
         git_commit - the Git hash of the version of the module.
         version - the semantic version for the module.
         service - the name of the service.
-        server_time - the current server timestamp (in milliseconds)
+        server_time - the current server timestamp since epoch
 
         # TODO - add some or all of the following
         reboot_mode - if 1, then in the process of rebooting
@@ -34,7 +34,7 @@ module execution_engine2 {
         string git_commit;
         string version;
         string service;
-        int server_time;
+        float server_time;
     } Status;
 
     /*
@@ -163,14 +163,14 @@ module execution_engine2 {
     /*
         line - string - a string to set for the log line.
         is_error - int - if 1, then this line should be treated as an error, default 0
-        ts - int - a timestamp (in milliseconds) for the log line (optional)
+        ts - float - a timestamp since epoch for the log line (optional)
 
         @optional ts
     */
     typedef structure {
         string line;
         boolean is_error;
-        int ts;
+        float ts;
     } LogLine;
     funcdef add_job_logs(job_id job_id, list<LogLine> lines)
         returns (int line_number) authentication required;
@@ -249,10 +249,10 @@ module execution_engine2 {
         wsid - int - id of the workspace where the job is bound
         authstrat - string - what strategy used to authenticate the job
         job_input - object - inputs to the job (from the run_job call)  ## TODO - verify
-        updated - int - timestamp (in milliseconds) of the last time the status was updated
-        running - int - timestamp (in milliseconds) of when it entered the running state
-        created - int - timestamp (in milliseconds) when the job was created
-        finished - int - timestamp (in milliseconds) when the job was finished
+        updated - float - timestamp since epoch of the last time the status was updated
+        running - float - timestamp since epoch of when it entered the running state
+        created - float - timestamp since epoch when the job was created
+        finished - float - timestamp since epoch when the job was finished
         status - string - status of the job. one of the following:
             created - job has been created in the service
             estimating - an estimation job is running to estimate resources required for the main
@@ -295,12 +295,12 @@ module execution_engine2 {
         int wsid;
         string status;
         RunJobParams job_input;
-        int created;
-        int updated;
+        float created;
+        float updated;
 
-        int estimating;
-        int running;
-        int finished;
+        float estimating;
+        float running;
+        float finished;
 
         JsonRpcError error;
         int error_code;
@@ -420,9 +420,9 @@ module execution_engine2 {
 
 
     /*
-      Check job for all jobs in a given date range for all users (Admin function)
-        string start_date; # Filter based on creation date
-        string end_date; # Filter based on creation date
+      Check job for all jobs in a given date/time range for all users (Admin function)
+        float start_time; # Filter based on creation timestamp since epoch
+        float end_time; # Filter based on creation timestamp since epoch
         list<string> projection; # A list of fields to include in the projection, default ALL See "Projection Fields"
         list<string> filter; # A list of simple filters to "AND" together, such as error_code=1, wsid=1234, terminated_code = 1
         int limit; # The maximum number of records to return
@@ -435,8 +435,8 @@ module execution_engine2 {
         @optional ascending
     */
     typedef structure {
-        string start_date;
-        string end_date;
+        float start_time;
+        float end_time;
         list<string> projection;
         list<string> filter;
         int limit;

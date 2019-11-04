@@ -250,6 +250,32 @@ class SDKMethodRunner:
         jl.lines = []
         return jl
 
+    def _check_and_convert_time(self, time_input, assign_default_time=False):
+        """
+        convert input time into timestamp in epoch format
+        """
+
+        try:
+            if isinstance(time_input, str):  # input time_input as string
+                if time_input.replace(".", "", 1).isdigit():  # input time_input as numeric string
+                    time_input = float(time_input) if "." in time_input else int(time_input) / 1000.0
+                else:  # input time_input as datetime string
+                    time_input = dateutil.parser.parse(time_input).timestamp()
+            elif isinstance(time_input, int):  # input time_input as epoch timestamps in milliseconds
+                time_input = time_input / 1000.0
+            elif isinstance(time_input, datetime):
+                time_input = time_input.timestamp()
+
+            datetime.fromtimestamp(time_input)  # check current time_input is valid
+        except Exception:
+            if assign_default_time:
+                logging.info("Cannot convert time_input into timestamps: {}".format(time_input))
+                time_input = time.time()
+            else:
+                raise ValueError("Cannot convert time_input into timestamps: {}".format(time_input))
+
+        return time_input
+
     def add_job_logs(self, job_id, log_lines):
         """
         #TODO Prevent too many logs in memory
@@ -287,22 +313,7 @@ class SDKMethodRunner:
             ts = input_line.get("ts")
             # TODO Maybe use strpos for efficiency?
             if ts is not None:
-
-                try:
-                    if isinstance(ts, str):  # input ts as string
-                        if ts.replace(
-                            ".", "", 1
-                        ).isdigit():  # input ts as numeric string
-                            ts = int(float(ts) * 1000) if "." in ts else int(ts)
-                        else:  # input ts as datetime string
-                            ts = int(dateutil.parser.parse(ts).timestamp() * 1000)
-                    elif isinstance(ts, float):  # input ts as float epoch
-                        ts = int(ts * 1000)
-
-                    datetime.fromtimestamp(ts / 1000.0)  # check current ts is valid
-                except Exception:
-                    logging.info("Cannot convert ts into timestamps: {}".format(ts))
-                    ts = int(time.time() * 1000)
+                ts = self._check_and_convert_time(ts, assign_default_time=True)
 
             ll.ts = ts
 
@@ -798,16 +809,14 @@ class SDKMethodRunner:
             mongo_rec = job.to_mongo().to_dict()
             del mongo_rec["_id"]
             mongo_rec["job_id"] = str(job.id)
-            mongo_rec["created"] = int(
-                job.id.generation_time.utcnow().timestamp() * 1000
-            )
-            mongo_rec["updated"] = job.updated
+            mongo_rec["created"] = int(job.id.generation_time.utcnow().timestamp() * 1000)
+            mongo_rec["updated"] = int(job.updated * 1000)
             if job.estimating:
-                mongo_rec["estimating"] = job.estimating
+                mongo_rec["estimating"] = int(job.estimating * 1000)
             if job.running:
-                mongo_rec["running"] = job.running
+                mongo_rec["running"] = int(job.running * 1000)
             if job.finished:
-                mongo_rec["finished"] = job.finished
+                mongo_rec["finished"] = int(job.finished * 1000)
 
             job_states[str(job.id)] = mongo_rec
 
@@ -885,8 +894,8 @@ class SDKMethodRunner:
 
     def check_jobs_date_range_for_user(
         self,
-        creation_start_date,
-        creation_end_date,
+        creation_start_time,
+        creation_end_time,
         job_projection=None,
         job_filter=None,
         limit=None,
@@ -896,8 +905,8 @@ class SDKMethodRunner:
     ):
 
         """
-        :param creation_start_date: Start Date for Creation
-        :param creation_end_date: Stop Date for Creation
+        :param creation_start_time: Start timestamp since epoch for Creation
+        :param creation_end_time: Stop timestamp since epoch for Creation
         :param job_projection:  List of fields to project alongside [_id, authstrat, updated, created, job_id]
         :param job_filter:  List of simple job fields of format key=value
         :param limit: Limit of records to return, default 2000
@@ -925,7 +934,7 @@ class SDKMethodRunner:
                     f"You are not authorized to view all records or records for others. user={user} token={token_user}"
                 )
 
-        dummy_ids = self._get_dummy_dates(creation_start_date, creation_end_date)
+        dummy_ids = self._get_dummy_dates(creation_start_time, creation_end_time)
 
         if job_projection is None:
             # Maybe set a default here?
@@ -996,23 +1005,24 @@ class SDKMethodRunner:
         # TODO Better define default fields
         # TODO Instead of SKIP use ID GT LT https://www.codementor.io/arpitbhayani/fast-and-efficient-pagination-in-mongodb-9095flbqr
 
-    @staticmethod
-    def _get_dummy_dates(creation_start_date, creation_end_date):
-        creation_start_date = dateutil.parser.parse(creation_start_date)
+    def _get_dummy_dates(self, creation_start_time, creation_end_time):
 
-        if creation_start_date is None:
-            raise Exception(
-                "Please provide a valid start date for when job was created"
-            )
+        if creation_start_time is None:
+            raise Exception("Please provide a valid start time for when job was created")
+
+        creation_start_time = self._check_and_convert_time(creation_start_time)
+        creation_start_date = datetime.fromtimestamp(creation_start_time)
         dummy_start_id = ObjectId.from_datetime(creation_start_date)
 
-        creation_end_date = dateutil.parser.parse(creation_end_date)
-        if creation_end_date is None:
-            raise Exception("Please provide a valid end date for when job was created")
+        if creation_end_time is None:
+            raise Exception("Please provide a valid end time for when job was created")
+
+        creation_end_time = self._check_and_convert_time(creation_end_time)
+        creation_end_date = datetime.fromtimestamp(creation_end_time)
         dummy_end_id = ObjectId.from_datetime(creation_end_date)
 
-        if creation_start_date.timestamp() > creation_end_date.timestamp():
-            raise Exception("The start date cannot be greater than the end date.")
+        if creation_start_time > creation_end_time:
+            raise Exception("The start time cannot be greater than the end time.")
 
         dummy_ids = namedtuple("dummy_ids", "start stop")
 

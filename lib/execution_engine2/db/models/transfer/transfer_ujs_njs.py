@@ -180,12 +180,12 @@ class MigrateDatabases:
 
             status = ujs_job.get("status")
 
-            exec_start_time = 0
-            finish_time = 0
+            exec_start_time = 0.0
+            finish_time = 0.0
 
             if njs_job is not None:
-                finish_time = njs_job.get("finish_time", 0)
-                exec_start_time = njs_job.get("exec_start_time", 0)
+                finish_time = njs_job.get("finish_time", 0.0) / 1000.0
+                exec_start_time = njs_job.get("exec_start_time", 0.0) / 1000.0
 
             if status == "canceled by user":
                 job.status = Status.terminated.value

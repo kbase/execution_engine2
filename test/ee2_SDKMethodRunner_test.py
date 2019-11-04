@@ -478,16 +478,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             if isinstance(time_input, str):
                 if time_input.replace(".", "", 1).isdigit():
                     time_input = (
-                        int(float(time_input) * 1000)
-                        if "." in time_input
-                        else int(time_input)
+                        float(time_input) if "." in time_input else int(time_input) / 1000.0
                     )
                 else:
-                    time_input = int(
-                        dateutil.parser.parse(time_input).timestamp() * 1000
-                    )
-            elif isinstance(time_input, float):
-                time_input = int(time_input * 1000)
+                    time_input = dateutil.parser.parse(time_input).timestamp()
+            elif isinstance(time_input, int):
+                time_input = time_input / 1000.0
 
             self.assertEqual(inserted_line["ts"], time_input)
 
@@ -1077,8 +1073,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 "Test case 1. Retrieving Jobs from last_week and tomorrow_max (yesterday and now jobs) "
             )
             job_state = runner.check_jobs_date_range_for_user(
-                creation_end_date=str(tomorrow),
-                creation_start_date=str(last_week),
+                creation_end_time=str(tomorrow),
+                creation_start_time=last_week.timestamp(),  # test timestamp input
                 user="ALL",
             )
             count = 0
@@ -1103,8 +1099,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             )
 
             job_state = runner.check_jobs_date_range_for_user(
-                creation_end_date=str(tomorrow),
-                creation_start_date=str(last_month_and_1_hour),
+                creation_end_time=str(tomorrow.timestamp()),  # test timestamp string input
+                creation_start_time=last_month_and_1_hour,  # test datetime input
                 user="ALL",
             )
 
@@ -1127,8 +1123,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             with self.assertRaises(Exception) as context:
                 job_state = runner.check_jobs_date_range_for_user(
-                    creation_end_date=str(yesterday),
-                    creation_start_date=str(tomorrow),
+                    creation_end_time=str(yesterday),
+                    creation_start_time=str(tomorrow),
                     user="ALL",
                 )
                 self.assertEqual(
@@ -1144,8 +1140,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 "You are not authorized to view all records or records for others.",
             ) as error:
                 job_state = runner.check_jobs_date_range_for_user(
-                    creation_end_date=str(tomorrow),
-                    creation_start_date=str(last_month_and_1_hour),
+                    creation_end_time=str(tomorrow),
+                    creation_start_time=str(last_month_and_1_hour),
                     user="FAKE",
                 )
                 print("Exception raised is", error)
@@ -1154,8 +1150,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             runner.is_admin = True
             runner._is_admin = MagicMock(return_value=True)
             job_state = runner.check_jobs_date_range_for_user(
-                creation_end_date=str(tomorrow),
-                creation_start_date=str(last_month_and_1_hour),
+                creation_end_time=str(tomorrow),
+                creation_start_time=str(last_month_and_1_hour),
                 user=user_name,
             )
 
@@ -1182,8 +1178,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             with self.assertRaises(Exception) as context:
                 job_state = runner.check_jobs_date_range_for_user(
-                    creation_end_date=str(yesterday),
-                    creation_start_date=str(tomorrow),
+                    creation_end_time=str(yesterday),
+                    creation_start_time=str(tomorrow),
                     user="ALL",
                 )
                 self.assertEqual(
@@ -1193,8 +1189,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             print("Test case 4, find the original job")
             job_state = runner.check_jobs_date_range_for_user(
-                creation_end_date=str(tomorrow),
-                creation_start_date=str(last_month_and_1_hour),
+                creation_end_time=str(tomorrow),
+                creation_start_time=str(last_month_and_1_hour),
                 user=user_name,
             )
             self.assertTrue(len(job_state["jobs"][0].keys()) > 0)
@@ -1212,8 +1208,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             print("Test 5, find the original job, but with projections")
             job_states = runner.check_jobs_date_range_for_user(
-                creation_end_date=str(tomorrow),
-                creation_start_date=str(last_month_and_1_hour),
+                creation_end_time=str(tomorrow),
+                creation_start_time=str(last_month_and_1_hour),
                 user=user_name,
                 job_projection=["wsid"],
             )
@@ -1240,8 +1236,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             print("Test 6a, find the original job, but with projections and filters")
             job_state = runner.check_jobs_date_range_for_user(
-                creation_end_date=str(tomorrow),
-                creation_start_date=str(last_month_and_1_hour),
+                creation_end_time=str(tomorrow),
+                creation_start_time=str(last_month_and_1_hour),
                 user="ALL",
                 job_projection=["wsid", "status"],
                 job_filter={"wsid": 9999},
@@ -1261,8 +1257,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             print("Test 6b, find the original job, but with projections and filters")
             job_state2 = runner.check_jobs_date_range_for_user(
-                creation_end_date=str(tomorrow),
-                creation_start_date=str(last_month_and_1_hour),
+                creation_end_time=str(tomorrow),
+                creation_start_time=str(last_month_and_1_hour),
                 user="ALL",
                 job_projection=["wsid", "status"],
                 job_filter=["wsid=123"],
@@ -1285,8 +1281,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 "Test 7, find same jobs as test 2 or 3, but also filter, project, and limit"
             )
             job_state_limit = runner.check_jobs_date_range_for_user(
-                creation_end_date=str(tomorrow),
-                creation_start_date=str(last_month_and_1_hour),
+                creation_end_time=str(tomorrow),
+                creation_start_time=str(last_month_and_1_hour),
                 user="ALL",
                 job_projection=["wsid", "status"],
                 job_filter=["wsid=123"],
@@ -1299,8 +1295,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 "Test 8, ascending and descending (maybe should verify jobs count > 2)"
             )
             job_state_limit_asc = runner.check_jobs_date_range_for_user(
-                creation_end_date=str(tomorrow),
-                creation_start_date=str(last_month_and_1_hour),
+                creation_end_time=str(tomorrow),
+                creation_start_time=str(last_month_and_1_hour),
                 user="ALL",
                 job_projection=["wsid", "status"],
                 ascending="True",
@@ -1323,8 +1319,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                     )
 
             job_state_limit_desc = runner.check_jobs_date_range_for_user(
-                creation_end_date=str(tomorrow),
-                creation_start_date=str(last_month_and_1_hour),
+                creation_end_time=str(tomorrow),
+                creation_start_time=str(last_month_and_1_hour),
                 user="ALL",
                 job_projection=["wsid", "status"],
                 ascending="False",
