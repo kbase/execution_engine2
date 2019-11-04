@@ -4,7 +4,7 @@ import os
 from configparser import ConfigParser
 
 from pymongo import MongoClient
-from mongoengine import  connect
+from mongoengine import connect
 
 jobs_database_name = "ee2_jobs"
 
@@ -88,7 +88,7 @@ class MigrateDatabases:
             .get_collection(self.njs_jobs_collection_name)
         )
 
-        self.ee2_jobs = self._get_njs_connection().get_database(self.njs_db).get_collection(jobs_database_name")
+        self.ee2_jobs = self._get_njs_connection().get_database(self.njs_db).get_collection(jobs_database_name)
 
         config = {'mongo-host' : self.njs_host,
                   'mongo-port' : 27017,
@@ -96,9 +96,7 @@ class MigrateDatabases:
                   'mongo-user' : self.njs_user,
                   'mongo-password' : self.njs_pwd,
                   'mongo-authmechanism' : "DEFAULT"}
-       # self.mongo_util = MongoUtil(config=config)
-
-
+        # self.mongo_util = MongoUtil(config=config)
 
     def get_njs_job_input(self, njs_job):
         job_input = njs_job.get("job_input")
@@ -132,7 +130,6 @@ class MigrateDatabases:
     def save_remnants(self):
         self.ee2_jobs.insert_many(self.jobs)
         self.jobs = []
-
 
     def begin_job_transfer(self):  # flake8: noqa
         ujs_jobs = self.ujs_jobs
@@ -183,24 +180,12 @@ class MigrateDatabases:
 
             status = ujs_job.get("status")
 
-            exec_start_time = datetime.datetime.utcfromtimestamp(0)
-            finish_time = datetime.datetime.utcfromtimestamp(0)
+            exec_start_time = 0
+            finish_time = 0
 
             if njs_job is not None:
-                if "finish_time" in njs_job:
-                    ft = njs_job.get("finish_time", 0)
-                    if ft is None:
-                        ft = 0
-                    finish_time = datetime.datetime.utcfromtimestamp(int(ft / 1000.0))
-
-                if "exec_start_time" in njs_job:
-                    est = njs_job.get("exec_start_time", 0)
-                    if est is None:
-                        est = 0
-                    exec_start_time = datetime.datetime.utcfromtimestamp(
-                        int(est / 1000.0)
-                    )
-                print(finish_time)
+                finish_time = njs_job.get("finish_time", 0)
+                exec_start_time = njs_job.get("exec_start_time", 0)
 
             if status == "canceled by user":
                 job.status = Status.terminated.value
