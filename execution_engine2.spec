@@ -249,10 +249,10 @@ module execution_engine2 {
         wsid - int - id of the workspace where the job is bound
         authstrat - string - what strategy used to authenticate the job
         job_input - object - inputs to the job (from the run_job call)  ## TODO - verify
-        updated - float - timestamp since epoch of the last time the status was updated
-        running - float - timestamp since epoch of when it entered the running state
-        created - float - timestamp since epoch when the job was created
-        finished - float - timestamp since epoch when the job was finished
+        updated - int - timestamp since epoch in milliseconds of the last time the status was updated
+        running - int - timestamp since epoch in milliseconds of when it entered the running state
+        created - int - timestamp since epoch in milliseconds when the job was created
+        finished - int - timestamp since epoch in milliseconds when the job was finished
         status - string - status of the job. one of the following:
             created - job has been created in the service
             estimating - an estimation job is running to estimate resources required for the main
@@ -295,12 +295,12 @@ module execution_engine2 {
         int wsid;
         string status;
         RunJobParams job_input;
-        float created;
-        float updated;
+        int created;
+        int updated;
 
-        float estimating;
-        float running;
-        float finished;
+        int estimating;
+        int running;
+        int finished;
 
         JsonRpcError error;
         int error_code;

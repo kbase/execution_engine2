@@ -22,7 +22,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "3dc32876b8330a3ee64777d2a832420c34ba1158"
+    GIT_COMMIT_HASH = "9a6b84e7731827ef679563aed4015ec90ea4e18f"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -404,11 +404,12 @@ class execution_engine2:
            job user - string - user who started the job wsid - int - id of
            the workspace where the job is bound authstrat - string - what
            strategy used to authenticate the job job_input - object - inputs
-           to the job (from the run_job call)  ## TODO - verify updated -
-           float - timestamp since epoch of the last time the status was
-           updated running - float - timestamp since epoch of when it entered
-           the running state created - float - timestamp since epoch when the
-           job was created finished - float - timestamp since epoch when the
+           to the job (from the run_job call)  ## TODO - verify updated - int
+           - timestamp since epoch in milliseconds of the last time the
+           status was updated running - int - timestamp since epoch in
+           milliseconds of when it entered the running state created - int -
+           timestamp since epoch in milliseconds when the job was created
+           finished - int - timestamp since epoch in milliseconds when the
            job was finished status - string - status of the job. one of the
            following: created - job has been created in the service
            estimating - an estimation job is running to estimate resources
@@ -476,14 +477,14 @@ class execution_engine2:
            or id, Y is the object name or id, Z is the version, which is
            optional.), parameter "app_id" of String, parameter "meta" of
            mapping from String to String, parameter "wsid" of Long, parameter
-           "parent_job_id" of String, parameter "created" of Double,
-           parameter "updated" of Double, parameter "estimating" of Double,
-           parameter "running" of Double, parameter "finished" of Double,
-           parameter "error" of type "JsonRpcError" (Error block of JSON RPC
-           response) -> structure: parameter "name" of String, parameter
-           "code" of Long, parameter "message" of String, parameter "error"
-           of String, parameter "error_code" of Long, parameter "errormsg" of
-           String, parameter "terminated_code" of Long
+           "parent_job_id" of String, parameter "created" of Long, parameter
+           "updated" of Long, parameter "estimating" of Long, parameter
+           "running" of Long, parameter "finished" of Long, parameter "error"
+           of type "JsonRpcError" (Error block of JSON RPC response) ->
+           structure: parameter "name" of String, parameter "code" of Long,
+           parameter "message" of String, parameter "error" of String,
+           parameter "error_code" of Long, parameter "errormsg" of String,
+           parameter "terminated_code" of Long
         """
         # ctx is the context object
         # return variables are: job_state
@@ -515,11 +516,12 @@ class execution_engine2:
            the job user - string - user who started the job wsid - int - id
            of the workspace where the job is bound authstrat - string - what
            strategy used to authenticate the job job_input - object - inputs
-           to the job (from the run_job call)  ## TODO - verify updated -
-           float - timestamp since epoch of the last time the status was
-           updated running - float - timestamp since epoch of when it entered
-           the running state created - float - timestamp since epoch when the
-           job was created finished - float - timestamp since epoch when the
+           to the job (from the run_job call)  ## TODO - verify updated - int
+           - timestamp since epoch in milliseconds of the last time the
+           status was updated running - int - timestamp since epoch in
+           milliseconds of when it entered the running state created - int -
+           timestamp since epoch in milliseconds when the job was created
+           finished - int - timestamp since epoch in milliseconds when the
            job was finished status - string - status of the job. one of the
            following: created - job has been created in the service
            estimating - an estimation job is running to estimate resources
@@ -587,14 +589,14 @@ class execution_engine2:
            or id, Y is the object name or id, Z is the version, which is
            optional.), parameter "app_id" of String, parameter "meta" of
            mapping from String to String, parameter "wsid" of Long, parameter
-           "parent_job_id" of String, parameter "created" of Double,
-           parameter "updated" of Double, parameter "estimating" of Double,
-           parameter "running" of Double, parameter "finished" of Double,
-           parameter "error" of type "JsonRpcError" (Error block of JSON RPC
-           response) -> structure: parameter "name" of String, parameter
-           "code" of Long, parameter "message" of String, parameter "error"
-           of String, parameter "error_code" of Long, parameter "errormsg" of
-           String, parameter "terminated_code" of Long
+           "parent_job_id" of String, parameter "created" of Long, parameter
+           "updated" of Long, parameter "estimating" of Long, parameter
+           "running" of Long, parameter "finished" of Long, parameter "error"
+           of type "JsonRpcError" (Error block of JSON RPC response) ->
+           structure: parameter "name" of String, parameter "code" of Long,
+           parameter "message" of String, parameter "error" of String,
+           parameter "error_code" of Long, parameter "errormsg" of String,
+           parameter "terminated_code" of Long
         """
         # ctx is the context object
         # return variables are: returnVal
@@ -627,11 +629,12 @@ class execution_engine2:
            the job user - string - user who started the job wsid - int - id
            of the workspace where the job is bound authstrat - string - what
            strategy used to authenticate the job job_input - object - inputs
-           to the job (from the run_job call)  ## TODO - verify updated -
-           float - timestamp since epoch of the last time the status was
-           updated running - float - timestamp since epoch of when it entered
-           the running state created - float - timestamp since epoch when the
-           job was created finished - float - timestamp since epoch when the
+           to the job (from the run_job call)  ## TODO - verify updated - int
+           - timestamp since epoch in milliseconds of the last time the
+           status was updated running - int - timestamp since epoch in
+           milliseconds of when it entered the running state created - int -
+           timestamp since epoch in milliseconds when the job was created
+           finished - int - timestamp since epoch in milliseconds when the
            job was finished status - string - status of the job. one of the
            following: created - job has been created in the service
            estimating - an estimation job is running to estimate resources
@@ -699,14 +702,14 @@ class execution_engine2:
            or id, Y is the object name or id, Z is the version, which is
            optional.), parameter "app_id" of String, parameter "meta" of
            mapping from String to String, parameter "wsid" of Long, parameter
-           "parent_job_id" of String, parameter "created" of Double,
-           parameter "updated" of Double, parameter "estimating" of Double,
-           parameter "running" of Double, parameter "finished" of Double,
-           parameter "error" of type "JsonRpcError" (Error block of JSON RPC
-           response) -> structure: parameter "name" of String, parameter
-           "code" of Long, parameter "message" of String, parameter "error"
-           of String, parameter "error_code" of Long, parameter "errormsg" of
-           String, parameter "terminated_code" of Long
+           "parent_job_id" of String, parameter "created" of Long, parameter
+           "updated" of Long, parameter "estimating" of Long, parameter
+           "running" of Long, parameter "finished" of Long, parameter "error"
+           of type "JsonRpcError" (Error block of JSON RPC response) ->
+           structure: parameter "name" of String, parameter "code" of Long,
+           parameter "message" of String, parameter "error" of String,
+           parameter "error_code" of Long, parameter "errormsg" of String,
+           parameter "terminated_code" of Long
         """
         # ctx is the context object
         # return variables are: returnVal
@@ -811,11 +814,12 @@ class execution_engine2:
            the job user - string - user who started the job wsid - int - id
            of the workspace where the job is bound authstrat - string - what
            strategy used to authenticate the job job_input - object - inputs
-           to the job (from the run_job call)  ## TODO - verify updated -
-           float - timestamp since epoch of the last time the status was
-           updated running - float - timestamp since epoch of when it entered
-           the running state created - float - timestamp since epoch when the
-           job was created finished - float - timestamp since epoch when the
+           to the job (from the run_job call)  ## TODO - verify updated - int
+           - timestamp since epoch in milliseconds of the last time the
+           status was updated running - int - timestamp since epoch in
+           milliseconds of when it entered the running state created - int -
+           timestamp since epoch in milliseconds when the job was created
+           finished - int - timestamp since epoch in milliseconds when the
            job was finished status - string - status of the job. one of the
            following: created - job has been created in the service
            estimating - an estimation job is running to estimate resources
@@ -883,14 +887,14 @@ class execution_engine2:
            or id, Y is the object name or id, Z is the version, which is
            optional.), parameter "app_id" of String, parameter "meta" of
            mapping from String to String, parameter "wsid" of Long, parameter
-           "parent_job_id" of String, parameter "created" of Double,
-           parameter "updated" of Double, parameter "estimating" of Double,
-           parameter "running" of Double, parameter "finished" of Double,
-           parameter "error" of type "JsonRpcError" (Error block of JSON RPC
-           response) -> structure: parameter "name" of String, parameter
-           "code" of Long, parameter "message" of String, parameter "error"
-           of String, parameter "error_code" of Long, parameter "errormsg" of
-           String, parameter "terminated_code" of Long
+           "parent_job_id" of String, parameter "created" of Long, parameter
+           "updated" of Long, parameter "estimating" of Long, parameter
+           "running" of Long, parameter "finished" of Long, parameter "error"
+           of type "JsonRpcError" (Error block of JSON RPC response) ->
+           structure: parameter "name" of String, parameter "code" of Long,
+           parameter "message" of String, parameter "error" of String,
+           parameter "error_code" of Long, parameter "errormsg" of String,
+           parameter "terminated_code" of Long
         """
         # ctx is the context object
         # return variables are: returnVal
@@ -939,11 +943,12 @@ class execution_engine2:
            the job user - string - user who started the job wsid - int - id
            of the workspace where the job is bound authstrat - string - what
            strategy used to authenticate the job job_input - object - inputs
-           to the job (from the run_job call)  ## TODO - verify updated -
-           float - timestamp since epoch of the last time the status was
-           updated running - float - timestamp since epoch of when it entered
-           the running state created - float - timestamp since epoch when the
-           job was created finished - float - timestamp since epoch when the
+           to the job (from the run_job call)  ## TODO - verify updated - int
+           - timestamp since epoch in milliseconds of the last time the
+           status was updated running - int - timestamp since epoch in
+           milliseconds of when it entered the running state created - int -
+           timestamp since epoch in milliseconds when the job was created
+           finished - int - timestamp since epoch in milliseconds when the
            job was finished status - string - status of the job. one of the
            following: created - job has been created in the service
            estimating - an estimation job is running to estimate resources
@@ -1011,14 +1016,14 @@ class execution_engine2:
            or id, Y is the object name or id, Z is the version, which is
            optional.), parameter "app_id" of String, parameter "meta" of
            mapping from String to String, parameter "wsid" of Long, parameter
-           "parent_job_id" of String, parameter "created" of Double,
-           parameter "updated" of Double, parameter "estimating" of Double,
-           parameter "running" of Double, parameter "finished" of Double,
-           parameter "error" of type "JsonRpcError" (Error block of JSON RPC
-           response) -> structure: parameter "name" of String, parameter
-           "code" of Long, parameter "message" of String, parameter "error"
-           of String, parameter "error_code" of Long, parameter "errormsg" of
-           String, parameter "terminated_code" of Long
+           "parent_job_id" of String, parameter "created" of Long, parameter
+           "updated" of Long, parameter "estimating" of Long, parameter
+           "running" of Long, parameter "finished" of Long, parameter "error"
+           of type "JsonRpcError" (Error block of JSON RPC response) ->
+           structure: parameter "name" of String, parameter "code" of Long,
+           parameter "message" of String, parameter "error" of String,
+           parameter "error_code" of Long, parameter "errormsg" of String,
+           parameter "terminated_code" of Long
         """
         # ctx is the context object
         # return variables are: returnVal
