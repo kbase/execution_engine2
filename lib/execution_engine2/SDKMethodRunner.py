@@ -250,7 +250,8 @@ class SDKMethodRunner:
         jl.lines = []
         return jl
 
-    def _check_and_convert_time(self, time_input, assign_default_time=False):
+    @staticmethod
+    def _check_and_convert_time(time_input, assign_default_time=False):
         """
         convert input time into timestamp in epoch format
         """

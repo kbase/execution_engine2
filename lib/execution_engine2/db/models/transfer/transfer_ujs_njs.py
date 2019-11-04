@@ -2,9 +2,7 @@
 import datetime
 import os
 from configparser import ConfigParser
-
 from pymongo import MongoClient
-from mongoengine import connect
 
 jobs_database_name = "ee2_jobs"
 
