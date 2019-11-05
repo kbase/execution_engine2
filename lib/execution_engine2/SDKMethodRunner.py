@@ -258,11 +258,19 @@ class SDKMethodRunner:
 
         try:
             if isinstance(time_input, str):  # input time_input as string
-                if time_input.replace(".", "", 1).isdigit():  # input time_input as numeric string
-                    time_input = float(time_input) if "." in time_input else int(time_input) / 1000.0
+                if time_input.replace(
+                    ".", "", 1
+                ).isdigit():  # input time_input as numeric string
+                    time_input = (
+                        float(time_input)
+                        if "." in time_input
+                        else int(time_input) / 1000.0
+                    )
                 else:  # input time_input as datetime string
                     time_input = dateutil.parser.parse(time_input).timestamp()
-            elif isinstance(time_input, int):  # input time_input as epoch timestamps in milliseconds
+            elif isinstance(
+                time_input, int
+            ):  # input time_input as epoch timestamps in milliseconds
                 time_input = time_input / 1000.0
             elif isinstance(time_input, datetime):
                 time_input = time_input.timestamp()
@@ -270,10 +278,14 @@ class SDKMethodRunner:
             datetime.fromtimestamp(time_input)  # check current time_input is valid
         except Exception:
             if assign_default_time:
-                logging.info("Cannot convert time_input into timestamps: {}".format(time_input))
+                logging.info(
+                    "Cannot convert time_input into timestamps: {}".format(time_input)
+                )
                 time_input = time.time()
             else:
-                raise ValueError("Cannot convert time_input into timestamps: {}".format(time_input))
+                raise ValueError(
+                    "Cannot convert time_input into timestamps: {}".format(time_input)
+                )
 
         return time_input
 
@@ -810,7 +822,9 @@ class SDKMethodRunner:
             mongo_rec = job.to_mongo().to_dict()
             del mongo_rec["_id"]
             mongo_rec["job_id"] = str(job.id)
-            mongo_rec["created"] = int(job.id.generation_time.utcnow().timestamp() * 1000)
+            mongo_rec["created"] = int(
+                job.id.generation_time.utcnow().timestamp() * 1000
+            )
             mongo_rec["updated"] = int(job.updated * 1000)
             if job.estimating:
                 mongo_rec["estimating"] = int(job.estimating * 1000)
@@ -857,19 +871,31 @@ class SDKMethodRunner:
 
     @staticmethod
     def _job_state_from_jobs(jobs):
+        """
+        Returns as per the spec file
+
+        :param jobs: MongoEngine Job Objects Query
+        :return: list of job states of format
+        Special Cases:
+        str(_id)
+        str(job_id)
+        float(created/queued/estimating/running/finished/updated/) (Time in MS)
+        """
         job_states = []
         for job in jobs:
             mongo_rec = job.to_mongo().to_dict()
             mongo_rec["_id"] = str(job.id)
             mongo_rec["job_id"] = str(job.id)
-            mongo_rec["created"] = str(job.id.generation_time)
-            mongo_rec["updated"] = str(job.updated)
+            mongo_rec["created"] = int(job.id.generation_time.timestamp() * 1000)
+            mongo_rec["updated"] = int(job.updated * 1000)
             if job.estimating:
-                mongo_rec["estimating"] = str(job.estimating)
+                mongo_rec["estimating"] = int(job.estimating * 1000)
+            if job.queued:
+                mongo_rec["queued"] = int(job.queued * 1000)
             if job.running:
-                mongo_rec["running"] = str(job.running)
+                mongo_rec["running"] = int(job.running * 1000)
             if job.finished:
-                mongo_rec["finished"] = str(job.finished)
+                mongo_rec["finished"] = int(job.finished * 1000)
             job_states.append(mongo_rec)
         return job_states
 
@@ -1022,7 +1048,9 @@ class SDKMethodRunner:
     def _get_dummy_dates(self, creation_start_time, creation_end_time):
 
         if creation_start_time is None:
-            raise Exception("Please provide a valid start time for when job was created")
+            raise Exception(
+                "Please provide a valid start time for when job was created"
+            )
 
         creation_start_time = self._check_and_convert_time(creation_start_time)
         creation_start_date = datetime.fromtimestamp(creation_start_time)

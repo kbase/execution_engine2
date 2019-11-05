@@ -8,9 +8,13 @@ from dateutil import parser as dateparser
 import requests
 import json
 from datetime import datetime
+from execution_engine2.exceptions import MalformedTimestampException
+from execution_engine2.db.models.models import Status
 
 
-def get_example_job(user: str = "boris", wsid: int = 123, authstrat: str = "kbaseworkspace") -> Job:
+def get_example_job(
+    user: str = "boris", wsid: int = 123, authstrat: str = "kbaseworkspace"
+) -> Job:
     j = Job()
     j.user = user
     j.wsid = wsid
@@ -59,6 +63,7 @@ def bootstrap():
     load_dotenv("test.env", verbose=True)
 
 
+# flake8: noqa: C901
 def validate_job_state(state):
     """
     Validates whether a returned Job State has all the required fields with the right format.
@@ -93,26 +98,19 @@ def validate_job_state(state):
         "estimating",
         "queued",
         "running",
-        "finished"
+        "completed",
     ]
 
     # fields that have to be present based on the context of different statuses
-    valid_statuses = [
-        "created",
-        "estimating",
-        "queued",
-        "running",
-        "finished",
-        "terminated",
-        "error"
-    ]
+
+    valid_statuses = vars(Status)["_member_names_"]
 
     status_context = {
         "estimating": ["estimating"],
         "running": ["running"],
-        "finished": ["finished"],
+        "completed": ["completed"],
         "error": ["error_code", "errormsg"],
-        "terminated": ["terminated_code"]
+        "terminated": ["terminated_code"],
     }
 
     # 1. Make sure required fields are present and of the correct type
@@ -127,11 +125,13 @@ def validate_job_state(state):
     if missing_reqs or wrong_reqs:
         print(f"Job state is missing required fields: {missing_reqs}.")
         for req in wrong_reqs:
-            print(f"Job state has faulty req - {req} should be of type {required_fields[req]}, but had value {state[req]}.")
+            print(
+                f"Job state has faulty req - {req} should be of type {required_fields[req]}, but had value {state[req]}."
+            )
         return False
 
     # 2. Make sure that context-specific fields are present and the right type
-    status = state['status']
+    status = state["status"]
     if status not in valid_statuses:
         print(f"Job state has invalid status {status}.")
         return False
@@ -148,17 +148,32 @@ def validate_job_state(state):
         if missing_context or wrong_context:
             print(f"Job state is missing status context fields: {missing_context}.")
             for field in wrong_context:
-                print(f"Job state has faulty context field - {field} should be of type {optional_fields[field]}, but had value {state[field]}.")
+                print(
+                    f"Job state has faulty context field - {field} should be of type {optional_fields[field]}, but had value {state[field]}."
+                )
             return False
 
     # 3. Make sure timestamps are really timestamps
     bad_ts = list()
     for ts_type in timestamp_fields:
-        if ts_type in state and not is_timestamp(state[ts_type]):
-            bad_ts.append(ts_type)
+        if ts_type in state:
+            is_second_ts = is_timestamp(state[ts_type])
+            if not is_second_ts:
+                print(state[ts_type], "is not a second ts")
+
+            is_ms_ts = is_timestamp(state[ts_type] / 1000)
+            if not is_ms_ts:
+                print(state[ts_type], "is not a millisecond ts")
+
+            if not is_second_ts and not is_ms_ts:
+                bad_ts.append(ts_type)
+
     if bad_ts:
         for ts_type in bad_ts:
-            print(f"Job state has a malformatted timestamp: {ts_type} with value {state[ts_type]}")
+            print(
+                f"Job state has a malformatted timestamp: {ts_type} with value {state[ts_type]}"
+            )
+        raise MalformedTimestampException()
 
     return True
 
@@ -184,6 +199,7 @@ def custom_ws_perm_maker(user_id: str, ws_perms: dict):
         write permission
     :return: an adapter function to be passed to request_mock
     """
+
     def perm_adapter(request):
         perms_req = request.json().get("params")[0].get("workspaces")
         ret_perms = []
@@ -191,9 +207,9 @@ def custom_ws_perm_maker(user_id: str, ws_perms: dict):
             ret_perms.append({user_id: ws_perms.get(ws["id"], "n")})
         response = requests.Response()
         response.status_code = 200
-        response._content = bytes(json.dumps({
-            "result": [{"perms": ret_perms}],
-            "version": "1.1"
-        }), "UTF-8")
+        response._content = bytes(
+            json.dumps({"result": [{"perms": ret_perms}], "version": "1.1"}), "UTF-8"
+        )
         return response
+
     return perm_adapter

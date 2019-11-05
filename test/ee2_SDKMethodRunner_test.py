@@ -478,7 +478,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             if isinstance(time_input, str):
                 if time_input.replace(".", "", 1).isdigit():
                     time_input = (
-                        float(time_input) if "." in time_input else int(time_input) / 1000.0
+                        float(time_input)
+                        if "." in time_input
+                        else int(time_input) / 1000.0
                     )
                 else:
                     time_input = dateutil.parser.parse(time_input).timestamp()
@@ -1084,14 +1086,17 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 if job_id in new_job_ids:
                     count += 1
                     self.assertEqual(js["status"], "created")
-                    date = dateutil.parser.parse(js["created"])
-                    ts = date.timestamp()
+                    print(js["created"])
+                    print(type(js["created"]))
+                    date = SDKMethodRunner._check_and_convert_time(js["created"])
+                    ts = date
                     print(
                         f"Creation date {date}, LastWeek:{last_week}, Tomorrow{tomorrow})"
                     )
-                    print(ts, last_week.timestamp(), tomorrow.timestamp())
-                    self.assertTrue(ts >= last_week.timestamp())
-                    self.assertTrue(ts <= tomorrow.timestamp())
+                    print(ts, last_week.timestamp())
+                    self.assertTrue(float(ts) >= last_week.timestamp())
+                    print(ts, tomorrow.timestamp())
+                    self.assertTrue(float(ts) <= tomorrow.timestamp())
             self.assertEqual(2, count)
 
             print(
@@ -1099,7 +1104,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             )
 
             job_state = runner.check_jobs_date_range_for_user(
-                creation_end_time=str(tomorrow.timestamp()),  # test timestamp string input
+                creation_end_time=str(
+                    tomorrow.timestamp()
+                ),  # test timestamp string input
                 creation_start_time=last_month_and_1_hour,  # test datetime input
                 user="ALL",
             )
@@ -1111,8 +1118,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 if job_id in new_job_ids:
                     count += 1
                     self.assertEqual(js["status"], "created")
-                    date = dateutil.parser.parse(js["created"])
-                    ts = date.timestamp()
+                    date = SDKMethodRunner._check_and_convert_time(js["created"])
+                    ts = date
                     print(date, last_week, tomorrow)
                     print(ts, last_week.timestamp(), tomorrow.timestamp())
                     self.assertTrue(ts > last_month_and_1_hour.timestamp())
@@ -1162,8 +1169,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 if job_id in new_job_ids:
                     count += 1
                     self.assertEqual(js["status"], "created")
-                    date = dateutil.parser.parse(js["created"])
-                    ts = date.timestamp()
+                    date = SDKMethodRunner._check_and_convert_time(js["created"])
+                    ts = date
                     print(date, last_week, tomorrow)
                     print(ts, last_week.timestamp(), tomorrow.timestamp())
                     self.assertTrue(ts > last_month_and_1_hour.timestamp())

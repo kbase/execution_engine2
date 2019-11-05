@@ -11,7 +11,7 @@ class execution_engine2:
     execution_engine2
 
     Module Description:
-
+    
     '''
 
     ######## WARNING FOR GEVENT USERS ####### noqa
@@ -22,7 +22,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "fc9a6ae2029d8711de1515d738e1495950648c8a"
+    GIT_COMMIT_HASH = "b7ebd61b40e4485d924a454859238e22dbc013e5"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -478,13 +478,13 @@ class execution_engine2:
            optional.), parameter "app_id" of String, parameter "meta" of
            mapping from String to String, parameter "wsid" of Long, parameter
            "parent_job_id" of String, parameter "created" of Long, parameter
-           "updated" of Long, parameter "estimating" of Long, parameter
-           "running" of Long, parameter "finished" of Long, parameter "error"
-           of type "JsonRpcError" (Error block of JSON RPC response) ->
-           structure: parameter "name" of String, parameter "code" of Long,
-           parameter "message" of String, parameter "error" of String,
-           parameter "error_code" of Long, parameter "errormsg" of String,
-           parameter "terminated_code" of Long
+           "queued" of Long, parameter "estimating" of Long, parameter
+           "running" of Long, parameter "finished" of Long, parameter
+           "updated" of Long, parameter "error" of type "JsonRpcError" (Error
+           block of JSON RPC response) -> structure: parameter "name" of
+           String, parameter "code" of Long, parameter "message" of String,
+           parameter "error" of String, parameter "error_code" of Long,
+           parameter "errormsg" of String, parameter "terminated_code" of Long
         """
         # ctx is the context object
         # return variables are: job_state
@@ -590,13 +590,13 @@ class execution_engine2:
            optional.), parameter "app_id" of String, parameter "meta" of
            mapping from String to String, parameter "wsid" of Long, parameter
            "parent_job_id" of String, parameter "created" of Long, parameter
-           "updated" of Long, parameter "estimating" of Long, parameter
-           "running" of Long, parameter "finished" of Long, parameter "error"
-           of type "JsonRpcError" (Error block of JSON RPC response) ->
-           structure: parameter "name" of String, parameter "code" of Long,
-           parameter "message" of String, parameter "error" of String,
-           parameter "error_code" of Long, parameter "errormsg" of String,
-           parameter "terminated_code" of Long
+           "queued" of Long, parameter "estimating" of Long, parameter
+           "running" of Long, parameter "finished" of Long, parameter
+           "updated" of Long, parameter "error" of type "JsonRpcError" (Error
+           block of JSON RPC response) -> structure: parameter "name" of
+           String, parameter "code" of Long, parameter "message" of String,
+           parameter "error" of String, parameter "error_code" of Long,
+           parameter "errormsg" of String, parameter "terminated_code" of Long
         """
         # ctx is the context object
         # return variables are: returnVal
@@ -703,13 +703,13 @@ class execution_engine2:
            optional.), parameter "app_id" of String, parameter "meta" of
            mapping from String to String, parameter "wsid" of Long, parameter
            "parent_job_id" of String, parameter "created" of Long, parameter
-           "updated" of Long, parameter "estimating" of Long, parameter
-           "running" of Long, parameter "finished" of Long, parameter "error"
-           of type "JsonRpcError" (Error block of JSON RPC response) ->
-           structure: parameter "name" of String, parameter "code" of Long,
-           parameter "message" of String, parameter "error" of String,
-           parameter "error_code" of Long, parameter "errormsg" of String,
-           parameter "terminated_code" of Long
+           "queued" of Long, parameter "estimating" of Long, parameter
+           "running" of Long, parameter "finished" of Long, parameter
+           "updated" of Long, parameter "error" of type "JsonRpcError" (Error
+           block of JSON RPC response) -> structure: parameter "name" of
+           String, parameter "code" of Long, parameter "message" of String,
+           parameter "error" of String, parameter "error_code" of Long,
+           parameter "errormsg" of String, parameter "terminated_code" of Long
         """
         # ctx is the context object
         # return variables are: returnVal
@@ -888,13 +888,13 @@ class execution_engine2:
            optional.), parameter "app_id" of String, parameter "meta" of
            mapping from String to String, parameter "wsid" of Long, parameter
            "parent_job_id" of String, parameter "created" of Long, parameter
-           "updated" of Long, parameter "estimating" of Long, parameter
-           "running" of Long, parameter "finished" of Long, parameter "error"
-           of type "JsonRpcError" (Error block of JSON RPC response) ->
-           structure: parameter "name" of String, parameter "code" of Long,
-           parameter "message" of String, parameter "error" of String,
-           parameter "error_code" of Long, parameter "errormsg" of String,
-           parameter "terminated_code" of Long
+           "queued" of Long, parameter "estimating" of Long, parameter
+           "running" of Long, parameter "finished" of Long, parameter
+           "updated" of Long, parameter "error" of type "JsonRpcError" (Error
+           block of JSON RPC response) -> structure: parameter "name" of
+           String, parameter "code" of Long, parameter "message" of String,
+           parameter "error" of String, parameter "error_code" of Long,
+           parameter "errormsg" of String, parameter "terminated_code" of Long
         """
         # ctx is the context object
         # return variables are: returnVal
@@ -1017,13 +1017,13 @@ class execution_engine2:
            optional.), parameter "app_id" of String, parameter "meta" of
            mapping from String to String, parameter "wsid" of Long, parameter
            "parent_job_id" of String, parameter "created" of Long, parameter
-           "updated" of Long, parameter "estimating" of Long, parameter
-           "running" of Long, parameter "finished" of Long, parameter "error"
-           of type "JsonRpcError" (Error block of JSON RPC response) ->
-           structure: parameter "name" of String, parameter "code" of Long,
-           parameter "message" of String, parameter "error" of String,
-           parameter "error_code" of Long, parameter "errormsg" of String,
-           parameter "terminated_code" of Long
+           "queued" of Long, parameter "estimating" of Long, parameter
+           "running" of Long, parameter "finished" of Long, parameter
+           "updated" of Long, parameter "error" of type "JsonRpcError" (Error
+           block of JSON RPC response) -> structure: parameter "name" of
+           String, parameter "code" of Long, parameter "message" of String,
+           parameter "error" of String, parameter "error_code" of Long,
+           parameter "errormsg" of String, parameter "terminated_code" of Long
         """
         # ctx is the context object
         # return variables are: returnVal
