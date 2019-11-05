@@ -456,6 +456,6 @@
         typedef structure {
             string user_token;
         } IsAdminParams;
-        funcdef is_admin(IsAdminParams params) returns (boolean is_admin) authentication required;
+        funcdef is_admin(IsAdminParams params) returns (boolean) authentication required;
 
     };

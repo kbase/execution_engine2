@@ -11,7 +11,7 @@ class execution_engine2:
     execution_engine2
 
     Module Description:
-    
+
     '''
 
     ######## WARNING FOR GEVENT USERS ####### noqa
@@ -22,7 +22,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "b7ebd61b40e4485d924a454859238e22dbc013e5"
+    GIT_COMMIT_HASH = "44e4a427c358070dc8dcfecb7ec8852fa0533b26"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -1058,15 +1058,15 @@ class execution_engine2:
         :returns: instance of type "boolean" (@range [0,1])
         """
         # ctx is the context object
-        # return variables are: is_admin
+        # return variables are: returnVal
         #BEGIN is_admin
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
-        is_admin = mr.check_is_admin(params.get("user_token"))
+        returnVal = mr.check_is_admin(params.get("user_token"))
         #END is_admin
 
         # At some point might do deeper type checking...
-        if not isinstance(is_admin, int):
+        if not isinstance(returnVal, int):
             raise ValueError('Method is_admin return value ' +
-                             'is_admin is not type int as required.')
+                             'returnVal is not type int as required.')
         # return the results
-        return [is_admin]
+        return [returnVal]
