@@ -1061,7 +1061,7 @@ class execution_engine2:
         # return variables are: is_admin
         #BEGIN is_admin
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
-        is_admin = mr.is_admin(params.get("user_token"))
+        is_admin = mr.check_is_admin(params.get("user_token"))
         #END is_admin
 
         # At some point might do deeper type checking...
