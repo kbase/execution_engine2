@@ -11,7 +11,7 @@ class execution_engine2:
     execution_engine2
 
     Module Description:
-    
+
     '''
 
     ######## WARNING FOR GEVENT USERS ####### noqa
@@ -22,7 +22,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "9a6b84e7731827ef679563aed4015ec90ea4e18f"
+    GIT_COMMIT_HASH = "fc9a6ae2029d8711de1515d738e1495950648c8a"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -1047,3 +1047,26 @@ class execution_engine2:
                              'returnVal is not type dict as required.')
         # return the results
         return [returnVal]
+
+    def is_admin(self, ctx, params):
+        """
+        :param params: instance of type "IsAdminParams" (Check if given user
+           (user_token) has admin rights. if user_token is given, current
+           user must have admin rights. otherwise, return whether current
+           user is an admin nor not. @optional user_token) -> structure:
+           parameter "user_token" of String
+        :returns: instance of type "boolean" (@range [0,1])
+        """
+        # ctx is the context object
+        # return variables are: is_admin
+        #BEGIN is_admin
+        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
+        is_admin = mr.is_admin(params.get("user_token"))
+        #END is_admin
+
+        # At some point might do deeper type checking...
+        if not isinstance(is_admin, int):
+            raise ValueError('Method is_admin return value ' +
+                             'is_admin is not type int as required.')
+        # return the results
+        return [is_admin]

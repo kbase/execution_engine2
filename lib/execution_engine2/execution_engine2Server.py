@@ -410,6 +410,10 @@ class Application(object):
                              name='execution_engine2.check_jobs_date_range_for_all',
                              types=[dict])
         self.method_authentication['execution_engine2.check_jobs_date_range_for_all'] = 'required'  # noqa
+        self.rpc_service.add(impl_execution_engine2.is_admin,
+                             name='execution_engine2.is_admin',
+                             types=[dict])
+        self.method_authentication['execution_engine2.is_admin'] = 'required'  # noqa
         authurl = config.get(AUTH) if config else None
         self.auth_client = _KBaseAuth(authurl)
 
