@@ -919,7 +919,7 @@ class SDKMethodRunner:
             else:
                 return "-"
 
-    def check_is_admin(user_token):
+    def check_is_admin(self, user_token):
 
         self.is_admin = self._is_admin(self.token)
 
