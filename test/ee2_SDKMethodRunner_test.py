@@ -858,6 +858,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertTrue(validate_job_state(job_state))
             self.assertEqual(job_state["status"], "created")
             self.assertEqual(job_state["wsid"], self.ws_id)
+            self.assertAlmostEqual(job_state["created"]/1000.0, job_state["updated"]/1000.0, places=-1)
 
             # test globally
             job_states = runner.check_workspace_jobs(self.ws_id)
