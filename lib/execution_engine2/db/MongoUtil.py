@@ -213,7 +213,6 @@ class MongoUtil:
         #TODO Make cancel code mandatory and part of spec?
         :param job_id: Cancel job by id
         :param terminated_code: Default to terminated by user
-        :param job: Cancel job with actual job document instance
         """
 
         with self.mongo_engine_connection():
@@ -222,6 +221,7 @@ class MongoUtil:
             if terminated_code is None:
                 terminated_code = TerminatedCode.terminated_by_user.value
 
+            j.finished = time.time()
             j.terminated_code = terminated_code
             j.status = Status.terminated.value
             j.save()
