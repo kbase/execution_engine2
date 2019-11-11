@@ -35,6 +35,25 @@ class MigrateDatabases:
     threshold = 1000
     none_jobs = 0
 
+
+    def _get_ee2_connection(self) -> MongoClient:
+        parser = ConfigParser()
+        parser.read(os.environ.get("KB_DEPLOYMENT_CONFIG"))
+        self.ee2_host = parser.get("execution_engine2", "mongo-host")
+        self.ee2_db = parser.get("execution_engine2", "mongo-database")
+        self.ee2_user = parser.get("execution_engine2", "mongo-user")
+        self.ee2_pwd = parser.get("execution_engine2", "mongo-password")
+
+        return MongoClient(
+            self.ee2_host,
+            27017,
+            username=self.ee2_user,
+            password=self.ee2_pwd,
+            authSource=self.ee2_db,
+            retryWrites=False,
+        )
+
+
     def _get_ujs_connection(self) -> MongoClient:
         parser = ConfigParser()
         parser.read(os.environ.get("KB_DEPLOYMENT_CONFIG"))
@@ -71,6 +90,7 @@ class MigrateDatabases:
         )
 
     def __init__(self):
+        #Use this after adding more config variables
         # self.ee2 = self._get_ee2_connection()
         self.njs = self._get_njs_connection()
         self.ujs = self._get_ujs_connection()
@@ -87,6 +107,10 @@ class MigrateDatabases:
             .get_database(self.njs_db)
             .get_collection(self.njs_jobs_collection_name)
         )
+
+
+        #Use this instead after adding more config variables
+        #self.ee2_jobs = self._get_ee2_connection().get_database(self.ee2_db).get_collection(jobs_database_name)
 
         self.ee2_jobs = (
             self._get_njs_connection()
