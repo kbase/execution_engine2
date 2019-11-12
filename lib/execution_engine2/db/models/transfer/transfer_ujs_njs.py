@@ -1,14 +1,16 @@
 #!/usr/bin/env python
-import datetime
 import os
+import datetime
+from dateutil.parser import parse
+
+
 from configparser import ConfigParser
 from pymongo import MongoClient
 
 jobs_database_name = "ee2_jobs"
 
-
 try:
-    from lib.execution_engine2.db.models.models import (
+    from execution_engine2.db.models.models import (
         Job,
         Status,
         ErrorCode,
@@ -19,7 +21,6 @@ try:
 
 except Exception:
     from models import Job, Status, ErrorCode, JobInput, Meta, TerminatedCode
-
 
 UNKNOWN = "UNKNOWN"
 
@@ -33,6 +34,23 @@ class MigrateDatabases:
     documents = []
     threshold = 1000
     none_jobs = 0
+
+    def _get_ee2_connection(self) -> MongoClient:
+        parser = ConfigParser()
+        parser.read(os.environ.get("KB_DEPLOYMENT_CONFIG"))
+        self.ee2_host = parser.get("execution_engine2", "mongo-host")
+        self.ee2_db = parser.get("execution_engine2", "mongo-database")
+        self.ee2_user = parser.get("execution_engine2", "mongo-user")
+        self.ee2_pwd = parser.get("execution_engine2", "mongo-password")
+
+        return MongoClient(
+            self.ee2_host,
+            27017,
+            username=self.ee2_user,
+            password=self.ee2_pwd,
+            authSource=self.ee2_db,
+            retryWrites=False,
+        )
 
     def _get_ujs_connection(self) -> MongoClient:
         parser = ConfigParser()
@@ -70,6 +88,8 @@ class MigrateDatabases:
         )
 
     def __init__(self):
+        # Use this after adding more config variables
+        # self.ee2 = self._get_ee2_connection()
         self.njs = self._get_njs_connection()
         self.ujs = self._get_ujs_connection()
         self.jobs = []
@@ -86,14 +106,23 @@ class MigrateDatabases:
             .get_collection(self.njs_jobs_collection_name)
         )
 
-        self.ee2_jobs = self._get_njs_connection().get_database(self.njs_db).get_collection(jobs_database_name)
+        # Use this instead after adding more config variables
+        # self.ee2_jobs = self._get_ee2_connection().get_database(self.ee2_db).get_collection(jobs_database_name)
 
-        config = {'mongo-host' : self.njs_host,
-                  'mongo-port' : 27017,
-                  'mongo-database' : self.njs_db,
-                  'mongo-user' : self.njs_user,
-                  'mongo-password' : self.njs_pwd,
-                  'mongo-authmechanism' : "DEFAULT"}
+        self.ee2_jobs = (
+            self._get_njs_connection()
+            .get_database(self.njs_db)
+            .get_collection(jobs_database_name)
+        )
+
+        config = {
+            "mongo-host": self.njs_host,
+            "mongo-port": 27017,
+            "mongo-database": self.njs_db,
+            "mongo-user": self.njs_user,
+            "mongo-password": self.njs_pwd,
+            "mongo-authmechanism": "DEFAULT",
+        }
         # self.mongo_util = MongoUtil(config=config)
 
     def get_njs_job_input(self, njs_job):
@@ -168,49 +197,55 @@ class MigrateDatabases:
                 job.errormsg = ujs_job.get("errormsg")
                 job.error_code = ErrorCode.unknown_error.value
             elif complete:
-                job.status = Status.finished.value
+                job.status = Status.completed.value
                 job.errormsg = None
 
-            job.updated = ujs_job.get("updated")
-            job.running = ujs_job.get("started")
+            job.updated = ujs_job.get("updated").timestamp()
+            try:
+                job.running = ujs_job.get("started").timestamp()
+            except:
+                job.running = 0
             job.estimating = None
             job.finished = None
 
             status = ujs_job.get("status")
 
-            exec_start_time = 0.0
-            finish_time = 0.0
+            if njs_job is None:
+                finish_time = 0
+                exec_start_time = 0
 
-            if njs_job is not None:
-                finish_time = njs_job.get("finish_time", 0.0) / 1000.0
-                exec_start_time = njs_job.get("exec_start_time", 0.0) / 1000.0
+            else:
+                finish_time = njs_job.get("finish_time", 0)
+                if finish_time is None:
+                    finish_time = 0
+                else:
+                    finish_time = finish_time / 1000.0
+                exec_start_time = njs_job.get("exec_start_time", 0)
+                if exec_start_time is None:
+                    exec_start_time = 0
+                else:
+                    exec_start_time = exec_start_time / 1000.0
+                    
 
             if status == "canceled by user":
                 job.status = Status.terminated.value
                 job.terminated_code = TerminatedCode.terminated_by_user.value
-                if njs_job is not None:
-                    job.finished = finish_time
-                    job.running = exec_start_time
+
             elif status == "done":
-                job.status = Status.finished.value
-                if njs_job is not None:
-                    job.finished = finish_time
-                    job.running = exec_start_time
+                job.status = Status.completed.value
+
             # Jobs shouldn't be queued from long ago.. And we shouldn't migrate running/queued jobs probably
             elif status == "error" or status == "queued" or status == "in-progress":
                 job.status = Status.error.value
                 job.error_code = ErrorCode.unknown_error.value
-                if njs_job is not None:
-                    job.finished = finish_time
-                    job.running = exec_start_time
 
             elif status is None:
                 print(f"{job.id} has a broken status")
                 job.status = Status.error.value
                 job.error_code = ErrorCode.unknown_error.value
-                if njs_job is not None:
-                    job.finished = finish_time
-                    job.running = exec_start_time
+
+            job.finished = finish_time
+            job.running = exec_start_time
 
             msg = [ujs_job.get("status", ""), ujs_job.get("desc", "")]
             job.msg = " ".join(msg)
@@ -219,6 +254,9 @@ class MigrateDatabases:
             job.job_input = None
             job.job_output = None
             job.scheduler_type = "awe"
+
+            print("Job is updated with")
+            print(job.updated)
 
             if njs_job is None:
                 # Just to make validation pass for job input part
@@ -277,9 +315,9 @@ class MigrateDatabases:
                 job.job_output = njs_job.get("job_output")
                 job.validate()
 
-            self.save_job(job)
+            # self.save_job(job)
             # Save leftover jobs
-        self.save_remnants()
+        # self.save_remnants()
 
         # TODO SAVE up to 5000 in memory and do a bulk insert
         # a = []
