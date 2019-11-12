@@ -1,15 +1,15 @@
-from configparser import ConfigParser
-import os
-from dotenv import load_dotenv
-import pathlib
-from shutil import copyfile
-from execution_engine2.db.models.models import Job, JobInput, Meta
-from dateutil import parser as dateparser
-import requests
 import json
+import os
+from shutil import copyfile
+
+import requests
+from configparser import ConfigParser
 from datetime import datetime
-from execution_engine2.exceptions import MalformedTimestampException
+from dotenv import load_dotenv
+
+from execution_engine2.db.models.models import Job, JobInput, Meta
 from execution_engine2.db.models.models import Status
+from execution_engine2.exceptions import MalformedTimestampException
 
 
 def get_example_job(

@@ -1,10 +1,10 @@
-import enum
 import json
 import logging
 from collections import namedtuple
-from configparser import ConfigParser
 
+import enum
 import htcondor
+from configparser import ConfigParser
 
 from execution_engine2.exceptions import MissingRunJobParamsException
 from execution_engine2.utils.Scheduler import Scheduler
@@ -347,6 +347,38 @@ class Condor(Scheduler):
     def get_user_info(self, user_id, projection=None):
         pass
 
-    def cancel_job(self, job_id):
+    def cancel_job(self, job_id: str) -> bool:
+        """
 
-        pass
+        :param job_id:
+        :return:
+        """
+        return self.cancel_jobs([job_id])
+
+    def cancel_jobs(self, scheduler_ids):
+        """
+        Possible return structure like this
+        [
+            TotalJobAds = 10;
+            TotalPermissionDenied = 0;
+            TotalAlreadyDone = 0;
+            TotalNotFound = 0;
+            TotalSuccess = 1;
+            TotalChangedAds = 1;
+            TotalBadStatus = 0;
+            TotalError = 0
+        ]
+        :param scheduler_ids:  List of jobs to cancel
+        :return:
+        """
+
+        if not isinstance(scheduler_ids, list):
+            raise Exception("Please provide a list of condor ids to cancel")
+
+        try:
+            logging.debug(
+                print(htcondor.Schedd().act(htcondor.JobAction.Remove, scheduler_ids))
+            )
+        except Exception as e:
+            logging.error(scheduler_ids)
+            logging.error(e)
