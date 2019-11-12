@@ -211,6 +211,7 @@ class MongoUtil:
         """
         #TODO Should we check for a valid state transition here also?
         #TODO Make cancel code mandatory and part of spec?
+        #TODO Should make terminated_code default to something else, and update clients in Narrative?
         :param job_id: Cancel job by id
         :param terminated_code: Default to terminated by user
         """
@@ -220,7 +221,6 @@ class MongoUtil:
             self.check_if_already_finished(j.status)
             if terminated_code is None:
                 terminated_code = TerminatedCode.terminated_by_user.value
-
             j.finished = time.time()
             j.terminated_code = terminated_code
             j.status = Status.terminated.value
