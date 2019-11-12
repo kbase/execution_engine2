@@ -26,6 +26,7 @@ from execution_engine2.db.models.models import (
     JobLog,
     LogLines,
     ErrorCode,
+    TerminatedCode,
 )
 from execution_engine2.exceptions import AuthError
 from execution_engine2.exceptions import (
@@ -470,7 +471,9 @@ class SDKMethodRunner:
         p = {
             "cancel_job": {
                 "job_id": params.get("job_id"),
-                "terminated_code": params.get("terminated_code"),
+                "terminated_code": params.get(
+                    "terminated_code", TerminatedCode.terminated_by_admin.value
+                ),
             },
             "view_job_logs": {"job_id": params.get("job_id")},
         }

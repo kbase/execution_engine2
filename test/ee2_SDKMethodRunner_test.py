@@ -5,6 +5,7 @@ import logging
 import os
 import time
 import unittest
+from pprint import pprint
 
 import dateutil
 import requests
@@ -1352,3 +1353,77 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             for key in job_state_limit_desc.keys():
                 print(key)
                 print(job_state_limit_desc[key])
+
+    # flake8: noqa: C901
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    def test_cancel_job(self, condor_mock):
+        user_name = "wsadmin"
+
+        runner = self.getRunner()
+        runner.workspace_auth = MagicMock()
+        runner.auth.get_user = MagicMock(return_value=user_name)
+        runner.is_admin = True
+        runner._is_admin = MagicMock(return_value=True)
+
+        runner.workspace_auth.can_read = MagicMock(return_value=True)
+        runner.get_permissions_for_workspace = MagicMock(return_value=True)
+        runner._get_module_git_commit = MagicMock(return_value="git_commit_goes_here")
+        runner.get_condor = MagicMock(return_value=condor_mock)
+        # ctx = {"user_id": self.user_id, "wsid": self.ws_id, "token": self.token}
+        job = get_example_job().to_mongo().to_dict()
+        job["method"] = job["job_input"]["app_id"]
+        job["app_id"] = job["job_input"]["app_id"]
+
+        si = submission_info(clusterid="test", submit=job, error=None)
+        condor_mock.run_job = MagicMock(return_value=si)
+
+        job_id0 = runner.run_job(params=job)
+        job_id1 = runner.run_job(params=job)
+        job_id2 = runner.run_job(params=job)
+        job_id3 = runner.run_job(params=job)
+        job_id4 = runner.run_job(params=job)
+
+        runner.cancel_job(
+            job_id=job_id1,
+            terminated_code=TerminatedCode.terminated_by_automation.value,
+        )
+        runner.cancel_job(
+            job_id=job_id2, terminated_code=TerminatedCode.terminated_by_admin.value
+        )
+        runner.cancel_job(
+            job_id=job_id3, terminated_code=TerminatedCode.terminated_by_user.value
+        )
+        runner.cancel_job(
+            job_id=job_id4, terminated_code=TerminatedCode.terminated_by_user.value
+        )
+
+        terminated_0 = runner.check_job_canceled(job_id=job_id0)
+        terminated_1 = runner.check_job_canceled(job_id=job_id1)
+        terminated_2 = runner.check_job_canceled(job_id=job_id2)
+        terminated_3 = runner.check_job_canceled(job_id=job_id3)
+        terminated_4 = runner.check_job_canceled(job_id=job_id4)
+        self.assertTrue(terminated_1["canceled"])
+        self.assertTrue(terminated_2["canceled"])
+        self.assertTrue(terminated_3["canceled"])
+        self.assertTrue(terminated_4["canceled"])
+        self.assertFalse(terminated_0["canceled"])
+
+        status0 = runner.check_job(job_id=job_id0)
+        status1 = runner.check_job(job_id=job_id1)
+        status2 = runner.check_job(job_id=job_id2)
+        status3 = runner.check_job(job_id=job_id3)
+        status4 = runner.check_job(job_id=job_id4)
+
+        self.assertTrue("terminated_code" not in status0)
+        self.assertEquals(
+            status1["terminated_code"], TerminatedCode.terminated_by_automation.value
+        )
+        self.assertEquals(
+            status2["terminated_code"], TerminatedCode.terminated_by_admin.value
+        )
+        self.assertEquals(
+            status3["terminated_code"], TerminatedCode.terminated_by_user.value
+        )
+        self.assertEquals(
+            status4["terminated_code"], TerminatedCode.terminated_by_user.value
+        )

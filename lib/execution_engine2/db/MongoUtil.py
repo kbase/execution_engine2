@@ -58,9 +58,9 @@ class MongoUtil:
         mongo_host: str,
         mongo_port: int,
         mongo_database: str,
-        mongo_user: str=None,
-        mongo_password: str=None,
-        mongo_authmechanism: str="DEFAULT",
+        mongo_user: str = None,
+        mongo_password: str = None,
+        mongo_authmechanism: str = "DEFAULT",
     ):
         """
         Connect to Mongo server and return a tuple with the MongoClient and MongoClient?
@@ -146,7 +146,7 @@ class MongoUtil:
         finally:
             mc.close()
 
-    def get_job_log(self, job_id: str=None) -> JobLog:
+    def get_job_log(self, job_id: str = None) -> JobLog:
         if job_id is None:
             raise ValueError("Please provide a job id")
         with self.mongo_engine_connection():
@@ -211,9 +211,9 @@ class MongoUtil:
         """
         #TODO Should we check for a valid state transition here also?
         #TODO Make cancel code mandatory and part of spec?
+        #TODO Should make terminated_code default to something else, and update clients in Narrative?
         :param job_id: Cancel job by id
         :param terminated_code: Default to terminated by user
-        :param job: Cancel job with actual job document instance
         """
 
         with self.mongo_engine_connection():
@@ -221,7 +221,7 @@ class MongoUtil:
             self.check_if_already_finished(j.status)
             if terminated_code is None:
                 terminated_code = TerminatedCode.terminated_by_user.value
-
+            j.terminated = time.time()
             j.terminated_code = terminated_code
             j.status = Status.terminated.value
             j.save()
