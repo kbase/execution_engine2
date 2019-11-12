@@ -788,12 +788,12 @@ class SDKMethodRunner:
             raise ValueError("Please provide valid job_id")
 
         job_state = self.check_jobs(
-            [job_id], check_permission=check_permission, projection=projection
+            [job_id], check_permission=check_permission, projection=projection, return_list=0
         ).get(job_id)
 
         return job_state
 
-    def check_jobs(self, job_ids, check_permission=True, projection=None):
+    def check_jobs(self, job_ids, check_permission=True, projection=None, return_list=None):
         """
         check_jobs: check and return job status for a given of list job_ids
         """
@@ -835,9 +835,14 @@ class SDKMethodRunner:
 
             job_states[str(job.id)] = mongo_rec
 
+        job_states = dict(sorted(job_states.items()))
+
+        if return_list:
+            job_states = list(job_states.values())
+
         return job_states
 
-    def check_workspace_jobs(self, workspace_id, projection=None):
+    def check_workspace_jobs(self, workspace_id, projection=None, return_list=None):
         """
         check_workspace_jobs: check job status for all jobs in a given workspace
         """
@@ -864,7 +869,7 @@ class SDKMethodRunner:
             return {}
 
         job_states = self.check_jobs(
-            job_ids, check_permission=False, projection=projection
+            job_ids, check_permission=False, projection=projection, return_list=return_list
         )
 
         return job_states

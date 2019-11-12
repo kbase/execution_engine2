@@ -913,21 +913,32 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_state["wsid"], self.ws_id)
 
             # test check_jobs
-            job_states = runner.check_jobs([job_id])
+            job_states = runner.check_jobs([job_id], return_list=0)
             json.dumps(job_states)  # make sure it's JSON serializable
             self.assertTrue(validate_job_state(job_states[job_id]))
             self.assertTrue(job_id in job_states)
             self.assertEqual(job_states[job_id]["status"], "created")
             self.assertEqual(job_states[job_id]["wsid"], self.ws_id)
+            print('fdsafds')
+            print(job_states)
+
+            # test check_jobs return list
+            job_states_list = runner.check_jobs([job_id], return_list=1)
+            json.dumps(job_states_list)  # make sure it's JSON serializable
+            self.assertTrue(isinstance(job_states_list, list))
+
+            print('fdsafdsaf')
+            print(job_states_list)
+            self.assertCountEqual(job_states_list, list(job_states.values()))
 
             # test check_jobs with projection
-            job_states = runner.check_jobs([job_id], projection=["wsid"])
+            job_states = runner.check_jobs([job_id], projection=["wsid"], return_list=0)
             self.assertTrue(job_id in job_states)
             self.assertFalse("wsid" in job_states[job_id].keys())
             self.assertEqual(job_states[job_id]["status"], "created")
 
             # test check_workspace_jobs
-            job_states = runner.check_workspace_jobs(self.ws_id)
+            job_states = runner.check_workspace_jobs(self.ws_id, return_list=0)
             for job_id in job_states:
                 self.assertTrue(job_states[job_id])
             json.dumps(job_states)  # make sure it's JSON serializable
@@ -936,7 +947,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_states[job_id]["wsid"], self.ws_id)
 
             # test check_workspace_jobs with projection
-            job_states = runner.check_workspace_jobs(self.ws_id, projection=["wsid"])
+            job_states = runner.check_workspace_jobs(self.ws_id, projection=["wsid"], return_list=0)
             self.assertTrue(job_id in job_states)
             self.assertFalse("wsid" in job_states[job_id].keys())
             self.assertEqual(job_states[job_id]["status"], "created")
