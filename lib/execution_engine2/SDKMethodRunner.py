@@ -199,7 +199,7 @@ class SDKMethodRunner:
                     "line": log_line.line,
                     "linepos": log_line.linepos,
                     "error": log_line.error,
-                    "ts": log_line.ts,
+                    "ts": int(log_line.ts * 1000),
                 }
             )
 

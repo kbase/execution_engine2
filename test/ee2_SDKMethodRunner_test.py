@@ -487,7 +487,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             elif isinstance(time_input, int):
                 time_input = time_input / 1000.0
 
-            self.assertEqual(inserted_line["ts"], time_input)
+            self.assertEqual(inserted_line["ts"], int(time_input * 1000))
 
             error1 = line["error"]
             error2 = input_lines2[i - log_pos_1]["error"]
