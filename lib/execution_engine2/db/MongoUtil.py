@@ -221,7 +221,7 @@ class MongoUtil:
             self.check_if_already_finished(j.status)
             if terminated_code is None:
                 terminated_code = TerminatedCode.terminated_by_user.value
-            j.terminated = time.time()
+            j.finished = time.time()
             j.terminated_code = terminated_code
             j.status = Status.terminated.value
             j.save()
