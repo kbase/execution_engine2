@@ -35,7 +35,6 @@ class MigrateDatabases:
     threshold = 1000
     none_jobs = 0
 
-
     def _get_ee2_connection(self) -> MongoClient:
         parser = ConfigParser()
         parser.read(os.environ.get("KB_DEPLOYMENT_CONFIG"))
@@ -52,7 +51,6 @@ class MigrateDatabases:
             authSource=self.ee2_db,
             retryWrites=False,
         )
-
 
     def _get_ujs_connection(self) -> MongoClient:
         parser = ConfigParser()
@@ -90,7 +88,7 @@ class MigrateDatabases:
         )
 
     def __init__(self):
-        #Use this after adding more config variables
+        # Use this after adding more config variables
         # self.ee2 = self._get_ee2_connection()
         self.njs = self._get_njs_connection()
         self.ujs = self._get_ujs_connection()
@@ -108,9 +106,8 @@ class MigrateDatabases:
             .get_collection(self.njs_jobs_collection_name)
         )
 
-
-        #Use this instead after adding more config variables
-        #self.ee2_jobs = self._get_ee2_connection().get_database(self.ee2_db).get_collection(jobs_database_name)
+        # Use this instead after adding more config variables
+        # self.ee2_jobs = self._get_ee2_connection().get_database(self.ee2_db).get_collection(jobs_database_name)
 
         self.ee2_jobs = (
             self._get_njs_connection()
@@ -218,8 +215,17 @@ class MigrateDatabases:
                 exec_start_time = 0
 
             else:
-                finish_time = njs_job.get("finish_time", 0) / 1000.0
-                exec_start_time = njs_job.get("exec_start_time", 0) / 1000.0
+                finish_time = njs_job.get("finish_time", 0)
+                if finish_time is None:
+                    finish_time = 0
+                else:
+                    finish_time = finish_time / 1000.0
+                exec_start_time = njs_job.get("exec_start_time", 0)
+                if exec_start_time is None:
+                    exec_start_time = 0
+                else:
+                    exec_start_time = exec_start_time / 1000.0
+                    
 
             if status == "canceled by user":
                 job.status = Status.terminated.value
