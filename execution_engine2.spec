@@ -163,14 +163,14 @@
         /*
             line - string - a string to set for the log line.
             is_error - int - if 1, then this line should be treated as an error, default 0
-            ts - float - a timestamp since epoch for the log line (optional)
+            ts - int - a timestamp since epoch in milliseconds for the log line (optional)
 
             @optional ts
         */
         typedef structure {
             string line;
             boolean is_error;
-            float ts;
+            int ts;
         } LogLine;
         funcdef add_job_logs(job_id job_id, list<LogLine> lines)
             returns (int line_number) authentication required;

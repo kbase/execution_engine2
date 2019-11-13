@@ -11,7 +11,7 @@ class execution_engine2:
     execution_engine2
 
     Module Description:
-
+    
     '''
 
     ######## WARNING FOR GEVENT USERS ####### noqa
@@ -22,7 +22,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "44e4a427c358070dc8dcfecb7ec8852fa0533b26"
+    GIT_COMMIT_HASH = "c038b089b0bf2c9e446313195efa4fbb6f2b3eae"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -295,10 +295,10 @@ class execution_engine2:
         :param job_id: instance of type "job_id" (A job id.)
         :param lines: instance of list of type "LogLine" (line - string - a
            string to set for the log line. is_error - int - if 1, then this
-           line should be treated as an error, default 0 ts - float - a
-           timestamp since epoch for the log line (optional) @optional ts) ->
-           structure: parameter "line" of String, parameter "is_error" of
-           type "boolean" (@range [0,1]), parameter "ts" of Double
+           line should be treated as an error, default 0 ts - int - a
+           timestamp since epoch in milliseconds for the log line (optional)
+           @optional ts) -> structure: parameter "line" of String, parameter
+           "is_error" of type "boolean" (@range [0,1]), parameter "ts" of Long
         :returns: instance of Long
         """
         # ctx is the context object
@@ -327,10 +327,11 @@ class execution_engine2:
            loaded lines next time.) -> structure: parameter "lines" of list
            of type "LogLine" (line - string - a string to set for the log
            line. is_error - int - if 1, then this line should be treated as
-           an error, default 0 ts - float - a timestamp since epoch for the
-           log line (optional) @optional ts) -> structure: parameter "line"
-           of String, parameter "is_error" of type "boolean" (@range [0,1]),
-           parameter "ts" of Double, parameter "last_line_number" of Long
+           an error, default 0 ts - int - a timestamp since epoch in
+           milliseconds for the log line (optional) @optional ts) ->
+           structure: parameter "line" of String, parameter "is_error" of
+           type "boolean" (@range [0,1]), parameter "ts" of Long, parameter
+           "last_line_number" of Long
         """
         # ctx is the context object
         # return variables are: returnVal
@@ -352,11 +353,12 @@ class execution_engine2:
         """
         Register results of already started job
         :param params: instance of type "FinishJobParams" (job_id - string -
-           the id of the job to mark finished error_message - string -
-           optional if job is finished with and error error_code - int -
-           optional if job finished with an error error - JsonRpcError -
-           optional job_output - job output if job completed successfully) ->
-           structure: parameter "job_id" of type "job_id" (A job id.),
+           the id of the job to mark completed or finished with an error
+           error_message - string - optional unless job is finished with an
+           error error_code - int - optional unless job finished with an
+           error error - JsonRpcError - optional output from SDK Job
+           Containers job_output - job output if job completed successfully)
+           -> structure: parameter "job_id" of type "job_id" (A job id.),
            parameter "error_message" of String, parameter "error_code" of
            Long, parameter "error" of type "JsonRpcError" (Error block of
            JSON RPC response) -> structure: parameter "name" of String,
@@ -415,9 +417,9 @@ class execution_engine2:
            estimating - an estimation job is running to estimate resources
            required for the main job, and which queue should be used queued -
            job is queued to be run running - job is running on a worker node
-           finished - job was completed successfully error - job is no longer
-           running, but failed with an error terminated - job is no longer
-           running, terminated either due to user cancellation, admin
+           completed - job was completed successfully error - job is no
+           longer running, but failed with an error terminated - job is no
+           longer running, terminated either due to user cancellation, admin
            cancellation, or some automated task error_code - int - internal
            reason why the job is an error. one of the following: 0 - unknown
            1 - job crashed 2 - job terminated by automation 3 - job ran over
@@ -527,9 +529,9 @@ class execution_engine2:
            estimating - an estimation job is running to estimate resources
            required for the main job, and which queue should be used queued -
            job is queued to be run running - job is running on a worker node
-           finished - job was completed successfully error - job is no longer
-           running, but failed with an error terminated - job is no longer
-           running, terminated either due to user cancellation, admin
+           completed - job was completed successfully error - job is no
+           longer running, but failed with an error terminated - job is no
+           longer running, terminated either due to user cancellation, admin
            cancellation, or some automated task error_code - int - internal
            reason why the job is an error. one of the following: 0 - unknown
            1 - job crashed 2 - job terminated by automation 3 - job ran over
@@ -640,9 +642,9 @@ class execution_engine2:
            estimating - an estimation job is running to estimate resources
            required for the main job, and which queue should be used queued -
            job is queued to be run running - job is running on a worker node
-           finished - job was completed successfully error - job is no longer
-           running, but failed with an error terminated - job is no longer
-           running, terminated either due to user cancellation, admin
+           completed - job was completed successfully error - job is no
+           longer running, but failed with an error terminated - job is no
+           longer running, terminated either due to user cancellation, admin
            cancellation, or some automated task error_code - int - internal
            reason why the job is an error. one of the following: 0 - unknown
            1 - job crashed 2 - job terminated by automation 3 - job ran over
@@ -825,9 +827,9 @@ class execution_engine2:
            estimating - an estimation job is running to estimate resources
            required for the main job, and which queue should be used queued -
            job is queued to be run running - job is running on a worker node
-           finished - job was completed successfully error - job is no longer
-           running, but failed with an error terminated - job is no longer
-           running, terminated either due to user cancellation, admin
+           completed - job was completed successfully error - job is no
+           longer running, but failed with an error terminated - job is no
+           longer running, terminated either due to user cancellation, admin
            cancellation, or some automated task error_code - int - internal
            reason why the job is an error. one of the following: 0 - unknown
            1 - job crashed 2 - job terminated by automation 3 - job ran over
@@ -954,9 +956,9 @@ class execution_engine2:
            estimating - an estimation job is running to estimate resources
            required for the main job, and which queue should be used queued -
            job is queued to be run running - job is running on a worker node
-           finished - job was completed successfully error - job is no longer
-           running, but failed with an error terminated - job is no longer
-           running, terminated either due to user cancellation, admin
+           completed - job was completed successfully error - job is no
+           longer running, but failed with an error terminated - job is no
+           longer running, terminated either due to user cancellation, admin
            cancellation, or some automated task error_code - int - internal
            reason why the job is an error. one of the following: 0 - unknown
            1 - job crashed 2 - job terminated by automation 3 - job ran over
