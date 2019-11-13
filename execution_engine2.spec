@@ -355,6 +355,7 @@
         */
         typedef structure {
             job_id job_id;
+            int terminated;
         } CancelJobParams;
 
         /*
