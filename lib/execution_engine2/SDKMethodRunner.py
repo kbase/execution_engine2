@@ -837,7 +837,7 @@ class SDKMethodRunner:
 
         job_states = dict(sorted(job_states.items()))
 
-        if return_list:
+        if int(return_list) == 1:
             job_states = list(job_states.values())
 
         return job_states
