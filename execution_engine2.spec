@@ -348,8 +348,22 @@
         } CheckWorkspaceJobsParams;
         funcdef check_workspace_jobs(CheckWorkspaceJobsParams params) returns (CheckJobsResults) authentication required;
 
+        /*
+            job_id job_id;
+            int terminated;
+            @optional terminated
+            termination_code one of:
+            """
+            Reasons for why the job was cancelled
+            """
+            Current Default is `terminated_by_user 0` so as to not update narrative client
+            terminated_by_user = 0
+            terminated_by_admin = 1
+            terminated_by_automation = 2
+        */
         typedef structure {
             job_id job_id;
+            int terminated;
         } CancelJobParams;
 
         /*

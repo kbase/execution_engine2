@@ -22,7 +22,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "c038b089b0bf2c9e446313195efa4fbb6f2b3eae"
+    GIT_COMMIT_HASH = "f8d4291120325beaad812abcf23047465bd4704e"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -571,8 +571,13 @@ class execution_engine2:
     def cancel_job(self, ctx, params):
         """
         Cancels a job. This results in the status becoming "terminated" with termination_code 0.
-        :param params: instance of type "CancelJobParams" -> structure:
-           parameter "job_id" of type "job_id" (A job id.)
+        :param params: instance of type "CancelJobParams" (job_id job_id; int
+           terminated; @optional terminated termination_code one of: ""
+           Reasons for why the job was cancelled "" Current Default is
+           `terminated_by_user 0` so as to not update narrative client
+           terminated_by_user = 0 terminated_by_admin = 1
+           terminated_by_automation = 2) -> structure: parameter "job_id" of
+           type "job_id" (A job id.), parameter "terminated" of Long
         """
         # ctx is the context object
         #BEGIN cancel_job
@@ -584,8 +589,13 @@ class execution_engine2:
     def check_job_canceled(self, ctx, params):
         """
         Check whether a job has been canceled. This method is lightweight compared to check_job.
-        :param params: instance of type "CancelJobParams" -> structure:
-           parameter "job_id" of type "job_id" (A job id.)
+        :param params: instance of type "CancelJobParams" (job_id job_id; int
+           terminated; @optional terminated termination_code one of: ""
+           Reasons for why the job was cancelled "" Current Default is
+           `terminated_by_user 0` so as to not update narrative client
+           terminated_by_user = 0 terminated_by_admin = 1
+           terminated_by_automation = 2) -> structure: parameter "job_id" of
+           type "job_id" (A job id.), parameter "terminated" of Long
         :returns: instance of type "CheckJobCanceledResult" (job_id - id of
            job running method finished - indicates whether job is done
            (including error/cancel cases) or not canceled - whether the job

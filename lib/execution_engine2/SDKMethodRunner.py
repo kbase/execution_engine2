@@ -26,6 +26,7 @@ from execution_engine2.db.models.models import (
     JobLog,
     LogLines,
     ErrorCode,
+    TerminatedCode,
 )
 from execution_engine2.exceptions import AuthError
 from execution_engine2.exceptions import (
@@ -199,7 +200,7 @@ class SDKMethodRunner:
                     "line": log_line.line,
                     "linepos": log_line.linepos,
                     "error": log_line.error,
-                    "ts": log_line.ts,
+                    "ts": int(log_line.ts * 1000),
                 }
             )
 
@@ -383,7 +384,7 @@ class SDKMethodRunner:
         self._test_job_permissions(job, job_id, JobPermissions.WRITE)
         logging.debug(f"User has permission to cancel job {job_id}")
         self.get_mongo_util().cancel_job(job_id=job_id, terminated_code=terminated_code)
-        self.get_condor().cancel_job(job_id=job_id)
+        self.get_condor().cancel_job(job_id=job.scheduler_id)
 
     def check_job_canceled(self, job_id):
         """
@@ -470,7 +471,9 @@ class SDKMethodRunner:
         p = {
             "cancel_job": {
                 "job_id": params.get("job_id"),
-                "terminated_code": params.get("terminated_code"),
+                "terminated_code": params.get(
+                    "terminated_code", TerminatedCode.terminated_by_admin.value
+                ),
             },
             "view_job_logs": {"job_id": params.get("job_id")},
         }
