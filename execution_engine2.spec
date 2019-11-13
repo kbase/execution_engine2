@@ -341,8 +341,6 @@
         funcdef check_workspace_jobs(CheckWorkspaceJobsParams params) returns (CheckJobsResults) authentication required;
 
         /*
-            job_id job_id;
-            @optional int terminated;
             termination_code one of:
 
             """
@@ -352,6 +350,9 @@
             terminated_by_user = 0
             terminated_by_admin = 1
             terminated_by_automation = 2
+
+            job_id job_id
+            @optional terminated
         */
         typedef structure {
             job_id job_id;
