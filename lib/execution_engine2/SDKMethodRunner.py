@@ -840,7 +840,7 @@ class SDKMethodRunner:
 
         job_states = dict(sorted(job_states.items()))
 
-        if int(return_list) == 1:
+        if return_list is not None and int(return_list) == 1:
             job_states = list(job_states.values())
 
         return job_states
