@@ -43,9 +43,11 @@ debug = json.loads(os.environ.get("debug", "False").lower())
 if debug:
     logging.basicConfig(level=logging.DEBUG)
     logging.info(f"Set log level to {logging.DEBUG}")
+    logging.debug(f"Set log level to {logging.DEBUG}")
 else:
     logging.basicConfig(level=logging.WARN)
     logging.info(f"Set log level to {logging.WARN}")
+    logging.warn(f"Set log level to {logging.WARN}")
 
 
 class JobPermissions(Enum):
@@ -466,7 +468,22 @@ class SDKMethodRunner:
         logging.debug(submission_info)
         logging.debug(condor_job_id)
         logging.debug(type(condor_job_id))
+
+        logging.info(f"Attempting to update job to queued  {job_id} {condor_job_id}")
+        self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
+
         return job_id
+
+    def update_job_to_queued(self, job_id, scheduler_id):
+        # TODO PASS QUEUE TIME IN FROM SCHEDULER ITSELF?
+        # TODO PASS IN SCHEDULER TYPE?
+        with self.get_mongo_util().mongo_engine_connection():
+            j = self.get_mongo_util().get_job(job_id=job_id)
+            j.status = Status.queued.value
+            j.queued = time.time()
+            j.scheduler_id = scheduler_id
+            j.scheduler_type = "condor"
+            j.save()
 
     def _run_admin_command(self, command, params):
         available_commands = ["cancel_job", "view_job_logs"]
