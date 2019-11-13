@@ -232,7 +232,6 @@ class MongoUtil:
         :param job_id:
         :param error_message:
         :param error_code:
-        :param job:
         :return:
         """
         with self.mongo_engine_connection():

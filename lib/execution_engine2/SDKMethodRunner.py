@@ -42,8 +42,10 @@ debug = json.loads(os.environ.get("debug", "False").lower())
 
 if debug:
     logging.basicConfig(level=logging.DEBUG)
+    logging.info(f"Set log level to {logging.DEBUG}")
 else:
     logging.basicConfig(level=logging.WARN)
+    logging.info(f"Set log level to {logging.WARN}")
 
 
 class JobPermissions(Enum):
@@ -382,9 +384,14 @@ class SDKMethodRunner:
         logging.debug(f"Attempting to cancel job {job_id}")
         job = self.get_mongo_util().get_job(job_id=job_id)
         self._test_job_permissions(job, job_id, JobPermissions.WRITE)
+        logging.info(f"User has permission to cancel job {job_id}")
         logging.debug(f"User has permission to cancel job {job_id}")
         self.get_mongo_util().cancel_job(job_id=job_id, terminated_code=terminated_code)
-        self.get_condor().cancel_job(job_id=job.scheduler_id)
+        logging.info(f"About to cancel job in CONDOR using {job.scheduler_id}")
+        logging.debug(f"About to cancel job in CONDOR using {job.scheduler_id}")
+        rv = self.get_condor().cancel_job(job_id=job.scheduler_id)
+        logging.info(rv)
+        logging.debug(f"{rv}")
 
     def check_job_canceled(self, job_id):
         """
