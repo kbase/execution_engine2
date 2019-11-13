@@ -380,6 +380,7 @@ class Condor(Scheduler):
                 htcondor.JobAction.Remove, scheduler_ids
             )
             logging.debug(f"{cancel_jobs}")
+            return cancel_jobs
         except Exception as e:
             logging.error(scheduler_ids)
             logging.error(e)
