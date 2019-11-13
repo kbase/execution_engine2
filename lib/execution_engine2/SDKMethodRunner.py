@@ -840,8 +840,11 @@ class SDKMethodRunner:
 
         job_states = dict(sorted(job_states.items()))
 
-        if return_list is not None and int(return_list) == 1:
+        if return_list is not None and SDKMethodRunner.parse_bool_from_string(return_list):
             job_states = list(job_states.values())
+
+        # if return_list is not None and int(return_list) == 1:
+        #     job_states = list(job_states.values())
 
         return job_states
 
@@ -910,6 +913,9 @@ class SDKMethodRunner:
     @staticmethod
     def parse_bool_from_string(str_or_bool):
         if isinstance(str_or_bool, bool):
+            return str_or_bool
+
+        if isinstance(str_or_bool, int):
             return str_or_bool
 
         if isinstance(json.loads(str_or_bool.lower()), bool):
