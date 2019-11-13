@@ -318,7 +318,7 @@
             could be mapping<job_id, JobState> or list<JobState>
         */
         typedef structure {
-            UnspecifiedObject job_states;
+            list<JobState> job_states;
         } CheckJobsResults;
 
         /*

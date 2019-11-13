@@ -838,8 +838,6 @@ class SDKMethodRunner:
 
             job_states[str(job.id)] = mongo_rec
 
-        job_states = dict(sorted(job_states.items()))
-
         if return_list is not None and SDKMethodRunner.parse_bool_from_string(return_list):
             job_states = list(job_states.values())
 
