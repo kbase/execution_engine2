@@ -5,7 +5,7 @@ import logging
 import os
 import time
 import unittest
-from pprint import pprint
+import bson
 
 import dateutil
 import requests
@@ -956,10 +956,15 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 user_roles=[],
             )
         )
+
         with self.mongo_util.mongo_engine_connection():
+
             ori_job_count = Job.objects.count()
             job_id = self.create_job_rec()
-            self.assertEqual(ori_job_count, Job.objects.count() - 1)
+            job_id_1 = self.create_job_rec()
+            job_id_fake = str(bson.objectid.ObjectId())
+
+            self.assertEqual(ori_job_count, Job.objects.count() - 2)
 
             job = self.mongo_util.get_job(job_id=job_id)
             self.assertEqual(job.status, "created")
@@ -988,23 +993,33 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_state["wsid"], self.ws_id)
 
             # test check_jobs
-            job_states = runner.check_jobs([job_id])
+            job_states = runner.check_jobs([job_id, job_id_1, job_id_fake])
             json.dumps(job_states)  # make sure it's JSON serializable
+            self.assertEqual(len(job_states.keys()), 3)
+            self.assertEqual(list(job_states.keys())[0], job_id)
+            self.assertEqual(list(job_states.keys())[1], job_id_1)
+            self.assertEqual(list(job_states.keys())[2], job_id_fake)
             self.assertTrue(validate_job_state(job_states[job_id]))
             self.assertTrue(job_id in job_states)
             self.assertEqual(job_states[job_id]["status"], "created")
             self.assertEqual(job_states[job_id]["wsid"], self.ws_id)
 
             # test check_jobs return list
-            job_states_list = runner.check_jobs([job_id], return_list=1)
+            job_states_list = runner.check_jobs([job_id, job_id_1, job_id_fake], return_list=1)
             json.dumps(job_states_list)  # make sure it's JSON serializable
+            self.assertEqual(len(job_states_list), 3)
+            self.assertEqual(job_states_list[0]['job_id'], job_id)
+            self.assertEqual(job_states_list[1]['job_id'], job_id_1)
+            self.assertEqual(job_states_list[2], [])
             self.assertTrue(isinstance(job_states_list, list))
             self.assertCountEqual(job_states_list, list(job_states.values()))
 
-            job_states_list = runner.check_jobs([job_id], return_list='True')
+            job_states_list = runner.check_jobs([job_id, job_id_1], return_list='True')
             json.dumps(job_states_list)  # make sure it's JSON serializable
+            self.assertEqual(job_states_list[0]['job_id'], job_id)
+            self.assertEqual(job_states_list[1]['job_id'], job_id_1)
             self.assertTrue(isinstance(job_states_list, list))
-            self.assertCountEqual(job_states_list, list(job_states.values()))
+            self.assertCountEqual(job_states_list, list(job_states.values())[:2])
 
             # test check_jobs with projection
             job_states = runner.check_jobs([job_id], projection=["wsid"], return_list=0)
@@ -1020,12 +1035,19 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertTrue(job_id in job_states)
             self.assertEqual(job_states[job_id]["status"], "created")
             self.assertEqual(job_states[job_id]["wsid"], self.ws_id)
+            self.assertTrue(job_id_1 in job_states)
+            self.assertEqual(job_states[job_id_1]["status"], "created")
+            self.assertEqual(job_states[job_id_1]["wsid"], self.ws_id)
 
             # test check_workspace_jobs with projection
             job_states = runner.check_workspace_jobs(self.ws_id, projection=["wsid"], return_list=False)
+            json.dumps(job_states)  # make sure it's JSON serializable
             self.assertTrue(job_id in job_states)
             self.assertFalse("wsid" in job_states[job_id].keys())
             self.assertEqual(job_states[job_id]["status"], "created")
+            self.assertTrue(job_id_1 in job_states)
+            self.assertFalse("wsid" in job_states[job_id_1].keys())
+            self.assertEqual(job_states[job_id_1]["status"], "created")
 
             with self.assertRaises(PermissionError) as e:
                 job_states = runner.check_workspace_jobs(1234)
@@ -1033,9 +1055,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 f"User {self.user_id} does not have permission to read jobs in workspace {1234}",
                 str(e.exception),
             )
-
-            self.mongo_util.get_job(job_id=job_id).delete()
-            self.assertEqual(ori_job_count, Job.objects.count())
 
     @staticmethod
     def create_job_from_job(job, new_job_id):

@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import time
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 
 import dateutil
 from bson import ObjectId
@@ -806,7 +806,9 @@ class SDKMethodRunner:
         if projection is None:
             projection = []
 
-        jobs = self.get_mongo_util().get_jobs(job_ids=job_ids, projection=projection)
+        with self.get_mongo_util().mongo_engine_connection():
+            jobs = self.get_mongo_util().get_jobs(job_ids=job_ids, projection=projection)
+
         if check_permission:
             try:
                 perms = can_read_jobs(jobs, self.user_id, self.token, self.config)
@@ -837,6 +839,8 @@ class SDKMethodRunner:
                 mongo_rec["finished"] = int(job.finished * 1000)
 
             job_states[str(job.id)] = mongo_rec
+
+        job_states = OrderedDict({job_id: job_states.get(job_id, []) for job_id in job_ids})
 
         if return_list is not None and SDKMethodRunner.parse_bool_from_string(return_list):
             job_states = list(job_states.values())
