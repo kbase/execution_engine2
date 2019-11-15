@@ -11,7 +11,7 @@ class execution_engine2:
     execution_engine2
 
     Module Description:
-    
+
     '''
 
     ######## WARNING FOR GEVENT USERS ####### noqa
@@ -22,7 +22,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "c038b089b0bf2c9e446313195efa4fbb6f2b3eae"
+    GIT_COMMIT_HASH = "b76895fdae3ddcc98755ca81dd89c04ba824837b"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -733,8 +733,13 @@ class execution_engine2:
     def cancel_job(self, ctx, params):
         """
         Cancels a job. This results in the status becoming "terminated" with termination_code 0.
-        :param params: instance of type "CancelJobParams" -> structure:
-           parameter "job_id" of type "job_id" (A job id.)
+        :param params: instance of type "CancelJobParams" (job_id job_id;
+           @optional terminated termination_code one of: "" Reasons for why
+           the job was cancelled "" Current Default is `terminated_by_user 0`
+           so as to not update narrative client terminated_by_user = 0
+           terminated_by_admin = 1 terminated_by_automation = 2) ->
+           structure: parameter "job_id" of type "job_id" (A job id.),
+           parameter "terminated" of Long
         """
         # ctx is the context object
         #BEGIN cancel_job
@@ -746,8 +751,13 @@ class execution_engine2:
     def check_job_canceled(self, ctx, params):
         """
         Check whether a job has been canceled. This method is lightweight compared to check_job.
-        :param params: instance of type "CancelJobParams" -> structure:
-           parameter "job_id" of type "job_id" (A job id.)
+        :param params: instance of type "CancelJobParams" (job_id job_id;
+           @optional terminated termination_code one of: "" Reasons for why
+           the job was cancelled "" Current Default is `terminated_by_user 0`
+           so as to not update narrative client terminated_by_user = 0
+           terminated_by_admin = 1 terminated_by_automation = 2) ->
+           structure: parameter "job_id" of type "job_id" (A job id.),
+           parameter "terminated" of Long
         :returns: instance of type "CheckJobCanceledResult" (job_id - id of
            job running method finished - indicates whether job is done
            (including error/cancel cases) or not canceled - whether the job
@@ -1050,20 +1060,16 @@ class execution_engine2:
         # return the results
         return [returnVal]
 
-    def is_admin(self, ctx, params):
+    def is_admin(self, ctx):
         """
-        :param params: instance of type "IsAdminParams" (Check if given user
-           (user_token) has admin rights. if user_token is given, current
-           user must have admin rights. otherwise, return whether current
-           user is an admin nor not. @optional user_token) -> structure:
-           parameter "user_token" of String
+        Check if current user has ee2 admin rights.
         :returns: instance of type "boolean" (@range [0,1])
         """
         # ctx is the context object
         # return variables are: returnVal
         #BEGIN is_admin
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
-        returnVal = mr.check_is_admin(user_token=params.get("user_token"))
+        returnVal = mr.check_is_admin()
         #END is_admin
 
         # At some point might do deeper type checking...
