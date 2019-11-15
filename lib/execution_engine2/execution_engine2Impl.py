@@ -22,7 +22,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "bce92a921b627111994b6d91f3d4f941149dbfa2"
+    GIT_COMMIT_HASH = "c95f2e38f83119a6778f60c28b9fb23af487afc0"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -1070,20 +1070,16 @@ class execution_engine2:
         # return the results
         return [returnVal]
 
-    def is_admin(self, ctx, params):
+    def is_admin(self, ctx):
         """
-        :param params: instance of type "IsAdminParams" (Check if given user
-           (user_token) has admin rights. if user_token is given, current
-           user must have admin rights. otherwise, return whether current
-           user is an admin nor not. @optional user_token) -> structure:
-           parameter "user_token" of String
+        Check if current user has ee2 admin rights.
         :returns: instance of type "boolean" (@range [0,1])
         """
         # ctx is the context object
         # return variables are: returnVal
         #BEGIN is_admin
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
-        returnVal = mr.check_is_admin(user_token=params.get("user_token"))
+        returnVal = mr.check_is_admin()
         #END is_admin
 
         # At some point might do deeper type checking...

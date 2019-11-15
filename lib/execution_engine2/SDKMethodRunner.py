@@ -932,22 +932,9 @@ class SDKMethodRunner:
             else:
                 return "-"
 
-    def check_is_admin(self, user_token):
+    def check_is_admin(self):
 
-        self.is_admin = self._is_admin(self.token)
-
-        if user_token:
-            if not self.is_admin:
-                raise AuthError(
-                    "You are not authorized to check admin rights for user: {}.".format(
-                        user_token
-                    )
-                )
-            return int(
-                AdminAuthUtil(self.auth_url, self.admin_roles).is_admin(user_token)
-            )
-        else:
-            return int(self.is_admin)
+        return int(self._is_admin(self.token))
 
     def check_jobs_date_range_for_user(
         self,
