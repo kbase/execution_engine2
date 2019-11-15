@@ -314,18 +314,23 @@
 
         /*
             job_states - states of jobs
+
+            could be mapping<job_id, JobState> or list<JobState>
         */
         typedef structure {
-            mapping<job_id, JobState> job_states;
+            list<JobState> job_states;
         } CheckJobsResults;
 
         /*
             As in check_job, projection strings can be used to return only useful fields.
             see CheckJobParams for allowed strings.
+
+            return_list - optional, return list of job state if set to 1. Otherwise return a dict. Default 1.
         */
         typedef structure {
             list<job_id> job_ids;
             list<string> projection;
+            boolean return_list;
         } CheckJobsParams;
 
         funcdef check_jobs(CheckJobsParams params) returns (CheckJobsResults) authentication required;
@@ -333,18 +338,22 @@
         /*
             Check status of all jobs in a given workspace. Only checks jobs that have been associated
             with a workspace at their creation.
+
+            return_list - optional, return list of job state if set to 1. Otherwise return a dict. Default 0.
         */
         typedef structure {
             string workspace_id;
             list<string> projection;
+            boolean return_list;
         } CheckWorkspaceJobsParams;
         funcdef check_workspace_jobs(CheckWorkspaceJobsParams params) returns (CheckJobsResults) authentication required;
 
         /*
             job_id job_id;
+            int terminated;
+
             @optional terminated
             termination_code one of:
-
             """
             Reasons for why the job was cancelled
             """

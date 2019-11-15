@@ -11,7 +11,7 @@ class execution_engine2:
     execution_engine2
 
     Module Description:
-
+    
     '''
 
     ######## WARNING FOR GEVENT USERS ####### noqa
@@ -22,7 +22,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "b76895fdae3ddcc98755ca81dd89c04ba824837b"
+    GIT_COMMIT_HASH = "c95f2e38f83119a6778f60c28b9fb23af487afc0"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -509,47 +509,50 @@ class execution_engine2:
         """
         :param params: instance of type "CheckJobsParams" (As in check_job,
            projection strings can be used to return only useful fields. see
-           CheckJobParams for allowed strings.) -> structure: parameter
-           "job_ids" of list of type "job_id" (A job id.), parameter
-           "projection" of list of String
+           CheckJobParams for allowed strings. return_list - optional, return
+           list of job state if set to 1. Otherwise return a dict. Default
+           1.) -> structure: parameter "job_ids" of list of type "job_id" (A
+           job id.), parameter "projection" of list of String, parameter
+           "return_list" of type "boolean" (@range [0,1])
         :returns: instance of type "CheckJobsResults" (job_states - states of
-           jobs) -> structure: parameter "job_states" of mapping from type
-           "job_id" (A job id.) to type "JobState" (job_id - string - id of
-           the job user - string - user who started the job wsid - int - id
-           of the workspace where the job is bound authstrat - string - what
-           strategy used to authenticate the job job_input - object - inputs
-           to the job (from the run_job call)  ## TODO - verify updated - int
-           - timestamp since epoch in milliseconds of the last time the
-           status was updated running - int - timestamp since epoch in
-           milliseconds of when it entered the running state created - int -
-           timestamp since epoch in milliseconds when the job was created
-           finished - int - timestamp since epoch in milliseconds when the
-           job was finished status - string - status of the job. one of the
-           following: created - job has been created in the service
-           estimating - an estimation job is running to estimate resources
-           required for the main job, and which queue should be used queued -
-           job is queued to be run running - job is running on a worker node
-           completed - job was completed successfully error - job is no
-           longer running, but failed with an error terminated - job is no
-           longer running, terminated either due to user cancellation, admin
-           cancellation, or some automated task error_code - int - internal
-           reason why the job is an error. one of the following: 0 - unknown
-           1 - job crashed 2 - job terminated by automation 3 - job ran over
-           time limit 4 - job was missing its automated output document 5 -
-           job authentication token expired errormsg - string - message (e.g.
-           stacktrace) accompanying an errored job error - object - the
-           JSON-RPC error package that accompanies the error code and message
-           terminated_code - int - internal reason why a job was terminated,
-           one of: 0 - user cancellation 1 - admin cancellation 2 -
-           terminated by some automatic process @optional error @optional
-           error_code @optional errormsg @optional terminated_code @optional
-           estimating @optional running @optional finished) -> structure:
-           parameter "job_id" of type "job_id" (A job id.), parameter "user"
-           of String, parameter "authstrat" of String, parameter "wsid" of
-           Long, parameter "status" of String, parameter "job_input" of type
-           "RunJobParams" (method - service defined in standard JSON RPC way,
-           typically it's module name from spec-file followed by '.' and name
-           of funcdef from spec-file corresponding to running method (e.g.
+           jobs could be mapping<job_id, JobState> or list<JobState>) ->
+           structure: parameter "job_states" of list of type "JobState"
+           (job_id - string - id of the job user - string - user who started
+           the job wsid - int - id of the workspace where the job is bound
+           authstrat - string - what strategy used to authenticate the job
+           job_input - object - inputs to the job (from the run_job call)  ##
+           TODO - verify updated - int - timestamp since epoch in
+           milliseconds of the last time the status was updated running - int
+           - timestamp since epoch in milliseconds of when it entered the
+           running state created - int - timestamp since epoch in
+           milliseconds when the job was created finished - int - timestamp
+           since epoch in milliseconds when the job was finished status -
+           string - status of the job. one of the following: created - job
+           has been created in the service estimating - an estimation job is
+           running to estimate resources required for the main job, and which
+           queue should be used queued - job is queued to be run running -
+           job is running on a worker node completed - job was completed
+           successfully error - job is no longer running, but failed with an
+           error terminated - job is no longer running, terminated either due
+           to user cancellation, admin cancellation, or some automated task
+           error_code - int - internal reason why the job is an error. one of
+           the following: 0 - unknown 1 - job crashed 2 - job terminated by
+           automation 3 - job ran over time limit 4 - job was missing its
+           automated output document 5 - job authentication token expired
+           errormsg - string - message (e.g. stacktrace) accompanying an
+           errored job error - object - the JSON-RPC error package that
+           accompanies the error code and message terminated_code - int -
+           internal reason why a job was terminated, one of: 0 - user
+           cancellation 1 - admin cancellation 2 - terminated by some
+           automatic process @optional error @optional error_code @optional
+           errormsg @optional terminated_code @optional estimating @optional
+           running @optional finished) -> structure: parameter "job_id" of
+           type "job_id" (A job id.), parameter "user" of String, parameter
+           "authstrat" of String, parameter "wsid" of Long, parameter
+           "status" of String, parameter "job_input" of type "RunJobParams"
+           (method - service defined in standard JSON RPC way, typically it's
+           module name from spec-file followed by '.' and name of funcdef
+           from spec-file corresponding to running method (e.g.
            'KBaseTrees.construct_species_tree' from trees service); params -
            the parameters of the method that performed this call; Optional
            parameters: service_ver - specific version of deployed service,
@@ -608,6 +611,7 @@ class execution_engine2:
         returnVal = mr.check_jobs(
             params.get("job_ids"),
             projection=params.get("projection", ["job_output"]),
+            return_list=params.get("return_list", 1),
         )
         #END check_jobs
 
@@ -622,47 +626,50 @@ class execution_engine2:
         """
         :param params: instance of type "CheckWorkspaceJobsParams" (Check
            status of all jobs in a given workspace. Only checks jobs that
-           have been associated with a workspace at their creation.) ->
-           structure: parameter "workspace_id" of String, parameter
-           "projection" of list of String
+           have been associated with a workspace at their creation.
+           return_list - optional, return list of job state if set to 1.
+           Otherwise return a dict. Default 0.) -> structure: parameter
+           "workspace_id" of String, parameter "projection" of list of
+           String, parameter "return_list" of type "boolean" (@range [0,1])
         :returns: instance of type "CheckJobsResults" (job_states - states of
-           jobs) -> structure: parameter "job_states" of mapping from type
-           "job_id" (A job id.) to type "JobState" (job_id - string - id of
-           the job user - string - user who started the job wsid - int - id
-           of the workspace where the job is bound authstrat - string - what
-           strategy used to authenticate the job job_input - object - inputs
-           to the job (from the run_job call)  ## TODO - verify updated - int
-           - timestamp since epoch in milliseconds of the last time the
-           status was updated running - int - timestamp since epoch in
-           milliseconds of when it entered the running state created - int -
-           timestamp since epoch in milliseconds when the job was created
-           finished - int - timestamp since epoch in milliseconds when the
-           job was finished status - string - status of the job. one of the
-           following: created - job has been created in the service
-           estimating - an estimation job is running to estimate resources
-           required for the main job, and which queue should be used queued -
-           job is queued to be run running - job is running on a worker node
-           completed - job was completed successfully error - job is no
-           longer running, but failed with an error terminated - job is no
-           longer running, terminated either due to user cancellation, admin
-           cancellation, or some automated task error_code - int - internal
-           reason why the job is an error. one of the following: 0 - unknown
-           1 - job crashed 2 - job terminated by automation 3 - job ran over
-           time limit 4 - job was missing its automated output document 5 -
-           job authentication token expired errormsg - string - message (e.g.
-           stacktrace) accompanying an errored job error - object - the
-           JSON-RPC error package that accompanies the error code and message
-           terminated_code - int - internal reason why a job was terminated,
-           one of: 0 - user cancellation 1 - admin cancellation 2 -
-           terminated by some automatic process @optional error @optional
-           error_code @optional errormsg @optional terminated_code @optional
-           estimating @optional running @optional finished) -> structure:
-           parameter "job_id" of type "job_id" (A job id.), parameter "user"
-           of String, parameter "authstrat" of String, parameter "wsid" of
-           Long, parameter "status" of String, parameter "job_input" of type
-           "RunJobParams" (method - service defined in standard JSON RPC way,
-           typically it's module name from spec-file followed by '.' and name
-           of funcdef from spec-file corresponding to running method (e.g.
+           jobs could be mapping<job_id, JobState> or list<JobState>) ->
+           structure: parameter "job_states" of list of type "JobState"
+           (job_id - string - id of the job user - string - user who started
+           the job wsid - int - id of the workspace where the job is bound
+           authstrat - string - what strategy used to authenticate the job
+           job_input - object - inputs to the job (from the run_job call)  ##
+           TODO - verify updated - int - timestamp since epoch in
+           milliseconds of the last time the status was updated running - int
+           - timestamp since epoch in milliseconds of when it entered the
+           running state created - int - timestamp since epoch in
+           milliseconds when the job was created finished - int - timestamp
+           since epoch in milliseconds when the job was finished status -
+           string - status of the job. one of the following: created - job
+           has been created in the service estimating - an estimation job is
+           running to estimate resources required for the main job, and which
+           queue should be used queued - job is queued to be run running -
+           job is running on a worker node completed - job was completed
+           successfully error - job is no longer running, but failed with an
+           error terminated - job is no longer running, terminated either due
+           to user cancellation, admin cancellation, or some automated task
+           error_code - int - internal reason why the job is an error. one of
+           the following: 0 - unknown 1 - job crashed 2 - job terminated by
+           automation 3 - job ran over time limit 4 - job was missing its
+           automated output document 5 - job authentication token expired
+           errormsg - string - message (e.g. stacktrace) accompanying an
+           errored job error - object - the JSON-RPC error package that
+           accompanies the error code and message terminated_code - int -
+           internal reason why a job was terminated, one of: 0 - user
+           cancellation 1 - admin cancellation 2 - terminated by some
+           automatic process @optional error @optional error_code @optional
+           errormsg @optional terminated_code @optional estimating @optional
+           running @optional finished) -> structure: parameter "job_id" of
+           type "job_id" (A job id.), parameter "user" of String, parameter
+           "authstrat" of String, parameter "wsid" of Long, parameter
+           "status" of String, parameter "job_input" of type "RunJobParams"
+           (method - service defined in standard JSON RPC way, typically it's
+           module name from spec-file followed by '.' and name of funcdef
+           from spec-file corresponding to running method (e.g.
            'KBaseTrees.construct_species_tree' from trees service); params -
            the parameters of the method that performed this call; Optional
            parameters: service_ver - specific version of deployed service,
@@ -719,7 +726,8 @@ class execution_engine2:
         mr = SDKMethodRunner(self.config, user_id=ctx["user_id"], token=ctx["token"])
         returnVal = mr.check_workspace_jobs(
             params.get("workspace_id"),
-            projection=params.get("projection", ["job_output"])
+            projection=params.get("projection", ["job_output"]),
+            return_list=params.get("return_list", 1),
         )
         #END check_workspace_jobs
 
@@ -733,13 +741,13 @@ class execution_engine2:
     def cancel_job(self, ctx, params):
         """
         Cancels a job. This results in the status becoming "terminated" with termination_code 0.
-        :param params: instance of type "CancelJobParams" (job_id job_id;
-           @optional terminated termination_code one of: "" Reasons for why
-           the job was cancelled "" Current Default is `terminated_by_user 0`
-           so as to not update narrative client terminated_by_user = 0
-           terminated_by_admin = 1 terminated_by_automation = 2) ->
-           structure: parameter "job_id" of type "job_id" (A job id.),
-           parameter "terminated" of Long
+        :param params: instance of type "CancelJobParams" (job_id job_id; int
+           terminated; @optional terminated termination_code one of: ""
+           Reasons for why the job was cancelled "" Current Default is
+           `terminated_by_user 0` so as to not update narrative client
+           terminated_by_user = 0 terminated_by_admin = 1
+           terminated_by_automation = 2) -> structure: parameter "job_id" of
+           type "job_id" (A job id.), parameter "terminated" of Long
         """
         # ctx is the context object
         #BEGIN cancel_job
@@ -751,13 +759,13 @@ class execution_engine2:
     def check_job_canceled(self, ctx, params):
         """
         Check whether a job has been canceled. This method is lightweight compared to check_job.
-        :param params: instance of type "CancelJobParams" (job_id job_id;
-           @optional terminated termination_code one of: "" Reasons for why
-           the job was cancelled "" Current Default is `terminated_by_user 0`
-           so as to not update narrative client terminated_by_user = 0
-           terminated_by_admin = 1 terminated_by_automation = 2) ->
-           structure: parameter "job_id" of type "job_id" (A job id.),
-           parameter "terminated" of Long
+        :param params: instance of type "CancelJobParams" (job_id job_id; int
+           terminated; @optional terminated termination_code one of: ""
+           Reasons for why the job was cancelled "" Current Default is
+           `terminated_by_user 0` so as to not update narrative client
+           terminated_by_user = 0 terminated_by_admin = 1
+           terminated_by_automation = 2) -> structure: parameter "job_id" of
+           type "job_id" (A job id.), parameter "terminated" of Long
         :returns: instance of type "CheckJobCanceledResult" (job_id - id of
            job running method finished - indicates whether job is done
            (including error/cancel cases) or not canceled - whether the job
@@ -821,43 +829,44 @@ class execution_engine2:
            Long, parameter "user" of String, parameter "offset" of Long,
            parameter "ascending" of type "boolean" (@range [0,1])
         :returns: instance of type "CheckJobsResults" (job_states - states of
-           jobs) -> structure: parameter "job_states" of mapping from type
-           "job_id" (A job id.) to type "JobState" (job_id - string - id of
-           the job user - string - user who started the job wsid - int - id
-           of the workspace where the job is bound authstrat - string - what
-           strategy used to authenticate the job job_input - object - inputs
-           to the job (from the run_job call)  ## TODO - verify updated - int
-           - timestamp since epoch in milliseconds of the last time the
-           status was updated running - int - timestamp since epoch in
-           milliseconds of when it entered the running state created - int -
-           timestamp since epoch in milliseconds when the job was created
-           finished - int - timestamp since epoch in milliseconds when the
-           job was finished status - string - status of the job. one of the
-           following: created - job has been created in the service
-           estimating - an estimation job is running to estimate resources
-           required for the main job, and which queue should be used queued -
-           job is queued to be run running - job is running on a worker node
-           completed - job was completed successfully error - job is no
-           longer running, but failed with an error terminated - job is no
-           longer running, terminated either due to user cancellation, admin
-           cancellation, or some automated task error_code - int - internal
-           reason why the job is an error. one of the following: 0 - unknown
-           1 - job crashed 2 - job terminated by automation 3 - job ran over
-           time limit 4 - job was missing its automated output document 5 -
-           job authentication token expired errormsg - string - message (e.g.
-           stacktrace) accompanying an errored job error - object - the
-           JSON-RPC error package that accompanies the error code and message
-           terminated_code - int - internal reason why a job was terminated,
-           one of: 0 - user cancellation 1 - admin cancellation 2 -
-           terminated by some automatic process @optional error @optional
-           error_code @optional errormsg @optional terminated_code @optional
-           estimating @optional running @optional finished) -> structure:
-           parameter "job_id" of type "job_id" (A job id.), parameter "user"
-           of String, parameter "authstrat" of String, parameter "wsid" of
-           Long, parameter "status" of String, parameter "job_input" of type
-           "RunJobParams" (method - service defined in standard JSON RPC way,
-           typically it's module name from spec-file followed by '.' and name
-           of funcdef from spec-file corresponding to running method (e.g.
+           jobs could be mapping<job_id, JobState> or list<JobState>) ->
+           structure: parameter "job_states" of list of type "JobState"
+           (job_id - string - id of the job user - string - user who started
+           the job wsid - int - id of the workspace where the job is bound
+           authstrat - string - what strategy used to authenticate the job
+           job_input - object - inputs to the job (from the run_job call)  ##
+           TODO - verify updated - int - timestamp since epoch in
+           milliseconds of the last time the status was updated running - int
+           - timestamp since epoch in milliseconds of when it entered the
+           running state created - int - timestamp since epoch in
+           milliseconds when the job was created finished - int - timestamp
+           since epoch in milliseconds when the job was finished status -
+           string - status of the job. one of the following: created - job
+           has been created in the service estimating - an estimation job is
+           running to estimate resources required for the main job, and which
+           queue should be used queued - job is queued to be run running -
+           job is running on a worker node completed - job was completed
+           successfully error - job is no longer running, but failed with an
+           error terminated - job is no longer running, terminated either due
+           to user cancellation, admin cancellation, or some automated task
+           error_code - int - internal reason why the job is an error. one of
+           the following: 0 - unknown 1 - job crashed 2 - job terminated by
+           automation 3 - job ran over time limit 4 - job was missing its
+           automated output document 5 - job authentication token expired
+           errormsg - string - message (e.g. stacktrace) accompanying an
+           errored job error - object - the JSON-RPC error package that
+           accompanies the error code and message terminated_code - int -
+           internal reason why a job was terminated, one of: 0 - user
+           cancellation 1 - admin cancellation 2 - terminated by some
+           automatic process @optional error @optional error_code @optional
+           errormsg @optional terminated_code @optional estimating @optional
+           running @optional finished) -> structure: parameter "job_id" of
+           type "job_id" (A job id.), parameter "user" of String, parameter
+           "authstrat" of String, parameter "wsid" of Long, parameter
+           "status" of String, parameter "job_input" of type "RunJobParams"
+           (method - service defined in standard JSON RPC way, typically it's
+           module name from spec-file followed by '.' and name of funcdef
+           from spec-file corresponding to running method (e.g.
            'KBaseTrees.construct_species_tree' from trees service); params -
            the parameters of the method that performed this call; Optional
            parameters: service_ver - specific version of deployed service,
@@ -950,43 +959,44 @@ class execution_engine2:
            Long, parameter "user" of String, parameter "offset" of Long,
            parameter "ascending" of type "boolean" (@range [0,1])
         :returns: instance of type "CheckJobsResults" (job_states - states of
-           jobs) -> structure: parameter "job_states" of mapping from type
-           "job_id" (A job id.) to type "JobState" (job_id - string - id of
-           the job user - string - user who started the job wsid - int - id
-           of the workspace where the job is bound authstrat - string - what
-           strategy used to authenticate the job job_input - object - inputs
-           to the job (from the run_job call)  ## TODO - verify updated - int
-           - timestamp since epoch in milliseconds of the last time the
-           status was updated running - int - timestamp since epoch in
-           milliseconds of when it entered the running state created - int -
-           timestamp since epoch in milliseconds when the job was created
-           finished - int - timestamp since epoch in milliseconds when the
-           job was finished status - string - status of the job. one of the
-           following: created - job has been created in the service
-           estimating - an estimation job is running to estimate resources
-           required for the main job, and which queue should be used queued -
-           job is queued to be run running - job is running on a worker node
-           completed - job was completed successfully error - job is no
-           longer running, but failed with an error terminated - job is no
-           longer running, terminated either due to user cancellation, admin
-           cancellation, or some automated task error_code - int - internal
-           reason why the job is an error. one of the following: 0 - unknown
-           1 - job crashed 2 - job terminated by automation 3 - job ran over
-           time limit 4 - job was missing its automated output document 5 -
-           job authentication token expired errormsg - string - message (e.g.
-           stacktrace) accompanying an errored job error - object - the
-           JSON-RPC error package that accompanies the error code and message
-           terminated_code - int - internal reason why a job was terminated,
-           one of: 0 - user cancellation 1 - admin cancellation 2 -
-           terminated by some automatic process @optional error @optional
-           error_code @optional errormsg @optional terminated_code @optional
-           estimating @optional running @optional finished) -> structure:
-           parameter "job_id" of type "job_id" (A job id.), parameter "user"
-           of String, parameter "authstrat" of String, parameter "wsid" of
-           Long, parameter "status" of String, parameter "job_input" of type
-           "RunJobParams" (method - service defined in standard JSON RPC way,
-           typically it's module name from spec-file followed by '.' and name
-           of funcdef from spec-file corresponding to running method (e.g.
+           jobs could be mapping<job_id, JobState> or list<JobState>) ->
+           structure: parameter "job_states" of list of type "JobState"
+           (job_id - string - id of the job user - string - user who started
+           the job wsid - int - id of the workspace where the job is bound
+           authstrat - string - what strategy used to authenticate the job
+           job_input - object - inputs to the job (from the run_job call)  ##
+           TODO - verify updated - int - timestamp since epoch in
+           milliseconds of the last time the status was updated running - int
+           - timestamp since epoch in milliseconds of when it entered the
+           running state created - int - timestamp since epoch in
+           milliseconds when the job was created finished - int - timestamp
+           since epoch in milliseconds when the job was finished status -
+           string - status of the job. one of the following: created - job
+           has been created in the service estimating - an estimation job is
+           running to estimate resources required for the main job, and which
+           queue should be used queued - job is queued to be run running -
+           job is running on a worker node completed - job was completed
+           successfully error - job is no longer running, but failed with an
+           error terminated - job is no longer running, terminated either due
+           to user cancellation, admin cancellation, or some automated task
+           error_code - int - internal reason why the job is an error. one of
+           the following: 0 - unknown 1 - job crashed 2 - job terminated by
+           automation 3 - job ran over time limit 4 - job was missing its
+           automated output document 5 - job authentication token expired
+           errormsg - string - message (e.g. stacktrace) accompanying an
+           errored job error - object - the JSON-RPC error package that
+           accompanies the error code and message terminated_code - int -
+           internal reason why a job was terminated, one of: 0 - user
+           cancellation 1 - admin cancellation 2 - terminated by some
+           automatic process @optional error @optional error_code @optional
+           errormsg @optional terminated_code @optional estimating @optional
+           running @optional finished) -> structure: parameter "job_id" of
+           type "job_id" (A job id.), parameter "user" of String, parameter
+           "authstrat" of String, parameter "wsid" of Long, parameter
+           "status" of String, parameter "job_input" of type "RunJobParams"
+           (method - service defined in standard JSON RPC way, typically it's
+           module name from spec-file followed by '.' and name of funcdef
+           from spec-file corresponding to running method (e.g.
            'KBaseTrees.construct_species_tree' from trees service); params -
            the parameters of the method that performed this call; Optional
            parameters: service_ver - specific version of deployed service,

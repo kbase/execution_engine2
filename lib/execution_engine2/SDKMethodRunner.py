@@ -2,7 +2,7 @@ import json
 import logging
 import os
 import time
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 
 import dateutil
 from bson import ObjectId
@@ -791,12 +791,12 @@ class SDKMethodRunner:
             raise ValueError("Please provide valid job_id")
 
         job_state = self.check_jobs(
-            [job_id], check_permission=check_permission, projection=projection
+            [job_id], check_permission=check_permission, projection=projection, return_list=0
         ).get(job_id)
 
         return job_state
 
-    def check_jobs(self, job_ids, check_permission=True, projection=None):
+    def check_jobs(self, job_ids, check_permission=True, projection=None, return_list=None):
         """
         check_jobs: check and return job status for a given of list job_ids
         """
@@ -806,7 +806,9 @@ class SDKMethodRunner:
         if projection is None:
             projection = []
 
-        jobs = self.get_mongo_util().get_jobs(job_ids=job_ids, projection=projection)
+        with self.get_mongo_util().mongo_engine_connection():
+            jobs = self.get_mongo_util().get_jobs(job_ids=job_ids, projection=projection)
+
         if check_permission:
             try:
                 perms = can_read_jobs(jobs, self.user_id, self.token, self.config)
@@ -838,9 +840,14 @@ class SDKMethodRunner:
 
             job_states[str(job.id)] = mongo_rec
 
+        job_states = OrderedDict({job_id: job_states.get(job_id, []) for job_id in job_ids})
+
+        if return_list is not None and SDKMethodRunner.parse_bool_from_string(return_list):
+            job_states = list(job_states.values())
+
         return job_states
 
-    def check_workspace_jobs(self, workspace_id, projection=None):
+    def check_workspace_jobs(self, workspace_id, projection=None, return_list=None):
         """
         check_workspace_jobs: check job status for all jobs in a given workspace
         """
@@ -867,7 +874,7 @@ class SDKMethodRunner:
             return {}
 
         job_states = self.check_jobs(
-            job_ids, check_permission=False, projection=projection
+            job_ids, check_permission=False, projection=projection, return_list=return_list
         )
 
         return job_states
@@ -905,6 +912,9 @@ class SDKMethodRunner:
     @staticmethod
     def parse_bool_from_string(str_or_bool):
         if isinstance(str_or_bool, bool):
+            return str_or_bool
+
+        if isinstance(str_or_bool, int):
             return str_or_bool
 
         if isinstance(json.loads(str_or_bool.lower()), bool):
