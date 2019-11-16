@@ -22,7 +22,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "c95f2e38f83119a6778f60c28b9fb23af487afc0"
+    GIT_COMMIT_HASH = "3dce5eb2bc84e1699f94d13dbf08aa7774dd27b8"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
