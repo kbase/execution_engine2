@@ -11,7 +11,7 @@ class execution_engine2:
     execution_engine2
 
     Module Description:
-
+    
     '''
 
     ######## WARNING FOR GEVENT USERS ####### noqa
@@ -22,7 +22,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "7be0ecbd29f8b8f7d2e2ae907ef90d60d5e54bf6"
+    GIT_COMMIT_HASH = "3dce5eb2bc84e1699f94d13dbf08aa7774dd27b8"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -616,9 +616,9 @@ class execution_engine2:
         #END check_jobs
 
         # At some point might do deeper type checking...
-        if not isinstance(returnVal, dict) or not isinstance(returnVal, list):
+        if not isinstance(returnVal, dict):
             raise ValueError('Method check_jobs return value ' +
-                             'returnVal is not type dict/list as required.')
+                             'returnVal is not type dict as required.')
         # return the results
         return [returnVal]
 
@@ -732,9 +732,9 @@ class execution_engine2:
         #END check_workspace_jobs
 
         # At some point might do deeper type checking...
-        if not isinstance(returnVal, dict) or not isinstance(returnVal, list):
+        if not isinstance(returnVal, dict):
             raise ValueError('Method check_workspace_jobs return value ' +
-                             'returnVal is not type dict/list as required.')
+                             'returnVal is not type dict as required.')
         # return the results
         return [returnVal]
 

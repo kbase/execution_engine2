@@ -843,7 +843,7 @@ class SDKMethodRunner:
         job_states = OrderedDict({job_id: job_states.get(job_id, []) for job_id in job_ids})
 
         if return_list is not None and SDKMethodRunner.parse_bool_from_string(return_list):
-            job_states = list(job_states.values())
+            job_states = {"job_states" : list(job_states.values())}
 
         return job_states
 
