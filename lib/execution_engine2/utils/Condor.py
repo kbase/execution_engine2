@@ -353,7 +353,7 @@ class Condor(Scheduler):
         :param job_id:
         :return:
         """
-        return self.cancel_jobs(["job_id"])
+        return self.cancel_jobs([f"{job_id}"])
 
     def cancel_jobs(self, scheduler_ids):
         """
