@@ -163,14 +163,14 @@
         /*
             line - string - a string to set for the log line.
             is_error - int - if 1, then this line should be treated as an error, default 0
-            ts - float - a timestamp since epoch for the log line (optional)
+            ts - int - a timestamp since epoch in milliseconds for the log line (optional)
 
             @optional ts
         */
         typedef structure {
             string line;
             boolean is_error;
-            float ts;
+            int ts;
         } LogLine;
         funcdef add_job_logs(job_id job_id, list<LogLine> lines)
             returns (int line_number) authentication required;
@@ -314,18 +314,23 @@
 
         /*
             job_states - states of jobs
+
+            could be mapping<job_id, JobState> or list<JobState>
         */
         typedef structure {
-            mapping<job_id, JobState> job_states;
+            list<JobState> job_states;
         } CheckJobsResults;
 
         /*
             As in check_job, projection strings can be used to return only useful fields.
             see CheckJobParams for allowed strings.
+
+            return_list - optional, return list of job state if set to 1. Otherwise return a dict. Default 1.
         */
         typedef structure {
             list<job_id> job_ids;
             list<string> projection;
+            boolean return_list;
         } CheckJobsParams;
 
         funcdef check_jobs(CheckJobsParams params) returns (CheckJobsResults) authentication required;
@@ -333,24 +338,25 @@
         /*
             Check status of all jobs in a given workspace. Only checks jobs that have been associated
             with a workspace at their creation.
+
+            return_list - optional, return list of job state if set to 1. Otherwise return a dict. Default 0.
         */
         typedef structure {
             string workspace_id;
             list<string> projection;
+            boolean return_list;
         } CheckWorkspaceJobsParams;
         funcdef check_workspace_jobs(CheckWorkspaceJobsParams params) returns (CheckJobsResults) authentication required;
 
         /*
-            termination_code one of:
-
+        cancel_and_sigterm
             """
             Reasons for why the job was cancelled
-            """
             Current Default is `terminated_by_user 0` so as to not update narrative client
             terminated_by_user = 0
             terminated_by_admin = 1
             terminated_by_automation = 2
-
+            """
             job_id job_id
             @optional terminated
         */
@@ -461,16 +467,8 @@
         funcdef check_jobs_date_range_for_all(CheckJobsDateRangeParams params) returns (CheckJobsResults) authentication required;
 
         /*
-            Check if given user (user_token) has admin rights.
-
-            if user_token is given, current user must have admin rights.
-            otherwise, return whether current user is an admin nor not.
-
-            @optional user_token
+            Check if current user has ee2 admin rights.
         */
-        typedef structure {
-            string user_token;
-        } IsAdminParams;
-        funcdef is_admin(IsAdminParams params) returns (boolean) authentication required;
+        funcdef is_admin() returns (boolean) authentication required;
 
     };

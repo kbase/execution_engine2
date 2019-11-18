@@ -173,17 +173,23 @@ class MongoUtil:
 
         return job
 
-    def get_jobs(self, job_ids=None, projection=None):
+    def get_jobs(self, job_ids=None, projection=None, sort_id_ascending=None):
         if not (job_ids and isinstance(job_ids, list)):
             raise ValueError("Please provide a non empty list of job ids")
+
+        if sort_id_ascending is None:
+            sort_id_ascending = True
+
+        sort_id_indicator = "+" if sort_id_ascending else "-"
+
         with self.mongo_engine_connection():
             try:
                 if projection:
                     if not isinstance(projection, list):
                         raise ValueError("Please input a list type projection")
-                    jobs = Job.objects(id__in=job_ids).exclude(*projection)
+                    jobs = Job.objects(id__in=job_ids).exclude(*projection).order_by("{}_id".format(sort_id_indicator))
                 else:
-                    jobs = Job.objects(id__in=job_ids)
+                    jobs = Job.objects(id__in=job_ids).order_by("{}_id".format(sort_id_indicator))
             except Exception:
                 raise ValueError(
                     "Unable to find job:\nError:\n{}".format(traceback.format_exc())
