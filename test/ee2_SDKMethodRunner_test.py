@@ -933,7 +933,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertTrue(validate_job_state(job_state))
             self.assertEqual(job_state["status"], "created")
             self.assertEqual(job_state["wsid"], self.ws_id)
-            self.assertAlmostEqual(job_state["created"]/1000.0, job_state["updated"]/1000.0, places=-1)
+
+            self.assertAlmostEqual(
+                job_state["created"] / 1000.0, job_state["updated"] / 1000.0, places=-1
+            )
 
             # test globally
             job_states = runner.check_workspace_jobs(self.ws_id)
@@ -1191,7 +1194,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 print("Job is id", job_id)
                 if job_id in new_job_ids:
                     count += 1
-                    self.assertEqual(js["status"], "created")
+                    self.assertIn(js["status"], ["created", "queued"])
                     print(js["created"])
                     print(type(js["created"]))
                     date = SDKMethodRunner._check_and_convert_time(js["created"])
@@ -1223,7 +1226,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 print("Job is id", job_id)
                 if job_id in new_job_ids:
                     count += 1
-                    self.assertEqual(js["status"], "created")
+                    self.assertIn(js["status"], ["created", "queued"])
                     date = SDKMethodRunner._check_and_convert_time(js["created"])
                     ts = date
                     print(date, last_week, tomorrow)
@@ -1274,7 +1277,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 print("Job is id", job_id)
                 if job_id in new_job_ids:
                     count += 1
-                    self.assertEqual(js["status"], "created")
+                    self.assertIn(js["status"], ["created", "queued"])
                     date = SDKMethodRunner._check_and_convert_time(js["created"])
                     ts = date
                     print(date, last_week, tomorrow)
