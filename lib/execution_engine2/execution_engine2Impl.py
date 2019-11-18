@@ -752,7 +752,7 @@ class execution_engine2:
         # ctx is the context object
         #BEGIN cancel_job
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
-        mr.cancel_job(job_id=params["job_id"])
+        mr.cancel_job(job_id=params["job_id"], terminated_code=params['terminated_code'] )
         #END cancel_job
         pass
 

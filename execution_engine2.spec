@@ -358,11 +358,11 @@
             terminated_by_automation = 2
             """
             job_id job_id
-            @optional terminated
+            @optional terminated_code
         */
         typedef structure {
             job_id job_id;
-            int terminated;
+            int terminated_code;
         } CancelJobParams;
 
         /*
