@@ -475,6 +475,7 @@ class SDKMethodRunner:
         return job_id
 
     def update_job_to_queued(self, job_id, scheduler_id):
+        # TODO RETRY FOR RACE CONDITION OF RUN/CANCEL
         # TODO PASS QUEUE TIME IN FROM SCHEDULER ITSELF?
         # TODO PASS IN SCHEDULER TYPE?
         with self.get_mongo_util().mongo_engine_connection():
