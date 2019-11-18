@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from enum import Enum
 from mongoengine import ValidationError
@@ -217,7 +216,8 @@ class Status(Enum):
     estimating = "estimating"
     queued = "queued"
     running = "running"
-    finished = "finished"  # Successful termination
+    # finished = "finished"  # Successful termination legacy code
+    completed = "completed"  # Successful termination
     error = (
         "error"
     )  # Something went wrong and job failed # Possible Reasons are (ErrorCodes)
@@ -254,8 +254,12 @@ class Job(Document):
     updated = FloatField(default=time.time())
 
     # id.generation_time = created
-    queued = FloatField(default=None)  # Time when job was submitted to the queue to be run
-    estimating = FloatField(default=None)  # Time when job was submitted to begin estimating
+    queued = FloatField(
+        default=None
+    )  # Time when job was submitted to the queue to be run
+    estimating = FloatField(
+        default=None
+    )  # Time when job was submitted to begin estimating
     running = FloatField(default=None)  # Time when job started
     # Time when job finished, errored out, or was terminated by the user/admin
     finished = FloatField(default=None)

@@ -200,7 +200,7 @@ class MongoUtil:
     def check_if_already_finished(job_status):
         if job_status in [
             Status.error.value,
-            Status.finished.value,
+            Status.completed.value,
             Status.terminated.value,
         ]:
             raise InvalidStatusTransitionException(
@@ -254,7 +254,7 @@ class MongoUtil:
         with self.mongo_engine_connection():
             j = self.get_job(job_id, projection=None)
             j.job_output = job_output
-            j.status = Status.finished.value
+            j.status = Status.completed.value
             j.finished = time.time()
             j.save()
 
@@ -276,7 +276,7 @@ class MongoUtil:
             j = Job.objects.with_id(job_id)  # type: Job
             #  A job in status finished/terminated/error cannot be changed
             if j.status in [
-                Status.finished.value,
+                Status.completed.value,
                 Status.terminated.value,
                 Status.error.value,
             ]:
@@ -289,7 +289,7 @@ class MongoUtil:
             #  A job in status running can only be terminated/error/finished
             if j.status == Status.running.value:
                 if status not in [
-                    Status.finished.value,
+                    Status.completed.value,
                     Status.terminated.value,
                     Status.error.value,
                 ]:

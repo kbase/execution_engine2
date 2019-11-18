@@ -204,20 +204,20 @@
             string error;
         } JsonRpcError;
 
-        /*
-            job_id - string - the id of the job to mark finished
-            error_message - string - optional if job is finished with and error
-            error_code - int - optional if job finished with an error
-            error - JsonRpcError - optional
-            job_output - job output if job completed successfully
-        */
-        typedef structure {
-            job_id job_id;
-            string error_message;
-            int error_code;
-            JsonRpcError error;
-            UnspecifiedObject job_output;
-        } FinishJobParams;
+    /*
+        job_id - string - the id of the job to mark completed or finished with an error
+        error_message - string - optional unless job is finished with an error
+        error_code - int - optional unless job finished with an error
+        error - JsonRpcError - optional output from SDK Job Containers
+        job_output - job output if job completed successfully
+    */
+    typedef structure {
+        job_id job_id;
+        string error_message;
+        int error_code;
+        JsonRpcError error;
+        UnspecifiedObject job_output;
+    } FinishJobParams;
 
         /*
             Register results of already started job
@@ -243,35 +243,35 @@
             list<string> projection;
         } CheckJobParams;
 
-        /*
-            job_id - string - id of the job
-            user - string - user who started the job
-            wsid - int - id of the workspace where the job is bound
-            authstrat - string - what strategy used to authenticate the job
-            job_input - object - inputs to the job (from the run_job call)  ## TODO - verify
-            updated - int - timestamp since epoch in milliseconds of the last time the status was updated
-            running - int - timestamp since epoch in milliseconds of when it entered the running state
-            created - int - timestamp since epoch in milliseconds when the job was created
-            finished - int - timestamp since epoch in milliseconds when the job was finished
-            status - string - status of the job. one of the following:
-                created - job has been created in the service
-                estimating - an estimation job is running to estimate resources required for the main
-                             job, and which queue should be used
-                queued - job is queued to be run
-                running - job is running on a worker node
-                finished - job was completed successfully
-                error - job is no longer running, but failed with an error
-                terminated - job is no longer running, terminated either due to user cancellation,
-                             admin cancellation, or some automated task
-            error_code - int - internal reason why the job is an error. one of the following:
-                0 - unknown
-                1 - job crashed
-                2 - job terminated by automation
-                3 - job ran over time limit
-                4 - job was missing its automated output document
-                5 - job authentication token expired
-            errormsg - string - message (e.g. stacktrace) accompanying an errored job
-            error - object - the JSON-RPC error package that accompanies the error code and message
+    /*
+        job_id - string - id of the job
+        user - string - user who started the job
+        wsid - int - id of the workspace where the job is bound
+        authstrat - string - what strategy used to authenticate the job
+        job_input - object - inputs to the job (from the run_job call)  ## TODO - verify
+        updated - int - timestamp since epoch in milliseconds of the last time the status was updated
+        running - int - timestamp since epoch in milliseconds of when it entered the running state
+        created - int - timestamp since epoch in milliseconds when the job was created
+        finished - int - timestamp since epoch in milliseconds when the job was finished
+        status - string - status of the job. one of the following:
+            created - job has been created in the service
+            estimating - an estimation job is running to estimate resources required for the main
+                         job, and which queue should be used
+            queued - job is queued to be run
+            running - job is running on a worker node
+            completed - job was completed successfully
+            error - job is no longer running, but failed with an error
+            terminated - job is no longer running, terminated either due to user cancellation,
+                         admin cancellation, or some automated task
+        error_code - int - internal reason why the job is an error. one of the following:
+            0 - unknown
+            1 - job crashed
+            2 - job terminated by automation
+            3 - job ran over time limit
+            4 - job was missing its automated output document
+            5 - job authentication token expired
+        errormsg - string - message (e.g. stacktrace) accompanying an errored job
+        error - object - the JSON-RPC error package that accompanies the error code and message
 
             terminated_code - int - internal reason why a job was terminated, one of:
                 0 - user cancellation

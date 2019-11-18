@@ -408,7 +408,7 @@ class SDKMethodRunner:
             rv["canceled"] = True
             rv["finished"] = True
 
-        if Status(job_status) in [Status.finished, Status.error, Status.terminated]:
+        if Status(job_status) in [Status.completed, Status.error, Status.terminated]:
             rv["finished"] = True
         return rv
 
@@ -851,7 +851,7 @@ class SDKMethodRunner:
             del mongo_rec["_id"]
             mongo_rec["job_id"] = str(job.id)
             mongo_rec["created"] = int(
-                job.id.generation_time.utcnow().timestamp() * 1000
+                job.id.generation_time.timestamp() * 1000
             )
             mongo_rec["updated"] = int(job.updated * 1000)
             if job.estimating:
