@@ -42,8 +42,12 @@ debug = json.loads(os.environ.get("debug", "False").lower())
 
 if debug:
     logging.basicConfig(level=logging.DEBUG)
+    logging.info(f"Set log level to {logging.DEBUG}")
+    logging.debug(f"Set log level to {logging.DEBUG}")
 else:
     logging.basicConfig(level=logging.WARN)
+    logging.info(f"Set log level to {logging.WARN}")
+    logging.warn(f"Set log level to {logging.WARN}")
 
 
 class JobPermissions(Enum):
@@ -382,9 +386,14 @@ class SDKMethodRunner:
         logging.debug(f"Attempting to cancel job {job_id}")
         job = self.get_mongo_util().get_job(job_id=job_id)
         self._test_job_permissions(job, job_id, JobPermissions.WRITE)
+        logging.info(f"User has permission to cancel job {job_id}")
         logging.debug(f"User has permission to cancel job {job_id}")
         self.get_mongo_util().cancel_job(job_id=job_id, terminated_code=terminated_code)
-        self.get_condor().cancel_job(job_id=job.scheduler_id)
+        logging.info(f"About to cancel job in CONDOR using {job.scheduler_id}")
+        logging.debug(f"About to cancel job in CONDOR using {job.scheduler_id}")
+        rv = self.get_condor().cancel_job(job_id=job.scheduler_id)
+        logging.info(rv)
+        logging.debug(f"{rv}")
 
     def check_job_canceled(self, job_id):
         """
@@ -459,7 +468,23 @@ class SDKMethodRunner:
         logging.debug(submission_info)
         logging.debug(condor_job_id)
         logging.debug(type(condor_job_id))
+
+        logging.info(f"Attempting to update job to queued  {job_id} {condor_job_id}")
+        self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
+
         return job_id
+
+    def update_job_to_queued(self, job_id, scheduler_id):
+        # TODO RETRY FOR RACE CONDITION OF RUN/CANCEL
+        # TODO PASS QUEUE TIME IN FROM SCHEDULER ITSELF?
+        # TODO PASS IN SCHEDULER TYPE?
+        with self.get_mongo_util().mongo_engine_connection():
+            j = self.get_mongo_util().get_job(job_id=job_id)
+            j.status = Status.queued.value
+            j.queued = time.time()
+            j.scheduler_id = scheduler_id
+            j.scheduler_type = "condor"
+            j.save()
 
     def _run_admin_command(self, command, params):
         available_commands = ["cancel_job", "view_job_logs"]

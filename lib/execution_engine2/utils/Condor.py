@@ -353,7 +353,7 @@ class Condor(Scheduler):
         :param job_id:
         :return:
         """
-        return self.cancel_jobs([job_id])
+        return self.cancel_jobs([f"{job_id}"])
 
     def cancel_jobs(self, scheduler_ids):
         """
@@ -368,7 +368,7 @@ class Condor(Scheduler):
             TotalBadStatus = 0;
             TotalError = 0
         ]
-        :param scheduler_ids:  List of jobs to cancel
+        :param scheduler_ids:  List of string of condor job ids to cancel
         :return:
         """
 
@@ -376,9 +376,11 @@ class Condor(Scheduler):
             raise Exception("Please provide a list of condor ids to cancel")
 
         try:
-            logging.debug(
-                print(htcondor.Schedd().act(htcondor.JobAction.Remove, scheduler_ids))
+            cancel_jobs = htcondor.Schedd().act(
+                htcondor.JobAction.Remove, scheduler_ids
             )
+            logging.debug(f"{cancel_jobs}")
+            return cancel_jobs
         except Exception as e:
             logging.error(scheduler_ids)
             logging.error(e)
