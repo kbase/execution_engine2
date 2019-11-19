@@ -34,6 +34,7 @@ from execution_engine2.exceptions import (
     InvalidStatusTransitionException,
 )
 from execution_engine2.utils.Condor import Condor
+from execution_engine2.utils.KafkaUtils import send_message_to_kafka
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.authclient import KBaseAuth
@@ -144,6 +145,13 @@ class SDKMethodRunner:
         logging.info(job.job_input.to_mongo().to_dict())
         with self.get_mongo_util().mongo_engine_connection():
             job.save()
+
+        create_job_status_msg = {
+            "job_id": str(job.id),
+            "new_status": job.status,
+            "previous_status": None,
+        }
+        send_message_to_kafka(data=create_job_status_msg)
 
         return str(job.id)
 
@@ -389,11 +397,24 @@ class SDKMethodRunner:
         logging.info(f"User has permission to cancel job {job_id}")
         logging.debug(f"User has permission to cancel job {job_id}")
         self.get_mongo_util().cancel_job(job_id=job_id, terminated_code=terminated_code)
+
+        cancel_job_msg = {
+            "job_id": str(job_id),
+            "previous_status": job.status,
+            "new_status": Status.terminated.value,
+            "scheduler_id": job.scheduler_id,
+            "terminated_code": terminated_code,
+        }
+        send_message_to_kafka(data=cancel_job_msg)
+
         logging.info(f"About to cancel job in CONDOR using {job.scheduler_id}")
         logging.debug(f"About to cancel job in CONDOR using {job.scheduler_id}")
         rv = self.get_condor().cancel_job(job_id=job.scheduler_id)
         logging.info(rv)
         logging.debug(f"{rv}")
+
+        cancel_job_msg2 = {"job_id": str(job_id), "requested_condor_deletion": 1}
+        send_message_to_kafka(data=cancel_job_msg2)
 
     def check_job_canceled(self, job_id):
         """
@@ -480,11 +501,19 @@ class SDKMethodRunner:
         # TODO PASS IN SCHEDULER TYPE?
         with self.get_mongo_util().mongo_engine_connection():
             j = self.get_mongo_util().get_job(job_id=job_id)
+            previous_status = j.status
             j.status = Status.queued.value
             j.queued = time.time()
             j.scheduler_id = scheduler_id
             j.scheduler_type = "condor"
             j.save()
+            queued_status_update = {
+                "job_id": str(j.id),
+                "new_status": j.status,
+                "previous_status": previous_status,
+                "scheduler_id": scheduler_id,
+            }
+            send_message_to_kafka(data=queued_status_update)
 
     def _run_admin_command(self, command, params):
         available_commands = ["cancel_job", "view_job_logs"]
@@ -633,9 +662,18 @@ class SDKMethodRunner:
         job = self.get_mongo_util().get_job(job_id=job_id)
         self._test_job_permissions(job, job_id, JobPermissions.WRITE)
 
+        previous_status = job.status
         job.status = status
         with self.get_mongo_util().mongo_engine_connection():
             job.save()
+
+        update_job_status = {
+            "job_id": str(job_id),
+            "new_status": status,
+            "previous_status": previous_status,
+            "scheduler_id": job.scheduler_id,
+        }
+        send_message_to_kafka(data=update_job_status)
 
         return str(job.id)
 
@@ -742,6 +780,16 @@ class SDKMethodRunner:
                 error_code=error_code,
                 error=error,
             )
+            finish_job_status = {
+                "job_id": str(job_id),
+                "new_status": Status.error.value,
+                "previous_status": job.status,
+                "error_message": error_message,
+                "error_code": error_code,
+                "scheduler_id": job.scheduler_id,
+            }
+            send_message_to_kafka(data=finish_job_status)
+
         elif job_output is None:
             if error_code is None:
                 error_code = ErrorCode.job_missing_output.value
@@ -751,7 +799,15 @@ class SDKMethodRunner:
             )
             raise ValueError(msg)
         else:
+
             self._finish_job_with_success(job_id=job_id, job_output=job_output)
+            finish_job_status = {
+                "job_id": str(job_id),
+                "new_status": Status.completed.value,
+                "previous_status": job.status,
+                "scheduler_id": job.scheduler_id,
+            }
+            send_message_to_kafka(data=finish_job_status)
 
     def start_job(self, job_id, skip_estimation=True):
         """
@@ -798,6 +854,13 @@ class SDKMethodRunner:
 
         with self.get_mongo_util().mongo_engine_connection():
             job.save()
+            start_job_status = {
+                "job_id": str(job_id),
+                "new_status": job.status,
+                "previous_status": job_status,
+                "scheduler_id": job.scheduler_id,
+            }
+            send_message_to_kafka(data=start_job_status)
 
     def check_job(self, job_id, check_permission=True, projection=None):
         """
@@ -816,12 +879,17 @@ class SDKMethodRunner:
             raise ValueError("Please provide valid job_id")
 
         job_state = self.check_jobs(
-            [job_id], check_permission=check_permission, projection=projection, return_list=0
+            [job_id],
+            check_permission=check_permission,
+            projection=projection,
+            return_list=0,
         ).get(job_id)
 
         return job_state
 
-    def check_jobs(self, job_ids, check_permission=True, projection=None, return_list=None):
+    def check_jobs(
+        self, job_ids, check_permission=True, projection=None, return_list=None
+    ):
         """
         check_jobs: check and return job status for a given of list job_ids
         """
@@ -832,7 +900,9 @@ class SDKMethodRunner:
             projection = []
 
         with self.get_mongo_util().mongo_engine_connection():
-            jobs = self.get_mongo_util().get_jobs(job_ids=job_ids, projection=projection)
+            jobs = self.get_mongo_util().get_jobs(
+                job_ids=job_ids, projection=projection
+            )
 
         if check_permission:
             try:
@@ -852,9 +922,7 @@ class SDKMethodRunner:
             mongo_rec = job.to_mongo().to_dict()
             del mongo_rec["_id"]
             mongo_rec["job_id"] = str(job.id)
-            mongo_rec["created"] = int(
-                job.id.generation_time.timestamp() * 1000
-            )
+            mongo_rec["created"] = int(job.id.generation_time.timestamp() * 1000)
             mongo_rec["updated"] = int(job.updated * 1000)
             if job.estimating:
                 mongo_rec["estimating"] = int(job.estimating * 1000)
@@ -865,10 +933,14 @@ class SDKMethodRunner:
 
             job_states[str(job.id)] = mongo_rec
 
-        job_states = OrderedDict({job_id: job_states.get(job_id, []) for job_id in job_ids})
+        job_states = OrderedDict(
+            {job_id: job_states.get(job_id, []) for job_id in job_ids}
+        )
 
-        if return_list is not None and SDKMethodRunner.parse_bool_from_string(return_list):
-            job_states = {"job_states" : list(job_states.values())}
+        if return_list is not None and SDKMethodRunner.parse_bool_from_string(
+            return_list
+        ):
+            job_states = {"job_states": list(job_states.values())}
 
         return job_states
 
@@ -899,7 +971,10 @@ class SDKMethodRunner:
             return {}
 
         job_states = self.check_jobs(
-            job_ids, check_permission=False, projection=projection, return_list=return_list
+            job_ids,
+            check_permission=False,
+            projection=projection,
+            return_list=return_list,
         )
 
         return job_states
