@@ -1,21 +1,20 @@
-from datetime import datetime
-from enum import Enum
-from mongoengine import ValidationError
 import time
 
+from datetime import datetime
+from enum import Enum
 from mongoengine import (
     StringField,
     IntField,
     FloatField,
     EmbeddedDocument,
     Document,
-    DateTimeField,
     BooleanField,
     ListField,
     EmbeddedDocumentField,
     DynamicField,
     ObjectIdField,
 )
+from mongoengine import ValidationError
 
 
 def valid_status(status):
@@ -278,7 +277,31 @@ class Job(Document):
     job_output = DynamicField()
 
     # meta = {"db_alias": "ee2"}
-    meta = {"collection": "ee2_jobs"}
+    meta = {
+        "collection": "ee2_jobs",
+        "indexes": [
+            {
+                "fields": [
+                    "$id",
+                    "$user",
+                    "$wsid",
+                    "$status",
+                    "$updated",
+                    "$finished",
+                    "$errormsg",
+                    "$msg",
+                    "$error",
+                    "$terminated_code",
+                    "$error_code",
+                    "$scheduler_id",
+                    "$job_input",
+                    "$job_output",
+                ],
+                "default_language": "english",
+                # 'weights': {'title': 10, 'content': 2}
+            }
+        ],
+    }
 
     def save(self, *args, **kwargs):
         self.updated = time.time()

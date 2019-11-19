@@ -462,6 +462,7 @@
             string user;
             int offset;
             boolean ascending;
+            string freetext_search;
         } CheckJobsDateRangeParams;
         funcdef check_jobs_date_range_for_user(CheckJobsDateRangeParams params) returns (CheckJobsResults) authentication required;
         funcdef check_jobs_date_range_for_all(CheckJobsDateRangeParams params) returns (CheckJobsResults) authentication required;

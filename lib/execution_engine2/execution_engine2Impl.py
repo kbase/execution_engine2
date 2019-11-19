@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 #BEGIN_HEADER
-from execution_engine2.SDKMethodRunner import SDKMethodRunner
 import time
+
+from execution_engine2.SDKMethodRunner import SDKMethodRunner
+
+
 #END_HEADER
 
 
@@ -929,7 +932,8 @@ class execution_engine2:
             limit=params.get("limit"),
             user=params.get("user"),
             offset=params.get("offset"),
-            ascending=params.get("ascending")
+            ascending=params.get("ascending"),
+            freetext_search=params.get("freetext_search"),
         )
         #END check_jobs_date_range_for_user
 
@@ -1059,6 +1063,7 @@ class execution_engine2:
             limit=params.get("limit"),
             offset=params.get("offset"),
             ascending=params.get("ascending"),
+            freetext_search=params.get("freetext_search"),
             user='ALL'
         )
         #END check_jobs_date_range_for_all

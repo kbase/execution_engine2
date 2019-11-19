@@ -816,12 +816,17 @@ class SDKMethodRunner:
             raise ValueError("Please provide valid job_id")
 
         job_state = self.check_jobs(
-            [job_id], check_permission=check_permission, projection=projection, return_list=0
+            [job_id],
+            check_permission=check_permission,
+            projection=projection,
+            return_list=0,
         ).get(job_id)
 
         return job_state
 
-    def check_jobs(self, job_ids, check_permission=True, projection=None, return_list=None):
+    def check_jobs(
+        self, job_ids, check_permission=True, projection=None, return_list=None
+    ):
         """
         check_jobs: check and return job status for a given of list job_ids
         """
@@ -832,7 +837,9 @@ class SDKMethodRunner:
             projection = []
 
         with self.get_mongo_util().mongo_engine_connection():
-            jobs = self.get_mongo_util().get_jobs(job_ids=job_ids, projection=projection)
+            jobs = self.get_mongo_util().get_jobs(
+                job_ids=job_ids, projection=projection
+            )
 
         if check_permission:
             try:
@@ -852,9 +859,7 @@ class SDKMethodRunner:
             mongo_rec = job.to_mongo().to_dict()
             del mongo_rec["_id"]
             mongo_rec["job_id"] = str(job.id)
-            mongo_rec["created"] = int(
-                job.id.generation_time.timestamp() * 1000
-            )
+            mongo_rec["created"] = int(job.id.generation_time.timestamp() * 1000)
             mongo_rec["updated"] = int(job.updated * 1000)
             if job.estimating:
                 mongo_rec["estimating"] = int(job.estimating * 1000)
@@ -865,10 +870,14 @@ class SDKMethodRunner:
 
             job_states[str(job.id)] = mongo_rec
 
-        job_states = OrderedDict({job_id: job_states.get(job_id, []) for job_id in job_ids})
+        job_states = OrderedDict(
+            {job_id: job_states.get(job_id, []) for job_id in job_ids}
+        )
 
-        if return_list is not None and SDKMethodRunner.parse_bool_from_string(return_list):
-            job_states = {"job_states" : list(job_states.values())}
+        if return_list is not None and SDKMethodRunner.parse_bool_from_string(
+            return_list
+        ):
+            job_states = {"job_states": list(job_states.values())}
 
         return job_states
 
@@ -899,7 +908,10 @@ class SDKMethodRunner:
             return {}
 
         job_states = self.check_jobs(
-            job_ids, check_permission=False, projection=projection, return_list=return_list
+            job_ids,
+            check_permission=False,
+            projection=projection,
+            return_list=return_list,
         )
 
         return job_states
@@ -971,6 +983,7 @@ class SDKMethodRunner:
         user=None,
         offset=None,
         ascending=None,
+        freetext_search=None,
     ):
 
         """
@@ -1040,6 +1053,7 @@ class SDKMethodRunner:
             count = Job.objects.filter(**job_filter_temp).count()
             jobs = (
                 Job.objects[:limit]
+                .search_text(freetext_search)
                 .filter(**job_filter_temp)
                 .order_by(f"{sort_order}_id")
                 .skip(offset)
