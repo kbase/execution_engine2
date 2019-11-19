@@ -8,7 +8,7 @@ import dateutil
 from bson import ObjectId
 from datetime import datetime
 from enum import Enum
-
+from pprint import pprint
 from execution_engine2.authorization.authstrategy import (
     can_read_job,
     can_read_jobs,
@@ -1016,6 +1016,8 @@ class SDKMethodRunner:
                     f"You are not authorized to view all records or records for others. user={user} token={token_user}"
                 )
 
+        # TODO MAKE CREATION TIME FILTERS OPTIONAL IF FREE_SEARCH IS NOT NONE
+
         dummy_ids = self._get_dummy_dates(creation_start_time, creation_end_time)
 
         if job_projection is None:
@@ -1050,16 +1052,35 @@ class SDKMethodRunner:
             job_filter_temp["user"] = user
 
         with self.get_mongo_util().mongo_engine_connection():
-            count = Job.objects.filter(**job_filter_temp).count()
-            jobs = (
-                Job.objects[:limit]
-                .search_text(freetext_search)
-                .filter(**job_filter_temp)
-                .order_by(f"{sort_order}_id")
-                .skip(offset)
-                .only(*job_projection)
-            )
+            # TODO FIX          count = len(jobs)
 
+            if freetext_search:
+                # TODO MAKE DATE FILTERS OPTIONAL
+                # del(job_filter_temp["id__gt"])
+                # del(job_filter_temp["id__lt"])
+                print("Doing freetext", freetext_search)
+
+                # all_jobs = Job.objects
+                # for job in all_jobs:
+                #     pprint(job.job_input.app_id)
+
+                jobs = (
+                    Job.objects[:limit]
+                    .search_text(freetext_search)
+                    .filter(**job_filter_temp)
+                    .order_by(f"{sort_order}_id")
+                    .skip(offset)
+                    .only(*job_projection)
+                )
+            else:
+                jobs = (
+                    Job.objects[:limit]
+                    .filter(**job_filter_temp)
+                    .order_by(f"{sort_order}_id")
+                    .skip(offset)
+                    .only(*job_projection)
+                )
+            count = len(jobs)
         logging.info(
             f"Searching for jobs with id_gt {dummy_ids.start} id_lt {dummy_ids.stop}"
         )

@@ -33,6 +33,7 @@ from execution_engine2.exceptions import InvalidStatusTransitionException
 from execution_engine2.utils.Condor import submission_info
 from test.mongo_test_helper import MongoTestHelper
 from test.test_utils import bootstrap, get_example_job, validate_job_state
+from pprint import pprint
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
@@ -130,6 +131,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         cls.method_runner = SDKMethodRunner(
             cls.cfg, user_id=cls.user_id, token=cls.token
         )
+
         cls.mongo_util = MongoUtil(cls.cfg)
         cls.mongo_helper = MongoTestHelper(cls.cfg)
 
@@ -137,6 +139,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             db=cls.cfg["mongo-database"], col=cls.cfg["mongo-jobs-collection"]
         )
 
+    # @patch('execution_engine2.utils.KafkaUtils.send_message_to_kafka')
     def getRunner(self) -> SDKMethodRunner:
         return copy.deepcopy(self.__class__.method_runner)
 
@@ -184,6 +187,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         return str(job.id)
 
+    # @patch('execution_engine2.utils.KafkaUtils.send_message_to_kafka')
     def test_init_ok(self):
         class_attri = ["config", "catalog", "workspace", "mongo_util", "condor"]
         runner = self.getRunner()
@@ -1008,19 +1012,23 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_states[job_id]["wsid"], self.ws_id)
 
             # test check_jobs return list
-            job_states_list = runner.check_jobs([job_id, job_id_1, job_id_fake], return_list=1)['job_states']
+            job_states_list = runner.check_jobs(
+                [job_id, job_id_1, job_id_fake], return_list=1
+            )["job_states"]
             json.dumps(job_states_list)  # make sure it's JSON serializable
             self.assertEqual(len(job_states_list), 3)
-            self.assertEqual(job_states_list[0]['job_id'], job_id)
-            self.assertEqual(job_states_list[1]['job_id'], job_id_1)
+            self.assertEqual(job_states_list[0]["job_id"], job_id)
+            self.assertEqual(job_states_list[1]["job_id"], job_id_1)
             self.assertEqual(job_states_list[2], [])
             self.assertTrue(isinstance(job_states_list, list))
             self.assertCountEqual(job_states_list, list(job_states.values()))
 
-            job_states_list = runner.check_jobs([job_id, job_id_1], return_list='True')['job_states']
+            job_states_list = runner.check_jobs([job_id, job_id_1], return_list="True")[
+                "job_states"
+            ]
             json.dumps(job_states_list)  # make sure it's JSON serializable
-            self.assertEqual(job_states_list[0]['job_id'], job_id)
-            self.assertEqual(job_states_list[1]['job_id'], job_id_1)
+            self.assertEqual(job_states_list[0]["job_id"], job_id)
+            self.assertEqual(job_states_list[1]["job_id"], job_id_1)
             self.assertTrue(isinstance(job_states_list, list))
             self.assertCountEqual(job_states_list, list(job_states.values())[:2])
 
@@ -1031,7 +1039,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_states[job_id]["status"], "created")
 
             # test check_workspace_jobs
-            job_states = runner.check_workspace_jobs(self.ws_id, return_list='False')
+            job_states = runner.check_workspace_jobs(self.ws_id, return_list="False")
             for job_id in job_states:
                 self.assertTrue(job_states[job_id])
             json.dumps(job_states)  # make sure it's JSON serializable
@@ -1043,7 +1051,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_states[job_id_1]["wsid"], self.ws_id)
 
             # test check_workspace_jobs with projection
-            job_states = runner.check_workspace_jobs(self.ws_id, projection=["wsid"], return_list=False)
+            job_states = runner.check_workspace_jobs(
+                self.ws_id, projection=["wsid"], return_list=False
+            )
             json.dumps(job_states)  # make sure it's JSON serializable
             self.assertTrue(job_id in job_states)
             self.assertFalse("wsid" in job_states[job_id].keys())
@@ -1461,3 +1471,62 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             for key in job_state_limit_desc.keys():
                 print(key)
                 print(job_state_limit_desc[key])
+
+    # The Saga Continues
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    def test_check_jobs_date_range_freetext(self, condor_mock):
+
+        user_name = "wsadmin"
+
+        runner = self.getRunner()
+        runner.workspace_auth = MagicMock()
+        runner.auth.get_user = MagicMock(return_value=user_name)
+        runner.is_admin = True
+        runner._is_admin = MagicMock(return_value=True)
+
+        runner.workspace_auth.can_read = MagicMock(return_value=True)
+        runner.get_permissions_for_workspace = MagicMock(return_value=True)
+        runner._get_module_git_commit = MagicMock(return_value="git_commit_goes_here")
+        runner.get_condor = MagicMock(return_value=condor_mock)
+        # ctx = {"user_id": self.user_id, "wsid": self.ws_id, "token": self.token}
+        job = get_example_job().to_mongo().to_dict()
+        job["method"] = job["job_input"]["app_id"]
+        job["app_id"] = job["job_input"]["app_id"]
+        job["app_id"] = "super_module.weak_weak_weak"
+        job["msg"] = "strong"
+
+        job2 = get_example_job().to_mongo().to_dict()
+        job2["method"] = job2["job_input"]["app_id"]
+        job2["app_id"] = job2["job_input"]["app_id"]
+        job2["app_id"] = "super_module.weak_function"
+        job2["msg"] = "weak"
+
+        si = submission_info(clusterid="test", submit=job, error=None)
+        condor_mock.run_job = MagicMock(return_value=si)
+        runner._get_client_groups = MagicMock(return_value={})
+
+        print("About to submit job with ", job["app_id"])
+        job_id1 = runner.run_job(params=job)
+
+        print("About to submit job with ", job2["app_id"])
+        job_id2 = runner.run_job(params=job2)
+
+        now = datetime.utcnow()
+        yesterday = now - timedelta(days=1)
+        tomorrow = now + timedelta(days=1)
+
+        job_states = runner.check_jobs_date_range_for_user(
+            creation_start_time=str(yesterday),
+            creation_end_time=str(tomorrow),
+            user=user_name,
+            freetext_search="weak_weak_weak",
+        )
+        print(job_states)
+        self.assertEquals(job_states["jobs"][0]["_id"], job_id1)
+
+        # So "weak" is not a match, but "weak_weak_weak" is a match
+        # So maybe we are better off with doing a filter on the jobs via iterating over the job_states object and if so, keep the record, if not, ignore it
+        # The tradeoff/options are
+        #  A) sending more data over the wire, loading records in memory, and and keeping track of which fields to search in the code versus
+        #  B) having to do indexes and keeping trak of the fields to search via indexes and letting mongo do it, less customizable of a search
+        #  C) or possible write elaborate queries to do search on subjob fields or custom regex matches

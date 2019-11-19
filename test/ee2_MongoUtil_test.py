@@ -13,6 +13,8 @@ from test.mongo_test_helper import MongoTestHelper
 logging.basicConfig(level=logging.INFO)
 from test.test_utils import bootstrap, get_example_job
 
+from pprint import pprint
+
 bootstrap()
 
 
@@ -294,3 +296,20 @@ class MongoUtilTest(unittest.TestCase):
             logging.info("Assert 0 documents")
             mongo_util.delete_one(job_id)
             self.assertEqual(col.count_documents({}), doc_count)
+
+    def test_freetext(self):
+        mongo_util = MongoUtil(self.config)
+        with mongo_util.mongo_engine_connection() as mec:
+
+            j = get_example_job()
+            j.job_input.app_id = "Mission1"
+            j.msg = "strong"
+            j.save()
+
+            j = get_example_job()
+            j.job_input.app_id = "Mission2"
+            j.msg = "weak"
+            j.save()
+
+            for job in Job.objects.search_text("Mission1"):
+                pprint(job.to_mongo().to_dict())

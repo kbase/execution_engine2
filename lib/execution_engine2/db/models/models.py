@@ -161,6 +161,28 @@ class JobInput(EmbeddedDocument):
     requirements = EmbeddedDocumentField(JobRequirements)
     narrative_cell_info = EmbeddedDocumentField(Meta, required=True)
 
+    meta = {
+        "collection": "ee2_jobs",
+        "indexes": [
+            {
+                "fields": [
+                    "$wsid",
+                    "$method",
+                    "$requested_release",
+                    "$params",
+                    "$service_ver",
+                    "$app_id",
+                    "$source_ws_objects",
+                    "$parent_job_id",
+                    "$requirements",
+                    "$narrative_cell_info",
+                ],
+                "default_language": "english",
+                # 'weights': {'title': 10, 'content': 2}
+            }
+        ],
+    }
+
 
 class JobOutput(EmbeddedDocument):
     """
@@ -295,6 +317,13 @@ class Job(Document):
                     "$error_code",
                     "$scheduler_id",
                     "$job_input",
+                    "$job_input.wsid",
+                    "$job_input.method",
+                    "$job_input.requested_release",
+                    "$job_input.params",
+                    "$job_input.service_ver",
+                    "$job_input.app_id",
+                    "$job_input.parent_job_id",
                     "$job_output",
                 ],
                 "default_language": "english",
