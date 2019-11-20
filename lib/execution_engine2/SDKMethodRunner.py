@@ -862,6 +862,8 @@ class SDKMethodRunner:
                 mongo_rec["running"] = int(job.running * 1000)
             if job.finished:
                 mongo_rec["finished"] = int(job.finished * 1000)
+            if job.queued:
+                mongo_rec["queued"] = int(job.queued * 1000)
 
             job_states[str(job.id)] = mongo_rec
 
