@@ -70,27 +70,25 @@ class MigrateDatabases:
 
     def begin_log_transfer(self):  # flake8: noqa
 
-
         logs_cursor = self.njs_logs.find()
-
 
         count = 0
         for log in logs_cursor:
             job_log = JobLog()
 
-            job_log.primary_key = log['_id']
-            count+=1
-            print(f"Working on {log['_id']}", count)
+            job_log.primary_key = log["ujs_job_id"]
+            count += 1
+            print(f"Working on {log['ujs_job_ids']}", count)
 
-            job_log.original_line_count = log['original_line_count']
-            job_log.stored_line_count = log['stored_line_count']
+            job_log.original_line_count = log["original_line_count"]
+            job_log.stored_line_count = log["stored_line_count"]
 
             lines = []
-            for line in log['lines']:
+            for line in log["lines"]:
                 ll = LogLines()
-                ll.error = line['is_error']
-                ll.linepos  = line['line_pos']
-                ll.line = line['line']
+                ll.error = line["is_error"]
+                ll.linepos = line["line_pos"]
+                ll.line = line["line"]
                 ll.validate()
                 lines.append(ll)
             job_log.lines = lines
