@@ -6,12 +6,18 @@ import unittest
 import threading
 import queue
 from configparser import ConfigParser
+from mock import MagicMock
+import requests_mock
+from unittest.mock import patch
 
 from execution_engine2.SDKMethodRunner import SDKMethodRunner
+from execution_engine2.utils.Condor import submission_info
 from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.db.models.models import Job
+from execution_engine2.db.models.models import Job, Status
 from test.mongo_test_helper import MongoTestHelper
-from test.test_utils import bootstrap
+from test.test_utils import bootstrap, get_example_job
+
+from test.ee2_SDKMethodRunner_test import _run_job_adapter
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
@@ -70,7 +76,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                     "min_contig_len": None,
                 }
             ],
-            "source_ws_objects": ["a/b/c", "e/d"],
             "parent_job_id": "9998",
             "meta": {"tag": "dev", "token_id": "12345"},
         }
@@ -78,21 +83,27 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         return job_params
 
     def test_init_job_stress(self):
+        """
+        testing initializing 3 different jobs in multiple theads.
+        """
+
+        thread_count = 3  # threads to test
+
         with self.mongo_util.mongo_engine_connection():
             ori_job_count = Job.objects.count()
             runner = self.getRunner()
 
+            # set job method differently to distinguish
             method_1 = 'a_method'
             method_2 = 'b_method'
             job_params_1 = self.get_sample_job_params(method=method_1)
             job_params_2 = self.get_sample_job_params(method=method_2)
 
-            thread_count = 3
-
             threads = list()
             job_ids = list()
             que = queue.Queue()
 
+            # execute _init_job_rec for 2 different jobs in threads
             for index in range(thread_count):
                 x = threading.Thread(target=que.put(runner._init_job_rec(self.user_id, job_params_1)))
                 threads.append(x)
@@ -109,57 +120,65 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             jobs = self.mongo_util.get_jobs(job_ids=job_ids)  # testing get jobs
 
-            methods = [job.job_input.method for job in jobs]
+            methods = [job.job_input.method for job in jobs]  # examing methods returned
             self.assertEqual(len(methods), thread_count * 2)
             self.assertEqual(methods.count(method_1), thread_count)
             self.assertEqual(methods.count(method_2), thread_count)
 
-            self.assertEqual(len(set(job_ids)), thread_count * 2)
+            self.assertEqual(len(set(job_ids)), thread_count * 2)  # testing identicalness of job_ids returned
             self.assertEqual(len(job_ids), len(set(job_ids)))
 
-            self.assertEqual(ori_job_count, Job.objects.count() - thread_count * 2)
+            self.assertEqual(ori_job_count, Job.objects.count() - thread_count * 2)   # testing job numbers created
 
             jobs.delete()
             self.assertEqual(ori_job_count, Job.objects.count())
 
     def test_update_job_status_stress(self):
+        """
+        testing update jobs into different status in multiple threads
+        """
         with self.mongo_util.mongo_engine_connection():
             ori_job_count = Job.objects.count()
             runner = self.getRunner()
 
             job_params = self.get_sample_job_params()
 
-            thread_count = 1
+            thread_count = 3
 
-            job_ids_queued = list()
-            job_ids_running = list()
-            job_ids_finish = list()
+            job_ids_queued = list()  # jobs to be set into 'queued' status
+            job_ids_running = list()  # jobs to be set into 'running' status
+            job_ids_completed = list()  # jobs to be set into 'completed' status
 
+            # initializing jobs to be tested
             for index in range(thread_count):
                 job_ids_queued.append(runner._init_job_rec(self.user_id, job_params))
                 job_ids_running.append(runner._init_job_rec(self.user_id, job_params))
-                job_ids_finish.append(runner._init_job_rec(self.user_id, job_params))
+                job_ids_completed.append(runner._init_job_rec(self.user_id, job_params))
 
+            # examing newly created job status
             queued_jobs = self.mongo_util.get_jobs(job_ids=job_ids_queued)
             for job in queued_jobs:
                 job_rec = job.to_mongo().to_dict()
                 self.assertIsNone(job_rec.get('queued'))
+                self.assertEqual(job_rec.get('status'), 'created')
 
             running_jobs = self.mongo_util.get_jobs(job_ids=job_ids_running)
             for job in running_jobs:
                 job_rec = job.to_mongo().to_dict()
                 self.assertIsNone(job_rec.get('running'))
+                self.assertEqual(job_rec.get('status'), 'created')
 
-            finish_jobs = self.mongo_util.get_jobs(job_ids=job_ids_finish)
+            finish_jobs = self.mongo_util.get_jobs(job_ids=job_ids_completed)
             for job in finish_jobs:
                 job_rec = job.to_mongo().to_dict()
                 self.assertIsNone(job_rec.get('finished'))
+                self.assertEqual(job_rec.get('status'), 'created')
 
             threads = list()
 
             def update_states(index, job_ids_queued, job_ids_running, job_ids_finish):
                 """
-                update jobs in different status in one thread
+                update jobs status in one thread
                 """
                 runner.update_job_to_queued(job_ids_queued[index], 'scheduler_id')
                 runner.start_job(job_ids_running[index])
@@ -168,28 +187,109 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 runner.finish_job(job_ids_finish[index], job_output=job_output)
 
             for index in range(thread_count):
-                x = threading.Thread(target=update_states(index, job_ids_queued, job_ids_running, job_ids_finish))
+                x = threading.Thread(target=update_states(index, job_ids_queued, job_ids_running, job_ids_completed))
                 threads.append(x)
                 x.start()
 
             for index, thread in enumerate(threads):
                 thread.join()
 
+            # examing updateed job status
             queued_jobs = self.mongo_util.get_jobs(job_ids=job_ids_queued)
             for job in queued_jobs:
                 job_rec = job.to_mongo().to_dict()
                 self.assertIsNotNone(job_rec.get('queued'))
+                self.assertEqual(job_rec.get('status'), 'queued')
 
             running_jobs = self.mongo_util.get_jobs(job_ids=job_ids_running)
             for job in running_jobs:
                 job_rec = job.to_mongo().to_dict()
                 self.assertIsNotNone(job_rec.get('running'))
+                self.assertEqual(job_rec.get('status'), 'running')
 
-            finish_jobs = self.mongo_util.get_jobs(job_ids=job_ids_finish)
+            finish_jobs = self.mongo_util.get_jobs(job_ids=job_ids_completed)
             for job in finish_jobs:
                 job_rec = job.to_mongo().to_dict()
                 self.assertIsNotNone(job_rec.get('finished'))
+                self.assertEqual(job_rec.get('status'), 'completed')
 
-            jobs = self.mongo_util.get_jobs(job_ids=(job_ids_queued + job_ids_running + job_ids_finish))
+            jobs = self.mongo_util.get_jobs(job_ids=(job_ids_queued + job_ids_running + job_ids_completed))
+            jobs.delete()
+            self.assertEqual(ori_job_count, Job.objects.count())
+
+    @requests_mock.Mocker()
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    @patch.object(SDKMethodRunner, "_get_client_groups", return_value="a group")
+    def test_run_job(self, rq_mock, condor_mock, _get_client_groups):
+        """
+        testing running 3 different jobs in multiple theads.
+        """
+        thread_count = 3  # threads to test
+
+        rq_mock.add_matcher(
+            _run_job_adapter(
+                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
+            )
+        )
+        runner = self.getRunner()
+        runner.get_condor = MagicMock(return_value=condor_mock)
+        job = get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
+        job["method"] = job["job_input"]["app_id"]
+        job["app_id"] = job["job_input"]["app_id"]
+
+        si = submission_info(clusterid="test", submit=job, error=None)
+        condor_mock.run_job = MagicMock(return_value=si)
+
+        with self.mongo_util.mongo_engine_connection():
+            ori_job_count = Job.objects.count()
+
+            # set job method differently to distinguish
+            method_1 = 'a_method'
+            method_2 = 'b_method'
+            method_3 = 'c_method'
+            job_params_1 = self.get_sample_job_params(method=method_1)
+            job_params_2 = self.get_sample_job_params(method=method_2)
+            job_params_3 = self.get_sample_job_params(method=method_3)
+
+            threads = list()
+            job_ids = list()
+            que = queue.Queue()
+
+            # execute run_job for 3 different jobs in threads
+            for index in range(thread_count):
+                x = threading.Thread(target=que.put(runner.run_job(params=job_params_1)))
+                threads.append(x)
+                x.start()
+
+                y = threading.Thread(target=que.put(runner.run_job(params=job_params_2)))
+                threads.append(y)
+                y.start()
+
+                z = threading.Thread(target=que.put(runner.run_job(params=job_params_3)))
+                threads.append(z)
+                z.start()
+
+            for index, thread in enumerate(threads):
+                thread.join()
+
+            while not que.empty():
+                job_ids.append(que.get())
+
+            jobs = self.mongo_util.get_jobs(job_ids=job_ids)  # testing get jobs
+
+            methods = [job.job_input.method for job in jobs]  # examing methods returned
+            self.assertEqual(len(methods), thread_count * 3)
+            self.assertEqual(methods.count(method_1), thread_count)
+            self.assertEqual(methods.count(method_2), thread_count)
+            self.assertEqual(methods.count(method_3), thread_count)
+
+            status = [job.status for job in jobs]  # all jobs should eventually be put to 'queued' status
+            self.assertCountEqual(status, [Status.queued.value] * thread_count * 3)
+
+            self.assertEqual(len(set(job_ids)), thread_count * 3)  # testing identicalness of job_ids returned
+            self.assertEqual(len(job_ids), len(set(job_ids)))
+
+            self.assertEqual(ori_job_count, Job.objects.count() - thread_count * 3)  # testing job numbers created
+
             jobs.delete()
             self.assertEqual(ori_job_count, Job.objects.count())
