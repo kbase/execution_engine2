@@ -92,11 +92,14 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             threads = list()
             job_ids = list()
             que = queue.Queue()
+
             for index in range(thread_count):
                 x = threading.Thread(target=que.put(runner._init_job_rec(self.user_id, job_params_1)))
-                x = threading.Thread(target=que.put(runner._init_job_rec(self.user_id, job_params_2)))
                 threads.append(x)
                 x.start()
+                y = threading.Thread(target=que.put(runner._init_job_rec(self.user_id, job_params_2)))
+                threads.append(y)
+                y.start()
 
             for index, thread in enumerate(threads):
                 thread.join()
@@ -116,5 +119,77 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             self.assertEqual(ori_job_count, Job.objects.count() - thread_count * 2)
 
+            jobs.delete()
+            self.assertEqual(ori_job_count, Job.objects.count())
+
+    def test_update_job_status_stress(self):
+        with self.mongo_util.mongo_engine_connection():
+            ori_job_count = Job.objects.count()
+            runner = self.getRunner()
+
+            job_params = self.get_sample_job_params()
+
+            thread_count = 1
+
+            job_ids_queued = list()
+            job_ids_running = list()
+            job_ids_finish = list()
+
+            for index in range(thread_count):
+                job_ids_queued.append(runner._init_job_rec(self.user_id, job_params))
+                job_ids_running.append(runner._init_job_rec(self.user_id, job_params))
+                job_ids_finish.append(runner._init_job_rec(self.user_id, job_params))
+
+            queued_jobs = self.mongo_util.get_jobs(job_ids=job_ids_queued)
+            for job in queued_jobs:
+                job_rec = job.to_mongo().to_dict()
+                self.assertIsNone(job_rec.get('queued'))
+
+            running_jobs = self.mongo_util.get_jobs(job_ids=job_ids_running)
+            for job in running_jobs:
+                job_rec = job.to_mongo().to_dict()
+                self.assertIsNone(job_rec.get('running'))
+
+            finish_jobs = self.mongo_util.get_jobs(job_ids=job_ids_finish)
+            for job in finish_jobs:
+                job_rec = job.to_mongo().to_dict()
+                self.assertIsNone(job_rec.get('finished'))
+
+            threads = list()
+
+            def update_states(index, job_ids_queued, job_ids_running, job_ids_finish):
+                """
+                update jobs in different status in one thread
+                """
+                runner.update_job_to_queued(job_ids_queued[index], 'scheduler_id')
+                runner.start_job(job_ids_running[index])
+                runner.start_job(job_ids_finish[index])
+                job_output = {'version': '11', 'result': {'result': 1}, 'id': '5d54bdcb9b402d15271b3208'}
+                runner.finish_job(job_ids_finish[index], job_output=job_output)
+
+            for index in range(thread_count):
+                x = threading.Thread(target=update_states(index, job_ids_queued, job_ids_running, job_ids_finish))
+                threads.append(x)
+                x.start()
+
+            for index, thread in enumerate(threads):
+                thread.join()
+
+            queued_jobs = self.mongo_util.get_jobs(job_ids=job_ids_queued)
+            for job in queued_jobs:
+                job_rec = job.to_mongo().to_dict()
+                self.assertIsNotNone(job_rec.get('queued'))
+
+            running_jobs = self.mongo_util.get_jobs(job_ids=job_ids_running)
+            for job in running_jobs:
+                job_rec = job.to_mongo().to_dict()
+                self.assertIsNotNone(job_rec.get('running'))
+
+            finish_jobs = self.mongo_util.get_jobs(job_ids=job_ids_finish)
+            for job in finish_jobs:
+                job_rec = job.to_mongo().to_dict()
+                self.assertIsNotNone(job_rec.get('finished'))
+
+            jobs = self.mongo_util.get_jobs(job_ids=(job_ids_queued + job_ids_running + job_ids_finish))
             jobs.delete()
             self.assertEqual(ori_job_count, Job.objects.count())
