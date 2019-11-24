@@ -53,6 +53,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             db=cls.cfg["mongo-database"], col=cls.cfg["mongo-jobs-collection"]
         )
 
+        cls.thread_count = 20
+
     def getRunner(self):
         return copy.deepcopy(self.__class__.method_runner)
 
@@ -88,7 +90,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         testing initializing 3 different jobs in multiple theads.
         """
 
-        thread_count = 3  # threads to test
+        thread_count = self.thread_count  # threads to test
 
         with self.mongo_util.mongo_engine_connection():
             ori_job_count = Job.objects.count()
@@ -144,7 +146,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             job_params = self.get_sample_job_params()
 
-            thread_count = 3
+            thread_count = self.thread_count  # threads to test
 
             job_ids_queued = list()  # jobs to be set into 'queued' status
             job_ids_running = list()  # jobs to be set into 'running' status
@@ -226,7 +228,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         """
         testing running 3 different jobs in multiple theads.
         """
-        thread_count = 3  # threads to test
+        thread_count = self.thread_count  # threads to test
 
         with self.mongo_util.mongo_engine_connection():
             ori_job_count = Job.objects.count()
@@ -279,5 +281,67 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             self.assertEqual(ori_job_count, Job.objects.count() - thread_count * 3)  # testing job numbers created
 
+            jobs.delete()
+            self.assertEqual(ori_job_count, Job.objects.count())
+
+    def test_update_job_status(self):
+        """
+        testing update jobs into different status in multiple threads
+        """
+        with self.mongo_util.mongo_engine_connection():
+            ori_job_count = Job.objects.count()
+            runner = self.getRunner()
+
+            job_params = self.get_sample_job_params()
+
+            thread_count = self.thread_count  # threads to test
+
+            job_ids_queued = list()  # jobs to be set into 'queued' status
+            job_ids_running = list()  # jobs to be set into 'running' status
+            job_ids_completed = list()  # jobs to be set into 'completed' status
+
+            # initializing jobs to be tested
+            for index in range(thread_count):
+                job_ids_queued.append(runner._init_job_rec(self.user_id, job_params))
+                job_ids_running.append(runner._init_job_rec(self.user_id, job_params))
+                job_ids_completed.append(runner._init_job_rec(self.user_id, job_params))
+
+            # examing newly created job status
+            init_jobs = self.mongo_util.get_jobs(job_ids=job_ids_queued + job_ids_running + job_ids_completed)
+            for job in init_jobs:
+                self.assertEqual(job.to_mongo().to_dict().get('status'), 'created')
+
+            threads = list()
+
+            def update_states(index, job_ids_queued, job_ids_running, job_ids_completed):
+                """
+                update jobs status in one thread
+                """
+                self.impl.update_job_status(ctx=self.ctx, params={'job_id': job_ids_queued[index], 'status': 'queued'})
+                self.impl.update_job_status(ctx=self.ctx, params={'job_id': job_ids_running[index], 'status': 'running'})
+                self.impl.update_job_status(ctx=self.ctx, params={'job_id': job_ids_completed[index], 'status': 'completed'})
+
+            for index in range(thread_count):
+                x = threading.Thread(target=update_states(index, job_ids_queued, job_ids_running, job_ids_completed))
+                threads.append(x)
+                x.start()
+
+            for index, thread in enumerate(threads):
+                thread.join()
+
+            # examing updateed job status
+            queued_jobs = self.mongo_util.get_jobs(job_ids=job_ids_queued)
+            for job in queued_jobs:
+                self.assertEqual(job.to_mongo().to_dict().get('status'), 'queued')
+
+            running_jobs = self.mongo_util.get_jobs(job_ids=job_ids_running)
+            for job in running_jobs:
+                self.assertEqual(job.to_mongo().to_dict().get('status'), 'running')
+
+            finish_jobs = self.mongo_util.get_jobs(job_ids=job_ids_completed)
+            for job in finish_jobs:
+                self.assertEqual(job.to_mongo().to_dict().get('status'), 'completed')
+
+            jobs = self.mongo_util.get_jobs(job_ids=(job_ids_queued + job_ids_running + job_ids_completed))
             jobs.delete()
             self.assertEqual(ori_job_count, Job.objects.count())
