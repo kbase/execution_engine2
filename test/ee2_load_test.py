@@ -6,18 +6,16 @@ import unittest
 import threading
 import queue
 from configparser import ConfigParser
-from mock import MagicMock
-import requests_mock
 from unittest.mock import patch
 
+from execution_engine2.authorization.workspaceauth import WorkspaceAuth
+from execution_engine2.execution_engine2Impl import execution_engine2
 from execution_engine2.SDKMethodRunner import SDKMethodRunner
-from execution_engine2.utils.Condor import submission_info
+from execution_engine2.utils.Condor import Condor, submission_info
 from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job, Status
 from test.mongo_test_helper import MongoTestHelper
-from test.test_utils import bootstrap, get_example_job
-
-from test.ee2_SDKMethodRunner_test import _run_job_adapter
+from test.test_utils import bootstrap
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
@@ -42,6 +40,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         cls.ws_id = 9999
         cls.token = "token"
 
+        cls.ctx = {'token': cls.token,
+                   'user_id': cls.user_id}
+        cls.impl = execution_engine2(cls.cfg)
         cls.method_runner = SDKMethodRunner(
             cls.cfg, user_id=cls.user_id, token=cls.token
         )
@@ -52,7 +53,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             db=cls.cfg["mongo-database"], col=cls.cfg["mongo-jobs-collection"]
         )
 
-    def getRunner(self) -> SDKMethodRunner:
+    def getRunner(self):
         return copy.deepcopy(self.__class__.method_runner)
 
     def get_sample_job_params(self, method=None):
@@ -217,28 +218,15 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             jobs.delete()
             self.assertEqual(ori_job_count, Job.objects.count())
 
-    @requests_mock.Mocker()
-    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    @patch.object(WorkspaceAuth, "can_write", return_value=True)
     @patch.object(SDKMethodRunner, "_get_client_groups", return_value="a group")
-    def test_run_job(self, rq_mock, condor_mock, _get_client_groups):
+    @patch.object(SDKMethodRunner, "_get_module_git_commit", return_value="a version")
+    @patch.object(Condor, "run_job", return_value=submission_info(clusterid="test", submit="job", error=None))
+    def test_run_job(self, can_write, _get_client_groups, _get_module_git_commit, run_job):
         """
         testing running 3 different jobs in multiple theads.
         """
         thread_count = 3  # threads to test
-
-        rq_mock.add_matcher(
-            _run_job_adapter(
-                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
-            )
-        )
-        runner = self.getRunner()
-        runner.get_condor = MagicMock(return_value=condor_mock)
-        job = get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
-        job["method"] = job["job_input"]["app_id"]
-        job["app_id"] = job["job_input"]["app_id"]
-
-        si = submission_info(clusterid="test", submit=job, error=None)
-        condor_mock.run_job = MagicMock(return_value=si)
 
         with self.mongo_util.mongo_engine_connection():
             ori_job_count = Job.objects.count()
@@ -257,15 +245,15 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             # execute run_job for 3 different jobs in threads
             for index in range(thread_count):
-                x = threading.Thread(target=que.put(runner.run_job(params=job_params_1)))
+                x = threading.Thread(target=que.put(self.impl.run_job(ctx=self.ctx, params=job_params_1)))
                 threads.append(x)
                 x.start()
 
-                y = threading.Thread(target=que.put(runner.run_job(params=job_params_2)))
+                y = threading.Thread(target=que.put(self.impl.run_job(ctx=self.ctx, params=job_params_2)))
                 threads.append(y)
                 y.start()
 
-                z = threading.Thread(target=que.put(runner.run_job(params=job_params_3)))
+                z = threading.Thread(target=que.put(self.impl.run_job(ctx=self.ctx, params=job_params_3)))
                 threads.append(z)
                 z.start()
 
@@ -273,7 +261,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 thread.join()
 
             while not que.empty():
-                job_ids.append(que.get())
+                job_ids.append(que.get()[0])
 
             jobs = self.mongo_util.get_jobs(job_ids=job_ids)  # testing get jobs
 
