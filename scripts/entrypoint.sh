@@ -1,9 +1,12 @@
 #!/bin/bash
 
+python ./scripts/prepare_deploy_cfg.py ./deploy.cfg ./work/config.properties
+
 if [ $# -eq 0 ] ; then
   useradd kbase
   if [ "${POOL_PASSWORD}" ] ; then
         /usr/sbin/condor_store_cred -p "${POOL_PASSWORD}" -f /etc/condor/password
+        chown kbase:kbase /etc/condor/password
   fi
   chown kbase /etc/condor/password
   cp -rf /runner/JobRunner.tgz /condor_shared
