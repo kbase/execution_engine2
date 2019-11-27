@@ -1,6 +1,6 @@
 #!/bin/bash
 
-python ./scripts/prepare_deploy_cfg.py ./deploy.cfg ./work/config.properties
+cp ./deploy.cfg ./work/config.properties
 
 if [ $# -eq 0 ] ; then
   useradd kbase
