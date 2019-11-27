@@ -541,7 +541,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             threads = list()
             # execute add_job_logs in multiple threads
             for index in range(thread_count):
-                x = threading.Thread(target=self.impl.add_job_logs(ctx=self.ctx, job_id=job_id, lines=job_line))
+                x = threading.Thread(target=self.impl.add_job_logs, args=(self.ctx, job_id, job_line))
                 threads.append(x)
                 x.start()
 
