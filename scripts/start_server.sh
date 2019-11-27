@@ -14,7 +14,7 @@ workers=${WORKERS:-$calc_workers}
 export PYTHONPATH=$lib_dir:$wsgi_dir:$PYTHONPATH
 
 gunicorn \
-  --user kbase
+  --user kbase \
   --worker-class gevent \
   --timeout 1800 \
   --workers $workers  \
