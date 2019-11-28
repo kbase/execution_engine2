@@ -471,4 +471,20 @@
         */
         funcdef is_admin() returns (boolean) authentication required;
 
+
+        /*
+            list<string> admin_roles;  # ('ee2_admin','ee2_admin_ro') or something else
+            str permissions; # One of ('read' | 'write' | 'none')
+        */
+          typedef structure {
+            list<string> admin_roles;
+            string permission;
+        } AdminRolesResults;
+
+        /*
+            Check if current user has ee2 admin rights.
+            If so, return the type of rights and their roles
+        */
+        funcdef get_admin_role()  returns (AdminRolesResults) authentication required;
+
     };
