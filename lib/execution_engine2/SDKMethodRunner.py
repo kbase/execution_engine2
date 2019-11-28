@@ -3,11 +3,11 @@ import logging
 import os
 import time
 from collections import namedtuple, OrderedDict
+from datetime import datetime
+from enum import Enum
 
 import dateutil
 from bson import ObjectId
-from datetime import datetime
-from enum import Enum
 
 from execution_engine2.authorization.authstrategy import (
     can_read_job,
@@ -978,19 +978,19 @@ class SDKMethodRunner:
         """
         return int(self._is_admin(self.token))
 
-    def get_admin_role(self):
+    def get_admin_permission(self):
         """
-        Get your admin roles and your type of r/w/x permissions
+        Get your your type of admin permissions
         :return:
         """
         aau = AdminAuthUtil(self.auth_url, self.admin_roles)
         roles = list(aau._fetch_user_roles(self.token))
-        permission = "x"
+        permission = None
         if "EE2_ADMIN" in roles:
             permission = "w"
         elif "EE2_ADMIN_RO" in roles:
             permission = "r"
-        return {"admin_roles": roles, "permission": permission}
+        return {"permission": permission}
 
     def check_jobs_date_range_for_user(
         self,

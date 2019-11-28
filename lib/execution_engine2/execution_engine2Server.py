@@ -494,12 +494,12 @@ class Application(object):
         )
         self.method_authentication["execution_engine2.is_admin"] = "required"  # noqa
         self.rpc_service.add(
-            impl_execution_engine2.get_admin_role,
-            name="execution_engine2.get_admin_role",
+            impl_execution_engine2.get_admin_permission,
+            name="execution_engine2.get_admin_permission",
             types=[],
         )
         self.method_authentication[
-            "execution_engine2.get_admin_role"
+            "execution_engine2.get_admin_permission"
         ] = "required"  # noqa
         authurl = config.get(AUTH) if config else None
         self.auth_client = _KBaseAuth(authurl)

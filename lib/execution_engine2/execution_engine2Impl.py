@@ -22,7 +22,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "57e5bc33392350c21b8a9b1618159a1d405e0fe8"
+    GIT_COMMIT_HASH = "b565e76aa81a3f9e42e55f52dd12a701c44af377"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -1089,26 +1089,25 @@ class execution_engine2:
         # return the results
         return [returnVal]
 
-    def get_admin_role(self, ctx):
+    def get_admin_permission(self, ctx):
         """
         Check if current user has ee2 admin rights.
         If so, return the type of rights and their roles
         :returns: instance of type "AdminRolesResults" (list<string>
            admin_roles;  # ('ee2_admin','ee2_admin_ro') or something else str
            permissions; # One of ('read' | 'write' | 'none')) -> structure:
-           parameter "admin_roles" of list of String, parameter "permissions"
-           of String
+           parameter "permission" of String
         """
         # ctx is the context object
         # return variables are: returnVal
-        #BEGIN get_admin_role
+        #BEGIN get_admin_permission
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
-        returnVal = mr.get_admin_role()
-        #END get_admin_role
+        returnVal = mr.get_admin_permission()
+        #END get_admin_permission
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
-            raise ValueError('Method get_admin_role return value ' +
+            raise ValueError('Method get_admin_permission return value ' +
                              'returnVal is not type dict as required.')
         # return the results
         return [returnVal]

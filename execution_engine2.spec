@@ -477,7 +477,6 @@
             str permissions; # One of ('read' | 'write' | 'none')
         */
           typedef structure {
-            list<string> admin_roles;
             string permission;
         } AdminRolesResults;
 
@@ -485,6 +484,6 @@
             Check if current user has ee2 admin rights.
             If so, return the type of rights and their roles
         */
-        funcdef get_admin_role()  returns (AdminRolesResults) authentication required;
+        funcdef get_admin_permission()  returns (AdminRolesResults) authentication required;
 
     };
