@@ -21,8 +21,8 @@ class execution_engine2:
     # the latter method is running.
     ######################################### noqa
     VERSION = "0.0.1"
-    GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
-    GIT_COMMIT_HASH = "3dce5eb2bc84e1699f94d13dbf08aa7774dd27b8"
+    GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
+    GIT_COMMIT_HASH = "b565e76aa81a3f9e42e55f52dd12a701c44af377"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -741,13 +741,13 @@ class execution_engine2:
     def cancel_job(self, ctx, params):
         """
         Cancels a job. This results in the status becoming "terminated" with termination_code 0.
-        :param params: instance of type "CancelJobParams" (job_id job_id; int
-           terminated; @optional terminated termination_code one of: ""
-           Reasons for why the job was cancelled "" Current Default is
+        :param params: instance of type "CancelJobParams" (cancel_and_sigterm
+           "" Reasons for why the job was cancelled Current Default is
            `terminated_by_user 0` so as to not update narrative client
            terminated_by_user = 0 terminated_by_admin = 1
-           terminated_by_automation = 2) -> structure: parameter "job_id" of
-           type "job_id" (A job id.), parameter "terminated" of Long
+           terminated_by_automation = 2 "" job_id job_id @optional
+           terminated_code) -> structure: parameter "job_id" of type "job_id"
+           (A job id.), parameter "terminated_code" of Long
         """
         # ctx is the context object
         #BEGIN cancel_job
@@ -759,13 +759,13 @@ class execution_engine2:
     def check_job_canceled(self, ctx, params):
         """
         Check whether a job has been canceled. This method is lightweight compared to check_job.
-        :param params: instance of type "CancelJobParams" (job_id job_id; int
-           terminated; @optional terminated termination_code one of: ""
-           Reasons for why the job was cancelled "" Current Default is
+        :param params: instance of type "CancelJobParams" (cancel_and_sigterm
+           "" Reasons for why the job was cancelled Current Default is
            `terminated_by_user 0` so as to not update narrative client
            terminated_by_user = 0 terminated_by_admin = 1
-           terminated_by_automation = 2) -> structure: parameter "job_id" of
-           type "job_id" (A job id.), parameter "terminated" of Long
+           terminated_by_automation = 2 "" job_id job_id @optional
+           terminated_code) -> structure: parameter "job_id" of type "job_id"
+           (A job id.), parameter "terminated_code" of Long
         :returns: instance of type "CheckJobCanceledResult" (job_id - id of
            job running method finished - indicates whether job is done
            (including error/cancel cases) or not canceled - whether the job
@@ -1086,5 +1086,28 @@ class execution_engine2:
         if not isinstance(returnVal, int):
             raise ValueError('Method is_admin return value ' +
                              'returnVal is not type int as required.')
+        # return the results
+        return [returnVal]
+
+    def get_admin_permission(self, ctx):
+        """
+        Check if current user has ee2 admin rights.
+        If so, return the type of rights and their roles
+        :returns: instance of type "AdminRolesResults" (list<string>
+           admin_roles;  # ('ee2_admin','ee2_admin_ro') or something else str
+           permissions; # One of ('read' | 'write' | 'none')) -> structure:
+           parameter "permission" of String
+        """
+        # ctx is the context object
+        # return variables are: returnVal
+        #BEGIN get_admin_permission
+        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
+        returnVal = mr.get_admin_permission()
+        #END get_admin_permission
+
+        # At some point might do deeper type checking...
+        if not isinstance(returnVal, dict):
+            raise ValueError('Method get_admin_permission return value ' +
+                             'returnVal is not type dict as required.')
         # return the results
         return [returnVal]
