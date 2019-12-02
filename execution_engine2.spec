@@ -474,7 +474,7 @@
 
         /*
             list<string> admin_roles;  # ('ee2_admin','ee2_admin_ro') or something else
-            str permissions; # One of ('read' | 'write' | 'none')
+            str permissions; # One of 'r|w|x' (('read' | 'write' | 'none'))
         */
           typedef structure {
             string permission;
