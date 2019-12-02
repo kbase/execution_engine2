@@ -473,7 +473,7 @@
 
 
         /*
-            str permissions; # One of 'r|w|x' (('read' | 'write' | 'none'))
+            str permission; # One of 'r|w|x' (('read' | 'write' | 'none'))
         */
           typedef structure {
             string permission;
