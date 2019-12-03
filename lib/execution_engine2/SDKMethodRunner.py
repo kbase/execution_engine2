@@ -3,11 +3,11 @@ import logging
 import os
 import time
 from collections import namedtuple, OrderedDict
+from datetime import datetime
+from enum import Enum
 
 import dateutil
 from bson import ObjectId
-from datetime import datetime
-from enum import Enum
 
 from execution_engine2.authorization.authstrategy import (
     can_read_job,
@@ -363,7 +363,7 @@ class SDKMethodRunner:
         self.workspace = None
         self.workspace_auth = None
 
-        self.admin_roles = config.get("admin_roles", ["EE2_ADMIN"])
+        self.admin_roles = config.get("admin_roles", ["EE2_ADMIN", "EE2_ADMIN_RO"])
 
         catalog_url = config.get("catalog-url")
         self.catalog = Catalog(catalog_url)
@@ -930,6 +930,8 @@ class SDKMethodRunner:
                 mongo_rec["running"] = int(job.running * 1000)
             if job.finished:
                 mongo_rec["finished"] = int(job.finished * 1000)
+            if job.queued:
+                mongo_rec["queued"] = int(job.queued * 1000)
 
             job_states[str(job.id)] = mongo_rec
 
@@ -1033,8 +1035,25 @@ class SDKMethodRunner:
                 return "-"
 
     def check_is_admin(self):
-
+        """
+        Check Auth for your admin role and see if it is an allowed admin role
+        :return:
+        """
         return int(self._is_admin(self.token))
+
+    def get_admin_permission(self):
+        """
+        Get your your type of admin permissions
+        :return:
+        """
+        aau = AdminAuthUtil(self.auth_url, self.admin_roles)
+        roles = list(aau._fetch_user_roles(self.token))
+        permission = None
+        if "EE2_ADMIN" in roles:
+            permission = "w"
+        elif "EE2_ADMIN_RO" in roles:
+            permission = "r"
+        return {"permission": permission}
 
     def check_jobs_date_range_for_user(
         self,

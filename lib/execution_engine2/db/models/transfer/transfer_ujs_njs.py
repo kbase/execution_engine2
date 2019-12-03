@@ -326,8 +326,11 @@ class MigrateDatabases:
         # x = places.objects.insert(a)
 
 
-c = MigrateDatabases()
-c.begin_job_transfer()
+
+
+if __name__ == '__main__':
+    c = MigrateDatabases()
+    c.begin_job_transfer()
 
 # Interesting jobs on CI
 # 564a4fd6e4b0d9c152289eac

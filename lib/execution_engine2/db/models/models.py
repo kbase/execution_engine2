@@ -77,7 +77,7 @@ class LogLines(EmbeddedDocument):
     line = StringField(required=True)
     linepos = IntField(required=True)
     error = BooleanField(default=False)
-    ts = FloatField(default=time.time())
+    ts = FloatField(default=time.time)
 
 
 class JobLog(Document):
@@ -87,7 +87,7 @@ class JobLog(Document):
     """
 
     primary_key = ObjectIdField(primary_key=True, required=True)
-    updated = FloatField(default=time.time())
+    updated = FloatField(default=time.time)
     original_line_count = IntField()
     stored_line_count = IntField()
     lines = ListField()
@@ -251,7 +251,7 @@ class Job(Document):
     wsid = IntField(required=True)
     status = StringField(required=True, validation=valid_status)
 
-    updated = FloatField(default=time.time())
+    updated = FloatField(default=time.time)
 
     # id.generation_time = created
     queued = FloatField(
