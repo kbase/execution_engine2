@@ -9,7 +9,8 @@ from dataclasses import dataclass
 
 from confluent_kafka import Producer
 
-KAFKA_EVENT_TYPE = "status_update"
+KAFKA_EVENT_TYPE = "job_status_update"
+CONDOR_EVENT_TYPE = "condor_request"
 DEFAULT_TOPIC = "ee2"
 
 
@@ -32,11 +33,13 @@ class KafkaStatusUpdate:
         if self.new_status is None:
             raise Exception("Need to provide a new_status")
 
+
 @dataclass
 class KafkaCondorCommandUpdate(KafkaStatusUpdate):
     scheduler_id: int = None
     job_id: int = None
     requested_condor_deletion: bool = None
+    event_type: str = CONDOR_EVENT_TYPE
 
     def __post_init__(self):
         if self.job_id is None:
@@ -46,16 +49,16 @@ class KafkaCondorCommandUpdate(KafkaStatusUpdate):
             raise Exception("Need to provide requested_condor_deletion")
 
 
-
-
 @dataclass
 class KafkaStatusUpdateStartJob(KafkaStatusUpdate):
     scheduler_id: int = None
+
 
 @dataclass
 class KafkaStatusUpdateCancelJob(KafkaStatusUpdate):
     terminated_code: int = None
     scheduler_id: int = None
+
 
 @dataclass
 class KafkaStatusUpdateFinishJob(KafkaStatusUpdate):
@@ -71,8 +74,6 @@ def _delivery_report(err, msg):
         msg = f"Message delivered to topic '{msg.topic()}': {msg.value()}"
         print(msg)
         logging.error(msg)
-
-
 
 
 def send_kafka_condor_update(data):
@@ -96,7 +97,11 @@ def send_kafka_update_cancel(data):
 
 
 def send_message_to_kafka(
-        data, data_class, topic=DEFAULT_TOPIC, event_type=KAFKA_EVENT_TYPE, server_address="kafka"
+    data,
+    data_class,
+    topic=DEFAULT_TOPIC,
+    event_type=KAFKA_EVENT_TYPE,
+    server_address="kafka",
 ):
     message = data_class(**data)
     producer = Producer({"bootstrap.servers": server_address})

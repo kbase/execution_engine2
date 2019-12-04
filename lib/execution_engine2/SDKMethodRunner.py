@@ -34,7 +34,10 @@ from execution_engine2.exceptions import (
     InvalidStatusTransitionException,
 )
 from execution_engine2.utils.Condor import Condor
-from execution_engine2.utils.KafkaUtils import send_kafka_update_cancel,send_kafka_condor_update
+from execution_engine2.utils.KafkaUtils import (
+    send_kafka_update_cancel,
+    send_kafka_condor_update,
+)
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.authclient import KBaseAuth
@@ -415,7 +418,7 @@ class SDKMethodRunner:
 
         cancel_job_msg2 = {"job_id": str(job_id), "requested_condor_deletion": True}
         send_kafka_condor_update(data=cancel_job_msg2)
-        #send_message_to_kafka(data=cancel_job_msg2)
+        # send_message_to_kafka(data=cancel_job_msg2)
 
     def check_job_canceled(self, job_id):
         """
