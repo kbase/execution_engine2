@@ -19,6 +19,7 @@ class KafkaStatusUpdate:
     job_id: str = None
     previous_status: str = None
     new_status: str = None
+    scheduler_id: int = None
     topic: str = DEFAULT_TOPIC
     event_type: str = KAFKA_EVENT_TYPE
     error: bool = False
@@ -33,10 +34,16 @@ class KafkaStatusUpdate:
         if self.new_status is None:
             raise Exception("Need to provide a new_status")
 
+        # A created job may not have been able to have been submitted to condor, so it may not have a scheduler_id
+        if self.new_status not in ["created", "terminated", "canceled"]:
+            if self.scheduler_id is None:
+                raise Exception(
+                    "You must pass a scheduler id once the job has been created already."
+                )
+
 
 @dataclass
 class KafkaCondorCommandUpdate(KafkaStatusUpdate):
-    scheduler_id: int = None
     job_id: int = None
     requested_condor_deletion: bool = None
     event_type: str = CONDOR_EVENT_TYPE
@@ -51,18 +58,25 @@ class KafkaCondorCommandUpdate(KafkaStatusUpdate):
 
 @dataclass
 class KafkaStatusUpdateStartJob(KafkaStatusUpdate):
-    scheduler_id: int = None
+    def __post_init__(self):
+        allowed_states = ["void", "created"]
+        if self.previous_status not in allowed_states:
+            raise Exception(
+                f"Invalid previous status, it should have been in {allowed_states}"
+            )
+
+        if self.new_status in ["queued", "estimating", "running"]:
+            raise Exception("Invalid new state")
 
 
 @dataclass
 class KafkaStatusUpdateCancelJob(KafkaStatusUpdate):
     terminated_code: int = None
-    scheduler_id: int = None
 
 
 @dataclass
 class KafkaStatusUpdateFinishJob(KafkaStatusUpdate):
-    scheduler_id: int = None
+    pass
 
 
 def _delivery_report(err, msg):

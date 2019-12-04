@@ -37,6 +37,9 @@ from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.KafkaUtils import (
     send_kafka_update_cancel,
     send_kafka_condor_update,
+    send_kafka_update_status,
+    send_kafka_update_finish,
+    send_kafka_update_start,
 )
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
@@ -152,9 +155,9 @@ class SDKMethodRunner:
         create_job_status_msg = {
             "job_id": str(job.id),
             "new_status": job.status,
-            "previous_status": None,
+            "previous_status": "void",
         }
-        send_message_to_kafka(data=create_job_status_msg)
+        send_kafka_update_status(data=create_job_status_msg)
 
         return str(job.id)
 
@@ -418,7 +421,6 @@ class SDKMethodRunner:
 
         cancel_job_msg2 = {"job_id": str(job_id), "requested_condor_deletion": True}
         send_kafka_condor_update(data=cancel_job_msg2)
-        # send_message_to_kafka(data=cancel_job_msg2)
 
     def check_job_canceled(self, job_id):
         """
@@ -517,7 +519,7 @@ class SDKMethodRunner:
                 "previous_status": previous_status,
                 "scheduler_id": scheduler_id,
             }
-            send_message_to_kafka(data=queued_status_update)
+            send_kafka_update_status(data=queued_status_update)
 
     def _run_admin_command(self, command, params):
         available_commands = ["cancel_job", "view_job_logs"]
@@ -677,7 +679,7 @@ class SDKMethodRunner:
             "previous_status": previous_status,
             "scheduler_id": job.scheduler_id,
         }
-        send_message_to_kafka(data=update_job_status)
+        send_kafka_update_status(data=update_job_status)
 
         return str(job.id)
 
@@ -792,7 +794,7 @@ class SDKMethodRunner:
                 "error_code": error_code,
                 "scheduler_id": job.scheduler_id,
             }
-            send_message_to_kafka(data=finish_job_status)
+            send_kafka_update_finish(data=finish_job_status)
 
         elif job_output is None:
             if error_code is None:
@@ -811,7 +813,7 @@ class SDKMethodRunner:
                 "previous_status": job.status,
                 "scheduler_id": job.scheduler_id,
             }
-            send_message_to_kafka(data=finish_job_status)
+            send_kafka_update_finish(data=finish_job_status)
 
     def start_job(self, job_id, skip_estimation=True):
         """
@@ -864,7 +866,7 @@ class SDKMethodRunner:
                 "previous_status": job_status,
                 "scheduler_id": job.scheduler_id,
             }
-            send_message_to_kafka(data=start_job_status)
+            send_kafka_update_start(data=start_job_status)
 
     def check_job(self, job_id, check_permission=True, projection=None):
         """
