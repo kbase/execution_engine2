@@ -402,6 +402,10 @@ class SDKMethodRunner:
         self._test_job_permissions(job, job_id, JobPermissions.WRITE)
         logging.info(f"User has permission to cancel job {job_id}")
         logging.debug(f"User has permission to cancel job {job_id}")
+
+        if terminated_code is None:
+            terminated_code = TerminatedCode.terminated_by_user.value
+
         self.get_mongo_util().cancel_job(job_id=job_id, terminated_code=terminated_code)
 
         cancel_job_msg = {
@@ -804,8 +808,8 @@ class SDKMethodRunner:
                 job_id=job_id, error_message=msg, error_code=error_code
             )
             raise ValueError(msg)
+            # No Kafka Message Here as this finish_job call failed due to insufficient requirements
         else:
-
             self._finish_job_with_success(job_id=job_id, job_output=job_output)
             finish_job_status = {
                 "job_id": str(job_id),

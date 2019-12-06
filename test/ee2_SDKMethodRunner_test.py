@@ -178,6 +178,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         job.job_input = inputs
         job.job_output = None
+        job.scheduler_id = "123"
 
         with self.mongo_util.mongo_engine_connection():
             job.save()
@@ -1008,19 +1009,23 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_states[job_id]["wsid"], self.ws_id)
 
             # test check_jobs return list
-            job_states_list = runner.check_jobs([job_id, job_id_1, job_id_fake], return_list=1)['job_states']
+            job_states_list = runner.check_jobs(
+                [job_id, job_id_1, job_id_fake], return_list=1
+            )["job_states"]
             json.dumps(job_states_list)  # make sure it's JSON serializable
             self.assertEqual(len(job_states_list), 3)
-            self.assertEqual(job_states_list[0]['job_id'], job_id)
-            self.assertEqual(job_states_list[1]['job_id'], job_id_1)
+            self.assertEqual(job_states_list[0]["job_id"], job_id)
+            self.assertEqual(job_states_list[1]["job_id"], job_id_1)
             self.assertEqual(job_states_list[2], [])
             self.assertTrue(isinstance(job_states_list, list))
             self.assertCountEqual(job_states_list, list(job_states.values()))
 
-            job_states_list = runner.check_jobs([job_id, job_id_1], return_list='True')['job_states']
+            job_states_list = runner.check_jobs([job_id, job_id_1], return_list="True")[
+                "job_states"
+            ]
             json.dumps(job_states_list)  # make sure it's JSON serializable
-            self.assertEqual(job_states_list[0]['job_id'], job_id)
-            self.assertEqual(job_states_list[1]['job_id'], job_id_1)
+            self.assertEqual(job_states_list[0]["job_id"], job_id)
+            self.assertEqual(job_states_list[1]["job_id"], job_id_1)
             self.assertTrue(isinstance(job_states_list, list))
             self.assertCountEqual(job_states_list, list(job_states.values())[:2])
 
@@ -1031,7 +1036,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_states[job_id]["status"], "created")
 
             # test check_workspace_jobs
-            job_states = runner.check_workspace_jobs(self.ws_id, return_list='False')
+            job_states = runner.check_workspace_jobs(self.ws_id, return_list="False")
             for job_id in job_states:
                 self.assertTrue(job_states[job_id])
             json.dumps(job_states)  # make sure it's JSON serializable
@@ -1043,7 +1048,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_states[job_id_1]["wsid"], self.ws_id)
 
             # test check_workspace_jobs with projection
-            job_states = runner.check_workspace_jobs(self.ws_id, projection=["wsid"], return_list=False)
+            job_states = runner.check_workspace_jobs(
+                self.ws_id, projection=["wsid"], return_list=False
+            )
             json.dumps(job_states)  # make sure it's JSON serializable
             self.assertTrue(job_id in job_states)
             self.assertFalse("wsid" in job_states[job_id].keys())
