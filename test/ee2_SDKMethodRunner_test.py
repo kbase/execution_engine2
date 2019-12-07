@@ -892,7 +892,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertTrue(job.estimating)
 
             # start a estimating job, set job to running status
-            runner.start_job(job_id)
+            runner.start_job(job_id, skip_estimation=False)
 
             job = self.mongo_util.get_job(job_id=job_id)
             self.assertEqual(job.status, "running")

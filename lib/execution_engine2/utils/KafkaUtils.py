@@ -83,7 +83,11 @@ class KafkaCondorCommandUpdate(KafkaStatusUpdate):
 @dataclass
 class KafkaStatusUpdateStartJob(KafkaStatusUpdate):
     def __post_init__(self):
-        allowed_states = [Status.queued.value, Status.estimating.value]
+        allowed_states = [
+            Status.created.value,
+            Status.queued.value,
+            Status.estimating.value,
+        ]
         if self.previous_status not in allowed_states:
             raise Exception(
                 f"Invalid previous status ({self.previous_status}), it should have been in {allowed_states}.  "

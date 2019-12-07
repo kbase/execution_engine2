@@ -849,21 +849,21 @@ class SDKMethodRunner:
                 f"Unexpected job status for {job_id}: {job_status}.  You cannot start a job that is not in {allowed_states}"
             )
 
-        if job_status == Status.estimating.value or skip_estimation:
-            # set job to running status
-            job.running = time.time()
-            self.get_mongo_util().update_job_status(
-                job_id=job_id, status=Status.running.value
-            )
-        else:
-            # set job to estimating status
-            job.estimating = time.time()
-            self.get_mongo_util().update_job_status(
-                job_id=job_id, status=Status.estimating.value
-            )
-
         with self.get_mongo_util().mongo_engine_connection():
-            job.save()
+            if job_status == Status.estimating.value or skip_estimation:
+                # set job to running status
+                job.running = time.time()
+                self.get_mongo_util().update_job_status(
+                    job_id=job_id, status=Status.running.value
+                )
+            else:
+                # set job to estimating status
+                job.estimating = time.time()
+                self.get_mongo_util().update_job_status(
+                    job_id=job_id, status=Status.estimating.value
+                )
+                job.save()
+
             start_job_status = {
                 "job_id": str(job_id),
                 "new_status": job.status,

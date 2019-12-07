@@ -3,6 +3,7 @@ import subprocess
 import traceback
 from contextlib import contextmanager
 import time
+from pprint import pprint
 
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
@@ -187,9 +188,15 @@ class MongoUtil:
                 if projection:
                     if not isinstance(projection, list):
                         raise ValueError("Please input a list type projection")
-                    jobs = Job.objects(id__in=job_ids).exclude(*projection).order_by("{}_id".format(sort_id_indicator))
+                    jobs = (
+                        Job.objects(id__in=job_ids)
+                        .exclude(*projection)
+                        .order_by("{}_id".format(sort_id_indicator))
+                    )
                 else:
-                    jobs = Job.objects(id__in=job_ids).order_by("{}_id".format(sort_id_indicator))
+                    jobs = Job.objects(id__in=job_ids).order_by(
+                        "{}_id".format(sort_id_indicator)
+                    )
             except Exception:
                 raise ValueError(
                     "Unable to find job:\nError:\n{}".format(traceback.format_exc())
@@ -328,6 +335,8 @@ class MongoUtil:
 
             j.status = status
             j.save()
+            pprint("Saved job")
+            pprint(j.to_mongo().to_dict())
 
     def get_empty_job_log(self):
         jl = JobLog()
