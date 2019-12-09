@@ -852,25 +852,29 @@ class SDKMethodRunner:
         with self.get_mongo_util().mongo_engine_connection():
             if job_status == Status.estimating.value or skip_estimation:
                 # set job to running status
+
                 job.running = time.time()
                 self.get_mongo_util().update_job_status(
                     job_id=job_id, status=Status.running.value
                 )
             else:
                 # set job to estimating status
+
                 job.estimating = time.time()
                 self.get_mongo_util().update_job_status(
                     job_id=job_id, status=Status.estimating.value
                 )
-                job.save()
+            job.save()
 
-            start_job_status = {
-                "job_id": str(job_id),
-                "new_status": job.status,
-                "previous_status": job_status,
-                "scheduler_id": job.scheduler_id,
-            }
-            send_kafka_update_start(data=start_job_status)
+        job.reload("status")
+
+        start_job_status = {
+            "job_id": str(job_id),
+            "new_status": job.status,
+            "previous_status": job_status,
+            "scheduler_id": job.scheduler_id,
+        }
+        send_kafka_update_start(data=start_job_status)
 
     def check_job(self, job_id, check_permission=True, projection=None):
         """

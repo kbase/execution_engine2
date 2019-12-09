@@ -5,7 +5,10 @@ import json
 import logging
 import unittest
 
-from execution_engine2.utils.KafkaUtils import send_message_to_kafka
+from execution_engine2.utils.KafkaUtils import (
+    send_message_to_kafka,
+    send_kafka_update_status,
+)
 from test.utils.KafkaTestUtils import Consumer, KafkaError
 
 logging.basicConfig(level=logging.DEBUG)
@@ -20,8 +23,24 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
 
     # TODO Integration Test with EE2/KAFKA
     # TODO Test to make sure that the correct messages are being sent from the various methods
+    # TODO Create a test for each method.. But they are already being tested in the ee2 sdkmr tests though
 
-    def test_produce_and_consume(self):
+    def test_status_update(self):
+        data = {
+            "job_id": "123",
+            "previous_status": "created",
+            "new_status": "estimating",
+        }
+        with self.assertRaisesRegex(
+            expected_exception=Exception,
+            expected_regex="You must pass a scheduler id once the job has been created already.",
+        ):
+            send_kafka_update_status(data)
+
+        data["scheduler_id"] = "123"
+        send_kafka_update_status(data)
+
+    def xtest_produce_and_consume(self):
         """
         Send a message via the kafka utils
         and test that the producer callback function works
