@@ -41,8 +41,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         cls.ws_id = 9999
         cls.token = "token"
 
-        cls.ctx = {'token': cls.token,
-                   'user_id': cls.user_id}
+        cls.ctx = {"token": cls.token, "user_id": cls.user_id}
         cls.impl = execution_engine2(cls.cfg)
         cls.method_runner = SDKMethodRunner(
             cls.cfg, user_id=cls.user_id, token=cls.token
@@ -98,8 +97,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             runner = self.getRunner()
 
             # set job method differently to distinguish
-            method_1 = 'a_method'
-            method_2 = 'b_method'
+            method_1 = "a_method"
+            method_2 = "b_method"
             job_params_1 = self.get_sample_job_params(method=method_1)
             job_params_2 = self.get_sample_job_params(method=method_2)
 
@@ -109,10 +108,14 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             # execute _init_job_rec for 2 different jobs in threads
             for index in range(thread_count):
-                x = threading.Thread(target=que.put(runner._init_job_rec(self.user_id, job_params_1)))
+                x = threading.Thread(
+                    target=que.put(runner._init_job_rec(self.user_id, job_params_1))
+                )
                 threads.append(x)
                 x.start()
-                y = threading.Thread(target=que.put(runner._init_job_rec(self.user_id, job_params_2)))
+                y = threading.Thread(
+                    target=que.put(runner._init_job_rec(self.user_id, job_params_2))
+                )
                 threads.append(y)
                 y.start()
 
@@ -129,10 +132,14 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(methods.count(method_1), thread_count)
             self.assertEqual(methods.count(method_2), thread_count)
 
-            self.assertEqual(len(set(job_ids)), thread_count * 2)  # testing identicalness of job_ids returned
+            self.assertEqual(
+                len(set(job_ids)), thread_count * 2
+            )  # testing identicalness of job_ids returned
             self.assertEqual(len(job_ids), len(set(job_ids)))
 
-            self.assertEqual(ori_job_count, Job.objects.count() - thread_count * 2)   # testing job numbers created
+            self.assertEqual(
+                ori_job_count, Job.objects.count() - thread_count * 2
+            )  # testing job numbers created
 
             jobs.delete()
             self.assertEqual(ori_job_count, Job.objects.count())
@@ -163,20 +170,20 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             queued_jobs = self.mongo_util.get_jobs(job_ids=job_ids_queued)
             for job in queued_jobs:
                 job_rec = job.to_mongo().to_dict()
-                self.assertIsNone(job_rec.get('queued'))
-                self.assertEqual(job_rec.get('status'), 'created')
+                self.assertIsNone(job_rec.get("queued"))
+                self.assertEqual(job_rec.get("status"), "created")
 
             running_jobs = self.mongo_util.get_jobs(job_ids=job_ids_running)
             for job in running_jobs:
                 job_rec = job.to_mongo().to_dict()
-                self.assertIsNone(job_rec.get('running'))
-                self.assertEqual(job_rec.get('status'), 'created')
+                self.assertIsNone(job_rec.get("running"))
+                self.assertEqual(job_rec.get("status"), "created")
 
             finish_jobs = self.mongo_util.get_jobs(job_ids=job_ids_completed)
             for job in finish_jobs:
                 job_rec = job.to_mongo().to_dict()
-                self.assertIsNone(job_rec.get('finished'))
-                self.assertEqual(job_rec.get('status'), 'created')
+                self.assertIsNone(job_rec.get("finished"))
+                self.assertEqual(job_rec.get("status"), "created")
 
             threads = list()
 
@@ -184,14 +191,22 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 """
                 update jobs status in one thread
                 """
-                runner.update_job_to_queued(job_ids_queued[index], 'scheduler_id')
+                runner.update_job_to_queued(job_ids_queued[index], "scheduler_id")
                 runner.start_job(job_ids_running[index])
                 runner.start_job(job_ids_finish[index])
-                job_output = {'version': '11', 'result': {'result': 1}, 'id': '5d54bdcb9b402d15271b3208'}
+                job_output = {
+                    "version": "11",
+                    "result": {"result": 1},
+                    "id": "5d54bdcb9b402d15271b3208",
+                }
                 runner.finish_job(job_ids_finish[index], job_output=job_output)
 
             for index in range(thread_count):
-                x = threading.Thread(target=update_states(index, job_ids_queued, job_ids_running, job_ids_completed))
+                x = threading.Thread(
+                    target=update_states(
+                        index, job_ids_queued, job_ids_running, job_ids_completed
+                    )
+                )
                 threads.append(x)
                 x.start()
 
@@ -202,30 +217,38 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             queued_jobs = self.mongo_util.get_jobs(job_ids=job_ids_queued)
             for job in queued_jobs:
                 job_rec = job.to_mongo().to_dict()
-                self.assertIsNotNone(job_rec.get('queued'))
-                self.assertEqual(job_rec.get('status'), 'queued')
+                self.assertIsNotNone(job_rec.get("queued"))
+                self.assertEqual(job_rec.get("status"), "queued")
 
             running_jobs = self.mongo_util.get_jobs(job_ids=job_ids_running)
             for job in running_jobs:
                 job_rec = job.to_mongo().to_dict()
-                self.assertIsNotNone(job_rec.get('running'))
-                self.assertEqual(job_rec.get('status'), 'running')
+                self.assertIsNotNone(job_rec.get("running"))
+                self.assertEqual(job_rec.get("status"), "running")
 
             finish_jobs = self.mongo_util.get_jobs(job_ids=job_ids_completed)
             for job in finish_jobs:
                 job_rec = job.to_mongo().to_dict()
-                self.assertIsNotNone(job_rec.get('finished'))
-                self.assertEqual(job_rec.get('status'), 'completed')
+                self.assertIsNotNone(job_rec.get("finished"))
+                self.assertEqual(job_rec.get("status"), "completed")
 
-            jobs = self.mongo_util.get_jobs(job_ids=(job_ids_queued + job_ids_running + job_ids_completed))
+            jobs = self.mongo_util.get_jobs(
+                job_ids=(job_ids_queued + job_ids_running + job_ids_completed)
+            )
             jobs.delete()
             self.assertEqual(ori_job_count, Job.objects.count())
 
     @patch.object(WorkspaceAuth, "can_write", return_value=True)
     @patch.object(SDKMethodRunner, "_get_client_groups", return_value="a group")
     @patch.object(SDKMethodRunner, "_get_module_git_commit", return_value="a version")
-    @patch.object(Condor, "run_job", return_value=submission_info(clusterid="test", submit="job", error=None))
-    def test_run_job_stress(self, can_write, _get_client_groups, _get_module_git_commit, run_job):
+    @patch.object(
+        Condor,
+        "run_job",
+        return_value=submission_info(clusterid="test", submit="job", error=None),
+    )
+    def test_run_job_stress(
+        self, can_write, _get_client_groups, _get_module_git_commit, run_job
+    ):
         """
         testing running 3 different jobs in multiple theads.
         """
@@ -235,9 +258,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             ori_job_count = Job.objects.count()
 
             # set job method differently to distinguish
-            method_1 = 'a_method'
-            method_2 = 'b_method'
-            method_3 = 'c_method'
+            method_1 = "a_method"
+            method_2 = "b_method"
+            method_3 = "c_method"
             job_params_1 = self.get_sample_job_params(method=method_1)
             job_params_2 = self.get_sample_job_params(method=method_2)
             job_params_3 = self.get_sample_job_params(method=method_3)
@@ -248,15 +271,21 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             # execute run_job for 3 different jobs in threads
             for index in range(thread_count):
-                x = threading.Thread(target=que.put(self.impl.run_job(ctx=self.ctx, params=job_params_1)))
+                x = threading.Thread(
+                    target=que.put(self.impl.run_job(ctx=self.ctx, params=job_params_1))
+                )
                 threads.append(x)
                 x.start()
 
-                y = threading.Thread(target=que.put(self.impl.run_job(ctx=self.ctx, params=job_params_2)))
+                y = threading.Thread(
+                    target=que.put(self.impl.run_job(ctx=self.ctx, params=job_params_2))
+                )
                 threads.append(y)
                 y.start()
 
-                z = threading.Thread(target=que.put(self.impl.run_job(ctx=self.ctx, params=job_params_3)))
+                z = threading.Thread(
+                    target=que.put(self.impl.run_job(ctx=self.ctx, params=job_params_3))
+                )
                 threads.append(z)
                 z.start()
 
@@ -274,13 +303,19 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(methods.count(method_2), thread_count)
             self.assertEqual(methods.count(method_3), thread_count)
 
-            status = [job.status for job in jobs]  # all jobs should eventually be put to 'queued' status
+            status = [
+                job.status for job in jobs
+            ]  # all jobs should eventually be put to 'queued' status
             self.assertCountEqual(status, [Status.queued.value] * thread_count * 3)
 
-            self.assertEqual(len(set(job_ids)), thread_count * 3)  # testing identicalness of job_ids returned
+            self.assertEqual(
+                len(set(job_ids)), thread_count * 3
+            )  # testing identicalness of job_ids returned
             self.assertEqual(len(job_ids), len(set(job_ids)))
 
-            self.assertEqual(ori_job_count, Job.objects.count() - thread_count * 3)  # testing job numbers created
+            self.assertEqual(
+                ori_job_count, Job.objects.count() - thread_count * 3
+            )  # testing job numbers created
 
             jobs.delete()
             self.assertEqual(ori_job_count, Job.objects.count())
@@ -308,22 +343,46 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 job_ids_completed.append(runner._init_job_rec(self.user_id, job_params))
 
             # examing newly created job status
-            init_jobs = self.mongo_util.get_jobs(job_ids=job_ids_queued + job_ids_running + job_ids_completed)
+            init_jobs = self.mongo_util.get_jobs(
+                job_ids=job_ids_queued + job_ids_running + job_ids_completed
+            )
             for job in init_jobs:
-                self.assertEqual(job.to_mongo().to_dict().get('status'), 'created')
+                self.assertEqual(job.to_mongo().to_dict().get("status"), "created")
 
             threads = list()
 
-            def update_states(index, job_ids_queued, job_ids_running, job_ids_completed):
+            def update_states(
+                index, job_ids_queued, job_ids_running, job_ids_completed
+            ):
                 """
                 update jobs status in one thread
                 """
-                self.impl.update_job_status(ctx=self.ctx, params={'job_id': job_ids_queued[index], 'status': 'queued'})
-                self.impl.update_job_status(ctx=self.ctx, params={'job_id': job_ids_running[index], 'status': 'running'})
-                self.impl.update_job_status(ctx=self.ctx, params={'job_id': job_ids_completed[index], 'status': 'completed'})
+
+                for job_ids in [job_ids_queued, job_ids_running, job_ids_completed]:
+                    for job_id in job_ids:
+                        job = self.mongo_util.get_job(job_id=job_id)
+                        job.scheduler_id = "123"
+                        job.save()
+
+                self.impl.update_job_status(
+                    ctx=self.ctx,
+                    params={"job_id": job_ids_queued[index], "status": "queued"},
+                )
+                self.impl.update_job_status(
+                    ctx=self.ctx,
+                    params={"job_id": job_ids_running[index], "status": "running"},
+                )
+                self.impl.update_job_status(
+                    ctx=self.ctx,
+                    params={"job_id": job_ids_completed[index], "status": "completed"},
+                )
 
             for index in range(thread_count):
-                x = threading.Thread(target=update_states(index, job_ids_queued, job_ids_running, job_ids_completed))
+                x = threading.Thread(
+                    target=update_states(
+                        index, job_ids_queued, job_ids_running, job_ids_completed
+                    )
+                )
                 threads.append(x)
                 x.start()
 
@@ -333,17 +392,19 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             # examing updateed job status
             queued_jobs = self.mongo_util.get_jobs(job_ids=job_ids_queued)
             for job in queued_jobs:
-                self.assertEqual(job.to_mongo().to_dict().get('status'), 'queued')
+                self.assertEqual(job.to_mongo().to_dict().get("status"), "queued")
 
             running_jobs = self.mongo_util.get_jobs(job_ids=job_ids_running)
             for job in running_jobs:
-                self.assertEqual(job.to_mongo().to_dict().get('status'), 'running')
+                self.assertEqual(job.to_mongo().to_dict().get("status"), "running")
 
             finish_jobs = self.mongo_util.get_jobs(job_ids=job_ids_completed)
             for job in finish_jobs:
-                self.assertEqual(job.to_mongo().to_dict().get('status'), 'completed')
+                self.assertEqual(job.to_mongo().to_dict().get("status"), "completed")
 
-            jobs = self.mongo_util.get_jobs(job_ids=(job_ids_queued + job_ids_running + job_ids_completed))
+            jobs = self.mongo_util.get_jobs(
+                job_ids=(job_ids_queued + job_ids_running + job_ids_completed)
+            )
             jobs.delete()
             self.assertEqual(ori_job_count, Job.objects.count())
 
@@ -359,8 +420,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             runner = self.getRunner()
 
             # set job method differently to distinguish
-            method_1 = 'a_method'
-            method_2 = 'b_method'
+            method_1 = "a_method"
+            method_2 = "b_method"
             job_params_1 = self.get_sample_job_params(method=method_1)
             job_params_2 = self.get_sample_job_params(method=method_2)
 
@@ -374,8 +435,13 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             # execute check_jobs in multiple threads
             for index in range(thread_count):
-                x = threading.Thread(target=que.put(
-                    self.impl.check_jobs(ctx=self.ctx, params={'job_ids': [job_id_1, job_id_2]})))
+                x = threading.Thread(
+                    target=que.put(
+                        self.impl.check_jobs(
+                            ctx=self.ctx, params={"job_ids": [job_id_1, job_id_2]}
+                        )
+                    )
+                )
                 threads.append(x)
                 x.start()
 
@@ -387,9 +453,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             # exam returned job status
             for job_status in job_status:
-                job_status = job_status[0]['job_states']
-                job_ids = [js['job_id'] for js in job_status]
-                job_methods = [js['job_input']['method'] for js in job_status]
+                job_status = job_status[0]["job_states"]
+                job_ids = [js["job_id"] for js in job_status]
+                job_methods = [js["job_input"]["method"] for js in job_status]
                 self.assertCountEqual(job_ids, [job_id_1, job_id_2])
                 self.assertCountEqual(job_methods, [method_1, method_2])
 
@@ -415,9 +481,23 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             job_id_terminated = runner._init_job_rec(self.user_id, job_params)
             job_id_completed = runner._init_job_rec(self.user_id, job_params)
 
-            self.impl.update_job_status(ctx=self.ctx, params={'job_id': job_id_running, 'status': 'running'})
-            self.impl.update_job_status(ctx=self.ctx, params={'job_id': job_id_terminated, 'status': 'terminated'})
-            self.impl.update_job_status(ctx=self.ctx, params={'job_id': job_id_completed, 'status': 'completed'})
+            for job in [job_id_running, job_id_terminated, job_id_completed]:
+                job = self.mongo_util.get_job(job_id=job)
+                job.scheduler_id = "123"
+                job.save()
+
+            self.impl.update_job_status(
+                ctx=self.ctx, params={"job_id": job_id_running, "status": "running"}
+            )
+
+            self.impl.update_job_status(
+                ctx=self.ctx,
+                params={"job_id": job_id_terminated, "status": "terminated"},
+            )
+
+            self.impl.update_job_status(
+                ctx=self.ctx, params={"job_id": job_id_completed, "status": "completed"}
+            )
 
             threads = list()
             job_canceled_status = list()
@@ -425,18 +505,33 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             # execute check_job_canceled in multiple threads
             for index in range(thread_count):
-                x = threading.Thread(target=que.put(
-                    self.impl.check_job_canceled(ctx=self.ctx, params={'job_id': job_id_running})))
+                x = threading.Thread(
+                    target=que.put(
+                        self.impl.check_job_canceled(
+                            ctx=self.ctx, params={"job_id": job_id_running}
+                        )
+                    )
+                )
                 threads.append(x)
                 x.start()
 
-                y = threading.Thread(target=que.put(
-                    self.impl.check_job_canceled(ctx=self.ctx, params={'job_id': job_id_terminated})))
+                y = threading.Thread(
+                    target=que.put(
+                        self.impl.check_job_canceled(
+                            ctx=self.ctx, params={"job_id": job_id_terminated}
+                        )
+                    )
+                )
                 threads.append(y)
                 y.start()
 
-                z = threading.Thread(target=que.put(
-                    self.impl.check_job_canceled(ctx=self.ctx, params={'job_id': job_id_completed})))
+                z = threading.Thread(
+                    target=que.put(
+                        self.impl.check_job_canceled(
+                            ctx=self.ctx, params={"job_id": job_id_completed}
+                        )
+                    )
+                )
                 threads.append(z)
                 z.start()
 
@@ -447,8 +542,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 job_canceled_status.append(que.get())
 
             # exam correct job ids returned
-            job_ids_returned = [jcs_return[0]['job_id']for jcs_return in job_canceled_status]
-            self.assertEqual(len(job_ids_returned), thread_count * 3)  # exam total job number returned
+            job_ids_returned = [
+                jcs_return[0]["job_id"] for jcs_return in job_canceled_status
+            ]
+            self.assertEqual(
+                len(job_ids_returned), thread_count * 3
+            )  # exam total job number returned
             self.assertEqual(job_ids_returned.count(job_id_running), thread_count)
             self.assertEqual(job_ids_returned.count(job_id_terminated), thread_count)
             self.assertEqual(job_ids_returned.count(job_id_completed), thread_count)
@@ -456,17 +555,19 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             # exam returned job canceled status
             for job_canceled_status_return in job_canceled_status:
                 job_canceled_status_return = job_canceled_status_return[0]
-                if job_canceled_status_return['job_id'] == job_id_running:
-                    self.assertFalse(job_canceled_status_return['canceled'])
-                    self.assertFalse(job_canceled_status_return['finished'])
-                if job_canceled_status_return['job_id'] == job_id_terminated:
-                    self.assertTrue(job_canceled_status_return['canceled'])
-                    self.assertTrue(job_canceled_status_return['finished'])
-                if job_canceled_status_return['job_id'] == job_id_completed:
-                    self.assertFalse(job_canceled_status_return['canceled'])
-                    self.assertTrue(job_canceled_status_return['finished'])
+                if job_canceled_status_return["job_id"] == job_id_running:
+                    self.assertFalse(job_canceled_status_return["canceled"])
+                    self.assertFalse(job_canceled_status_return["finished"])
+                if job_canceled_status_return["job_id"] == job_id_terminated:
+                    self.assertTrue(job_canceled_status_return["canceled"])
+                    self.assertTrue(job_canceled_status_return["finished"])
+                if job_canceled_status_return["job_id"] == job_id_completed:
+                    self.assertFalse(job_canceled_status_return["canceled"])
+                    self.assertTrue(job_canceled_status_return["finished"])
 
-            jobs = self.mongo_util.get_jobs(job_ids=[job_id_running, job_id_terminated, job_id_completed])
+            jobs = self.mongo_util.get_jobs(
+                job_ids=[job_id_running, job_id_terminated, job_id_completed]
+            )
             jobs.delete()
             self.assertEqual(ori_job_count, Job.objects.count())
 
@@ -486,7 +587,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             # add one line to job
             ts = time.time()
-            job_line = [{'line': 'hello ee2', 'is_error': True, 'ts': ts}]
+            job_line = [{"line": "hello ee2", "is_error": True, "ts": ts}]
             self.impl.add_job_logs(ctx=self.ctx, job_id=job_id, lines=job_line)
 
             threads = list()
@@ -495,8 +596,11 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             # execute get_job_logs in multiple threads
             for index in range(thread_count):
-                x = threading.Thread(target=que.put(
-                    self.impl.get_job_logs(ctx=self.ctx, params={'job_id': job_id})))
+                x = threading.Thread(
+                    target=que.put(
+                        self.impl.get_job_logs(ctx=self.ctx, params={"job_id": job_id})
+                    )
+                )
                 threads.append(x)
                 x.start()
 
@@ -506,15 +610,17 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             while not que.empty():
                 job_lines.append(que.get())
 
-            self.assertEqual(len(job_lines), thread_count)  # exam total number of job lines returned
+            self.assertEqual(
+                len(job_lines), thread_count
+            )  # exam total number of job lines returned
 
             # exam each get_job_logs result
             for job_line in job_lines:
-                job_line = job_line[0]['lines'][0]
-                self.assertEqual(job_line['line'], 'hello ee2')
-                self.assertEqual(job_line['linepos'], 1)
-                self.assertFalse(job_line['error'])
-                self.assertEqual(job_line['ts'], int(ts * 1000))
+                job_line = job_line[0]["lines"][0]
+                self.assertEqual(job_line["line"], "hello ee2")
+                self.assertEqual(job_line["linepos"], 1)
+                self.assertFalse(job_line["error"])
+                self.assertEqual(job_line["ts"], int(ts * 1000))
 
             jobs = self.mongo_util.get_jobs(job_ids=[job_id])
             jobs.delete()
@@ -536,31 +642,40 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             # job line to be added
             ts = time.time()
-            job_line = [{'line': 'hello ee2', 'is_error': True, 'ts': ts}]
+            job_line = [{"line": "hello ee2", "is_error": True, "ts": ts}]
 
             threads = list()
             que = queue.Queue()
             # execute add_job_logs in multiple threads
             for index in range(thread_count):
-                x = threading.Thread(target=que.put(
-                    self.impl.add_job_logs(ctx=self.ctx, job_id=job_id, lines=job_line)))
+                x = threading.Thread(
+                    target=que.put(
+                        self.impl.add_job_logs(
+                            ctx=self.ctx, job_id=job_id, lines=job_line
+                        )
+                    )
+                )
                 threads.append(x)
                 x.start()
 
             for index, thread in enumerate(threads):
                 thread.join()
 
-            job_lines = self.impl.get_job_logs(ctx=self.ctx, params={'job_id': job_id})[0]
+            job_lines = self.impl.get_job_logs(ctx=self.ctx, params={"job_id": job_id})[
+                0
+            ]
 
-            self.assertEqual(job_lines['last_line_number'], thread_count)  # exam total number of job lines created by add_job_logs
+            self.assertEqual(
+                job_lines["last_line_number"], thread_count
+            )  # exam total number of job lines created by add_job_logs
 
             # exam each line created by add_job_logs
-            lines = job_lines['lines']
+            lines = job_lines["lines"]
             self.assertEqual(len(lines), thread_count)
             for line in lines:
-                self.assertEqual(line['line'], 'hello ee2')
-                self.assertFalse(line['error'])
-                self.assertEqual(line['ts'], int(ts * 1000))
+                self.assertEqual(line["line"], "hello ee2")
+                self.assertFalse(line["error"])
+                self.assertEqual(line["ts"], int(ts * 1000))
 
             jobs = self.mongo_util.get_jobs(job_ids=[job_id])
             jobs.delete()
