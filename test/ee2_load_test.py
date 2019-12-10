@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.INFO)
 bootstrap()
 
 
-class ee2_SDKMethodRunner_test(unittest.TestCase):
+class ee2_server_load_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")

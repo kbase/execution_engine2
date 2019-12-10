@@ -316,9 +316,7 @@ class SDKMethodRunner:
         self._test_job_permissions(job, job_id, JobPermissions.WRITE)
         logging.debug("Success, you have permission to add logs for " + job_id)
 
-        try:
-            log = self.get_mongo_util().get_job_log(job_id=job_id)
-        except RecordNotFoundException:
+        if not self.get_mongo_util().job_log_exists(job_id):
             log = self._create_new_log(pk=job_id)
 
         olc = log.original_line_count

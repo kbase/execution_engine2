@@ -6,7 +6,7 @@ from configparser import ConfigParser
 
 from bson.objectid import ObjectId
 
-from execution_engine2.db.models.models import Job, JobInput, Meta
+from execution_engine2.db.models.models import Job, JobLog
 from execution_engine2.db.MongoUtil import MongoUtil
 from test.mongo_test_helper import MongoTestHelper
 
@@ -294,3 +294,26 @@ class MongoUtilTest(unittest.TestCase):
             logging.info("Assert 0 documents")
             mongo_util.delete_one(job_id)
             self.assertEqual(col.count_documents({}), doc_count)
+
+    def test_job_log_exists_ok(self):
+
+        primary_key = ObjectId()
+
+        jl = JobLog()
+        jl.primary_key = primary_key
+        jl.original_line_count = 0
+        jl.stored_line_count = 0
+        jl.lines = []
+
+        mongo_util = self.getMongoUtil()
+        with mongo_util.mongo_engine_connection():
+            ori_jl_count = JobLog.objects.count()
+            self.assertFalse(mongo_util.job_log_exists(primary_key))  # job log not exists yet
+
+            jl.save()  # save job log
+
+            self.assertEqual(JobLog.objects.count(), ori_jl_count + 1)
+            self.assertTrue(mongo_util.job_log_exists(primary_key))  # job log exists
+
+            mongo_util.get_job_log(job_id=primary_key).delete()
+            self.assertEqual(ori_jl_count, JobLog.objects.count())
