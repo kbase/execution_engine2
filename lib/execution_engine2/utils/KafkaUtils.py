@@ -38,6 +38,7 @@ def send_kafka_update_cancel(data):
 
 @dataclass
 class KafkaStatusUpdate:
+
     job_id: str = None
     previous_status: str = None
     new_status: str = None
@@ -59,7 +60,7 @@ class KafkaStatusUpdate:
                 raise Exception("Need to provide a previous_status")
 
         # A created job may not have been able to have been submitted to condor, so it may not have a scheduler_id
-        if self.new_status not in ["created", "terminated", "canceled"]:
+        if self.new_status not in [Status.created.value, Status.terminated.value, Status.terminated.value]:
             if self.scheduler_id is None:
                 message = f"You must pass a scheduler id once the job has been created already. Job status is {self.new_status}"
                 logging.error(message)
@@ -71,6 +72,7 @@ class KafkaCondorCommandUpdate(KafkaStatusUpdate):
     job_id: int = None
     requested_condor_deletion: bool = None
     event_type: str = CONDOR_EVENT_TYPE
+
 
     def __post_init__(self):
         if self.job_id is None:
@@ -136,10 +138,10 @@ def _delivery_report(err, msg):
         logging.error(msg)
 
 
-def send_message_to_kafka(
-    data, data_class, topic=DEFAULT_TOPIC, server_address="kafka"
+def send_kafka_message(
+    message, topic=DEFAULT_TOPIC, server_address="kafka"
 ):
-    message = data_class(**data)
+
     producer = Producer({"bootstrap.servers": server_address})
     producer.produce(topic, json.dumps(message.__dict__), callback=_delivery_report)
     producer.poll(2)
