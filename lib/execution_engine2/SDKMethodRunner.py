@@ -34,10 +34,7 @@ from execution_engine2.exceptions import (
     InvalidStatusTransitionException,
 )
 from execution_engine2.utils.Condor import Condor
-from execution_engine2.utils.KafkaUtils import (
-    send_kafka_message,
-    KafkaStatusUpdate
-)
+from execution_engine2.utils.KafkaUtils import send_kafka_message, KafkaStatusUpdate
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.authclient import KBaseAuth
@@ -149,7 +146,9 @@ class SDKMethodRunner:
         with self.get_mongo_util().mongo_engine_connection():
             job.save()
 
-        create_job_status_msg = KafkaStatusUpdate(job_id=str(job.id), new_status=job.status)
+        create_job_status_msg = KafkaStatusUpdate(
+            job_id=str(job.id), new_status=job.status
+        )
         send_kafka_message(message=create_job_status_msg)
 
         return str(job.id)
