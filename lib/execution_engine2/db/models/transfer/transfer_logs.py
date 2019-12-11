@@ -54,7 +54,9 @@ class MigrateDatabases:
         )
 
         self.ee2_logs = (
-            self._get_njs_connection().get_database(self.njs_db).get_collection("logs")
+            self._get_njs_connection()
+            .get_database("exec_engine2")
+            .get_collection("logs")
         )
 
     def save_log(self, log):
@@ -78,7 +80,7 @@ class MigrateDatabases:
 
             job_log.primary_key = log["ujs_job_id"]
             count += 1
-            print(f"Working on {log['ujs_job_ids']}", count)
+            print(f"Working on {log['ujs_job_id']}", count)
 
             job_log.original_line_count = log["original_line_count"]
             job_log.stored_line_count = log["stored_line_count"]
