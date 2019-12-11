@@ -324,8 +324,6 @@ class SDKMethodRunner:
         mongo_util = self.get_mongo_util()
 
         if not self._get_job_permission_from_cache(job_id, self.user_id, JobPermissions.WRITE):
-            # print('fsdafsfsaf')
-            # print(dict(self.job_permission_cache))
             with mongo_util.mongo_engine_connection():
                 job = Job.objects.with_id(job_id)
                 if not job:
