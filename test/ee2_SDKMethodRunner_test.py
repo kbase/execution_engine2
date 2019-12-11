@@ -609,9 +609,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             test_line = ori_lines[0]
 
-            self.assertEqual(test_line.line, "Hello world")
-            self.assertEqual(test_line.linepos, 1)
-            self.assertFalse(test_line.error)
+            self.assertEqual(test_line["line"], "Hello world")
+            self.assertEqual(test_line["linepos"], 1)
+            self.assertFalse(test_line["error"])
 
             # add job log
             lines = [
@@ -632,22 +632,22 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             # original line
             test_line = ori_lines[0]
 
-            self.assertEqual(test_line.line, "Hello world")
-            self.assertEqual(test_line.linepos, 1)
-            self.assertFalse(test_line.error)
+            self.assertEqual(test_line["line"], "Hello world")
+            self.assertEqual(test_line["linepos"], 1)
+            self.assertFalse(test_line["error"])
 
             # new line
             test_line = ori_lines[1]
 
-            self.assertEqual(test_line.line, "Hello Kbase")
-            self.assertEqual(test_line.linepos, 2)
-            self.assertTrue(test_line.error)
+            self.assertEqual(test_line["line"], "Hello Kbase")
+            self.assertEqual(test_line["linepos"], 2)
+            self.assertTrue(test_line["error"])
 
             test_line = ori_lines[2]
 
-            self.assertEqual(test_line.line, "Hello Wrold Kbase")
-            self.assertEqual(test_line.linepos, 3)
-            self.assertFalse(test_line.error)
+            self.assertEqual(test_line["line"], "Hello Wrold Kbase")
+            self.assertEqual(test_line["linepos"], 3)
+            self.assertFalse(test_line["error"])
 
             self.mongo_util.get_job(job_id=job_id).delete()
             self.assertEqual(ori_job_count, Job.objects.count())
