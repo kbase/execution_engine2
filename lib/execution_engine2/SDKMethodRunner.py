@@ -228,8 +228,9 @@ class SDKMethodRunner:
         :return:
         """
         logging.debug(f"About to view logs for {job_id}")
-        job = self.get_mongo_util().get_job(job_id)
-        self._test_job_permissions(job, job_id, level=JobPermissions.READ)
+        if not self._get_job_permission_from_cache(job_id, self.user_id, JobPermissions.READ):
+            job = self.get_mongo_util().get_job(job_id)
+            self._test_job_permissions(job, job_id, level=JobPermissions.READ)
         logging.debug("Success, you have permission to view logs for " + job_id)
         return self._get_job_log(job_id, skip_lines)
 
@@ -411,7 +412,8 @@ class SDKMethodRunner:
         # Maybe if the call fails, we don't actually cancel the job?
         logging.debug(f"Attempting to cancel job {job_id}")
         job = self.get_mongo_util().get_job(job_id=job_id)
-        self._test_job_permissions(job, job_id, JobPermissions.WRITE)
+        if not self._get_job_permission_from_cache(job_id, self.user_id, JobPermissions.WRITE):
+            self._test_job_permissions(job, job_id, JobPermissions.WRITE)
         logging.info(f"User has permission to cancel job {job_id}")
         logging.debug(f"User has permission to cancel job {job_id}")
         self.get_mongo_util().cancel_job(job_id=job_id, terminated_code=terminated_code)
@@ -651,7 +653,8 @@ class SDKMethodRunner:
         job_params = dict()
 
         job = self.get_mongo_util().get_job(job_id=job_id)
-        self._test_job_permissions(job, job_id, JobPermissions.READ)
+        if not self._get_job_permission_from_cache(job_id, self.user_id, JobPermissions.READ):
+            self._test_job_permissions(job, job_id, JobPermissions.READ)
 
         job_input = job.job_input
 
@@ -682,7 +685,8 @@ class SDKMethodRunner:
             raise ValueError("Please provide both job_id and status")
 
         job = self.get_mongo_util().get_job(job_id=job_id)
-        self._test_job_permissions(job, job_id, JobPermissions.WRITE)
+        if not self._get_job_permission_from_cache(job_id, self.user_id, JobPermissions.WRITE):
+            self._test_job_permissions(job, job_id, JobPermissions.WRITE)
 
         job.status = status
         with self.get_mongo_util().mongo_engine_connection():
@@ -708,7 +712,8 @@ class SDKMethodRunner:
             raise ValueError("Please provide valid job_id")
 
         job = self.get_mongo_util().get_job(job_id=job_id)
-        self._test_job_permissions(job, job_id, JobPermissions.READ)
+        if not self._get_job_permission_from_cache(job_id, self.user_id, JobPermissions.READ):
+            self._test_job_permissions(job, job_id, JobPermissions.READ)
 
         returnVal["status"] = job.status
 
@@ -780,8 +785,9 @@ class SDKMethodRunner:
         if not job_id:
             raise ValueError("Please provide valid job_id")
 
-        job = self.get_mongo_util().get_job(job_id=job_id)
-        self._test_job_permissions(job, job_id, JobPermissions.WRITE)
+        if not self._get_job_permission_from_cache(job_id, self.user_id, JobPermissions.WRITE):
+            job = self.get_mongo_util().get_job(job_id=job_id)
+            self._test_job_permissions(job, job_id, JobPermissions.WRITE)
         self._check_job_is_running(job_id=job_id)
 
         if error_message:
@@ -821,7 +827,8 @@ class SDKMethodRunner:
             raise ValueError("Please provide valid job_id")
 
         job = self.get_mongo_util().get_job(job_id=job_id)
-        self._test_job_permissions(job, job_id, JobPermissions.WRITE)
+        if not self._get_job_permission_from_cache(job_id, self.user_id, JobPermissions.WRITE):
+            self._test_job_permissions(job, job_id, JobPermissions.WRITE)
         job_status = job.status
 
         allowed_states = [
