@@ -196,10 +196,7 @@ class SDKMethodRunner:
         """
 
         mongo_util = self.get_mongo_util()
-        with mongo_util.me_collection(self.config["mongo-logs-collection"]) as (
-            pymongo_client,
-            mongoengine_client
-        ):
+        with mongo_util.me_collection(self.config["mongo-logs-collection"]):
             log = mongo_util.get_job_log_pymongo(job_id)
 
         lines = []
@@ -324,10 +321,7 @@ class SDKMethodRunner:
         self._test_job_permissions(job, job_id, JobPermissions.WRITE)
         logging.debug("Success, you have permission to add logs for " + job_id)
 
-        with mongo_util.me_collection(self.config["mongo-logs-collection"]) as (
-            pymongo_client,
-            mongoengine_client
-        ):
+        with mongo_util.me_collection(self.config["mongo-logs-collection"]):
             try:
                 log = mongo_util.get_job_log_pymongo(job_id)
             except RecordNotFoundException:
@@ -355,10 +349,7 @@ class SDKMethodRunner:
         log["original_line_count"] = olc
         log["stored_line_count"] = olc
 
-        with mongo_util.me_collection(self.config["mongo-logs-collection"]) as (
-            pymongo_client,
-            mongoengine_client
-        ):
+        with mongo_util.me_collection(self.config["mongo-logs-collection"]):
             mongo_util.update_one(log, str(log.get("_id")))
 
         return log["stored_line_count"]
