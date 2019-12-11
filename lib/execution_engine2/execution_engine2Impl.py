@@ -2,6 +2,7 @@
 #BEGIN_HEADER
 from execution_engine2.SDKMethodRunner import SDKMethodRunner
 import time
+from cachetools import TTLCache
 #END_HEADER
 
 
@@ -11,7 +12,7 @@ class execution_engine2:
     execution_engine2
 
     Module Description:
-    
+
     '''
 
     ######## WARNING FOR GEVENT USERS ####### noqa
@@ -30,6 +31,9 @@ class execution_engine2:
 
     SERVICE_NAME = "KBase Execution Engine"
 
+    JOB_PERMISSION_CACHE_SIZE = 500
+    JOB_PERMISSION_CACHE_EXPIRE_TIME = 300  # seconds
+
     #END_CLASS_HEADER
 
     # config contains contents of config file in a hash or None if it couldn't
@@ -39,6 +43,8 @@ class execution_engine2:
         self.config = config
         self.config["mongo-collection"] = self.MONGO_COLLECTION
         self.config.setdefault("mongo-authmechanism", self.MONGO_AUTHMECHANISM)
+        self.job_permission_cache = TTLCache(maxsize=self.JOB_PERMISSION_CACHE_SIZE,
+                                             ttl=self.JOB_PERMISSION_CACHE_EXPIRE_TIME)
         #END_CONSTRUCTOR
         pass
 
@@ -304,7 +310,9 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: line_number
         #BEGIN add_job_logs
-        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
+
+        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+                             job_permission_cache=self.job_permission_cache)
         line_number = mr.add_job_logs(job_id=job_id, log_lines=lines)
         #END add_job_logs
 
