@@ -5,6 +5,7 @@ import time
 from collections import namedtuple, OrderedDict
 from datetime import datetime
 from enum import Enum
+from cachetools import TTLCache
 
 import dateutil
 from bson import ObjectId
@@ -57,6 +58,10 @@ class JobPermissions(Enum):
 
 
 class SDKMethodRunner:
+
+    JOB_PERMISSION_CACHE_SIZE = 500
+    JOB_PERMISSION_CACHE_EXPIRE_TIME = 300  # seconds
+
     def _get_client_groups(self, method):
         """
         get client groups info from Catalog
@@ -317,13 +322,18 @@ class SDKMethodRunner:
         """
         logging.debug(f"About to add logs for {job_id}")
         mongo_util = self.get_mongo_util()
-        with mongo_util.mongo_engine_connection():
-            job = Job.objects.with_id(job_id)
-            if not job:
-                raise RecordNotFoundException(
-                    "Cannot find job log with id: {}".format(job_id)
-                )
-        self._test_job_permissions(job, job_id, JobPermissions.WRITE)
+
+        if not self._get_job_permission_from_cache(job_id, self.user_id, JobPermissions.WRITE):
+            # print('fsdafsfsaf')
+            # print(dict(self.job_permission_cache))
+            with mongo_util.mongo_engine_connection():
+                job = Job.objects.with_id(job_id)
+                if not job:
+                    raise RecordNotFoundException(
+                        "Cannot find job log with id: {}".format(job_id)
+                    )
+            self._test_job_permissions(job, job_id, JobPermissions.WRITE)
+
         logging.debug("Success, you have permission to add logs for " + job_id)
 
         with mongo_util.me_collection(self.config["mongo-logs-collection"]):
@@ -381,6 +391,8 @@ class SDKMethodRunner:
         self.user_id = user_id
         self.token = token
         self.is_admin = False
+        self.job_permission_cache = TTLCache(maxsize=self.JOB_PERMISSION_CACHE_SIZE,
+                                             ttl=self.JOB_PERMISSION_CACHE_EXPIRE_TIME)
 
         logging.basicConfig(
             format="%(created)s %(levelname)s: %(message)s", level=logging.debug
@@ -559,6 +571,28 @@ class SDKMethodRunner:
             )
             raise e
 
+    def _update_job_permission_cache(self, job_id, user_id, level, perm):
+
+        if not self.job_permission_cache.get(job_id):
+            self.job_permission_cache[job_id] = {user_id: {level: perm}}
+        else:
+            job_permission = self.job_permission_cache[job_id]
+            if not job_permission.get(user_id):
+                job_permission[user_id] = {level: perm}
+            else:
+                job_permission[user_id][level] = perm
+
+    def _get_job_permission_from_cache(self, job_id, user_id, level):
+
+        if not self.job_permission_cache.get(job_id):
+            return False
+        else:
+            job_permission = self.job_permission_cache[job_id]
+            if not job_permission.get(user_id):
+                return False
+            else:
+                return job_permission[user_id].get(level)
+
     def _test_job_permissions(
         self, job: Job, job_id: str, level: JobPermissions
     ) -> bool:
@@ -582,13 +616,16 @@ class SDKMethodRunner:
         :returns: True if the user has permission, raises a PermissionError otherwise.
         """
         if self.is_admin:  # bypass if we're in admin mode.
-            return
+            self._update_job_permission_cache(job_id, self.user_id, level, True)
+            return True
         try:
             perm = False
             if level == JobPermissions.READ:
                 perm = can_read_job(job, self.user_id, self.token, self.config)
+                self._update_job_permission_cache(job_id, self.user_id, level, perm)
             elif level == JobPermissions.WRITE:
                 perm = can_write_job(job, self.user_id, self.token, self.config)
+                self._update_job_permission_cache(job_id, self.user_id, level, perm)
             if not perm:
                 raise PermissionError(
                     f"User {self.user_id} does not have permission to {level} job {job_id}"
