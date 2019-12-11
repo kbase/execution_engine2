@@ -202,7 +202,6 @@ class SDKMethodRunner:
         ):
             log = mongo_util.get_job_log_pymongo(job_id)
 
-        # log = self.get_mongo_util().get_job_log(job_id)
         lines = []
         for log_line in log.get("lines", []):  # type: LogLines
             if skip_lines and int(skip_lines) >= log_line.get("linepos", 0):
@@ -325,7 +324,6 @@ class SDKMethodRunner:
         self._test_job_permissions(job, job_id, JobPermissions.WRITE)
         logging.debug("Success, you have permission to add logs for " + job_id)
 
-        mongo_util = self.get_mongo_util()
         with mongo_util.me_collection(self.config["mongo-logs-collection"]) as (
             pymongo_client,
             mongoengine_client
