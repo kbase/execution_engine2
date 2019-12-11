@@ -317,9 +317,14 @@ class SDKMethodRunner:
         """
         logging.debug(f"About to add logs for {job_id}")
         mongo_util = self.get_mongo_util()
-        # job = mongo_util.get_job(job_id=job_id)
-        # self._test_job_permissions(job, job_id, JobPermissions.WRITE)
-        # logging.debug("Success, you have permission to add logs for " + job_id)
+        with mongo_util.mongo_engine_connection():
+            job = Job.objects.with_id(job_id)
+            if not job:
+                raise RecordNotFoundException(
+                    "Cannot find job log with id: {}".format(job_id)
+                )
+        self._test_job_permissions(job, job_id, JobPermissions.WRITE)
+        logging.debug("Success, you have permission to add logs for " + job_id)
 
         with mongo_util.me_collection(self.config["mongo-logs-collection"]):
             try:
