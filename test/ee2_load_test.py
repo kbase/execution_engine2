@@ -54,7 +54,7 @@ class ee2_server_load_test(unittest.TestCase):
             db=cls.cfg["mongo-database"], col=cls.cfg["mongo-jobs-collection"]
         )
 
-        cls.thread_count = 200
+        cls.thread_count = 50
 
     def getRunner(self):
         return copy.deepcopy(self.__class__.method_runner)
