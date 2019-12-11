@@ -317,3 +317,34 @@ class MongoUtilTest(unittest.TestCase):
 
             mongo_util.get_job_log(job_id=primary_key).delete()
             self.assertEqual(ori_jl_count, JobLog.objects.count())
+
+    def test_get_job_log_pymongo_ok(self):
+
+        mongo_util = self.getMongoUtil()
+
+        primary_key = ObjectId()
+
+        jl = JobLog()
+        jl.primary_key = primary_key
+        jl.original_line_count = 0
+        jl.stored_line_count = 0
+        jl.lines = []
+
+        with mongo_util.me_collection(self.config["mongo-logs-collection"]) as (
+            pymongo_client,
+            mongoengine_client,
+        ):
+            jl_col = pymongo_client[self.config["mongo-database"]][
+                self.config["mongo-logs-collection"]
+            ]
+
+            ori_jl_count = jl_col.count_documents({})
+
+            jl.save()  # save job log
+
+            self.assertEqual(JobLog.objects.count(), ori_jl_count + 1)
+            job_log = mongo_util.get_job_log_pymongo(str(primary_key))
+
+            self.assertEqual(job_log.get("original_line_count"), 0)
+            self.assertEqual(job_log.get("stored_line_count"), 0)
+            self.assertIsNone(job_log.get("lines"))
