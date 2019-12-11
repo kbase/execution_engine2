@@ -367,7 +367,7 @@ class SDKMethodRunner:
 
         return log["stored_line_count"]
 
-    def __init__(self, config, user_id=None, token=None):
+    def __init__(self, config, user_id=None, token=None, job_permission_cache=None):
         self.deployment_config_fp = os.environ.get("KB_DEPLOYMENT_CONFIG")
         self.config = config
         self.mongo_util = None
@@ -389,8 +389,12 @@ class SDKMethodRunner:
         self.user_id = user_id
         self.token = token
         self.is_admin = False
-        self.job_permission_cache = TTLCache(maxsize=self.JOB_PERMISSION_CACHE_SIZE,
-                                             ttl=self.JOB_PERMISSION_CACHE_EXPIRE_TIME)
+
+        if job_permission_cache is None:
+            self.job_permission_cache = TTLCache(maxsize=self.JOB_PERMISSION_CACHE_SIZE,
+                                                 ttl=self.JOB_PERMISSION_CACHE_EXPIRE_TIME)
+        else:
+            self.job_permission_cache = job_permission_cache
 
         logging.basicConfig(
             format="%(created)s %(levelname)s: %(message)s", level=logging.debug
