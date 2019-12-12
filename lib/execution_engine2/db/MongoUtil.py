@@ -154,7 +154,7 @@ class MongoUtil:
             pymongo_client,
             mongoengine_client,
         ):
-            job_log_col = pymongo_client[self.mongo_database][mongo_collection]
+            job_log_col = pymongo_client[self.mongo_database][self.mongo_collection]
             try:
                 find_filter = {"_id": ObjectId(job_id)}
                 job_log = job_log_col.find_one(find_filter)
