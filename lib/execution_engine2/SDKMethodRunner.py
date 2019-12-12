@@ -67,7 +67,7 @@ class SDKMethodRunner:
 
             job_id = kwargs.get("job_id")
             if not job_id:
-                raise ValueError("Please provide job_id")
+                raise ValueError("Please provide valid job_id")
             self._test_job_permission_with_cache(job_id, JobPermissions.READ)
 
             return func(self, *args, **kwargs)
@@ -79,7 +79,7 @@ class SDKMethodRunner:
 
             job_id = kwargs.get("job_id")
             if not job_id:
-                raise ValueError("Please provide job_id")
+                raise ValueError("Please provide valid job_id")
             self._test_job_permission_with_cache(job_id, JobPermissions.WRITE)
 
             return func(self, *args, **kwargs)
@@ -797,9 +797,6 @@ class SDKMethodRunner:
         :param error: dict - default None, if given, set the error to this structure
         :param job_output: dict - default None, if given this job has some output
         """
-
-        if not job_id:
-            raise ValueError("Please provide valid job_id")
 
         self._check_job_is_running(job_id=job_id)
 
