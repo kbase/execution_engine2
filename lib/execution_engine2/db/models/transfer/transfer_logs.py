@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import datetime
 import os
 from configparser import ConfigParser
 
@@ -21,7 +20,7 @@ class MigrateDatabases:
     """
 
     documents = []
-    threshold = 20
+
     none_jobs = 0
 
     def _get_njs_connection(self) -> MongoClient:
@@ -73,7 +72,8 @@ class MigrateDatabases:
     def begin_log_transfer(self):  # flake8: noqa
 
         logs_cursor = self.njs_logs.find()
-
+        success = 0
+        failures = 0
         count = 0
         for log in logs_cursor:
             job_log = JobLog()
@@ -95,9 +95,17 @@ class MigrateDatabases:
                 lines.append(ll)
             job_log.lines = lines
             job_log.validate()
-            self.save_log(job_log)
+            try:
+                self.ee2_logs.insert_one(job_log.to_mongo())
+                success += 1
+            except Exception as e:
+                print("couldn't insert ", log["ujs_job_id"])
+                print(e)
+                failures += 1
+
+            # self.save_log(job_log)
         # Save leftover jobs
-        self.save_remnants()
+        # self.save_remnants()
 
         # TODO SAVE up to 5000 in memory and do a bulk insert
         # a = []
