@@ -188,7 +188,7 @@ class ee2_server_load_test(unittest.TestCase):
                 runner.start_job(job_ids_running[index])
                 runner.start_job(job_ids_finish[index])
                 job_output = {'version': '11', 'result': {'result': 1}, 'id': '5d54bdcb9b402d15271b3208'}
-                runner.finish_job(job_ids_finish[index], job_output=job_output)
+                runner.finish_job(job_id=job_ids_finish[index], job_output=job_output)
 
             for index in range(thread_count):
                 x = threading.Thread(target=update_states(index, job_ids_queued, job_ids_running, job_ids_completed))
