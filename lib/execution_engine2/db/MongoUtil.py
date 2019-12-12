@@ -148,7 +148,9 @@ class MongoUtil:
 
     def get_job_log_pymongo(self, job_id: str = None):
 
-        with self.me_collection(self.mongo_collection) as (
+        mongo_collection = self.config["mongo-logs-collection"]
+
+        with self.me_collection(mongo_collection) as (
             pymongo_client,
             mongoengine_client,
         ):
