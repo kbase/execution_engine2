@@ -380,7 +380,7 @@ class execution_engine2:
         #BEGIN finish_job
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
                              job_permission_cache=self.job_permission_cache)
-        mr.finish_job(params.get('job_id'),
+        mr.finish_job(job_id=params.get('job_id'),
                       error_message=params.get('error_message'),
                       error_code=params.get('error_code'),
                       error=params.get('error'),
