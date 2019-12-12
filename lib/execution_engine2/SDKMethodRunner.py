@@ -66,7 +66,7 @@ class SDKMethodRunner:
         def inner(self, *args, **kwargs):
 
             job_id = kwargs.get("job_id")
-            if not job_id:
+            if job_id is None:
                 raise ValueError("Please provide valid job_id")
             self._test_job_permission_with_cache(job_id, JobPermissions.READ)
 
@@ -78,7 +78,7 @@ class SDKMethodRunner:
         def inner(self, *args, **kwargs):
 
             job_id = kwargs.get("job_id")
-            if not job_id:
+            if job_id is None:
                 raise ValueError("Please provide valid job_id")
             self._test_job_permission_with_cache(job_id, JobPermissions.WRITE)
 
