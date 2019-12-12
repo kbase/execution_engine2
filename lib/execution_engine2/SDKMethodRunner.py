@@ -201,8 +201,7 @@ class SDKMethodRunner:
         """
 
         mongo_util = self.get_mongo_util()
-        with mongo_util.me_collection(self.config["mongo-logs-collection"]):
-            log = mongo_util.get_job_log_pymongo(job_id)
+        log = mongo_util.get_job_log_pymongo(job_id)
 
         lines = []
         for log_line in log.get("lines", []):  # type: LogLines
@@ -335,11 +334,10 @@ class SDKMethodRunner:
 
         logging.debug("Success, you have permission to add logs for " + job_id)
 
-        with mongo_util.me_collection(self.config["mongo-logs-collection"]):
-            try:
-                log = mongo_util.get_job_log_pymongo(job_id)
-            except RecordNotFoundException:
-                log = self._create_new_log(pk=job_id).to_mongo().to_dict()
+        try:
+            log = mongo_util.get_job_log_pymongo(job_id)
+        except RecordNotFoundException:
+            log = self._create_new_log(pk=job_id).to_mongo().to_dict()
 
         olc = log.get("original_line_count")
 
