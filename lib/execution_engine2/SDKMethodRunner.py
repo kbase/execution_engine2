@@ -62,6 +62,30 @@ class SDKMethodRunner:
     JOB_PERMISSION_CACHE_SIZE = 500
     JOB_PERMISSION_CACHE_EXPIRE_TIME = 300  # seconds
 
+    def allow_job_read(func):
+        def inner(self, *args, **kwargs):
+
+            job_id = kwargs.get("job_id")
+            if not job_id:
+                raise ValueError("Please provide job_id")
+            self._test_job_permission_with_cache(job_id, JobPermissions.READ)
+
+            return func(self, *args, **kwargs)
+
+        return inner
+
+    def allow_job_write(func):
+        def inner(self, *args, **kwargs):
+
+            job_id = kwargs.get("job_id")
+            if not job_id:
+                raise ValueError("Please provide job_id")
+            self._test_job_permission_with_cache(job_id, JobPermissions.WRITE)
+
+            return func(self, *args, **kwargs)
+
+        return inner
+
     def _get_client_groups(self, method):
         """
         get client groups info from Catalog
@@ -219,6 +243,7 @@ class SDKMethodRunner:
         log_obj = {"lines": lines, "last_line_number": log["stored_line_count"]}
         return log_obj
 
+    @allow_job_read
     def view_job_logs(self, job_id, skip_lines):
         """
         Authorization Required: Ability to read from the workspace
@@ -226,9 +251,6 @@ class SDKMethodRunner:
         :param skip_lines:
         :return:
         """
-        logging.debug(f"About to view logs for {job_id}")
-        self._test_job_permission_with_cache(job_id, JobPermissions.READ)
-        logging.debug("Success, you have permission to view logs for " + job_id)
         return self._get_job_log(job_id, skip_lines)
 
     def _send_exec_stats_to_catalog(self, job_id):
@@ -301,6 +323,7 @@ class SDKMethodRunner:
 
         return time_input
 
+    @allow_job_write
     def add_job_logs(self, job_id, log_lines):
         """
         #TODO Prevent too many logs in memory
@@ -320,10 +343,6 @@ class SDKMethodRunner:
         """
         logging.debug(f"About to add logs for {job_id}")
         mongo_util = self.get_mongo_util()
-
-        self._test_job_permission_with_cache(job_id, JobPermissions.WRITE)
-
-        logging.debug("Success, you have permission to add logs for " + job_id)
 
         try:
             log = mongo_util.get_job_log_pymongo(job_id)
@@ -591,6 +610,8 @@ class SDKMethodRunner:
             job = self.get_mongo_util().get_job(job_id=job_id)
             self._test_job_permissions(job, job_id, permission)
 
+        logging.debug("you have permission to {} job {}".format(permission, job_id))
+
     def _get_job_with_permission(self, job_id, permission):
         job = self.get_mongo_util().get_job(job_id=job_id)
         if not self._get_job_permission_from_cache(job_id, self.user_id, permission):
@@ -758,6 +779,7 @@ class SDKMethodRunner:
             job_id=job_id, job_output=job_output
         )
 
+    @allow_job_write
     def finish_job(
         self, job_id, error_message=None, error_code=None, error=None, job_output=None
     ):
@@ -779,7 +801,6 @@ class SDKMethodRunner:
         if not job_id:
             raise ValueError("Please provide valid job_id")
 
-        self._test_job_permission_with_cache(job_id, JobPermissions.WRITE)
         self._check_job_is_running(job_id=job_id)
 
         if error_message:
