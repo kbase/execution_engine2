@@ -190,10 +190,6 @@ class MongoUtil:
 
         return job_log
 
-    def job_log_exists(self, job_id):
-        with self.mongo_engine_connection():
-            return JobLog.objects(pk=job_id).count() != 0
-
     def get_job(self, job_id=None, projection=None) -> Job:
 
         if job_id is None:
