@@ -224,8 +224,7 @@ class SDKMethodRunner:
         :return:
         """
 
-        mongo_util = self.get_mongo_util()
-        log = mongo_util.get_job_log_pymongo(job_id)
+        log = self.get_mongo_util().get_job_log_pymongo(job_id)
 
         lines = []
         for log_line in log.get("lines", []):  # type: LogLines
