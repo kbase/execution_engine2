@@ -150,10 +150,7 @@ class MongoUtil:
 
         mongo_collection = self.config["mongo-logs-collection"]
 
-        with self.me_collection(mongo_collection) as (
-            pymongo_client,
-            mongoengine_client,
-        ):
+        with self.pymongo_client(mongo_collection) as pymongo_client:
             job_log_col = pymongo_client[self.mongo_database][self.mongo_collection]
             try:
                 find_filter = {"_id": ObjectId(job_id)}
@@ -400,10 +397,7 @@ class MongoUtil:
         """
         logging.info("start inserting document")
 
-        with self.me_collection(self.mongo_collection) as (
-            pymongo_client,
-            mongoengine_client,
-        ):
+        with self.pymongo_client(self.mongo_collection) as pymongo_client:
             try:
                 rec = pymongo_client[self.mongo_database][
                     self.mongo_collection
@@ -424,10 +418,7 @@ class MongoUtil:
         """
         logging.info("start updating document")
 
-        with self.me_collection(self.mongo_collection) as (
-            pymongo_client,
-            mongoengine_client,
-        ):
+        with self.pymongo_client(self.mongo_collection) as pymongo_client:
             job_col = pymongo_client[self.mongo_database][self.mongo_collection]
             try:
                 update_filter = {"_id": ObjectId(job_id)}
@@ -447,10 +438,7 @@ class MongoUtil:
         delete a doc by _id
         """
         logging.info("start deleting document")
-        with self.me_collection(self.mongo_collection) as (
-            pymongo_client,
-            mongoengine_client,
-        ):
+        with self.pymongo_client(self.mongo_collection) as pymongo_client:
             job_col = pymongo_client[self.mongo_database][self.mongo_collection]
             try:
                 delete_filter = {"_id": ObjectId(job_id)}
@@ -470,10 +458,7 @@ class MongoUtil:
         """
         logging.info("start querying MongoDB")
 
-        with self.me_collection(self.mongo_collection) as (
-            pymongo_client,
-            mongoengine_client,
-        ):
+        with self.pymongo_client(self.mongo_collection) as pymongo_client:
             job_col = pymongo_client[self.mongo_database][self.mongo_collection]
             try:
                 result = job_col.find(
