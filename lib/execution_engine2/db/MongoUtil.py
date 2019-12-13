@@ -146,6 +146,29 @@ class MongoUtil:
         finally:
             mc.close()
 
+    def get_job_log_pymongo(self, job_id: str = None):
+
+        mongo_collection = self.config["mongo-logs-collection"]
+
+        with self.pymongo_client(mongo_collection) as pymongo_client:
+            job_log_col = pymongo_client[self.mongo_database][self.mongo_collection]
+            try:
+                find_filter = {"_id": ObjectId(job_id)}
+                job_log = job_log_col.find_one(find_filter)
+            except Exception as e:
+                error_msg = "Unable to find job\n"
+                error_msg += "ERROR -- {}:\n{}".format(
+                    e, "".join(traceback.format_exception(None, e, e.__traceback__))
+                )
+                raise ValueError(error_msg)
+
+            if not job_log:
+                raise RecordNotFoundException(
+                    "Cannot find job log with id: {}".format(job_id)
+                )
+
+        return job_log
+
     def get_job_log(self, job_id: str = None) -> JobLog:
         if job_id is None:
             raise ValueError("Please provide a job id")
@@ -374,10 +397,7 @@ class MongoUtil:
         """
         logging.info("start inserting document")
 
-        with self.me_collection(self.mongo_collection) as (
-            pymongo_client,
-            mongoengine_client,
-        ):
+        with self.pymongo_client(self.mongo_collection) as pymongo_client:
             try:
                 rec = pymongo_client[self.mongo_database][
                     self.mongo_collection
@@ -398,15 +418,12 @@ class MongoUtil:
         """
         logging.info("start updating document")
 
-        with self.me_collection(self.mongo_collection) as (
-            pymongo_client,
-            mongoengine_client,
-        ):
+        with self.pymongo_client(self.mongo_collection) as pymongo_client:
             job_col = pymongo_client[self.mongo_database][self.mongo_collection]
             try:
                 update_filter = {"_id": ObjectId(job_id)}
                 update = {"$set": doc}
-                job_col.update_one(update_filter, update)
+                job_col.update_one(update_filter, update, upsert=True)
             except Exception as e:
                 error_msg = "Connot update doc\n"
                 error_msg += "ERROR -- {}:\n{}".format(
@@ -421,10 +438,7 @@ class MongoUtil:
         delete a doc by _id
         """
         logging.info("start deleting document")
-        with self.me_collection(self.mongo_collection) as (
-            pymongo_client,
-            mongoengine_client,
-        ):
+        with self.pymongo_client(self.mongo_collection) as pymongo_client:
             job_col = pymongo_client[self.mongo_database][self.mongo_collection]
             try:
                 delete_filter = {"_id": ObjectId(job_id)}
@@ -444,10 +458,7 @@ class MongoUtil:
         """
         logging.info("start querying MongoDB")
 
-        with self.me_collection(self.mongo_collection) as (
-            pymongo_client,
-            mongoengine_client,
-        ):
+        with self.pymongo_client(self.mongo_collection) as pymongo_client:
             job_col = pymongo_client[self.mongo_database][self.mongo_collection]
             try:
                 result = job_col.find(

@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.INFO)
 bootstrap()
 
 
-class ee2_SDKMethodRunner_test(unittest.TestCase):
+class ee2_server_load_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
@@ -54,7 +54,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             db=cls.cfg["mongo-database"], col=cls.cfg["mongo-jobs-collection"]
         )
 
-        cls.thread_count = 20
+        cls.thread_count = 50
 
     def getRunner(self):
         return copy.deepcopy(self.__class__.method_runner)
@@ -188,7 +188,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 runner.start_job(job_ids_running[index])
                 runner.start_job(job_ids_finish[index])
                 job_output = {'version': '11', 'result': {'result': 1}, 'id': '5d54bdcb9b402d15271b3208'}
-                runner.finish_job(job_ids_finish[index], job_output=job_output)
+                runner.finish_job(job_id=job_ids_finish[index], job_output=job_output)
 
             for index in range(thread_count):
                 x = threading.Thread(target=update_states(index, job_ids_queued, job_ids_running, job_ids_completed))
@@ -557,10 +557,13 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             # exam each line created by add_job_logs
             lines = job_lines['lines']
             self.assertEqual(len(lines), thread_count)
+            line_pos = list()
             for line in lines:
                 self.assertEqual(line['line'], 'hello ee2')
                 self.assertFalse(line['error'])
                 self.assertEqual(line['ts'], int(ts * 1000))
+                line_pos.append(line['linepos'])
+            self.assertCountEqual(line_pos, list(range(1, thread_count + 1)))
 
             jobs = self.mongo_util.get_jobs(job_ids=[job_id])
             jobs.delete()

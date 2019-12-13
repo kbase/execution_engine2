@@ -5,6 +5,7 @@ import time
 from collections import namedtuple, OrderedDict
 from datetime import datetime
 from enum import Enum
+from cachetools import TTLCache
 
 import dateutil
 from bson import ObjectId
@@ -57,6 +58,34 @@ class JobPermissions(Enum):
 
 
 class SDKMethodRunner:
+
+    JOB_PERMISSION_CACHE_SIZE = 500
+    JOB_PERMISSION_CACHE_EXPIRE_TIME = 300  # seconds
+
+    def allow_job_read(func):
+        def inner(self, *args, **kwargs):
+
+            job_id = kwargs.get("job_id")
+            if job_id is None:
+                raise ValueError("Please provide valid job_id")
+            self._test_job_permission_with_cache(job_id, JobPermissions.READ)
+
+            return func(self, *args, **kwargs)
+
+        return inner
+
+    def allow_job_write(func):
+        def inner(self, *args, **kwargs):
+
+            job_id = kwargs.get("job_id")
+            if job_id is None:
+                raise ValueError("Please provide valid job_id")
+            self._test_job_permission_with_cache(job_id, JobPermissions.WRITE)
+
+            return func(self, *args, **kwargs)
+
+        return inner
+
     def _get_client_groups(self, method):
         """
         get client groups info from Catalog
@@ -194,23 +223,26 @@ class SDKMethodRunner:
         :param skip_lines:
         :return:
         """
-        log = self.get_mongo_util().get_job_log(job_id)
+
+        log = self.get_mongo_util().get_job_log_pymongo(job_id)
+
         lines = []
-        for log_line in log.lines:  # type: LogLines
-            if skip_lines and int(skip_lines) >= log_line.linepos:
+        for log_line in log.get("lines", []):  # type: LogLines
+            if skip_lines and int(skip_lines) >= log_line.get("linepos", 0):
                 continue
             lines.append(
                 {
-                    "line": log_line.line,
-                    "linepos": log_line.linepos,
-                    "error": log_line.error,
-                    "ts": int(log_line.ts * 1000),
+                    "line": log_line.get("line"),
+                    "linepos": log_line.get("linepos"),
+                    "error": log_line.get("error"),
+                    "ts": int(log_line.get("ts", 0) * 1000),
                 }
             )
 
-        log_obj = {"lines": lines, "last_line_number": log.stored_line_count}
+        log_obj = {"lines": lines, "last_line_number": log["stored_line_count"]}
         return log_obj
 
+    @allow_job_read
     def view_job_logs(self, job_id, skip_lines):
         """
         Authorization Required: Ability to read from the workspace
@@ -218,10 +250,6 @@ class SDKMethodRunner:
         :param skip_lines:
         :return:
         """
-        logging.debug(f"About to view logs for {job_id}")
-        job = self.get_mongo_util().get_job(job_id)
-        self._test_job_permissions(job, job_id, level=JobPermissions.READ)
-        logging.debug("Success, you have permission to view logs for " + job_id)
         return self._get_job_log(job_id, skip_lines)
 
     def _send_exec_stats_to_catalog(self, job_id):
@@ -294,6 +322,7 @@ class SDKMethodRunner:
 
         return time_input
 
+    @allow_job_write
     def add_job_logs(self, job_id, log_lines):
         """
         #TODO Prevent too many logs in memory
@@ -312,16 +341,14 @@ class SDKMethodRunner:
         :return:
         """
         logging.debug(f"About to add logs for {job_id}")
-        job = self.get_mongo_util().get_job(job_id=job_id)
-        self._test_job_permissions(job, job_id, JobPermissions.WRITE)
-        logging.debug("Success, you have permission to add logs for " + job_id)
+        mongo_util = self.get_mongo_util()
 
         try:
-            log = self.get_mongo_util().get_job_log(job_id=job_id)
+            log = mongo_util.get_job_log_pymongo(job_id)
         except RecordNotFoundException:
-            log = self._create_new_log(pk=job_id)
+            log = self._create_new_log(pk=job_id).to_mongo().to_dict()
 
-        olc = log.original_line_count
+        olc = log.get("original_line_count")
 
         for input_line in log_lines:
             olc += 1
@@ -336,18 +363,19 @@ class SDKMethodRunner:
             ll.ts = ts
 
             ll.line = input_line.get("line")
-            log.lines.append(ll)
             ll.validate()
+            log["lines"].append(ll.to_mongo().to_dict())
 
-        log.original_line_count = olc
-        log.stored_line_count = olc
+        log["updated"] = time.time()
+        log["original_line_count"] = olc
+        log["stored_line_count"] = olc
 
-        with self.get_mongo_util().mongo_engine_connection():
-            log.save()
+        with mongo_util.pymongo_client(self.config["mongo-logs-collection"]):
+            mongo_util.update_one(log, str(log.get("_id")))
 
-        return log.stored_line_count
+        return log["stored_line_count"]
 
-    def __init__(self, config, user_id=None, token=None):
+    def __init__(self, config, user_id=None, token=None, job_permission_cache=None):
         self.deployment_config_fp = os.environ.get("KB_DEPLOYMENT_CONFIG")
         self.config = config
         self.mongo_util = None
@@ -370,6 +398,12 @@ class SDKMethodRunner:
         self.token = token
         self.is_admin = False
 
+        if job_permission_cache is None:
+            self.job_permission_cache = TTLCache(maxsize=self.JOB_PERMISSION_CACHE_SIZE,
+                                                 ttl=self.JOB_PERMISSION_CACHE_EXPIRE_TIME)
+        else:
+            self.job_permission_cache = job_permission_cache
+
         logging.basicConfig(
             format="%(created)s %(levelname)s: %(message)s", level=logging.debug
         )
@@ -384,8 +418,9 @@ class SDKMethodRunner:
         # Is it inefficient to get the job twice? Is it cached?
         # Maybe if the call fails, we don't actually cancel the job?
         logging.debug(f"Attempting to cancel job {job_id}")
-        job = self.get_mongo_util().get_job(job_id=job_id)
-        self._test_job_permissions(job, job_id, JobPermissions.WRITE)
+
+        job = self._get_job_with_permission(job_id, JobPermissions.WRITE)
+
         logging.info(f"User has permission to cancel job {job_id}")
         logging.debug(f"User has permission to cancel job {job_id}")
         self.get_mongo_util().cancel_job(job_id=job_id, terminated_code=terminated_code)
@@ -547,6 +582,41 @@ class SDKMethodRunner:
             )
             raise e
 
+    def _update_job_permission_cache(self, job_id, user_id, level, perm):
+
+        if not self.job_permission_cache.get(job_id):
+            self.job_permission_cache[job_id] = {user_id: {level: perm}}
+        else:
+            job_permission = self.job_permission_cache[job_id]
+            if not job_permission.get(user_id):
+                job_permission[user_id] = {level: perm}
+            else:
+                job_permission[user_id][level] = perm
+
+    def _get_job_permission_from_cache(self, job_id, user_id, level):
+
+        if not self.job_permission_cache.get(job_id):
+            return False
+        else:
+            job_permission = self.job_permission_cache[job_id]
+            if not job_permission.get(user_id):
+                return False
+            else:
+                return job_permission[user_id].get(level)
+
+    def _test_job_permission_with_cache(self, job_id, permission):
+        if not self._get_job_permission_from_cache(job_id, self.user_id, permission):
+            job = self.get_mongo_util().get_job(job_id=job_id)
+            self._test_job_permissions(job, job_id, permission)
+
+        logging.debug("you have permission to {} job {}".format(permission, job_id))
+
+    def _get_job_with_permission(self, job_id, permission):
+        job = self.get_mongo_util().get_job(job_id=job_id)
+        if not self._get_job_permission_from_cache(job_id, self.user_id, permission):
+            self._test_job_permissions(job, job_id, permission)
+        return job
+
     def _test_job_permissions(
         self, job: Job, job_id: str, level: JobPermissions
     ) -> bool:
@@ -570,13 +640,16 @@ class SDKMethodRunner:
         :returns: True if the user has permission, raises a PermissionError otherwise.
         """
         if self.is_admin:  # bypass if we're in admin mode.
-            return
+            self._update_job_permission_cache(job_id, self.user_id, level, True)
+            return True
         try:
             perm = False
             if level == JobPermissions.READ:
                 perm = can_read_job(job, self.user_id, self.token, self.config)
+                self._update_job_permission_cache(job_id, self.user_id, level, perm)
             elif level == JobPermissions.WRITE:
                 perm = can_write_job(job, self.user_id, self.token, self.config)
+                self._update_job_permission_cache(job_id, self.user_id, level, perm)
             if not perm:
                 raise PermissionError(
                     f"User {self.user_id} does not have permission to {level} job {job_id}"
@@ -599,8 +672,7 @@ class SDKMethodRunner:
         """
         job_params = dict()
 
-        job = self.get_mongo_util().get_job(job_id=job_id)
-        self._test_job_permissions(job, job_id, JobPermissions.READ)
+        job = self._get_job_with_permission(job_id, JobPermissions.READ)
 
         job_input = job.job_input
 
@@ -630,8 +702,7 @@ class SDKMethodRunner:
         if not (job_id and status):
             raise ValueError("Please provide both job_id and status")
 
-        job = self.get_mongo_util().get_job(job_id=job_id)
-        self._test_job_permissions(job, job_id, JobPermissions.WRITE)
+        job = self._get_job_with_permission(job_id, JobPermissions.WRITE)
 
         job.status = status
         with self.get_mongo_util().mongo_engine_connection():
@@ -656,8 +727,7 @@ class SDKMethodRunner:
         if not job_id:
             raise ValueError("Please provide valid job_id")
 
-        job = self.get_mongo_util().get_job(job_id=job_id)
-        self._test_job_permissions(job, job_id, JobPermissions.READ)
+        job = self._get_job_with_permission(job_id, JobPermissions.READ)
 
         returnVal["status"] = job.status
 
@@ -708,6 +778,7 @@ class SDKMethodRunner:
             job_id=job_id, job_output=job_output
         )
 
+    @allow_job_write
     def finish_job(
         self, job_id, error_message=None, error_code=None, error=None, job_output=None
     ):
@@ -726,11 +797,6 @@ class SDKMethodRunner:
         :param job_output: dict - default None, if given this job has some output
         """
 
-        if not job_id:
-            raise ValueError("Please provide valid job_id")
-
-        job = self.get_mongo_util().get_job(job_id=job_id)
-        self._test_job_permissions(job, job_id, JobPermissions.WRITE)
         self._check_job_is_running(job_id=job_id)
 
         if error_message:
@@ -769,8 +835,7 @@ class SDKMethodRunner:
         if not job_id:
             raise ValueError("Please provide valid job_id")
 
-        job = self.get_mongo_util().get_job(job_id=job_id)
-        self._test_job_permissions(job, job_id, JobPermissions.WRITE)
+        job = self._get_job_with_permission(job_id, JobPermissions.WRITE)
         job_status = job.status
 
         allowed_states = [

@@ -6,12 +6,12 @@ from configparser import ConfigParser
 
 from bson.objectid import ObjectId
 
-from execution_engine2.db.models.models import Job, JobInput, Meta
+from execution_engine2.db.models.models import Job, JobLog
 from execution_engine2.db.MongoUtil import MongoUtil
 from test.mongo_test_helper import MongoTestHelper
+from test.test_utils import bootstrap, get_example_job
 
 logging.basicConfig(level=logging.INFO)
-from test.test_utils import bootstrap, get_example_job
 
 bootstrap()
 
@@ -188,10 +188,7 @@ class MongoUtilTest(unittest.TestCase):
     def test_insert_one_ok(self):
         mongo_util = self.getMongoUtil()
 
-        with mongo_util.me_collection(self.config["mongo-jobs-collection"]) as (
-            pymongo_client,
-            mongoengine_client,
-        ):
+        with mongo_util.pymongo_client(self.config["mongo-jobs-collection"]) as pymongo_client:
             col = pymongo_client[self.config["mongo-database"]][
                 self.config["mongo-jobs-collection"]
             ]
@@ -210,10 +207,7 @@ class MongoUtilTest(unittest.TestCase):
     def test_find_in_ok(self):
         mongo_util = self.getMongoUtil()
 
-        with mongo_util.me_collection(self.config["mongo-jobs-collection"]) as (
-            pymongo_client,
-            mongoengine_client,
-        ):
+        with mongo_util.pymongo_client(self.config["mongo-jobs-collection"]) as pymongo_client:
             col = pymongo_client[self.config["mongo-database"]][
                 self.config["mongo-jobs-collection"]
             ]
@@ -243,10 +237,7 @@ class MongoUtilTest(unittest.TestCase):
     def test_update_one_ok(self):
         mongo_util = self.getMongoUtil()
 
-        with mongo_util.me_collection(self.config["mongo-jobs-collection"]) as (
-            pymongo_client,
-            mongoengine_client,
-        ):
+        with mongo_util.pymongo_client(self.config["mongo-jobs-collection"]) as pymongo_client:
             col = pymongo_client[self.config["mongo-database"]][
                 self.config["mongo-jobs-collection"]
             ]
@@ -294,3 +285,31 @@ class MongoUtilTest(unittest.TestCase):
             logging.info("Assert 0 documents")
             mongo_util.delete_one(job_id)
             self.assertEqual(col.count_documents({}), doc_count)
+
+    def test_get_job_log_pymongo_ok(self):
+
+        mongo_util = self.getMongoUtil()
+
+        primary_key = ObjectId()
+
+        jl = JobLog()
+        jl.primary_key = primary_key
+        jl.original_line_count = 0
+        jl.stored_line_count = 0
+        jl.lines = []
+
+        with mongo_util.pymongo_client(self.config["mongo-jobs-collection"]) as pymongo_client:
+            jl_col = pymongo_client[self.config["mongo-database"]][
+                self.config["mongo-logs-collection"]
+            ]
+
+            ori_jl_count = jl_col.count_documents({})
+
+            jl.save()  # save job log
+
+            self.assertEqual(JobLog.objects.count(), ori_jl_count + 1)
+            job_log = mongo_util.get_job_log_pymongo(str(primary_key))
+
+            self.assertEqual(job_log.get("original_line_count"), 0)
+            self.assertEqual(job_log.get("stored_line_count"), 0)
+            self.assertIsNone(job_log.get("lines"))
