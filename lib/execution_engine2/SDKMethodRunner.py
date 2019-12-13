@@ -370,7 +370,7 @@ class SDKMethodRunner:
         log["original_line_count"] = olc
         log["stored_line_count"] = olc
 
-        with mongo_util.me_collection(self.config["mongo-logs-collection"]):
+        with mongo_util.pymongo_client(self.config["mongo-logs-collection"]):
             mongo_util.update_one(log, str(log.get("_id")))
 
         return log["stored_line_count"]
