@@ -1,10 +1,10 @@
+import enum
 import json
 import logging
 from collections import namedtuple
-
-import enum
-import htcondor
 from configparser import ConfigParser
+
+import htcondor
 
 from execution_engine2.exceptions import MissingRunJobParamsException
 from execution_engine2.utils.Scheduler import Scheduler
@@ -101,27 +101,6 @@ class Condor(Scheduler):
             option=self.TRANSFER_INPUT_FILES,
             fallback="/condor_shared/JobRunner.tgz",
         )
-
-    def get_default_resources(self, client_group):
-        """
-        Search the config file for default client groups and requirements
-        :param client_group: The section of the config file to search for requirements
-        :return: The default requirements for that client group, or for no client group provided
-        """
-        default_resources = dict()
-        if client_group in self.config.sections():
-            section = client_group
-            default_resources[self.CG] = client_group
-        else:
-            client_group = self.config["DEFAULT"][self.DEFAULT_CLIENT_GROUP]
-            default_resources[self.CG] = client_group
-            section = client_group
-
-        # Get settings from config file based on clientgroup or default_clientgroup
-        for item in [self.REQUEST_CPUS, self.REQUEST_DISK, self.REQUEST_MEMORY]:
-            default_resources[item] = self.config.get(section=section, option=item)
-
-        return default_resources
 
     def cleanup_submit_file(self, submit_filepath):
         pass
@@ -288,6 +267,7 @@ class Condor(Scheduler):
         sub["requirements"] = " && ".join(requirements)
 
         params["extracted_client_group"] = client_group
+        sub["client_group"] = client_group
         sub["environment"] = self.setup_environment_vars(params)
 
         return sub
