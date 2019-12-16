@@ -456,7 +456,7 @@ class SDKMethodRunner:
         """
         wsid = params.get("wsid")
         ws_auth = self.get_workspace_auth()
-        if wsid and not ws_auth.can_write():
+        if wsid and not ws_auth.can_write(wsid):
             logging.debug(
                 f"User {self.user_id} doesn't have permission to run jobs in workspace {wsid}."
             )
