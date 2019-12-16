@@ -86,7 +86,6 @@ class RollbakDatabases:
 
             if not ujs_jobs.find({"id": job_id}).count():
                 job_input = ee2_job.get("job_input", {})
-                job_output = ee2_job.get("job_output", {})
                 error = ee2_job.get("error", {})
 
                 ujs_job_doc = {"_id": job_id,
@@ -130,7 +129,7 @@ class RollbakDatabases:
                                "output_shock_id": None,
                                "app_job_id": None,
                                "creation_time": int(datetime.timestamp(job_id.generation_time) * 1000),
-                               "job_output": job_output,
+                               "job_output": ee2_job.get("job_output"),
                                "scheduler_type": ee2_job.get("scheduler_type"),
                                "task_id": ee2_job.get("scheduler_id"),
                                "last_job_state": ee2_job.get("status"),
@@ -166,11 +165,20 @@ class RollbakDatabases:
                 except Exception:
                     failed_njs_insert.append(str(job_id))
 
+        return count, failed_ujs_insert, failed_njs_insert
+
     def rollback_logs(self):
         pass
 
 
-if __name__ == "__main__":
+def main():
     rd = RollbakDatabases()
-    rd.rollback_jobs()
-    # rd.rollback_logs()
+    count, failed_ujs_insert, failed_njs_insert = rd.rollback_jobs()
+    print("attempted to rollback {} records".format(count))
+    print("failed to insert UJS:\n{}\nfailed to insert NJS:\n{}\n".format(failed_ujs_insert, failed_njs_insert))
+
+    rd.rollback_logs()
+
+
+if __name__ == "__main__":
+    main()
