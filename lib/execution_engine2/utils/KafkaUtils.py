@@ -16,29 +16,8 @@ CONDOR_EVENT_TYPE = "condor_request"
 DEFAULT_TOPIC = "ee2"
 
 
-def send_kafka_update_status(data):
-    send_message_to_kafka(data=data, data_class=KafkaStatusUpdate)
-
-
-def send_kafka_condor_update(data):
-    send_message_to_kafka(data=data, data_class=KafkaCondorCommandUpdate)
-
-
-def send_kafka_update_start(data):
-    send_message_to_kafka(data=data, data_class=KafkaStatusUpdateStartJob)
-
-
-def send_kafka_update_finish(data):
-    send_message_to_kafka(data=data, data_class=KafkaStatusUpdateFinishJob)
-
-
-def send_kafka_update_cancel(data):
-    send_message_to_kafka(data=data, data_class=KafkaStatusUpdateCancelJob)
-
-
 @dataclass
 class KafkaStatusUpdate:
-
     job_id: str = None
     previous_status: str = None
     new_status: str = None
@@ -48,6 +27,15 @@ class KafkaStatusUpdate:
     error: bool = False
 
     def __post_init__(self):
+
+        if self.scheduler_id is not None:
+            if not isinstance(self.scheduler_id, int):
+                raise Exception("Scheduler id must be an int")
+
+        if self.error is not None:
+            if not isinstance(self.error, bool):
+                raise Exception("error must be a bool")
+
         if self.job_id is None:
             raise Exception("Need to provide a job id")
 
@@ -73,7 +61,7 @@ class KafkaStatusUpdate:
 
 @dataclass
 class KafkaCondorCommandUpdate(KafkaStatusUpdate):
-    job_id: int = None
+    job_id: str = None
     requested_condor_deletion: bool = None
     event_type: str = CONDOR_EVENT_TYPE
 
@@ -130,7 +118,9 @@ class KafkaStatusUpdateFinishJob(KafkaStatusUpdate):
     def __post_init__(self):
         if self.new_status is not Status.completed.value:
             if self.error_message is None:
-                raise Exception("Need to provide error_msg for unsuccessful jobs")
+                raise Exception(
+                    f"Need to provide error_msg for unsuccessful jobs (Status is {self.new_status})"
+                )
             if self.error_code is None:
                 raise Exception("Need to provide error_code for unsuccessful jobs")
 
@@ -142,7 +132,6 @@ def _delivery_report(err, msg):
 
 
 def send_kafka_message(message, topic=DEFAULT_TOPIC, server_address="kafka"):
-
     producer = Producer({"bootstrap.servers": server_address})
     producer.produce(topic, json.dumps(message.__dict__), callback=_delivery_report)
     producer.poll(2)

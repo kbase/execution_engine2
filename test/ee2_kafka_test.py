@@ -1,22 +1,14 @@
 # -*- coding: utf-8 -*-
 """Module to test out logging to kafka."""
-
 import json
-import logging
-import unittest
-
-from execution_engine2.utils.KafkaUtils import (
-    send_message_to_kafka,
-    send_kafka_update_status,
-)
-from test.utils.KafkaTestUtils import Consumer, KafkaError
-
-logging.basicConfig(level=logging.DEBUG)
-
-from unittest.mock import patch
-from io import StringIO
 import copy
 import time
+import unittest
+from io import StringIO
+from unittest.mock import patch
+
+from execution_engine2.utils.KafkaUtils import send_kafka_message, KafkaStatusUpdate
+from test.utils.KafkaTestUtils import Consumer, KafkaError
 
 
 class ExecutionEngine2SchedulerTest(unittest.TestCase):
@@ -26,19 +18,29 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
     # TODO Create a test for each method.. But they are already being tested in the ee2 sdkmr tests though
 
     def test_status_update(self):
-        data = {
-            "job_id": "123",
-            "previous_status": "created",
-            "new_status": "estimating",
-        }
+        # #data = {
+        #     "job_id": "123",
+        #     "previous_status": "created",
+        #     "new_status": "estimating",
+        # }
         with self.assertRaisesRegex(
             expected_exception=Exception,
             expected_regex="You must pass a scheduler id once the job has been created already.",
         ):
-            send_kafka_update_status(data)
+            send_kafka_message(
+                KafkaStatusUpdate(
+                    job_id="123", previous_status="created", new_status="new_status"
+                )
+            )
 
-        data["scheduler_id"] = "123"
-        send_kafka_update_status(data)
+        send_kafka_message(
+            KafkaStatusUpdate(
+                job_id="123",
+                previous_status="created",
+                new_status="new_status",
+                scheduler_id=123,
+            )
+        )
 
     def xtest_produce_and_consume(self):
         """
@@ -51,8 +53,8 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         data2["error"] = True
 
         with patch("sys.stdout", new=StringIO()) as fakeOutput:
-            send_message_to_kafka(data)
-            send_message_to_kafka(data2)
+            # send_message_to_kafka(data)
+            # send_message_to_kafka(data2)
             stdout = fakeOutput.getvalue().strip()
             self.assertIn(f"Message delivered to topic 'ee2':", stdout)
 
