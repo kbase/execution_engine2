@@ -9,14 +9,7 @@ from configparser import ConfigParser
 from pymongo import MongoClient
 
 
-UNKNOWN = "UNKNOWN"
-
-
 class RollbakDatabases:
-
-    documents = []
-    threshold = 1000
-    none_jobs = 0
 
     def _get_ujs_connection(self) -> MongoClient:
         parser = ConfigParser()
