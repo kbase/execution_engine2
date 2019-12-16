@@ -399,8 +399,10 @@ class SDKMethodRunner:
         self.is_admin = False
 
         if job_permission_cache is None:
-            self.job_permission_cache = TTLCache(maxsize=self.JOB_PERMISSION_CACHE_SIZE,
-                                                 ttl=self.JOB_PERMISSION_CACHE_EXPIRE_TIME)
+            self.job_permission_cache = TTLCache(
+                maxsize=self.JOB_PERMISSION_CACHE_SIZE,
+                ttl=self.JOB_PERMISSION_CACHE_EXPIRE_TIME,
+            )
         else:
             self.job_permission_cache = job_permission_cache
 
@@ -452,13 +454,14 @@ class SDKMethodRunner:
         :param params: RunJobParams object (See spec file)
         :return: The condor job id
         """
+        wsid = params.get("wsid")
         ws_auth = self.get_workspace_auth()
-        if not ws_auth.can_write(params["wsid"]):
+        if wsid and not ws_auth.can_write():
             logging.debug(
-                f"User {self.user_id} doesn't have permission to run jobs in workspace {params['wsid']}."
+                f"User {self.user_id} doesn't have permission to run jobs in workspace {wsid}."
             )
             raise PermissionError(
-                f"User {self.user_id} doesn't have permission to run jobs in workspace {params['wsid']}."
+                f"User {self.user_id} doesn't have permission to run jobs in workspace {wsid}."
             )
 
         method = params.get("method")

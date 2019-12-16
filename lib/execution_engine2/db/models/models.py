@@ -151,7 +151,7 @@ class JobInput(EmbeddedDocument):
     To be created from the Narrative
     """
 
-    wsid = IntField(required=True)
+    wsid = IntField(required=False, default=None)
     method = StringField(required=True)
     requested_release = StringField()
     params = DynamicField()
@@ -248,7 +248,7 @@ class Job(Document):
     authstrat = StringField(
         required=True, default="kbaseworkspace", validation=valid_authstrat
     )
-    wsid = IntField(required=True)
+    wsid = IntField(required=False, default=None)
     status = StringField(required=True, validation=valid_status)
 
     updated = FloatField(default=time.time)
