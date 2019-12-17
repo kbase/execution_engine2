@@ -43,6 +43,7 @@ class RollbakDatabases:
             authSource=self.exec_engine_db,
         )
 
+    @classmethod
     def _create_ujs_job_rec(self, ee2_job):
 
         job_id = ee2_job["_id"]
@@ -80,6 +81,7 @@ class RollbakDatabases:
 
         return ujs_job_doc
 
+    @classmethod
     def _create_njs_job_rec(self, ee2_job):
 
         job_id = ee2_job["_id"]
@@ -231,7 +233,7 @@ def main():
 
     count, failed_njs_insert = rd.rollback_logs()
     print("attempted to rollback {} log records".format(count))
-    print("failed to insert NJS logs:\n{}\n".format(failed_ujs_insert, failed_njs_insert))
+    print("failed to insert NJS logs:\n{}\n".format(failed_njs_insert))
 
 
 if __name__ == "__main__":
