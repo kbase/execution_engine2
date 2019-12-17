@@ -4,44 +4,40 @@
 import json
 import logging
 
-from execution_engine2.db.models.models import Status
+from execution_engine2.db.models.models import Status, ErrorCode
 
 logging.basicConfig(level=logging.INFO)
 from dataclasses import dataclass
 
 from confluent_kafka import Producer
 
-KAFKA_EVENT_TYPE = "job_status_update"
+STATUS_EVENT_TYPE = "job_status_update"
 CONDOR_EVENT_TYPE = "condor_request"
+
+VALID_CONDOR_COMMANDS = [
+    "condor_q",
+    "condor_rm",
+    "condor_qedit",
+    "condor_status",
+    "condor",
+    "condor_userprio",
+    "condor_prio",
+    "condor_hold",
+]
+
+EVENT_TYPES = [STATUS_EVENT_TYPE, CONDOR_EVENT_TYPE]
 DEFAULT_TOPIC = "ee2"
+TOPICS = [DEFAULT_TOPIC]
 
 
 @dataclass
-class KafkaStatusUpdate:
-    job_id: str = None
-    previous_status: str = None
-    new_status: str = None
-    scheduler_id: int = None
-    topic: str = DEFAULT_TOPIC
-    event_type: str = KAFKA_EVENT_TYPE
-    error: bool = False
+class StatusRequired:
+    job_id: str
+    previous_status: str
+    new_status: str
+    scheduler_id: int
 
     def __post_init__(self):
-
-        if self.scheduler_id is not None:
-            if not isinstance(self.scheduler_id, int):
-                raise Exception("Scheduler id must be an int")
-
-        if self.error is not None:
-            if not isinstance(self.error, bool):
-                raise Exception("error must be a bool")
-
-        if self.job_id is None:
-            raise Exception("Need to provide a job id")
-
-        if self.new_status is None:
-            raise Exception("Need to provide a new_status")
-
         # All state transitions need a previous status, except the created one
         if self.previous_status is None:
             if self.new_status != Status.created.value:
@@ -60,21 +56,111 @@ class KafkaStatusUpdate:
 
 
 @dataclass
-class KafkaCondorCommandUpdate(KafkaStatusUpdate):
-    job_id: str = None
-    requested_condor_deletion: bool = None
-    event_type: str = CONDOR_EVENT_TYPE
+class StatusOptional:
+    topic: str = DEFAULT_TOPIC
+    event_type: str = STATUS_EVENT_TYPE
+    status_change: str = None
+    error: bool = False
 
     def __post_init__(self):
-        if self.job_id is None:
-            raise Exception("Need to provide a job id")
+        if self.topic not in TOPICS:
+            raise Exception(f"Invalid topic {self.topic}")
 
-        if self.requested_condor_deletion is None:
-            raise Exception("Need to provide requested_condor_deletion")
+        if self.event_type not in EVENT_TYPES:
+            raise Exception(f"Invalid kafka event_type {self.event_type}")
+
+        if not isinstance(self.error, bool):
+            raise TypeError("error must be a bool")
+
+        Status(self.status_change)
 
 
 @dataclass
-class KafkaStatusUpdateStartJob(KafkaStatusUpdate):
+class ErrorOptional:
+    error_code: int = None
+    error_message: str = None
+
+    def check_for_error(self, new_status):
+        if self.error_message is None:
+            raise Exception(
+                f"Need to provide error_msg for unsuccessful jobs (Status is {new_status})"
+            )
+        ErrorCode(self.error_code)
+
+
+@dataclass
+class KafkaFinishJob(StatusOptional, ErrorOptional, StatusRequired):
+    # A job can end with an error or with 'complete'
+
+    def __post_init__(self):
+        # Error is required if the job isn't complete
+        if self.new_status is not Status.completed.value:
+            self.check_for_error(self.new_status)
+
+
+@dataclass
+class CondorRequired:
+    condor_command: str
+    job_id: str
+    scheduler_id: float
+
+    def __post_init__(self):
+        if self.condor_command not in VALID_CONDOR_COMMANDS:
+            raise Exception(f"{self.condor_command} not in {VALID_CONDOR_COMMANDS}")
+
+
+@dataclass
+class CondorOptional:
+    event_type: str = CONDOR_EVENT_TYPE
+
+
+@dataclass
+class CancelJobRequired:
+    terminated_code: int
+
+
+@dataclass
+class KafkaCancelJob(StatusOptional, StatusRequired, CancelJobRequired):
+    def __post_init__(self):
+        self.status_change = Status.terminated.value
+
+    pass
+
+
+@dataclass
+class KafkaStatusChange(StatusOptional, StatusRequired):
+    # Message for generic status changes
+    pass
+
+
+@dataclass
+class KafkaQueueChange(StatusOptional, StatusRequired):
+    def __post_init__(self):
+        self.status_change = Status.queued.value
+
+
+@dataclass
+class KafkaCondorCommand(CondorOptional, CondorRequired):
+    # Message when issuing condor commands
+    pass
+
+
+@dataclass
+class UserRequired:
+    user: str
+
+
+@dataclass
+class KafkaCreateJob(UserRequired):
+    job_id: str
+
+    def __post_init__(self):
+        self.status_change = Status.created.value
+
+
+@dataclass
+class KafkaStartJob(StatusOptional, StatusRequired):
+    # Message for starting job
     def __post_init__(self):
         allowed_states = [
             Status.created.value,
@@ -99,30 +185,6 @@ class KafkaStatusUpdateStartJob(KafkaStatusUpdate):
                 raise Exception(
                     f"State not updated prev:{self.previous_status} new:{self.new_status}"
                 )
-
-
-@dataclass
-class KafkaStatusUpdateCancelJob(KafkaStatusUpdate):
-    terminated_code: int = None
-
-    def __post_init__(self):
-        if self.terminated_code is None:
-            raise Exception("Need to provide a termination reason code")
-
-
-@dataclass
-class KafkaStatusUpdateFinishJob(KafkaStatusUpdate):
-    error_message: str = None
-    error_code: int = None
-
-    def __post_init__(self):
-        if self.new_status is not Status.completed.value:
-            if self.error_message is None:
-                raise Exception(
-                    f"Need to provide error_msg for unsuccessful jobs (Status is {self.new_status})"
-                )
-            if self.error_code is None:
-                raise Exception("Need to provide error_code for unsuccessful jobs")
 
 
 def _delivery_report(err, msg):

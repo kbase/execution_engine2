@@ -36,11 +36,13 @@ from execution_engine2.exceptions import (
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.KafkaUtils import (
     send_kafka_message,
-    KafkaStatusUpdate,
-    KafkaStatusUpdateCancelJob,
-    KafkaCondorCommandUpdate,
-    KafkaStatusUpdateFinishJob,
-    KafkaStatusUpdateStartJob,
+    KafkaCancelJob,
+    KafkaCondorCommand,
+    KafkaFinishJob,
+    KafkaStartJob,
+    KafkaStatusChange,
+    KafkaCreateJob,
+    KafkaQueueChange,
 )
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
@@ -153,9 +155,7 @@ class SDKMethodRunner:
         with self.get_mongo_util().mongo_engine_connection():
             job.save()
 
-        send_kafka_message(
-            message=KafkaStatusUpdate(job_id=str(job.id), new_status=job.status)
-        )
+        send_kafka_message(message=KafkaCreateJob(job_id=str(job.id), user=user_id))
 
         return str(job.id)
 
@@ -407,7 +407,7 @@ class SDKMethodRunner:
         self.get_mongo_util().cancel_job(job_id=job_id, terminated_code=terminated_code)
 
         send_kafka_message(
-            message=KafkaStatusUpdateCancelJob(
+            message=KafkaCancelJob(
                 job_id=str(job_id),
                 previous_status=job.status,
                 new_status=Status.terminated.value,
@@ -423,8 +423,10 @@ class SDKMethodRunner:
         logging.debug(f"{rv}")
 
         send_kafka_message(
-            message=KafkaCondorCommandUpdate(
-                job_id=str(job_id), requested_condor_deletion=True
+            message=KafkaCondorCommand(
+                job_id=str(job_id),
+                scheduler_id=job.scheduler_id,
+                condor_command="condor_rm",
             )
         )
 
@@ -521,7 +523,7 @@ class SDKMethodRunner:
             j.save()
 
             send_kafka_message(
-                message=KafkaStatusUpdate(
+                message=KafkaQueueChange(
                     job_id=str(j.id),
                     new_status=j.status,
                     previous_status=previous_status,
@@ -682,7 +684,8 @@ class SDKMethodRunner:
             job.save()
 
         send_kafka_message(
-            message=KafkaStatusUpdate(
+            message=KafkaStatusChange(
+                status_change=status,
                 job_id=str(job_id),
                 new_status=status,
                 previous_status=previous_status,
@@ -797,7 +800,7 @@ class SDKMethodRunner:
             )
 
             send_kafka_message(
-                message=KafkaStatusUpdateFinishJob(
+                message=KafkaFinishJob(
                     job_id=str(job_id),
                     new_status=Status.error.value,
                     previous_status=job.status,
@@ -819,7 +822,7 @@ class SDKMethodRunner:
         else:
             self._finish_job_with_success(job_id=job_id, job_output=job_output)
             send_kafka_message(
-                message=KafkaStatusUpdateFinishJob(
+                message=KafkaFinishJob(
                     job_id=str(job_id),
                     new_status=Status.completed.value,
                     previous_status=job.status,
@@ -860,14 +863,14 @@ class SDKMethodRunner:
         with self.get_mongo_util().mongo_engine_connection():
             if job_status == Status.estimating.value or skip_estimation:
                 # set job to running status
-
+                status_change = Status.running.value
                 job.running = time.time()
                 self.get_mongo_util().update_job_status(
                     job_id=job_id, status=Status.running.value
                 )
             else:
                 # set job to estimating status
-
+                status_change = Status.estimating.value
                 job.estimating = time.time()
                 self.get_mongo_util().update_job_status(
                     job_id=job_id, status=Status.estimating.value
@@ -877,7 +880,8 @@ class SDKMethodRunner:
         job.reload("status")
 
         send_kafka_message(
-            message=KafkaStatusUpdateStartJob(
+            message=KafkaStatusChange(
+                status_change=status_change,
                 job_id=str(job_id),
                 new_status=job.status,
                 previous_status=job_status,
