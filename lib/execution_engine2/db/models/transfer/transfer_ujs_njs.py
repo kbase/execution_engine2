@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 import os
-import datetime
-from dateutil.parser import parse
-
 from configparser import ConfigParser
+
 from pymongo import MongoClient
 
 jobs_database_name = "ee2_jobs"
@@ -37,10 +35,10 @@ class MigrateDatabases:
     def _get_ee2_connection(self) -> MongoClient:
         parser = ConfigParser()
         parser.read(os.environ.get("KB_DEPLOYMENT_CONFIG"))
-        self.ee2_host = parser.get("execution_engine2", "mongo-host")
-        self.ee2_db = parser.get("execution_engine2", "mongo-database")
-        self.ee2_user = parser.get("execution_engine2", "mongo-user")
-        self.ee2_pwd = parser.get("execution_engine2", "mongo-password")
+        self.ee2_host = parser.get("NarrativeJobService", "mongodb-host")
+        self.ee2_db = "exec_engine2"
+        self.ee2_user = parser.get("NarrativeJobService", "mongodb-user")
+        self.ee2_pwd = parser.get("NarrativeJobService", "mongodb-pwd")
 
         return MongoClient(
             self.ee2_host,
@@ -88,7 +86,7 @@ class MigrateDatabases:
 
     def __init__(self):
         # Use this after adding more config variables
-        # self.ee2 = self._get_ee2_connection()
+        self.ee2 = self._get_ee2_connection()
         self.njs = self._get_njs_connection()
         self.ujs = self._get_ujs_connection()
         self.jobs = []
@@ -105,24 +103,11 @@ class MigrateDatabases:
             .get_collection(self.njs_jobs_collection_name)
         )
 
-        # Use this instead after adding more config variables
-        # self.ee2_jobs = self._get_ee2_connection().get_database(self.ee2_db).get_collection(jobs_database_name)
-
         self.ee2_jobs = (
-            self._get_njs_connection()
-            .get_database(self.njs_db)
+            self._get_ee2_connection()
+            .get_database(self.ee2_db)
             .get_collection(jobs_database_name)
         )
-
-        # config = {
-        #     "mongo-host": self.njs_host,
-        #     "mongo-port": 27017,
-        #     "mongo-database": self.njs_db,
-        #     "mongo-user": self.njs_user,
-        #     "mongo-password": self.njs_pwd,
-        #     "mongo-authmechanism": "DEFAULT",
-        # }
-        # self.mongo_util = MongoUtil(config=config)
 
     def get_njs_job_input(self, njs_job):
         job_input = njs_job.get("job_input")
