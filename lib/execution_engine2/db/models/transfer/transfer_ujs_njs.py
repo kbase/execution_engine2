@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 import os
-import datetime
-from dateutil.parser import parse
-
-
 from configparser import ConfigParser
+
 from pymongo import MongoClient
 
 jobs_database_name = "ee2_jobs"
@@ -34,6 +31,23 @@ class MigrateDatabases:
     documents = []
     threshold = 1000
     none_jobs = 0
+
+    def _get_ee2_connection(self) -> MongoClient:
+        parser = ConfigParser()
+        parser.read(os.environ.get("KB_DEPLOYMENT_CONFIG"))
+        self.ee2_host = parser.get("NarrativeJobService", "mongodb-host")
+        self.ee2_db = "exec_engine2"
+        self.ee2_user = parser.get("NarrativeJobService", "mongodb-user")
+        self.ee2_pwd = parser.get("NarrativeJobService", "mongodb-pwd")
+
+        return MongoClient(
+            self.ee2_host,
+            27017,
+            username=self.ee2_user,
+            password=self.ee2_pwd,
+            authSource=self.ee2_db,
+            retryWrites=False,
+        )
 
     def _get_ujs_connection(self) -> MongoClient:
         parser = ConfigParser()
@@ -72,6 +86,7 @@ class MigrateDatabases:
 
     def __init__(self):
         # Use this after adding more config variables
+        self.ee2 = self._get_ee2_connection()
         self.njs = self._get_njs_connection()
         self.ujs = self._get_ujs_connection()
         self.jobs = []
@@ -88,28 +103,11 @@ class MigrateDatabases:
             .get_collection(self.njs_jobs_collection_name)
         )
 
-        # Use this instead after adding more config variables
         self.ee2_jobs = (
-            self._get_njs_connection()
-            .get_database("exec_engine2")
+            self._get_ee2_connection()
+            .get_database(self.ee2_db)
             .get_collection(jobs_database_name)
         )
-
-        # self.ee2_jobs = (
-        #     self._get_njs_connection()
-        #     .get_database(self.njs_db)
-        #     .get_collection(jobs_database_name)
-        # )
-
-        config = {
-            "mongo-host": self.njs_host,
-            "mongo-port": 27017,
-            "mongo-database": self.njs_db,
-            "mongo-user": self.njs_user,
-            "mongo-password": self.njs_pwd,
-            "mongo-authmechanism": "DEFAULT",
-        }
-        # self.mongo_util = MongoUtil(config=config)
 
     def get_njs_job_input(self, njs_job):
         job_input = njs_job.get("job_input")
@@ -144,6 +142,7 @@ class MigrateDatabases:
         self.ee2_jobs.insert_many(self.jobs)
         self.jobs = []
 
+    # flake8: noqa: C901
     def begin_job_transfer(self):  # flake8: noqa
         ujs_jobs = self.ujs_jobs
         njs_jobs = self.njs_jobs
@@ -173,14 +172,7 @@ class MigrateDatabases:
 
             if njs_job is not None:
                 njs_job_input = self.get_njs_job_input(njs_job)
-                # if job.wsid == -1:
-                job.wsid = njs_job_input.get("wsid", -1)
-                finish_time = njs_job.get("finish_time")
-                exec_start_time = njs_job.get("exec_start_time")
-            else:
-                njs_job_input = None
-                finish_time = None
-                exec_start_time = None
+                job.wsid = njs_job_input.get("wsid", None)
 
             complete = ujs_job.get("complete")
             error = ujs_job.get("error")
@@ -196,21 +188,28 @@ class MigrateDatabases:
             job.updated = ujs_job.get("updated").timestamp()
             try:
                 job.running = ujs_job.get("started").timestamp()
-            except:
-                pass
+            except Exception:
+                job.running = 0
             job.estimating = None
             job.finished = None
 
-            if job.running is not None:
-                job.queued = ujs_job["_id"].generation_time.timestamp()
-
             status = ujs_job.get("status")
 
-            if finish_time is not None:
-                finish_time = finish_time / 1000.0
+            if njs_job is None:
+                finish_time = 0
+                exec_start_time = 0
 
-            if exec_start_time is not None:
-                exec_start_time = exec_start_time / 1000.0
+            else:
+                finish_time = njs_job.get("finish_time", 0)
+                if finish_time is None:
+                    finish_time = 0
+                else:
+                    finish_time = finish_time / 1000.0
+                exec_start_time = njs_job.get("exec_start_time", 0)
+                if exec_start_time is None:
+                    exec_start_time = 0
+                else:
+                    exec_start_time = exec_start_time / 1000.0
 
             if status == "canceled by user":
                 job.status = Status.terminated.value
@@ -220,7 +219,12 @@ class MigrateDatabases:
                 job.status = Status.completed.value
 
             # Jobs shouldn't be queued from long ago.. And we shouldn't migrate running/queued jobs probably
-            elif status == "error" or status == "queued" or status == "in-progress":
+            elif (
+                status == "error"
+                or status == "queued"
+                or status == "in-progress"
+                or status == "running"
+            ):
                 job.status = Status.error.value
                 job.error_code = ErrorCode.unknown_error.value
 
@@ -262,7 +266,12 @@ class MigrateDatabases:
                 njs_count += 1
                 job_input = JobInput()
                 njs_job_input = self.get_njs_job_input(njs_job)
-                job_input.wsid = int(njs_job_input.get("wsid", -1))
+                if njs_job_input is None:
+                    raise Exception("NJS JOB INPUT IS NONE", njs_job)
+                job_input.wsid = njs_job_input.get("wsid")
+                if job_input.wsid is not None:
+                    job_input.wsid = int(job_input.wsid)
+
                 job_input.method = njs_job_input.get("method", UNKNOWN)
                 job_input.requested_release = njs_job_input.get(
                     "requested_release", UNKNOWN
@@ -298,7 +307,7 @@ class MigrateDatabases:
 
                 job.job_input = job_input
                 job.job_output = njs_job.get("job_output")
-                print(job.queued)
+
                 job.validate()
 
             # self.save_job(job)

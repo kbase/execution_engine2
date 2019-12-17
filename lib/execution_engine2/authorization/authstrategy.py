@@ -34,7 +34,9 @@ def can_write_job(job: Job, user_id: str, token: str, config: Dict[str, str]) ->
     return _check_permissions(job, user_id, token, config, level="write")
 
 
-def can_read_jobs(jobs: List[Job], user_id: str, token: str, config: Dict[str, str]) -> List[bool]:
+def can_read_jobs(
+    jobs: List[Job], user_id: str, token: str, config: Dict[str, str]
+) -> List[bool]:
     """
     Returns a list of job permissions in the same order as the given list of Jobs.
     :param job: a Job model object
@@ -46,7 +48,9 @@ def can_read_jobs(jobs: List[Job], user_id: str, token: str, config: Dict[str, s
     return _check_permissions_list(jobs, user_id, token, config, level="read")
 
 
-def can_write_jobs(jobs: List[Job], user_id: str, token: str, config: Dict[str, str]) -> List[bool]:
+def can_write_jobs(
+    jobs: List[Job], user_id: str, token: str, config: Dict[str, str]
+) -> List[bool]:
     """
     Returns a list of job write permissions in the same order as the given list of Jobs.
     :param job: a Job model object
@@ -58,7 +62,9 @@ def can_write_jobs(jobs: List[Job], user_id: str, token: str, config: Dict[str, 
     return _check_permissions_list(jobs, user_id, token, config, level="write")
 
 
-def _check_permissions(job: Job, user_id: str, token: str, config: Dict[str, str], level="read") -> bool:
+def _check_permissions(
+    job: Job, user_id: str, token: str, config: Dict[str, str], level="read"
+) -> bool:
     """
     Returns a job permissions, for either read or write ability
     :param job: a Job model object
@@ -71,7 +77,10 @@ def _check_permissions(job: Job, user_id: str, token: str, config: Dict[str, str
     if user_id == job.user:
         return True
     if job.authstrat == KBASE_WS_AUTHSTRAT:
-        ws_auth = WorkspaceAuth(token, user_id, config['workspace-url'])
+        if job.wsid is None:
+            return False
+
+        ws_auth = WorkspaceAuth(token, user_id, config["workspace-url"])
         if level == "read":
             return ws_auth.can_read(job.wsid)
         else:
@@ -80,7 +89,9 @@ def _check_permissions(job: Job, user_id: str, token: str, config: Dict[str, str
         return user_id == job.user
 
 
-def _check_permissions_list(jobs: List[Job], user_id: str, token: str, config: Dict[str, str], level="read") -> List[bool]:
+def _check_permissions_list(
+    jobs: List[Job], user_id: str, token: str, config: Dict[str, str], level="read"
+) -> List[bool]:
     """
     Returns True for each job the user has read access to, and False for the ones they don't.
     :param job: a Job model object
@@ -105,7 +116,7 @@ def _check_permissions_list(jobs: List[Job], user_id: str, token: str, config: D
     # should be just a single ws call to get_permissions_mass, and up to 2 loops over the list of
     # jobs (O(2N) if there's a unique ws id for each job, and fewer comparisons)
 
-    perms = len(jobs) * [False]    # permissions start False
+    perms = len(jobs) * [False]  # permissions start False
 
     # job_idx_to_perm = dict()                      # permissions that get returned
     ws_ids_to_jobs = defaultdict(list)
@@ -124,9 +135,11 @@ def _check_permissions_list(jobs: List[Job], user_id: str, token: str, config: D
 
     if len(ws_ids_to_jobs):
         # If there's workspaces to look up, go do it.
-        ws_auth = WorkspaceAuth(token, user_id, config['workspace-url'])
+        ws_auth = WorkspaceAuth(token, user_id, config["workspace-url"])
         if level == "read":
-            ws_perms = ws_auth.can_read_list(list(ws_ids_to_jobs.keys()))  # map from ws_id -> perm
+            ws_perms = ws_auth.can_read_list(
+                list(ws_ids_to_jobs.keys())
+            )  # map from ws_id -> perm
         else:
             ws_perms = ws_auth.can_write_list(list(ws_ids_to_jobs.keys()))
         for ws_id in ws_ids_to_jobs:

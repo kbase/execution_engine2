@@ -23,6 +23,24 @@ class MigrateDatabases:
 
     none_jobs = 0
 
+    def _get_ee2_connection(self) -> MongoClient:
+        parser = ConfigParser()
+        parser.read(os.environ.get("KB_DEPLOYMENT_CONFIG"))
+        self.ee2_host = parser.get("NarrativeJobService", "mongodb-host")
+        self.ee2_db = "exec_engine2"
+        self.ee2_user = parser.get("NarrativeJobService", "mongodb-user")
+        self.ee2_pwd = parser.get("NarrativeJobService", "mongodb-pwd")
+        self.ee2_logs_collection_name = "ee2_logs"
+
+        return MongoClient(
+            self.ee2_host,
+            27017,
+            username=self.ee2_user,
+            password=self.ee2_pwd,
+            authSource=self.ee2_db,
+            retryWrites=False,
+        )
+
     def _get_njs_connection(self) -> MongoClient:
         parser = ConfigParser()
         parser.read(os.environ.get("KB_DEPLOYMENT_CONFIG"))
@@ -53,9 +71,9 @@ class MigrateDatabases:
         )
 
         self.ee2_logs = (
-            self._get_njs_connection()
-            .get_database("exec_engine2")
-            .get_collection("logs")
+            self._get_ee2_connection()
+            .get_database(self.ee2_db)
+            .get_collection(self.ee2_logs_collection_name)
         )
 
     def save_log(self, log):
@@ -96,6 +114,7 @@ class MigrateDatabases:
             job_log.lines = lines
             job_log.validate()
             try:
+                print("About to insert log into", self.ee2_db, self.ee2_logs)
                 self.ee2_logs.insert_one(job_log.to_mongo())
                 success += 1
             except Exception as e:
