@@ -3,8 +3,6 @@ import os
 from datetime import datetime
 from bson.objectid import ObjectId
 import copy
-
-
 from configparser import ConfigParser
 from pymongo import MongoClient
 
@@ -14,33 +12,51 @@ class RollbakDatabases:
     def _get_ujs_connection(self):
         parser = ConfigParser()
         parser.read(os.environ.get("KB_DEPLOYMENT_CONFIG"))
-        self.ujs_host = parser.get("NarrativeJobService", "ujs-mongodb-host")
+        ujs_host = parser.get("NarrativeJobService", "ujs-mongodb-host")
         self.ujs_db = parser.get("NarrativeJobService", "ujs-mongodb-database")
-        self.ujs_user = parser.get("NarrativeJobService", "ujs-mongodb-user")
-        self.ujs_pwd = parser.get("NarrativeJobService", "ujs-mongodb-pwd")
+        ujs_user = parser.get("NarrativeJobService", "ujs-mongodb-user")
+        ujs_pwd = parser.get("NarrativeJobService", "ujs-mongodb-pwd")
 
         return MongoClient(
-            self.ujs_host,
+            ujs_host,
             27017,
-            username=self.ujs_user,
-            password=self.ujs_pwd,
+            username=ujs_user,
+            password=ujs_pwd,
             authSource=self.ujs_db,
+            retryWrites=False,
         )
 
-    def _get_exec_engine_connection(self):
+    def _get_njs_connection(self):
         parser = ConfigParser()
         parser.read(os.environ.get("KB_DEPLOYMENT_CONFIG"))
-        self.exec_engine_host = parser.get("NarrativeJobService", "mongodb-host")
-        self.exec_engine_db = parser.get("NarrativeJobService", "mongodb-database")
-        self.exec_engine_user = parser.get("NarrativeJobService", "mongodb-user")
-        self.exec_engine_pwd = parser.get("NarrativeJobService", "mongodb-pwd")
+        njs_host = parser.get("NarrativeJobService", "mongodb-host")
+        self.njs_db = parser.get("NarrativeJobService", "mongodb-database")
+        njs_user = parser.get("NarrativeJobService", "mongodb-user")
+        njs_pwd = parser.get("NarrativeJobService", "mongodb-pwd")
 
         return MongoClient(
-            self.exec_engine_host,
+            njs_host,
             27017,
-            username=self.exec_engine_user,
-            password=self.exec_engine_pwd,
-            authSource=self.exec_engine_db,
+            username=njs_user,
+            password=njs_pwd,
+            authSource=self.njs_db,
+            retryWrites=False,
+        )
+
+    def _get_ee2_connection(self):
+        parser = ConfigParser()
+        parser.read(os.environ.get("KB_DEPLOYMENT_CONFIG"))
+        ee2_host = parser.get("NarrativeJobService", "mongodb-host")
+        self.ee2_db = "exec_engine2"
+        ee2_user = parser.get("NarrativeJobService", "mongodb-user")
+        ee2_pwd = parser.get("NarrativeJobService", "mongodb-pwd")
+
+        return MongoClient(
+            ee2_host,
+            27017,
+            username=ee2_user,
+            password=ee2_pwd,
+            authSource=self.ee2_db,
         )
 
     @classmethod
@@ -114,8 +130,9 @@ class RollbakDatabases:
 
     def __init__(self):
 
-        self.exec_engine = self._get_exec_engine_connection()
+        self.njs = self._get_njs_connection()
         self.ujs = self._get_ujs_connection()
+        self.ee2 = self._get_ee2_connection()
 
         self.ujs_jobs_collection = "jobstate"
 
@@ -125,18 +142,16 @@ class RollbakDatabases:
         self.ee2_jobs_collection = "ee2_jobs"
         self.ee2_logs_collection = "ee2_logs"
 
-        self.ee2_db = "exec_engine2"
-
     def rollback_jobs(self):
 
         ee2_jobs = (
-            self.exec_engine
+            self.ee2
             .get_database(self.ee2_db)
             .get_collection(self.ee2_jobs_collection))
 
         njs_jobs = (
             self.exec_engine
-            .get_database(self.exec_engine_db)
+            .get_database(self.njs_db)
             .get_collection(self.njs_jobs_collection))
 
         ujs_jobs = (
@@ -156,14 +171,12 @@ class RollbakDatabases:
             if not ujs_jobs.find({"id": job_id}).count():
 
                 ujs_job_doc = self._create_ujs_job_rec(ee2_job)
-
                 try:
                     ujs_jobs.insert(ujs_job_doc)
                 except Exception:
                     failed_ujs_insert.append(str(job_id))
 
                 njs_job_doc = self._create_njs_job_rec(ee2_job)
-
                 try:
                     njs_jobs.insert(njs_job_doc)
                 except Exception:
@@ -182,7 +195,7 @@ class RollbakDatabases:
 
         njs_logs = (
             self.exec_engine
-            .get_database(self.exec_engine_db)
+            .get_database(self.njs_db)
             .get_collection(self.njs_logs_collection))
 
         ee2_logs_cursor = ee2_logs.find()
