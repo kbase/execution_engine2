@@ -74,10 +74,7 @@ class RollbakDatabases:
         ujs_job_doc['meta'] = job_input.get("narrative_cell_info")
 
         running = ee2_job.get("running")
-        if running is None:
-            ujs_job_doc['started'] = None
-        else:
-            ujs_job_doc['started'] = datetime.fromtimestamp(running)
+        ujs_job_doc['started'] = datetime.fromtimestamp(running) if running else None
 
         return ujs_job_doc
 
@@ -105,25 +102,13 @@ class RollbakDatabases:
         njs_job_doc['job_input'] = njs_job_input
 
         queued = ee2_job.get("queued")
-        if queued is None:
-            queue_time = None
-        else:
-            queue_time = int(queued * 1000)
-        njs_job_doc['queue_time'] = queue_time
+        njs_job_doc['queue_time'] = int(queued * 1000) if queued else None
 
         running = ee2_job.get("running")
-        if running is None:
-            exec_start_time = None
-        else:
-            exec_start_time = int(running * 1000)
-        njs_job_doc['exec_start_time'] = exec_start_time
+        njs_job_doc['exec_start_time'] = int(running * 1000) if running else None
 
         finished = ee2_job.get("finished")
-        if finished is None:
-            finish_time = None
-        else:
-            finish_time = int(finished * 1000)
-        njs_job_doc['finish_time'] = finish_time
+        njs_job_doc['finish_time'] = int(finished * 1000) if finished else None
 
         return njs_job_doc
 
