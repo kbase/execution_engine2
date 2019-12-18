@@ -149,7 +149,7 @@ class RollbakDatabases:
         self.ee2_jobs_collection = "ee2_jobs"
         self.ee2_logs_collection = "ee2_logs"
 
-    def rollback_jobs(self):
+    def rollback_jobs(self, cut_off_time=None):
 
         ee2_jobs = (
             self.ee2
@@ -166,7 +166,11 @@ class RollbakDatabases:
             .get_database(self.ujs_db)
             .get_collection(self.ujs_jobs_collection))
 
-        ee2_jobs_cursor = ee2_jobs.find()
+        if cut_off_time:
+            ee2_jobs_cursor = ee2_jobs.find({"updated": {"$gt": cut_off_time}})
+        else:
+            ee2_jobs_cursor = ee2_jobs.find()
+
         count = 0
         failed_ujs_insert = list()
         failed_njs_insert = list()
@@ -194,7 +198,7 @@ class RollbakDatabases:
 
         return count, failed_ujs_insert, failed_njs_insert
 
-    def rollback_logs(self):
+    def rollback_logs(self, cut_off_time=None):
         ee2_logs = (
             self.ee2
             .get_database(self.ee2_db)
@@ -205,7 +209,11 @@ class RollbakDatabases:
             .get_database(self.njs_db)
             .get_collection(self.njs_logs_collection))
 
-        ee2_logs_cursor = ee2_logs.find()
+        if cut_off_time:
+            ee2_logs_cursor = ee2_logs.find({"updated": {"$gt": cut_off_time}})
+        else:
+            ee2_logs_cursor = ee2_logs.find()
+
         count = 0
         failed_njs_insert = list()
 
@@ -233,7 +241,8 @@ class RollbakDatabases:
 def main():
     if sys.argv[1] == "test_roll_back":
         rd = RollbakDatabases()
-        count, failed_ujs_insert, failed_njs_insert = rd.rollback_jobs()
+        cut_off_date = datetime(2019, 7, 1)
+        count, failed_ujs_insert, failed_njs_insert = rd.rollback_jobs(cut_off_time=datetime.timestamp(cut_off_date))
         print("attempted to rollback {} job records".format(count))
         print("failed to insert UJS jobs:\n{}\nfailed to insert NJS jobs:\n{}\n".format(failed_ujs_insert, failed_njs_insert))
 
@@ -242,7 +251,7 @@ def main():
         print("failed to insert NJS logs:\n{}\n".format(failed_njs_insert))
     else:
         rd = RollbakDatabases()
-        count, failed_ujs_insert, failed_njs_insert = rd.rollback_jobs()
+        count, failed_ujs_insert, failed_njs_insert = rd.rollback_jobs(cut_off_time=datetime.timestamp(cut_off_date))
         print("attempted to rollback {} job records".format(count))
         print("failed to insert UJS jobs:\n{}\nfailed to insert NJS jobs:\n{}\n".format(failed_ujs_insert, failed_njs_insert))
 
