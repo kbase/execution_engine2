@@ -5,6 +5,7 @@ from bson.objectid import ObjectId
 import copy
 from configparser import ConfigParser
 from pymongo import MongoClient
+import sys
 
 
 class RollbakDatabases:
@@ -128,19 +129,28 @@ class RollbakDatabases:
 
         return njs_job_doc
 
-    def __init__(self):
+    def __init__(self, test_roll_back=None):
 
         self.njs = self._get_njs_connection()
         self.ujs = self._get_ujs_connection()
         self.ee2 = self._get_ee2_connection()
 
-        self.ujs_jobs_collection = "jobstate"
+        if test_roll_back:
+            self.ujs_jobs_collection = "jobstate"
 
-        self.njs_jobs_collection = "exec_tasks"
-        self.njs_logs_collection = "exec_logs"
+            self.njs_jobs_collection = "exec_tasks"
+            self.njs_logs_collection = "exec_logs"
 
-        self.ee2_jobs_collection = "ee2_jobs"
-        self.ee2_logs_collection = "ee2_logs"
+            self.ee2_jobs_collection = "ee2_jobs"
+            self.ee2_logs_collection = "ee2_logs"
+        else:
+            self.ujs_jobs_collection = "jobstate_test_rb"
+
+            self.njs_jobs_collection = "exec_tasks_test_rb"
+            self.njs_logs_collection = "exec_logs_test_rb"
+
+            self.ee2_jobs_collection = "ee2_jobs_test_rb"
+            self.ee2_logs_collection = "ee2_logs_test_rb"
 
     def rollback_jobs(self):
 
@@ -150,7 +160,7 @@ class RollbakDatabases:
             .get_collection(self.ee2_jobs_collection))
 
         njs_jobs = (
-            self.exec_engine
+            self.njs
             .get_database(self.njs_db)
             .get_collection(self.njs_jobs_collection))
 
@@ -189,12 +199,12 @@ class RollbakDatabases:
 
     def rollback_logs(self):
         ee2_logs = (
-            self.exec_engine
+            self.ee2
             .get_database(self.ee2_db)
             .get_collection(self.ee2_logs_collection))
 
         njs_logs = (
-            self.exec_engine
+            self.njs
             .get_database(self.njs_db)
             .get_collection(self.njs_logs_collection))
 
@@ -224,14 +234,24 @@ class RollbakDatabases:
 
 
 def main():
-    rd = RollbakDatabases()
-    count, failed_ujs_insert, failed_njs_insert = rd.rollback_jobs()
-    print("attempted to rollback {} job records".format(count))
-    print("failed to insert UJS jobs:\n{}\nfailed to insert NJS jobs:\n{}\n".format(failed_ujs_insert, failed_njs_insert))
+    if sys.argv[1] == "test_roll_back":
+        rd = RollbakDatabases()
+        count, failed_ujs_insert, failed_njs_insert = rd.rollback_jobs()
+        print("attempted to rollback {} job records".format(count))
+        print("failed to insert UJS jobs:\n{}\nfailed to insert NJS jobs:\n{}\n".format(failed_ujs_insert, failed_njs_insert))
 
-    count, failed_njs_insert = rd.rollback_logs()
-    print("attempted to rollback {} log records".format(count))
-    print("failed to insert NJS logs:\n{}\n".format(failed_njs_insert))
+        count, failed_njs_insert = rd.rollback_logs()
+        print("attempted to rollback {} log records".format(count))
+        print("failed to insert NJS logs:\n{}\n".format(failed_njs_insert))
+    else:
+        rd = RollbakDatabases()
+        count, failed_ujs_insert, failed_njs_insert = rd.rollback_jobs()
+        print("attempted to rollback {} job records".format(count))
+        print("failed to insert UJS jobs:\n{}\nfailed to insert NJS jobs:\n{}\n".format(failed_ujs_insert, failed_njs_insert))
+
+        count, failed_njs_insert = rd.rollback_logs()
+        print("attempted to rollback {} log records".format(count))
+        print("failed to insert NJS logs:\n{}\n".format(failed_njs_insert))
 
 
 if __name__ == "__main__":
