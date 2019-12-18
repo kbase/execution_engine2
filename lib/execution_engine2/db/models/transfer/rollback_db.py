@@ -115,7 +115,7 @@ class RollbakDatabases:
                        "parent_job_id": job_input.get('parent_job_id')}
 
         njs_job_input = copy.deepcopy(job_input)
-        njs_job_input["meta"] = njs_job_input.pop("narrative_cell_info")
+        njs_job_input["meta"] = njs_job_input.pop("narrative_cell_info", None)
         njs_job_doc['job_input'] = njs_job_input
 
         queued = ee2_job.get("queued")
@@ -140,17 +140,14 @@ class RollbakDatabases:
 
             self.njs_jobs_collection = "exec_tasks"
             self.njs_logs_collection = "exec_logs"
-
-            self.ee2_jobs_collection = "ee2_jobs"
-            self.ee2_logs_collection = "ee2_logs"
         else:
             self.ujs_jobs_collection = "jobstate_test_rb"
 
             self.njs_jobs_collection = "exec_tasks_test_rb"
             self.njs_logs_collection = "exec_logs_test_rb"
 
-            self.ee2_jobs_collection = "ee2_jobs_test_rb"
-            self.ee2_logs_collection = "ee2_logs_test_rb"
+        self.ee2_jobs_collection = "ee2_jobs"
+        self.ee2_logs_collection = "ee2_logs"
 
     def rollback_jobs(self):
 
