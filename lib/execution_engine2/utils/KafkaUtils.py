@@ -59,7 +59,7 @@ class StatusRequired:
 class StatusOptional:
     topic: str = DEFAULT_TOPIC
     event_type: str = STATUS_EVENT_TYPE
-    status_change: str = None
+
     error: bool = False
 
     def __post_init__(self):
@@ -71,8 +71,6 @@ class StatusOptional:
 
         if not isinstance(self.error, bool):
             raise TypeError("error must be a bool")
-
-        Status(self.status_change)
 
 
 @dataclass

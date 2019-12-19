@@ -759,7 +759,6 @@ class SDKMethodRunner:
 
         send_kafka_message(
             message=KafkaStatusChange(
-                status_change=status,
                 job_id=str(job_id),
                 new_status=status,
                 previous_status=previous_status,
@@ -856,7 +855,7 @@ class SDKMethodRunner:
         :param job_output: dict - default None, if given this job has some output
         """
 
-        self._check_job_is_running(job_id=job_id)
+        job = self._check_job_is_running(job_id=job_id)
 
         if error_message:
             if error_code is None:
@@ -931,14 +930,14 @@ class SDKMethodRunner:
         with self.get_mongo_util().mongo_engine_connection():
             if job_status == Status.estimating.value or skip_estimation:
                 # set job to running status
-                status_change = Status.running.value
+
                 job.running = time.time()
                 self.get_mongo_util().update_job_status(
                     job_id=job_id, status=Status.running.value
                 )
             else:
                 # set job to estimating status
-                status_change = Status.estimating.value
+
                 job.estimating = time.time()
                 self.get_mongo_util().update_job_status(
                     job_id=job_id, status=Status.estimating.value
@@ -949,7 +948,6 @@ class SDKMethodRunner:
 
         send_kafka_message(
             message=KafkaStatusChange(
-                status_change=status_change,
                 job_id=str(job_id),
                 new_status=job.status,
                 previous_status=job_status,
