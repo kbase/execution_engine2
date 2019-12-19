@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from bson.objectid import ObjectId
 import copy
 from configparser import ConfigParser
@@ -108,7 +108,7 @@ class RollbakDatabases:
                        "output_shock_id": None,
                        "app_job_id": None,
                        "creation_time": int(datetime.timestamp(job_id.generation_time) * 1000),
-                       "job_output": ee2_job.get("job_output"),
+                       "job_output": ee2_job.get("job_output", {}),
                        "scheduler_type": ee2_job.get("scheduler_type"),
                        "task_id": ee2_job.get("scheduler_id"),
                        "last_job_state": ee2_job.get("status"),
@@ -246,16 +246,18 @@ def main():
         print("attempted to rollback {} job records".format(count))
         print("failed to insert UJS jobs:\n{}\nfailed to insert NJS jobs:\n{}\n".format(failed_ujs_insert, failed_njs_insert))
 
-        count, failed_njs_insert = rd.rollback_logs()
+        count, failed_njs_insert = rd.rollback_logs(cut_off_time=datetime.timestamp(cut_off_date))
         print("attempted to rollback {} log records".format(count))
         print("failed to insert NJS logs:\n{}\n".format(failed_njs_insert))
     else:
         rd = RollbakDatabases()
+        cut_off_date = None
+        cut_off_date = datetime.today() - timedelta(days=1)  # comment this line for a full rollback
         count, failed_ujs_insert, failed_njs_insert = rd.rollback_jobs(cut_off_time=datetime.timestamp(cut_off_date))
         print("attempted to rollback {} job records".format(count))
         print("failed to insert UJS jobs:\n{}\nfailed to insert NJS jobs:\n{}\n".format(failed_ujs_insert, failed_njs_insert))
 
-        count, failed_njs_insert = rd.rollback_logs()
+        count, failed_njs_insert = rd.rollback_logs(cut_off_time=datetime.timestamp(cut_off_date))
         print("attempted to rollback {} log records".format(count))
         print("failed to insert NJS logs:\n{}\n".format(failed_njs_insert))
 
