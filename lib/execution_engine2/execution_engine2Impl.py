@@ -2,6 +2,7 @@
 #BEGIN_HEADER
 from execution_engine2.SDKMethodRunner import SDKMethodRunner
 import time
+from cachetools import TTLCache
 #END_HEADER
 
 
@@ -11,7 +12,7 @@ class execution_engine2:
     execution_engine2
 
     Module Description:
-    
+
     '''
 
     ######## WARNING FOR GEVENT USERS ####### noqa
@@ -30,6 +31,9 @@ class execution_engine2:
 
     SERVICE_NAME = "KBase Execution Engine"
 
+    JOB_PERMISSION_CACHE_SIZE = 500
+    JOB_PERMISSION_CACHE_EXPIRE_TIME = 300  # seconds
+
     #END_CLASS_HEADER
 
     # config contains contents of config file in a hash or None if it couldn't
@@ -39,6 +43,8 @@ class execution_engine2:
         self.config = config
         self.config["mongo-collection"] = self.MONGO_COLLECTION
         self.config.setdefault("mongo-authmechanism", self.MONGO_AUTHMECHANISM)
+        self.job_permission_cache = TTLCache(maxsize=self.JOB_PERMISSION_CACHE_SIZE,
+                                             ttl=self.JOB_PERMISSION_CACHE_EXPIRE_TIME)
         #END_CONSTRUCTOR
         pass
 
@@ -257,7 +263,8 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: params
         #BEGIN get_job_params
-        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
+        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+                             job_permission_cache=self.job_permission_cache)
         params = mr.get_job_params(job_id)
         #END get_job_params
 
@@ -279,7 +286,8 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: job_id
         #BEGIN update_job_status
-        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
+        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+                             job_permission_cache=self.job_permission_cache)
         job_id = mr.update_job_status(params.get("job_id"), params.get("status"))
         #END update_job_status
 
@@ -304,7 +312,9 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: line_number
         #BEGIN add_job_logs
-        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
+
+        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+                             job_permission_cache=self.job_permission_cache)
         line_number = mr.add_job_logs(job_id=job_id, log_lines=lines)
         #END add_job_logs
 
@@ -336,7 +346,8 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: returnVal
         #BEGIN get_job_logs
-        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
+        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+                             job_permission_cache=self.job_permission_cache)
         returnVal = mr.view_job_logs(
             job_id=params["job_id"], skip_lines=params.get("skip_lines", None)
         )
@@ -367,8 +378,9 @@ class execution_engine2:
         """
         # ctx is the context object
         #BEGIN finish_job
-        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
-        mr.finish_job(params.get('job_id'),
+        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+                             job_permission_cache=self.job_permission_cache)
+        mr.finish_job(job_id=params.get('job_id'),
                       error_message=params.get('error_message'),
                       error_code=params.get('error_code'),
                       error=params.get('error'),
@@ -387,7 +399,8 @@ class execution_engine2:
         """
         # ctx is the context object
         #BEGIN start_job
-        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
+        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+                             job_permission_cache=self.job_permission_cache)
         mr.start_job(
             params.get("job_id"),
             skip_estimation=params.get("skip_estimation", True),
@@ -751,7 +764,8 @@ class execution_engine2:
         """
         # ctx is the context object
         #BEGIN cancel_job
-        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
+        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+                             job_permission_cache=self.job_permission_cache)
         mr.cancel_job(job_id=params["job_id"], terminated_code=params['terminated_code'] )
         #END cancel_job
         pass
@@ -799,7 +813,8 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: result
         #BEGIN get_job_status
-        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
+        mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+                             job_permission_cache=self.job_permission_cache)
         result = mr.get_job_status(job_id)
         #END get_job_status
 

@@ -116,11 +116,10 @@
             app_id - the id of the Narrative application running this job (e.g.
                 repo/name)
             mapping<string, string> meta - user defined metadata to associate with
-                the job. This data is passed to the User and Job State (UJS)
-                service.
-            wsid - a workspace id to associate with the job. This is passed to the
-                UJS service, which will share the job based on the permissions of
-                the workspace rather than UJS ACLs.
+                the job.
+            wsid - an optional workspace id to associate with the job. This is passed to the
+                workspace service, which will share the job based on the permissions of
+                the workspace rather than owner of the job
             parent_job_id - UJS id of the parent of a batch job. Sub jobs will add
             this id to the NJS database under the field "parent_job_id"
         */
@@ -246,7 +245,7 @@
     /*
         job_id - string - id of the job
         user - string - user who started the job
-        wsid - int - id of the workspace where the job is bound
+        wsid - int - optional id of the workspace where the job is bound
         authstrat - string - what strategy used to authenticate the job
         job_input - object - inputs to the job (from the run_job call)  ## TODO - verify
         updated - int - timestamp since epoch in milliseconds of the last time the status was updated
@@ -401,7 +400,7 @@
             authstrat = StringField(
                 required=True, default="kbaseworkspace", validation=valid_authstrat
             )
-            wsid = IntField(required=True)
+            wsid = IntField(required=False)
             status = StringField(required=True, validation=valid_status)
             updated = DateTimeField(default=datetime.datetime.utcnow, autonow=True)
             estimating = DateTimeField(default=None)  # Time when job began estimating

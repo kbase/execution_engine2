@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import datetime
 import os
 from configparser import ConfigParser
 
@@ -21,8 +20,26 @@ class MigrateDatabases:
     """
 
     documents = []
-    threshold = 20
+
     none_jobs = 0
+
+    def _get_ee2_connection(self) -> MongoClient:
+        parser = ConfigParser()
+        parser.read(os.environ.get("KB_DEPLOYMENT_CONFIG"))
+        self.ee2_host = parser.get("NarrativeJobService", "mongodb-host")
+        self.ee2_db = "exec_engine2"
+        self.ee2_user = parser.get("NarrativeJobService", "mongodb-user")
+        self.ee2_pwd = parser.get("NarrativeJobService", "mongodb-pwd")
+        self.ee2_logs_collection_name = "ee2_logs"
+
+        return MongoClient(
+            self.ee2_host,
+            27017,
+            username=self.ee2_user,
+            password=self.ee2_pwd,
+            authSource=self.ee2_db,
+            retryWrites=False,
+        )
 
     def _get_njs_connection(self) -> MongoClient:
         parser = ConfigParser()
@@ -54,7 +71,9 @@ class MigrateDatabases:
         )
 
         self.ee2_logs = (
-            self._get_njs_connection().get_database(self.njs_db).get_collection("logs")
+            self._get_ee2_connection()
+            .get_database(self.ee2_db)
+            .get_collection(self.ee2_logs_collection_name)
         )
 
     def save_log(self, log):
@@ -70,34 +89,42 @@ class MigrateDatabases:
 
     def begin_log_transfer(self):  # flake8: noqa
 
-
         logs_cursor = self.njs_logs.find()
-
-
+        success = 0
+        failures = 0
         count = 0
         for log in logs_cursor:
             job_log = JobLog()
 
-            job_log.primary_key = log['_id']
-            count+=1
-            print(f"Working on {log['_id']}", count)
+            job_log.primary_key = log["ujs_job_id"]
+            count += 1
+            print(f"Working on {log['ujs_job_id']}", count)
 
-            job_log.original_line_count = log['original_line_count']
-            job_log.stored_line_count = log['stored_line_count']
+            job_log.original_line_count = log["original_line_count"]
+            job_log.stored_line_count = log["stored_line_count"]
 
             lines = []
-            for line in log['lines']:
+            for line in log["lines"]:
                 ll = LogLines()
-                ll.error = line['is_error']
-                ll.linepos  = line['line_pos']
-                ll.line = line['line']
+                ll.error = line["is_error"]
+                ll.linepos = line["line_pos"]
+                ll.line = line["line"]
                 ll.validate()
                 lines.append(ll)
             job_log.lines = lines
             job_log.validate()
-            self.save_log(job_log)
+            try:
+                print("About to insert log into", self.ee2_db, self.ee2_logs)
+                self.ee2_logs.insert_one(job_log.to_mongo())
+                success += 1
+            except Exception as e:
+                print("couldn't insert ", log["ujs_job_id"])
+                print(e)
+                failures += 1
+
+            # self.save_log(job_log)
         # Save leftover jobs
-        self.save_remnants()
+        # self.save_remnants()
 
         # TODO SAVE up to 5000 in memory and do a bulk insert
         # a = []

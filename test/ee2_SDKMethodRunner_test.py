@@ -610,9 +610,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             test_line = ori_lines[0]
 
-            self.assertEqual(test_line.line, "Hello world")
-            self.assertEqual(test_line.linepos, 1)
-            self.assertFalse(test_line.error)
+            self.assertEqual(test_line["line"], "Hello world")
+            self.assertEqual(test_line["linepos"], 1)
+            self.assertFalse(test_line["error"])
 
             # add job log
             lines = [
@@ -633,22 +633,22 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             # original line
             test_line = ori_lines[0]
 
-            self.assertEqual(test_line.line, "Hello world")
-            self.assertEqual(test_line.linepos, 1)
-            self.assertFalse(test_line.error)
+            self.assertEqual(test_line["line"], "Hello world")
+            self.assertEqual(test_line["linepos"], 1)
+            self.assertFalse(test_line["error"])
 
             # new line
             test_line = ori_lines[1]
 
-            self.assertEqual(test_line.line, "Hello Kbase")
-            self.assertEqual(test_line.linepos, 2)
-            self.assertTrue(test_line.error)
+            self.assertEqual(test_line["line"], "Hello Kbase")
+            self.assertEqual(test_line["linepos"], 2)
+            self.assertTrue(test_line["error"])
 
             test_line = ori_lines[2]
 
-            self.assertEqual(test_line.line, "Hello Wrold Kbase")
-            self.assertEqual(test_line.linepos, 3)
-            self.assertFalse(test_line.error)
+            self.assertEqual(test_line["line"], "Hello Wrold Kbase")
+            self.assertEqual(test_line["linepos"], 3)
+            self.assertFalse(test_line["error"])
 
             self.mongo_util.get_job(job_id=job_id).delete()
             self.assertEqual(ori_job_count, Job.objects.count())
@@ -764,13 +764,13 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             # test missing job_id input
             with self.assertRaises(ValueError) as context:
                 logging.info("Finish Job Case 0 Raises Error")
-                runner.finish_job(None)
+                runner.finish_job(job_id=None)
             self.assertEqual("Please provide valid job_id", str(context.exception))
 
             # test finish job with invalid status
             with self.assertRaises(ValueError) as context:
                 logging.info("Finish Job Case 1 Raises Error")
-                runner.finish_job(job_id)
+                runner.finish_job(job_id=job_id)
             self.assertIn("Unexpected job status", str(context.exception))
 
             # update job status to running
@@ -790,7 +790,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             print(f"About to finish job {job_id}. The job status is currently")
             print(runner.get_job_status(job_id))
-            runner.finish_job(job_id, job_output=job_output)
+            runner.finish_job(job_id=job_id, job_output=job_output)
             print("Job is now finished, status is")
             print(runner.get_job_status(job_id))
 
@@ -823,10 +823,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner._test_job_permissions = MagicMock(return_value=True)
 
         with self.assertRaises(InvalidStatusTransitionException):
-            runner.finish_job(job_id, error_message="error message")
+            runner.finish_job(job_id=job_id, error_message="error message")
 
         runner.start_job(job_id=job_id, skip_estimation=True)
-        runner.finish_job(job_id, error_message="error message")
+        runner.finish_job(job_id=job_id, error_message="error message")
 
         job = self.mongo_util.get_job(job_id=job_id)
 
@@ -849,7 +849,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         }
 
         runner.finish_job(
-            job_id, error_message="error message", error=error, error_code=0
+            job_id=job_id, error_message="error message", error=error, error_code=0
         )
 
         job = self.mongo_util.get_job(job_id=job_id)
