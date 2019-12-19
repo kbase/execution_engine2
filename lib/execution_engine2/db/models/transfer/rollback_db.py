@@ -102,7 +102,7 @@ class RollbakDatabases:
         job_input = ee2_job.get("job_input", {})
 
         njs_job_doc = {"_id": ObjectId(),
-                       "ujs_job_id": job_id,
+                       "ujs_job_id": str(job_id),
                        "awe_job_id": None,
                        "input_shock_id": None,
                        "output_shock_id": None,
