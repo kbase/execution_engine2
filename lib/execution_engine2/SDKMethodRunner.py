@@ -867,7 +867,7 @@ class SDKMethodRunner:
         with self.get_mongo_util().mongo_engine_connection():
             job.save()
 
-    def check_job(self, job_id, check_permission=True, projection=None):
+    def check_job(self, job_id, check_permission=True, exclude_fields=None):
         """
         check_job: check and return job status for a given job_id
 
@@ -877,8 +877,8 @@ class SDKMethodRunner:
 
         logging.info("Start fetching status for job: {}".format(job_id))
 
-        if projection is None:
-            projection = []
+        if exclude_fields is None:
+            exclude_fields = []
 
         if not job_id:
             raise ValueError("Please provide valid job_id")
@@ -886,14 +886,14 @@ class SDKMethodRunner:
         job_state = self.check_jobs(
             [job_id],
             check_permission=check_permission,
-            projection=projection,
+            exclude_fields=exclude_fields,
             return_list=0,
         ).get(job_id)
 
         return job_state
 
     def check_jobs(
-        self, job_ids, check_permission=True, projection=None, return_list=None
+        self, job_ids, check_permission=True, exclude_fields=None, return_list=None
     ):
         """
         check_jobs: check and return job status for a given of list job_ids
@@ -901,12 +901,12 @@ class SDKMethodRunner:
 
         logging.info("Start fetching status for jobs: {}".format(job_ids))
 
-        if projection is None:
-            projection = []
+        if exclude_fields is None:
+            exclude_fields = []
 
         with self.get_mongo_util().mongo_engine_connection():
             jobs = self.get_mongo_util().get_jobs(
-                job_ids=job_ids, projection=projection
+                job_ids=job_ids, exclude_fields=exclude_fields
             )
 
         if check_permission:
@@ -951,7 +951,7 @@ class SDKMethodRunner:
 
         return job_states
 
-    def check_workspace_jobs(self, workspace_id, projection=None, return_list=None):
+    def check_workspace_jobs(self, workspace_id, exclude_fields=None, return_list=None):
         """
         check_workspace_jobs: check job status for all jobs in a given workspace
         """
@@ -959,8 +959,8 @@ class SDKMethodRunner:
             "Start fetching all jobs status in workspace: {}".format(workspace_id)
         )
 
-        if projection is None:
-            projection = []
+        if exclude_fields is None:
+            exclude_fields = []
 
         ws_auth = self.get_workspace_auth()
         if not ws_auth.can_read(workspace_id):
@@ -980,7 +980,7 @@ class SDKMethodRunner:
         job_states = self.check_jobs(
             job_ids,
             check_permission=False,
-            projection=projection,
+            exclude_fields=exclude_fields,
             return_list=return_list,
         )
 

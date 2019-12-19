@@ -990,8 +990,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_state["status"], "created")
             self.assertEqual(job_state["wsid"], self.ws_id)
 
-            # test check_job with projection
-            job_state = runner.check_job(job_id, projection=["status"])
+            # test check_job with exclude_fields
+            job_state = runner.check_job(job_id, exclude_fields=["status"])
             self.assertFalse("status" in job_state.keys())
             self.assertEqual(job_state["wsid"], self.ws_id)
 
@@ -1024,8 +1024,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertTrue(isinstance(job_states_list, list))
             self.assertCountEqual(job_states_list, list(job_states.values())[:2])
 
-            # test check_jobs with projection
-            job_states = runner.check_jobs([job_id], projection=["wsid"], return_list=0)
+            # test check_jobs with exclude_fields
+            job_states = runner.check_jobs([job_id], exclude_fields=["wsid"], return_list=0)
             self.assertTrue(job_id in job_states)
             self.assertFalse("wsid" in job_states[job_id].keys())
             self.assertEqual(job_states[job_id]["status"], "created")
@@ -1042,8 +1042,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_states[job_id_1]["status"], "created")
             self.assertEqual(job_states[job_id_1]["wsid"], self.ws_id)
 
-            # test check_workspace_jobs with projection
-            job_states = runner.check_workspace_jobs(self.ws_id, projection=["wsid"], return_list=False)
+            # test check_workspace_jobs with exclude_fields
+            job_states = runner.check_workspace_jobs(self.ws_id, exclude_fields=["wsid"], return_list=False)
             json.dumps(job_states)  # make sure it's JSON serializable
             self.assertTrue(job_id in job_states)
             self.assertFalse("wsid" in job_states[job_id].keys())

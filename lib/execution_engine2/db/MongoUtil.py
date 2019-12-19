@@ -187,16 +187,16 @@ class MongoUtil:
 
         return job_log
 
-    def get_job(self, job_id=None, projection=None) -> Job:
+    def get_job(self, job_id=None, exclude_fields=None) -> Job:
 
         if job_id is None:
             raise ValueError("Please provide a job id")
 
-        job = self.get_jobs(job_ids=[job_id], projection=projection)[0]
+        job = self.get_jobs(job_ids=[job_id], exclude_fields=exclude_fields)[0]
 
         return job
 
-    def get_jobs(self, job_ids=None, projection=None, sort_id_ascending=None):
+    def get_jobs(self, job_ids=None, exclude_fields=None, sort_id_ascending=None):
         if not (job_ids and isinstance(job_ids, list)):
             raise ValueError("Please provide a non empty list of job ids")
 
@@ -207,10 +207,10 @@ class MongoUtil:
 
         with self.mongo_engine_connection():
             try:
-                if projection:
-                    if not isinstance(projection, list):
-                        raise ValueError("Please input a list type projection")
-                    jobs = Job.objects(id__in=job_ids).exclude(*projection).order_by("{}_id".format(sort_id_indicator))
+                if exclude_fields:
+                    if not isinstance(exclude_fields, list):
+                        raise ValueError("Please input a list type exclude_fields")
+                    jobs = Job.objects(id__in=job_ids).exclude(*exclude_fields).order_by("{}_id".format(sort_id_indicator))
                 else:
                     jobs = Job.objects(id__in=job_ids).order_by("{}_id".format(sort_id_indicator))
             except Exception:
@@ -246,7 +246,7 @@ class MongoUtil:
         """
 
         with self.mongo_engine_connection():
-            j = self.get_job(job_id, projection=None)
+            j = self.get_job(job_id)
             self.check_if_already_finished(j.status)
             if terminated_code is None:
                 terminated_code = TerminatedCode.terminated_by_user.value
@@ -264,7 +264,7 @@ class MongoUtil:
         :return:
         """
         with self.mongo_engine_connection():
-            j = self.get_job(job_id, projection=None)
+            j = self.get_job(job_id)
             j.error_code = error_code
             j.errormsg = error_message
             j.error = error
@@ -281,7 +281,7 @@ class MongoUtil:
         :return:
         """
         with self.mongo_engine_connection():
-            j = self.get_job(job_id, projection=None)
+            j = self.get_job(job_id)
             j.job_output = job_output
             j.status = Status.completed.value
             j.finished = time.time()
