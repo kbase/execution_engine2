@@ -947,7 +947,7 @@ class SDKMethodRunner:
         job.reload("status")
 
         send_kafka_message(
-            message=KafkaStatusChange(
+            message=KafkaStartJob(
                 job_id=str(job_id),
                 new_status=job.status,
                 previous_status=job_status,
