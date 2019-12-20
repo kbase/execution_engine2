@@ -194,11 +194,16 @@ def _delivery_report(err, msg):
 
 
 def send_kafka_message(message, topic=DEFAULT_TOPIC, server_address="kafka"):
-    logging.info(json.dumps(message.__dict__))
+
     try:
         producer = Producer({"bootstrap.servers": server_address})
         producer.produce(topic, json.dumps(message.__dict__), callback=_delivery_report)
         producer.poll(2)
+        logging.info(
+            f"Successfully sent message to kafka at topic={topic} message={json.dumps(message.__dict__)} server_address={server_address}"
+        )
     except Exception as e:
-        print(str(e))
+        logging.info(
+            f"Failed to send message to kafka at topic={topic} message={json.dumps(message.__dict__)} server_address={server_address}"
+        )
         raise Exception(e)
