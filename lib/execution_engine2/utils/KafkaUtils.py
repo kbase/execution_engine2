@@ -7,6 +7,8 @@ import logging
 from execution_engine2.db.models.models import Status, ErrorCode
 
 logging.basicConfig(level=logging.INFO)
+
+
 from dataclasses import dataclass
 
 from confluent_kafka import Producer
@@ -192,6 +194,11 @@ def _delivery_report(err, msg):
 
 
 def send_kafka_message(message, topic=DEFAULT_TOPIC, server_address="kafka"):
-    producer = Producer({"bootstrap.servers": server_address})
-    producer.produce(topic, json.dumps(message.__dict__), callback=_delivery_report)
-    producer.poll(2)
+    logging.info(json.dumps(message.__dict__))
+    try:
+        producer = Producer({"bootstrap.servers": server_address})
+        producer.produce(topic, json.dumps(message.__dict__), callback=_delivery_report)
+        producer.poll(2)
+    except Exception as e:
+        print(str(e))
+        raise Exception(e)

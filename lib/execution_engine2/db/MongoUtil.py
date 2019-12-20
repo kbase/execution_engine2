@@ -425,8 +425,6 @@ class MongoUtil:
         update existing records
         https://docs.mongodb.com/manual/reference/operator/update/set/
         """
-        logging.info("start updating document")
-
         with self.pymongo_client(self.mongo_collection) as pymongo_client:
             job_col = pymongo_client[self.mongo_database][self.mongo_collection]
             try:
