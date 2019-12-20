@@ -77,7 +77,7 @@ class MongoUtilTest(unittest.TestCase):
             job_id = job.save().id
             self.assertEqual(ori_job_count, Job.objects.count() - 1)
 
-            # get job with no projection
+            # get job with no exclude_fields
             job = mongo_util.get_job(job_id=job_id).to_mongo().to_dict()
 
             expected_keys = [
@@ -91,9 +91,9 @@ class MongoUtilTest(unittest.TestCase):
             ]
             self.assertCountEqual(job.keys(), expected_keys)
 
-            # get job with projection
+            # get job with exclude_fields
             job = (
-                mongo_util.get_job(job_id=job_id, projection=["job_input"])
+                mongo_util.get_job(job_id=job_id, exclude_fields=["job_input"])
                 .to_mongo()
                 .to_dict()
             )
@@ -101,9 +101,9 @@ class MongoUtilTest(unittest.TestCase):
             expected_keys = ["_id", "user", "authstrat", "wsid", "status", "updated"]
             self.assertCountEqual(job.keys(), expected_keys)
 
-            # get job with multiple projection
+            # get job with multiple exclude_fields
             job = (
-                mongo_util.get_job(job_id=job_id, projection=["user", "wsid"])
+                mongo_util.get_job(job_id=job_id, exclude_fields=["user", "wsid"])
                 .to_mongo()
                 .to_dict()
             )
@@ -126,7 +126,7 @@ class MongoUtilTest(unittest.TestCase):
             job_id_2 = job.save().id
             self.assertEqual(ori_job_count, Job.objects.count() - 2)
 
-            # get jobs with no projection
+            # get jobs with no exclude_fields
             jobs = mongo_util.get_jobs(job_ids=[job_id_1, job_id_2])
 
             expected_keys = [
@@ -142,9 +142,9 @@ class MongoUtilTest(unittest.TestCase):
             for job in jobs:
                 self.assertCountEqual(job.to_mongo().to_dict().keys(), expected_keys)
 
-            # get jobs with multiple projection
+            # get jobs with multiple exclude_fields
             jobs = mongo_util.get_jobs(
-                job_ids=[job_id_1, job_id_2], projection=["user", "wsid"]
+                job_ids=[job_id_1, job_id_2], exclude_fields=["user", "wsid"]
             )
 
             expected_keys = ["_id", "authstrat", "status", "updated", "job_input"]
