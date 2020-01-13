@@ -36,7 +36,7 @@ from execution_engine2.exceptions import (
 )
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.KafkaUtils import (
-    send_kafka_message,
+    KafkaClient,
     KafkaCancelJob,
     KafkaCondorCommand,
     KafkaFinishJob,
@@ -184,7 +184,9 @@ class SDKMethodRunner:
         with self.get_mongo_util().mongo_engine_connection():
             job.save()
 
-        send_kafka_message(message=KafkaCreateJob(job_id=str(job.id), user=user_id))
+        self.kafka_client.send_kafka_message(
+            message=KafkaCreateJob(job_id=str(job.id), user=user_id)
+        )
 
         return str(job.id)
 
@@ -418,6 +420,8 @@ class SDKMethodRunner:
         else:
             self.job_permission_cache = job_permission_cache
 
+        self.kafka_client = KafkaClient(config.get("kafka-host"))
+
         logging.basicConfig(
             format="%(created)s %(levelname)s: %(message)s", level=logging.debug
         )
@@ -443,7 +447,7 @@ class SDKMethodRunner:
 
         self.get_mongo_util().cancel_job(job_id=job_id, terminated_code=terminated_code)
 
-        send_kafka_message(
+        self.kafka_client.send_kafka_message(
             message=KafkaCancelJob(
                 job_id=str(job_id),
                 previous_status=job.status,
@@ -459,7 +463,7 @@ class SDKMethodRunner:
         logging.info(rv)
         logging.debug(f"{rv}")
 
-        send_kafka_message(
+        self.kafka_client.send_kafka_message(
             message=KafkaCondorCommand(
                 job_id=str(job_id),
                 scheduler_id=job.scheduler_id,
@@ -560,7 +564,7 @@ class SDKMethodRunner:
             j.scheduler_type = "condor"
             j.save()
 
-            send_kafka_message(
+            self.kafka_client.send_kafka_message(
                 message=KafkaQueueChange(
                     job_id=str(j.id),
                     new_status=j.status,
@@ -757,7 +761,7 @@ class SDKMethodRunner:
         with self.get_mongo_util().mongo_engine_connection():
             job.save()
 
-        send_kafka_message(
+        self.kafka_client.send_kafka_message(
             message=KafkaStatusChange(
                 job_id=str(job_id),
                 new_status=status,
@@ -867,7 +871,7 @@ class SDKMethodRunner:
                 error=error,
             )
 
-            send_kafka_message(
+            self.kafka_client.send_kafka_message(
                 message=KafkaFinishJob(
                     job_id=str(job_id),
                     new_status=Status.error.value,
@@ -889,7 +893,7 @@ class SDKMethodRunner:
             # No Kafka Message Here as this finish_job call failed due to insufficient requirements
         else:
             self._finish_job_with_success(job_id=job_id, job_output=job_output)
-            send_kafka_message(
+            self.kafka_client.send_kafka_message(
                 message=KafkaFinishJob(
                     job_id=str(job_id),
                     new_status=Status.completed.value,
@@ -946,7 +950,7 @@ class SDKMethodRunner:
 
         job.reload("status")
 
-        send_kafka_message(
+        self.kafka_client.send_kafka_message(
             message=KafkaStartJob(
                 job_id=str(job_id),
                 new_status=job.status,
