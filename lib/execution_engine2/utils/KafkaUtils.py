@@ -193,7 +193,7 @@ def _delivery_report(err, msg):
 
 
 class KafkaClient:
-    def __init__(self, server_address, slack_channel):
+    def __init__(self, server_address):
         if server_address is None:
             raise Exception(
                 "You must provide a Kafka Server address in deploy.cfg of format hostname:port"
