@@ -8,7 +8,7 @@ def _test_sample_consumer():
      """
     consumer = Consumer(
         {
-            "bootstrap.servers": "kafka:9092",
+            "bootstrap.servers": "ci-kafka:9096",
             "group.id": "n/a",
             "auto.offset.reset": "earliest",
         }

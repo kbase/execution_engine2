@@ -2,6 +2,8 @@ import json
 import logging
 import os
 import time
+
+
 from collections import namedtuple, OrderedDict
 from datetime import datetime
 from enum import Enum
@@ -45,6 +47,7 @@ from execution_engine2.utils.KafkaUtils import (
     KafkaCreateJob,
     KafkaQueueChange,
 )
+from execution_engine2.utils.SlackUtils import SlackClient
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.authclient import KBaseAuth
@@ -421,6 +424,7 @@ class SDKMethodRunner:
             self.job_permission_cache = job_permission_cache
 
         self.kafka_client = KafkaClient(config.get("kafka-host"))
+        self.slack_client = SlackClient(config.get("slack-token"))
 
         logging.basicConfig(
             format="%(created)s %(levelname)s: %(message)s", level=logging.debug
@@ -548,6 +552,9 @@ class SDKMethodRunner:
 
         logging.info(f"Attempting to update job to queued  {job_id} {condor_job_id}")
         self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
+        self.slack_client.run_job_message(
+            job_id=job_id, scheduler_id=condor_job_id, username=self.user_id
+        )
 
         return job_id
 

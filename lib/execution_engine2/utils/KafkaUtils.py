@@ -8,7 +8,6 @@ from execution_engine2.db.models.models import Status, ErrorCode
 
 logging.basicConfig(level=logging.INFO)
 
-
 from dataclasses import dataclass
 
 from confluent_kafka import Producer
@@ -194,7 +193,11 @@ def _delivery_report(err, msg):
 
 
 class KafkaClient:
-    def __init__(self, server_address):
+    def __init__(self, server_address, slack_channel):
+        if server_address is None:
+            raise Exception(
+                "You must provide a Kafka Server address in deploy.cfg of format hostname:port"
+            )
         self.server_address = server_address
 
     def send_kafka_message(self, message, topic=DEFAULT_TOPIC):
