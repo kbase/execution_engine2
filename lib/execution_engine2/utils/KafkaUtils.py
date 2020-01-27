@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
 """Module to provide kafka handlers for internal logging facility."""
-
 import json
 import logging
-
+from dataclasses import dataclass
+from confluent_kafka import Producer
 from execution_engine2.db.models.models import Status, ErrorCode
 
 logging.basicConfig(level=logging.INFO)
 
-from dataclasses import dataclass
-
-from confluent_kafka import Producer
 
 STATUS_EVENT_TYPE = "job_status_update"
 CONDOR_EVENT_TYPE = "condor_request"
@@ -186,13 +183,17 @@ class KafkaStartJob(StatusOptional, StatusRequired):
                 )
 
 
-def _delivery_report(err, msg):
+def _delivery_report(err):
     if err is not None:
-        msg = "Message delivery failed:", err
-        logging.error(msg)
+        logging.error(f"Kafka message delivery failed: {err}")
 
 
 class KafkaClient:
+    """
+    Convenience class to send a kafka message to our kafka instance.
+    You must provide kafka configuration for server_address via hostname:port
+    """
+
     def __init__(self, server_address):
         if server_address is None:
             raise Exception(
@@ -202,7 +203,6 @@ class KafkaClient:
 
     def send_kafka_message(self, message: dict, topic: str = DEFAULT_TOPIC):
         """
-        # TODO Remove POLL?
         :param message: The message to send to the queue, which likely has been passed thru the dataclass
         :param topic: The kafka topic, default is likely be ee2
         :return:
@@ -212,6 +212,7 @@ class KafkaClient:
             producer.produce(
                 topic, json.dumps(message.__dict__), callback=_delivery_report
             )
+            # TODO Remove POLL?
             producer.poll(2)
             logging.info(
                 f"Successfully sent message to kafka at topic={topic} message={json.dumps(message.__dict__)} server_address={self.server_address}"
