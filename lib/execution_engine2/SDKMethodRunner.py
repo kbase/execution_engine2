@@ -414,6 +414,7 @@ class SDKMethodRunner:
         self.user_id = user_id
         self.token = token
         self.is_admin = False
+        self.debug = SDKMethodRunner.parse_bool_from_string(config.get("debug"))
 
         if job_permission_cache is None:
             self.job_permission_cache = TTLCache(
@@ -424,7 +425,9 @@ class SDKMethodRunner:
             self.job_permission_cache = job_permission_cache
 
         self.kafka_client = KafkaClient(config.get("kafka-host"))
-        self.slack_client = SlackClient(config.get("slack-token"))
+        self.slack_client = SlackClient(
+            config.get("slack-token"), debug=config.get("debug")
+        )
 
         logging.basicConfig(
             format="%(created)s %(levelname)s: %(message)s", level=logging.debug
