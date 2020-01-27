@@ -200,7 +200,13 @@ class KafkaClient:
             )
         self.server_address = server_address
 
-    def send_kafka_message(self, message, topic=DEFAULT_TOPIC):
+    def send_kafka_message(self, message: dict, topic: str = DEFAULT_TOPIC):
+        """
+        # TODO Remove POLL?
+        :param message: The message to send to the queue, which likely has been passed thru the dataclass
+        :param topic: The kafka topic, default is likely be ee2
+        :return:
+        """
         try:
             producer = Producer({"bootstrap.servers": self.server_address})
             producer.produce(
