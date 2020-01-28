@@ -233,13 +233,12 @@
         funcdef start_job(StartJobParams params) returns () authentication required;
 
         /*
-            projection: project certain fields to return. default None.
-            projection strings can be one of:
-                ...
+            exclude_fields: exclude certain fields to return. default None.
+            exclude_fields strings can be one of fiedls defined in execution_engine2.db.models.models.Job
         */
         typedef structure {
             job_id job_id;
-            list<string> projection;
+            list<string> exclude_fields;
         } CheckJobParams;
 
     /*
@@ -321,14 +320,14 @@
         } CheckJobsResults;
 
         /*
-            As in check_job, projection strings can be used to return only useful fields.
+            As in check_job, exclude_fields strings can be used to exclude fields.
             see CheckJobParams for allowed strings.
 
             return_list - optional, return list of job state if set to 1. Otherwise return a dict. Default 1.
         */
         typedef structure {
             list<job_id> job_ids;
-            list<string> projection;
+            list<string> exclude_fields;
             boolean return_list;
         } CheckJobsParams;
 
@@ -342,7 +341,7 @@
         */
         typedef structure {
             string workspace_id;
-            list<string> projection;
+            list<string> exclude_fields;
             boolean return_list;
         } CheckWorkspaceJobsParams;
         funcdef check_workspace_jobs(CheckWorkspaceJobsParams params) returns (CheckJobsResults) authentication required;
