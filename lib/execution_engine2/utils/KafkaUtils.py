@@ -3,11 +3,12 @@
 import json
 import logging
 from dataclasses import dataclass
+
 from confluent_kafka import Producer
+
 from execution_engine2.db.models.models import Status, ErrorCode
 
 logging.basicConfig(level=logging.INFO)
-
 
 STATUS_EVENT_TYPE = "job_status_update"
 CONDOR_EVENT_TYPE = "condor_request"
@@ -42,11 +43,7 @@ class StatusRequired:
                 raise Exception("Need to provide a previous_status")
 
         # A created job may not have been able to have been submitted to condor, so it may not have a scheduler_id
-        if self.new_status not in [
-            Status.created.value,
-            Status.terminated.value,
-            Status.terminated.value,
-        ]:
+        if self.new_status not in [Status.created.value, Status.terminated.value]:
             if self.scheduler_id is None:
                 message = f"You must pass a scheduler id once the job has been created already. Job status is {self.new_status}"
                 logging.error(message)
@@ -201,7 +198,7 @@ class KafkaClient:
             )
         self.server_address = server_address
 
-    def send_kafka_message(self, message: dict, topic: str = DEFAULT_TOPIC):
+    def send_kafka_message(self, message: dataclass, topic: str = DEFAULT_TOPIC):
         """
         :param message: The message to send to the queue, which likely has been passed thru the dataclass
         :param topic: The kafka topic, default is likely be ee2

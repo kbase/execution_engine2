@@ -212,7 +212,11 @@ class MongoUtil:
                 if exclude_fields:
                     if not isinstance(exclude_fields, list):
                         raise ValueError("Please input a list type exclude_fields")
-                    jobs = Job.objects(id__in=job_ids).exclude(*exclude_fields).order_by("{}_id".format(sort_id_indicator))
+                    jobs = (
+                        Job.objects(id__in=job_ids)
+                        .exclude(*exclude_fields)
+                        .order_by("{}_id".format(sort_id_indicator))
+                    )
 
                 else:
                     jobs = Job.objects(id__in=job_ids).order_by(
@@ -356,8 +360,6 @@ class MongoUtil:
 
             j.status = status
             j.save()
-            pprint("Saved job")
-            pprint(j.to_mongo().to_dict())
 
     def get_empty_job_log(self):
         jl = JobLog()
