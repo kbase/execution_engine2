@@ -52,17 +52,6 @@ from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.authclient import KBaseAuth
 
-debug = json.loads(os.environ.get("debug", "False").lower())
-
-if debug:
-    logging.basicConfig(level=logging.DEBUG)
-    logging.info(f"Set log level to {logging.DEBUG}")
-    logging.debug(f"Set log level to {logging.DEBUG}")
-else:
-    logging.basicConfig(level=logging.WARN)
-    logging.info(f"Set log level to {logging.WARN}")
-    logging.warn(f"Set log level to {logging.WARN}")
-
 
 class JobPermissions(Enum):
     READ = "r"
@@ -392,6 +381,22 @@ class SDKMethodRunner:
 
         return log["stored_line_count"]
 
+    def set_log_level(self):
+        """
+        Enable this setting to get output for development purposes
+        Otherwise, only emit warnings or errors for production
+        """
+        log_format = "%(created)s %(levelname)s: %(message)s"
+
+        if self.debug:
+            logging.basicConfig(level=logging.DEBUG, format=log_format)
+            logging.info(f"Debugging is enabled. Set log level to {logging.DEBUG}")
+            logging.debug(f"Debugging is enabled. Set log level to {logging.DEBUG}")
+        else:
+            logging.basicConfig(level=logging.WARN, format=log_format)
+            logging.info(f"Debugging is DISABLED. Set log level to {logging.WARN}")
+            logging.warning(f"Debugging is DISABLED. Set log level to {logging.WARN}")
+
     def __init__(self, config, user_id=None, token=None, job_permission_cache=None):
         self.deployment_config_fp = os.environ.get("KB_DEPLOYMENT_CONFIG")
         self.config = config
@@ -399,22 +404,20 @@ class SDKMethodRunner:
         self.condor = None
         self.workspace = None
         self.workspace_auth = None
-
         self.admin_roles = config.get("admin_roles", ["EE2_ADMIN", "EE2_ADMIN_RO"])
 
-        catalog_url = config.get("catalog-url")
-        self.catalog = Catalog(catalog_url)
-
+        self.catalog = Catalog(config.get("catalog-url"))
         self.workspace_url = config.get("workspace-url")
 
         self.auth_url = config.get("auth-url")
-        self.legacy_auth_url = config.get("auth-service-url")
-        self.auth = KBaseAuth(auth_url=self.legacy_auth_url)
+        self.auth = KBaseAuth(auth_url=config.get("auth-service-url"))
 
         self.user_id = user_id
         self.token = token
         self.is_admin = False
+
         self.debug = SDKMethodRunner.parse_bool_from_string(config.get("debug"))
+        self.set_log_level()
 
         if job_permission_cache is None:
             self.job_permission_cache = TTLCache(
@@ -425,13 +428,7 @@ class SDKMethodRunner:
             self.job_permission_cache = job_permission_cache
 
         self.kafka_client = KafkaClient(config.get("kafka-host"))
-        self.slack_client = SlackClient(
-            config.get("slack-token"), debug=config.get("debug")
-        )
-
-        logging.basicConfig(
-            format="%(created)s %(levelname)s: %(message)s", level=logging.debug
-        )
+        self.slack_client = SlackClient(config.get("slack-token"), debug=self.debug)
 
     def cancel_job(self, job_id, terminated_code=None):
         """
