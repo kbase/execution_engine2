@@ -141,6 +141,7 @@ class Condor(Scheduler):
         :param cgrr:
         :return:
         """
+        print("About to extract from", cgrr)
         client_group = cgrr.get("client_group", None)
         if client_group is None or client_group == "":
             client_group = self.config.get(
@@ -157,8 +158,8 @@ class Condor(Scheduler):
 
         cr = condor_resources(
             request_cpus=cgrr.get(self.REQUEST_CPUS),
-            request_disk=cgrr.get(self.REQUEST_DISK),
-            request_memory=cgrr.get(self.REQUEST_MEMORY),
+            request_disk=str(cgrr.get(self.REQUEST_DISK)),
+            request_memory=str(cgrr.get(self.REQUEST_MEMORY)),
             client_group=client_group,
         )
 
@@ -217,9 +218,9 @@ class Condor(Scheduler):
         # If a job exits incorrectly put it on hold
         sub["on_exit_hold"] = "ExitCode =!= 0"
         #  Allow up to 12 hours of no response from job
-        sub["JobLeaseDuration"] = 43200
+        sub["JobLeaseDuration"] = "43200"
         #  Allow up to 12 hours for condor drain
-        sub["JobLeaseDuration"] = 604800
+        sub["JobLeaseDuration"] = "604800"
         # Remove jobs running longer than 7 days
         sub["Periodic_Remove"] = "( RemoteWallClockTime > 604800 )"
 
