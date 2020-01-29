@@ -1,7 +1,6 @@
+import time
 from datetime import datetime
 from enum import Enum
-from mongoengine import ValidationError
-import time
 
 from mongoengine import (
     StringField,
@@ -9,13 +8,14 @@ from mongoengine import (
     FloatField,
     EmbeddedDocument,
     Document,
-    DateTimeField,
     BooleanField,
     ListField,
     EmbeddedDocumentField,
+    EmbeddedDocumentListField,
     DynamicField,
     ObjectIdField,
 )
+from mongoengine import ValidationError
 
 
 def valid_status(status):
@@ -137,12 +137,13 @@ class Estimate(EmbeddedDocument):
 
 class JobRequirements(EmbeddedDocument):
     """
-    To be populated at runtime during start_job, probably from the Catalog
+    To be populated by ee2 during init of a job record
     """
 
     clientgroup = StringField()
     cpu = IntField()
-    memory = StringField()
+    memory = IntField()
+    disk = IntField()
     estimate = EmbeddedDocumentField(Estimate)
 
 
@@ -235,6 +236,40 @@ class AuthStrat(Enum):
     DEFAULT = "DEFAULT"
     kbaseworkspace = "kbaseworkspace"
     execution_engine = "execution_engine"
+
+
+class JobInputFile(EmbeddedDocument):
+    # TODO USE THIS
+    # TODO VERIFY UPA WITH REGEX or special function [0-9]+/[0-9]+/*[0-9]*
+    upa = StringField()
+    filename = StringField()
+    filesize_mb = IntField()
+    # Provenance?
+
+
+class JobInputAttributes(Document):
+    # TODO USE THIS
+    job_input_filesizes = EmbeddedDocumentListField(JobInputFile)
+
+
+class JobUsageAttributes(Document):
+    # TODO USE THIS
+    job_peak_cpu_usage = FloatField(default=0)
+    job_peak_memory_usage_mb = IntField(default=0)
+    job_peak_disk_usage_mb = IntField(default=0)
+
+
+class JobResourceAttributes(Document):
+    """
+    Should be partially populated by the JobRunner at run time
+    Can be periodically populated by the JobRunner during the lifecycle of the job
+    Can be populated at the end of
+    """
+
+    client_group = StringField(required=True)
+    request_cpus = IntField(required=True)
+    request_memory = IntField(required=True)
+    request_disk = IntField(required=True)
 
 
 class Job(Document):

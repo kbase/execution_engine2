@@ -30,12 +30,14 @@ from execution_engine2.db.models.models import (
     LogLines,
     ErrorCode,
     TerminatedCode,
+    JobRequirements,
 )
 from execution_engine2.exceptions import AuthError
 from execution_engine2.exceptions import (
     RecordNotFoundException,
     InvalidStatusTransitionException,
 )
+from execution_engine2.utils.CatalogUtils import normalize_catalog_cgroups
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.KafkaUtils import (
     KafkaClient,
@@ -51,6 +53,7 @@ from execution_engine2.utils.SlackUtils import SlackClient
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.authclient import KBaseAuth
+from execution_engine2.utils.Condor import condor_resources
 
 
 class JobPermissions(Enum):
@@ -144,7 +147,7 @@ class SDKMethodRunner:
 
         return git_commit_hash
 
-    def _init_job_rec(self, user_id, params):
+    def _init_job_rec(self, user_id, params, resources: condor_resources = None):
 
         job = Job()
 
@@ -171,8 +174,17 @@ class SDKMethodRunner:
             inputs.narrative_cell_info.cell_id = meta.get("cell_id")
             inputs.narrative_cell_info.status = meta.get("status")
 
+        if resources:
+            jr = JobRequirements()
+            jr.clientgroup = resources.client_group
+            jr.cpu = resources.request_cpus
+            jr.memory = resources.request_memory
+            jr.disk = resources.request_disk
+            inputs.requirements = jr
+
         job.job_input = inputs
         logging.info(job.job_input.to_mongo().to_dict())
+
         with self.get_mongo_util().mongo_engine_connection():
             job.save()
 
@@ -510,7 +522,14 @@ class SDKMethodRunner:
         method = params.get("method")
         logging.info(f"User {self.user_id} attempting to run job {method}")
 
-        client_groups = self._get_client_groups(method)
+        # Normalize multiple formats into one format (csv vs json)
+        resource_requirements = normalize_catalog_cgroups(
+            self._get_client_groups(method)
+        )
+        # These are for saving into job inputs. Maybe its best to pass this into condor as well?
+        extracted_resources = self.get_condor().extract_resources(
+            cgrr=resource_requirements
+        )
 
         # perform sanity checks before creating job
         self._check_ws_objects(source_objects=params.get("source_ws_objects"))
@@ -520,15 +539,15 @@ class SDKMethodRunner:
         params["service_ver"] = git_commit_hash
 
         # insert initial job document
-        job_id = self._init_job_rec(self.user_id, params)
+        job_id = self._init_job_rec(self.user_id, params, extracted_resources)
 
         logging.debug("About to run job with")
-        logging.debug(client_groups)
-        logging.debug(params)
+        logging.debug(resource_requirements)
+
         params["job_id"] = job_id
         params["user_id"] = self.user_id
         params["token"] = self.token
-        params["cg_resources_requirements"] = client_groups
+        params["cg_resources_requirements"] = resource_requirements
         try:
             submission_info = self.get_condor().run_job(params)
             condor_job_id = submission_info.clusterid
@@ -965,7 +984,6 @@ class SDKMethodRunner:
                 scheduler_id=job.scheduler_id,
             )
         )
-
 
     def check_job(self, job_id, check_permission=True, exclude_fields=None):
 

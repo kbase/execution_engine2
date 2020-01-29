@@ -17,7 +17,7 @@ from mock import MagicMock
 from mongoengine import ValidationError
 from typing import Dict, List
 from unittest.mock import patch
-
+from execution_engine2.utils.Condor import condor_resources
 from execution_engine2.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import (
@@ -135,6 +135,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         cls.test_collection = cls.mongo_helper.create_test_db(
             db=cls.cfg["mongo-database"], col=cls.cfg["mongo-jobs-collection"]
+        )
+
+        cls.cr = condor_resources(
+            request_cpus=1, request_disk=1, request_memory=1, client_group="njs"
         )
 
     def getRunner(self) -> SDKMethodRunner:
@@ -341,13 +345,16 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner.get_permissions_for_workspace = MagicMock(return_value=True)
         runner._get_module_git_commit = MagicMock(return_value="git_commit_goes_here")
         runner.get_condor = MagicMock(return_value=condor_mock)
+
         # ctx = {"user_id": self.user_id, "wsid": self.ws_id, "token": self.token}
         job = get_example_job().to_mongo().to_dict()
         job["method"] = job["job_input"]["app_id"]
         job["app_id"] = job["job_input"]["app_id"]
 
         si = submission_info(clusterid="test", submit=job, error=None)
+
         condor_mock.run_job = MagicMock(return_value=si)
+        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
         job_id0 = runner.run_job(params=job)
         job_id1 = runner.run_job(params=job)
@@ -466,6 +473,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         si = submission_info(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
+        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
         job_id = runner.run_job(params=job)
         print(f"Job id is {job_id} ")
@@ -492,6 +500,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         si = submission_info(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
+        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
         job_id = runner.run_job(params=job)
         logging.info(f"Job id is {job_id} ")
@@ -1030,7 +1039,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertCountEqual(job_states_list, list(job_states.values())[:2])
 
             # test check_jobs with exclude_fields
-            job_states = runner.check_jobs([job_id], exclude_fields=["wsid"], return_list=0)
+            job_states = runner.check_jobs(
+                [job_id], exclude_fields=["wsid"], return_list=0
+            )
             self.assertTrue(job_id in job_states)
             self.assertFalse("wsid" in job_states[job_id].keys())
             self.assertEqual(job_states[job_id]["status"], "created")
@@ -1047,9 +1058,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_states[job_id_1]["status"], "created")
             self.assertEqual(job_states[job_id_1]["wsid"], self.ws_id)
 
-
             # test check_workspace_jobs with exclude_fields
-            job_states = runner.check_workspace_jobs(self.ws_id, exclude_fields=["wsid"], return_list=False)
+            job_states = runner.check_workspace_jobs(
+                self.ws_id, exclude_fields=["wsid"], return_list=False
+            )
 
             json.dumps(job_states)  # make sure it's JSON serializable
             self.assertTrue(job_id in job_states)
@@ -1107,6 +1119,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         si = submission_info(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
+        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
         job_id1 = runner.run_job(params=job)
         job_id2 = runner.run_job(params=job)
