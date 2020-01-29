@@ -4,6 +4,7 @@ import unittest
 
 logging.basicConfig(level=logging.INFO)
 
+from execution_engine2.utils.CatalogUtils import normalize_catalog_cgroups
 from execution_engine2.utils.Condor import Condor
 from test.test_utils import bootstrap
 
@@ -16,7 +17,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
-        cls.condor = Condor(cls.deploy)
+        cls.condor = Condor("deploy.cfg")
         cls.job_id = "1234"
         cls.user = "kbase"
 
@@ -26,27 +27,31 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
             cls.wsClient.delete_workspace({"workspace": cls.wsName})
             print("Test workspace was deleted")
 
-    def _create_sample_params(self):
+    def _create_sample_params(self, cgroups):
         params = dict()
         params["job_id"] = self.job_id
         params["user_id"] = "kbase"
         params["token"] = "test_token"
-        params["cg_resources_requirements"] = "njs"
+        rr = normalize_catalog_cgroups(cgroups)
+
+        print(rr)
+        params["cg_resources_requirements"] = rr
+
         return params
 
     def test_empty_params(self):
-        c = Condor("deploy.cfg")
+        c = self.condor
         params = {"job_id": "test_job_id", "user_id": "test", "token": "test_token"}
         with self.assertRaisesRegex(
             Exception, "cg_resources_requirements not found in params"
-        ) as error:
+        ):
             c.create_submit(params)
 
     def test_create_submit_file(self):
         # Test with empty clientgroup
         logging.info("Testing with njs clientgroup")
-        c = Condor("deploy.cfg")
-        params = self._create_sample_params()
+        c = self.condor
+        params = self._create_sample_params(cgroups="njs")
 
         default_sub = c.create_submit(params)
 
@@ -68,13 +73,14 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         self.assertEqual(sub[Condor.REQUEST_DISK], c.config["njs"][Condor.REQUEST_DISK])
 
         # TODO Test this variable somehow
-        environment = sub["environment"].split(" ")
+        # environment = sub["environment"].split(" ")
 
         # Test with filled out clientgroup
         logging.info("Testing with complex-empty clientgroup")
-        params[
-            "cg_resources_requirements"
-        ] = "njs,request_cpus=8,request_memory=10GB,request_apples=5"
+
+        params = self._create_sample_params(
+            cgroups="njs,request_cpus=8,request_memory=10GB,request_apples=5"
+        )
 
         njs_sub = c.create_submit(params)
         sub = njs_sub
@@ -89,23 +95,21 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         self.assertEqual(sub[Condor.REQUEST_MEMORY], "10GB")
         self.assertEqual(sub[Condor.REQUEST_DISK], c.config["njs"][Condor.REQUEST_DISK])
 
-        params[
-            "cg_resources_requirements"
-        ] = "njs,request_cpus=8,request_memory=10GB,request_apples=5,client_group_regex=False"
-
         logging.info("Testing with regex disabled in old format (no effect)")
 
         with self.assertRaisesRegex(
             ValueError, "Illegal argument! Old format does not support this option"
-        ) as error:
-            regex_sub = c.create_submit(params)  # pragma: no cover
-            sub = njs_sub  # pragma: no cover
+        ):
+            params = self._create_sample_params(
+                cgroups="njs,request_cpus=8,request_memory=10GB,request_apples=5,client_group_regex=False"
+            )
+            c.create_submit(params)  # pragma: no cover
 
         # Test with json version of clientgroup
 
         logging.info("Testing with empty clientgroup defaulting to njs")
 
-        params["cg_resources_requirements"] = ""
+        params = self._create_sample_params(cgroups="")
 
         empty_sub = c.create_submit(params)
         sub = empty_sub
@@ -118,22 +122,24 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
 
         logging.info("Testing with empty dict (raises typeerror)")
 
-        params["cg_resources_requirements"] = {}
-
-        with self.assertRaises(TypeError) as e:
+        with self.assertRaises(TypeError):
+            params = self._create_sample_params(cgroups={})
             empty_json_sub = c.create_submit(params)
 
         logging.info("Testing with empty dict as a string ")
 
-        params["cg_resources_requirements"] = "{}"
+        params = self._create_sample_params(cgroups="{}")
+
         empty_json_sub = c.create_submit(params)
 
-        params["cg_resources_requirements"] = '{"client_group" : "njs"}'
+        params = self._create_sample_params(cgroups='{"client_group" : "njs"}')
+
         json_sub = c.create_submit(params)
 
-        params[
-            "cg_resources_requirements"
-        ] = '{"client_group" : "njs", "client_group_regex" : "FaLsE"}'
+        params = self._create_sample_params(
+            cgroups='{"client_group" : "njs", "client_group_regex" : "FaLsE"}'
+        )
+
         json_sub_with_regex_disabled_njs = c.create_submit(params)
 
         # json_sub_with_regex_disabled
@@ -150,18 +156,21 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
                 sub[Condor.REQUEST_DISK], c.config["njs"][Condor.REQUEST_DISK]
             )
 
-        with self.assertRaises(ValueError) as e:
+        with self.assertRaises(ValueError):
             logging.info("Testing with real json invalid cgroup {bigmemzlong} ")
+            params = self._create_sample_params(
+                cgroups='{"client_group" : "bigmemzlong", "client_group_regex" : "FaLsE"}'
+            )
 
-            params[
-                "cg_resources_requirements"
-            ] = '{"client_group" : "bigmemzlong", "client_group_regex" : "FaLsE"}'
-            json_sub_with_regex_disabled = c.create_submit(params)
+            # json_sub_with_regex_disabled
+            c.create_submit(params)
 
         logging.info("Testing with real json, regex disabled, bigmem")
-        params[
-            "cg_resources_requirements"
-        ] = '{"client_group" : "bigmem", "client_group_regex" : "FaLsE"}'
+
+        params = self._create_sample_params(
+            cgroups='{"client_group" : "bigmem", "client_group_regex" : "FaLsE"}'
+        )
+
         json_sub_with_regex_disabled_bigmem = c.create_submit(params)
         self.assertIn(
             '(CLIENTGROUP == "bigmem',
