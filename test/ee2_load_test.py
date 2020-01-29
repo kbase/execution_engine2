@@ -239,7 +239,7 @@ class ee2_server_load_test(unittest.TestCase):
             self.assertEqual(ori_job_count, Job.objects.count())
 
     @patch.object(WorkspaceAuth, "can_write", return_value=True)
-    @patch.object(SDKMethodRunner, "_get_client_groups", return_value="a group")
+    @patch.object(SDKMethodRunner, "_get_client_groups", return_value="njs")
     @patch.object(SDKMethodRunner, "_get_module_git_commit", return_value="a version")
     @patch.object(
         Condor,
