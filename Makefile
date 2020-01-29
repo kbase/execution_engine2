@@ -72,6 +72,7 @@ test:
 	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_MongoUtil_test.py
 	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_server_test.py
 	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_load_test.py
+	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_kafka_test.py
 
 test-models:
 	# Requires travis user to be set up

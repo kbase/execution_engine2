@@ -17,7 +17,7 @@ from mock import MagicMock
 from mongoengine import ValidationError
 from typing import Dict, List
 from unittest.mock import patch
-
+from execution_engine2.utils.Condor import condor_resources
 from execution_engine2.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import (
@@ -137,6 +137,13 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             db=cls.cfg["mongo-database"], col=cls.cfg["mongo-jobs-collection"]
         )
 
+        cls.cr = condor_resources(
+            request_cpus="1",
+            request_disk="1GB",
+            request_memory="100M",
+            client_group="njs",
+        )
+
     def getRunner(self) -> SDKMethodRunner:
         return copy.deepcopy(self.__class__.method_runner)
 
@@ -178,6 +185,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         job.job_input = inputs
         job.job_output = None
+        job.scheduler_id = "123"
 
         with self.mongo_util.mongo_engine_connection():
             job.save()
@@ -340,13 +348,16 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner.get_permissions_for_workspace = MagicMock(return_value=True)
         runner._get_module_git_commit = MagicMock(return_value="git_commit_goes_here")
         runner.get_condor = MagicMock(return_value=condor_mock)
+
         # ctx = {"user_id": self.user_id, "wsid": self.ws_id, "token": self.token}
         job = get_example_job().to_mongo().to_dict()
         job["method"] = job["job_input"]["app_id"]
         job["app_id"] = job["job_input"]["app_id"]
 
         si = submission_info(clusterid="test", submit=job, error=None)
+
         condor_mock.run_job = MagicMock(return_value=si)
+        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
         job_id0 = runner.run_job(params=job)
         job_id1 = runner.run_job(params=job)
@@ -465,6 +476,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         si = submission_info(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
+        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
         job_id = runner.run_job(params=job)
         print(f"Job id is {job_id} ")
@@ -491,6 +503,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         si = submission_info(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
+        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
         job_id = runner.run_job(params=job)
         logging.info(f"Job id is {job_id} ")
@@ -891,7 +904,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertTrue(job.estimating)
 
             # start a estimating job, set job to running status
-            runner.start_job(job_id)
+            runner.start_job(job_id, skip_estimation=False)
 
             job = self.mongo_util.get_job(job_id=job_id)
             self.assertEqual(job.status, "running")
@@ -1008,30 +1021,36 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_states[job_id]["wsid"], self.ws_id)
 
             # test check_jobs return list
-            job_states_list = runner.check_jobs([job_id, job_id_1, job_id_fake], return_list=1)['job_states']
+            job_states_list = runner.check_jobs(
+                [job_id, job_id_1, job_id_fake], return_list=1
+            )["job_states"]
             json.dumps(job_states_list)  # make sure it's JSON serializable
             self.assertEqual(len(job_states_list), 3)
-            self.assertEqual(job_states_list[0]['job_id'], job_id)
-            self.assertEqual(job_states_list[1]['job_id'], job_id_1)
+            self.assertEqual(job_states_list[0]["job_id"], job_id)
+            self.assertEqual(job_states_list[1]["job_id"], job_id_1)
             self.assertEqual(job_states_list[2], [])
             self.assertTrue(isinstance(job_states_list, list))
             self.assertCountEqual(job_states_list, list(job_states.values()))
 
-            job_states_list = runner.check_jobs([job_id, job_id_1], return_list='True')['job_states']
+            job_states_list = runner.check_jobs([job_id, job_id_1], return_list="True")[
+                "job_states"
+            ]
             json.dumps(job_states_list)  # make sure it's JSON serializable
-            self.assertEqual(job_states_list[0]['job_id'], job_id)
-            self.assertEqual(job_states_list[1]['job_id'], job_id_1)
+            self.assertEqual(job_states_list[0]["job_id"], job_id)
+            self.assertEqual(job_states_list[1]["job_id"], job_id_1)
             self.assertTrue(isinstance(job_states_list, list))
             self.assertCountEqual(job_states_list, list(job_states.values())[:2])
 
             # test check_jobs with exclude_fields
-            job_states = runner.check_jobs([job_id], exclude_fields=["wsid"], return_list=0)
+            job_states = runner.check_jobs(
+                [job_id], exclude_fields=["wsid"], return_list=0
+            )
             self.assertTrue(job_id in job_states)
             self.assertFalse("wsid" in job_states[job_id].keys())
             self.assertEqual(job_states[job_id]["status"], "created")
 
             # test check_workspace_jobs
-            job_states = runner.check_workspace_jobs(self.ws_id, return_list='False')
+            job_states = runner.check_workspace_jobs(self.ws_id, return_list="False")
             for job_id in job_states:
                 self.assertTrue(job_states[job_id])
             json.dumps(job_states)  # make sure it's JSON serializable
@@ -1043,7 +1062,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_states[job_id_1]["wsid"], self.ws_id)
 
             # test check_workspace_jobs with exclude_fields
-            job_states = runner.check_workspace_jobs(self.ws_id, exclude_fields=["wsid"], return_list=False)
+            job_states = runner.check_workspace_jobs(
+                self.ws_id, exclude_fields=["wsid"], return_list=False
+            )
+
             json.dumps(job_states)  # make sure it's JSON serializable
             self.assertTrue(job_id in job_states)
             self.assertFalse("wsid" in job_states[job_id].keys())
@@ -1100,6 +1122,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         si = submission_info(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
+        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
         job_id1 = runner.run_job(params=job)
         job_id2 = runner.run_job(params=job)

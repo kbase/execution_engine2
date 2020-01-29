@@ -2,6 +2,8 @@ import json
 import logging
 import os
 import time
+
+
 from collections import namedtuple, OrderedDict
 from datetime import datetime
 from enum import Enum
@@ -28,27 +30,30 @@ from execution_engine2.db.models.models import (
     LogLines,
     ErrorCode,
     TerminatedCode,
+    JobRequirements,
 )
 from execution_engine2.exceptions import AuthError
 from execution_engine2.exceptions import (
     RecordNotFoundException,
     InvalidStatusTransitionException,
 )
+from execution_engine2.utils.CatalogUtils import normalize_catalog_cgroups
 from execution_engine2.utils.Condor import Condor
+from execution_engine2.utils.KafkaUtils import (
+    KafkaClient,
+    KafkaCancelJob,
+    KafkaCondorCommand,
+    KafkaFinishJob,
+    KafkaStartJob,
+    KafkaStatusChange,
+    KafkaCreateJob,
+    KafkaQueueChange,
+)
+from execution_engine2.utils.SlackUtils import SlackClient
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.authclient import KBaseAuth
-
-debug = json.loads(os.environ.get("debug", "False").lower())
-
-if debug:
-    logging.basicConfig(level=logging.DEBUG)
-    logging.info(f"Set log level to {logging.DEBUG}")
-    logging.debug(f"Set log level to {logging.DEBUG}")
-else:
-    logging.basicConfig(level=logging.WARN)
-    logging.info(f"Set log level to {logging.WARN}")
-    logging.warn(f"Set log level to {logging.WARN}")
+from execution_engine2.utils.Condor import condor_resources
 
 
 class JobPermissions(Enum):
@@ -142,7 +147,7 @@ class SDKMethodRunner:
 
         return git_commit_hash
 
-    def _init_job_rec(self, user_id, params):
+    def _init_job_rec(self, user_id, params, resources: condor_resources = None):
 
         job = Job()
 
@@ -169,10 +174,27 @@ class SDKMethodRunner:
             inputs.narrative_cell_info.cell_id = meta.get("cell_id")
             inputs.narrative_cell_info.status = meta.get("status")
 
+        if resources:
+            jr = JobRequirements()
+            jr.clientgroup = resources.client_group
+            jr.cpu = resources.request_cpus
+            # Should probably do some type checking on these before its passed in
+            # Memory always in mb
+            # Space always in gb
+
+            jr.memory = resources.request_memory[:-1]
+            jr.disk = resources.request_disk[:-2]
+            inputs.requirements = jr
+
         job.job_input = inputs
         logging.info(job.job_input.to_mongo().to_dict())
+
         with self.get_mongo_util().mongo_engine_connection():
             job.save()
+
+        self.kafka_client.send_kafka_message(
+            message=KafkaCreateJob(job_id=str(job.id), user=user_id)
+        )
 
         return str(job.id)
 
@@ -375,6 +397,22 @@ class SDKMethodRunner:
 
         return log["stored_line_count"]
 
+    def set_log_level(self):
+        """
+        Enable this setting to get output for development purposes
+        Otherwise, only emit warnings or errors for production
+        """
+        log_format = "%(created)s %(levelname)s: %(message)s"
+
+        if self.debug:
+            logging.basicConfig(level=logging.DEBUG, format=log_format)
+            logging.info(f"Debugging is enabled. Set log level to {logging.DEBUG}")
+            logging.debug(f"Debugging is enabled. Set log level to {logging.DEBUG}")
+        else:
+            logging.basicConfig(level=logging.WARN, format=log_format)
+            logging.info(f"Debugging is DISABLED. Set log level to {logging.WARN}")
+            logging.warning(f"Debugging is DISABLED. Set log level to {logging.WARN}")
+
     def __init__(self, config, user_id=None, token=None, job_permission_cache=None):
         self.deployment_config_fp = os.environ.get("KB_DEPLOYMENT_CONFIG")
         self.config = config
@@ -382,21 +420,20 @@ class SDKMethodRunner:
         self.condor = None
         self.workspace = None
         self.workspace_auth = None
-
         self.admin_roles = config.get("admin_roles", ["EE2_ADMIN", "EE2_ADMIN_RO"])
 
-        catalog_url = config.get("catalog-url")
-        self.catalog = Catalog(catalog_url)
-
+        self.catalog = Catalog(config.get("catalog-url"))
         self.workspace_url = config.get("workspace-url")
 
         self.auth_url = config.get("auth-url")
-        self.legacy_auth_url = config.get("auth-service-url")
-        self.auth = KBaseAuth(auth_url=self.legacy_auth_url)
+        self.auth = KBaseAuth(auth_url=config.get("auth-service-url"))
 
         self.user_id = user_id
         self.token = token
         self.is_admin = False
+
+        self.debug = SDKMethodRunner.parse_bool_from_string(config.get("debug"))
+        self.set_log_level()
 
         if job_permission_cache is None:
             self.job_permission_cache = TTLCache(
@@ -406,9 +443,8 @@ class SDKMethodRunner:
         else:
             self.job_permission_cache = job_permission_cache
 
-        logging.basicConfig(
-            format="%(created)s %(levelname)s: %(message)s", level=logging.debug
-        )
+        self.kafka_client = KafkaClient(config.get("kafka-host"))
+        self.slack_client = SlackClient(config.get("slack-token"), debug=self.debug)
 
     def cancel_job(self, job_id, terminated_code=None):
         """
@@ -425,12 +461,35 @@ class SDKMethodRunner:
 
         logging.info(f"User has permission to cancel job {job_id}")
         logging.debug(f"User has permission to cancel job {job_id}")
+
+        if terminated_code is None:
+            terminated_code = TerminatedCode.terminated_by_user.value
+
         self.get_mongo_util().cancel_job(job_id=job_id, terminated_code=terminated_code)
+
+        self.kafka_client.send_kafka_message(
+            message=KafkaCancelJob(
+                job_id=str(job_id),
+                previous_status=job.status,
+                new_status=Status.terminated.value,
+                scheduler_id=job.scheduler_id,
+                terminated_code=terminated_code,
+            )
+        )
+
         logging.info(f"About to cancel job in CONDOR using {job.scheduler_id}")
         logging.debug(f"About to cancel job in CONDOR using {job.scheduler_id}")
         rv = self.get_condor().cancel_job(job_id=job.scheduler_id)
         logging.info(rv)
         logging.debug(f"{rv}")
+
+        self.kafka_client.send_kafka_message(
+            message=KafkaCondorCommand(
+                job_id=str(job_id),
+                scheduler_id=job.scheduler_id,
+                condor_command="condor_rm",
+            )
+        )
 
     def check_job_canceled(self, job_id):
         """
@@ -467,7 +526,15 @@ class SDKMethodRunner:
         method = params.get("method")
         logging.info(f"User {self.user_id} attempting to run job {method}")
 
-        client_groups = self._get_client_groups(method)
+        # Normalize multiple formats into one format (csv vs json)
+        resource_requirements = normalize_catalog_cgroups(
+            self._get_client_groups(method)
+        )
+        # These are for saving into job inputs. Maybe its best to pass this into condor as well?
+        extracted_resources = self.get_condor().extract_resources(
+            cgrr=resource_requirements
+        )
+        # TODO Validate MB/GB from both config and catalog.
 
         # perform sanity checks before creating job
         self._check_ws_objects(source_objects=params.get("source_ws_objects"))
@@ -477,15 +544,15 @@ class SDKMethodRunner:
         params["service_ver"] = git_commit_hash
 
         # insert initial job document
-        job_id = self._init_job_rec(self.user_id, params)
+        job_id = self._init_job_rec(self.user_id, params, extracted_resources)
 
         logging.debug("About to run job with")
-        logging.debug(client_groups)
-        logging.debug(params)
+        logging.debug(resource_requirements)
+
         params["job_id"] = job_id
         params["user_id"] = self.user_id
         params["token"] = self.token
-        params["cg_resources_requirements"] = client_groups
+        params["cg_resources_requirements"] = resource_requirements
         try:
             submission_info = self.get_condor().run_job(params)
             condor_job_id = submission_info.clusterid
@@ -509,6 +576,9 @@ class SDKMethodRunner:
 
         logging.info(f"Attempting to update job to queued  {job_id} {condor_job_id}")
         self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
+        self.slack_client.run_job_message(
+            job_id=job_id, scheduler_id=condor_job_id, username=self.user_id
+        )
 
         return job_id
 
@@ -518,11 +588,21 @@ class SDKMethodRunner:
         # TODO PASS IN SCHEDULER TYPE?
         with self.get_mongo_util().mongo_engine_connection():
             j = self.get_mongo_util().get_job(job_id=job_id)
+            previous_status = j.status
             j.status = Status.queued.value
             j.queued = time.time()
             j.scheduler_id = scheduler_id
             j.scheduler_type = "condor"
             j.save()
+
+            self.kafka_client.send_kafka_message(
+                message=KafkaQueueChange(
+                    job_id=str(j.id),
+                    new_status=j.status,
+                    previous_status=previous_status,
+                    scheduler_id=scheduler_id,
+                )
+            )
 
     def _run_admin_command(self, command, params):
         available_commands = ["cancel_job", "view_job_logs"]
@@ -707,9 +787,19 @@ class SDKMethodRunner:
 
         job = self._get_job_with_permission(job_id, JobPermissions.WRITE)
 
+        previous_status = job.status
         job.status = status
         with self.get_mongo_util().mongo_engine_connection():
             job.save()
+
+        self.kafka_client.send_kafka_message(
+            message=KafkaStatusChange(
+                job_id=str(job_id),
+                new_status=status,
+                previous_status=previous_status,
+                scheduler_id=job.scheduler_id,
+            )
+        )
 
         return str(job.id)
 
@@ -800,7 +890,7 @@ class SDKMethodRunner:
         :param job_output: dict - default None, if given this job has some output
         """
 
-        self._check_job_is_running(job_id=job_id)
+        job = self._check_job_is_running(job_id=job_id)
 
         if error_message:
             if error_code is None:
@@ -811,6 +901,18 @@ class SDKMethodRunner:
                 error_code=error_code,
                 error=error,
             )
+
+            self.kafka_client.send_kafka_message(
+                message=KafkaFinishJob(
+                    job_id=str(job_id),
+                    new_status=Status.error.value,
+                    previous_status=job.status,
+                    error_message=error_message,
+                    error_code=error_code,
+                    scheduler_id=job.scheduler_id,
+                )
+            )
+
         elif job_output is None:
             if error_code is None:
                 error_code = ErrorCode.job_missing_output.value
@@ -819,8 +921,17 @@ class SDKMethodRunner:
                 job_id=job_id, error_message=msg, error_code=error_code
             )
             raise ValueError(msg)
+            # No Kafka Message Here as this finish_job call failed due to insufficient requirements
         else:
             self._finish_job_with_success(job_id=job_id, job_output=job_output)
+            self.kafka_client.send_kafka_message(
+                message=KafkaFinishJob(
+                    job_id=str(job_id),
+                    new_status=Status.completed.value,
+                    previous_status=job.status,
+                    scheduler_id=job.scheduler_id,
+                )
+            )
 
     def start_job(self, job_id, skip_estimation=True):
         """
@@ -851,23 +962,36 @@ class SDKMethodRunner:
                 f"Unexpected job status for {job_id}: {job_status}.  You cannot start a job that is not in {allowed_states}"
             )
 
-        if job_status == Status.estimating.value or skip_estimation:
-            # set job to running status
-            job.running = time.time()
-            self.get_mongo_util().update_job_status(
-                job_id=job_id, status=Status.running.value
-            )
-        else:
-            # set job to estimating status
-            job.estimating = time.time()
-            self.get_mongo_util().update_job_status(
-                job_id=job_id, status=Status.estimating.value
-            )
-
         with self.get_mongo_util().mongo_engine_connection():
+            if job_status == Status.estimating.value or skip_estimation:
+                # set job to running status
+
+                job.running = time.time()
+                self.get_mongo_util().update_job_status(
+                    job_id=job_id, status=Status.running.value
+                )
+            else:
+                # set job to estimating status
+
+                job.estimating = time.time()
+                self.get_mongo_util().update_job_status(
+                    job_id=job_id, status=Status.estimating.value
+                )
             job.save()
 
+        job.reload("status")
+
+        self.kafka_client.send_kafka_message(
+            message=KafkaStartJob(
+                job_id=str(job_id),
+                new_status=job.status,
+                previous_status=job_status,
+                scheduler_id=job.scheduler_id,
+            )
+        )
+
     def check_job(self, job_id, check_permission=True, exclude_fields=None):
+
         """
         check_job: check and return job status for a given job_id
 

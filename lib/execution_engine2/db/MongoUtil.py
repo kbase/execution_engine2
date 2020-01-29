@@ -3,6 +3,7 @@ import subprocess
 import traceback
 from contextlib import contextmanager
 import time
+from pprint import pprint
 
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
@@ -207,12 +208,20 @@ class MongoUtil:
 
         with self.mongo_engine_connection():
             try:
+
                 if exclude_fields:
                     if not isinstance(exclude_fields, list):
                         raise ValueError("Please input a list type exclude_fields")
-                    jobs = Job.objects(id__in=job_ids).exclude(*exclude_fields).order_by("{}_id".format(sort_id_indicator))
+                    jobs = (
+                        Job.objects(id__in=job_ids)
+                        .exclude(*exclude_fields)
+                        .order_by("{}_id".format(sort_id_indicator))
+                    )
+
                 else:
-                    jobs = Job.objects(id__in=job_ids).order_by("{}_id".format(sort_id_indicator))
+                    jobs = Job.objects(id__in=job_ids).order_by(
+                        "{}_id".format(sort_id_indicator)
+                    )
             except Exception:
                 raise ValueError(
                     "Unable to find job:\nError:\n{}".format(traceback.format_exc())
@@ -416,8 +425,6 @@ class MongoUtil:
         update existing records
         https://docs.mongodb.com/manual/reference/operator/update/set/
         """
-        logging.info("start updating document")
-
         with self.pymongo_client(self.mongo_collection) as pymongo_client:
             job_col = pymongo_client[self.mongo_database][self.mongo_collection]
             try:
