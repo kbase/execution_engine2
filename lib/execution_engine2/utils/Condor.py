@@ -134,43 +134,6 @@ class Condor(Scheduler):
             if item not in params:
                 raise MissingRunJobParamsException(f"{item} not found in params")
 
-    # TODO Return type
-    @staticmethod
-    def normalize(resources_request):
-        """
-        Ensure that the client_groups are processed as a dictionary and has at least one value
-        :param resources_request: either an empty string, a json object, or cg,key1=value,key2=value
-        :return:
-        """
-        if type(resources_request) is not str:
-            raise TypeError(str(type(resources_request)))
-
-        # No clientgroup provided
-        if resources_request == "":
-            return {}
-        # JSON
-        if "{" in resources_request:
-            return json.loads(resources_request)
-
-        rr = resources_request.split(",")
-        # Default
-
-        rv = {"client_group": rr.pop(0), "client_group_regex": True}
-        for item in rr:
-            if "=" not in item:
-                raise Exception(
-                    f"Malformed requirement. Format is <key>=<value> . Item is {item}"
-                )
-            (key, value) = item.split("=")
-            rv[key] = value
-
-            if key in ["client_group_regex"]:
-                raise ValueError(
-                    "Illegal argument! Old format does not support this option ('client_group_regex')"
-                )
-
-        return rv
-
     def extract_resources(self, cgrr):
         """
         Checks to see if request_cpus/memory/disk is available
@@ -178,6 +141,7 @@ class Condor(Scheduler):
         :param cgrr:
         :return:
         """
+        print("About to extract from", cgrr)
         client_group = cgrr.get("client_group", None)
         if client_group is None or client_group == "":
             client_group = self.config.get(
@@ -194,8 +158,8 @@ class Condor(Scheduler):
 
         cr = condor_resources(
             request_cpus=cgrr.get(self.REQUEST_CPUS),
-            request_disk=cgrr.get(self.REQUEST_DISK),
-            request_memory=cgrr.get(self.REQUEST_MEMORY),
+            request_disk=str(cgrr.get(self.REQUEST_DISK)),
+            request_memory=str(cgrr.get(self.REQUEST_MEMORY)),
             client_group=client_group,
         )
 
@@ -251,9 +215,16 @@ class Condor(Scheduler):
         sub["ShouldTransferFiles"] = "YES"
         sub["transfer_input_files"] = self.transfer_input_files
         sub["When_To_Transfer_Output"] = "ON_EXIT"
+        # If a job exits incorrectly put it on hold
+        sub["on_exit_hold"] = "ExitCode =!= 0"
+        #  Allow up to 12 hours of no response from job
+        sub["JobLeaseDuration"] = "43200"
+        #  Allow up to 12 hours for condor drain
+        sub["JobLeaseDuration"] = "604800"
+        # Remove jobs running longer than 7 days
+        sub["Periodic_Remove"] = "( RemoteWallClockTime > 604800 )"
 
-        # Ensure cgrr is a dictionary
-        cgrr = self.normalize(params["cg_resources_requirements"])
+        cgrr = params["cg_resources_requirements"]
 
         # Extract minimum condor resource requirements and client_group
         resources = self.extract_resources(cgrr)
@@ -268,6 +239,7 @@ class Condor(Scheduler):
 
         params["extracted_client_group"] = client_group
         sub["client_group"] = client_group
+        sub["gentenv"] = "false"
         sub["environment"] = self.setup_environment_vars(params)
 
         return sub

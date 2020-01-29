@@ -180,9 +180,11 @@ class KafkaStartJob(StatusOptional, StatusRequired):
                 )
 
 
-def _delivery_report(err):
+def _delivery_report(err, msg):
     if err is not None:
-        logging.error(f"Kafka message delivery failed: {err}")
+        logging.error(msg)
+        msg = "Message delivery failed:", err
+        logging.error(msg)
 
 
 class KafkaClient:
