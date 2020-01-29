@@ -178,6 +178,7 @@ class SDKMethodRunner:
             jr = JobRequirements()
             jr.clientgroup = resources.client_group
             jr.cpu = resources.request_cpus
+            # Should probably do some type checking on these before its passed in
             # Memory always in mb
             # Space always in gb
             jr.memory = resources.request_memory[:-1]
@@ -532,6 +533,7 @@ class SDKMethodRunner:
         extracted_resources = self.get_condor().extract_resources(
             cgrr=resource_requirements
         )
+        # TODO Validate MB/GB from both config and catalog.
 
         # perform sanity checks before creating job
         self._check_ws_objects(source_objects=params.get("source_ws_objects"))
