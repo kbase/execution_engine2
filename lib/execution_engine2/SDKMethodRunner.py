@@ -178,8 +178,10 @@ class SDKMethodRunner:
             jr = JobRequirements()
             jr.clientgroup = resources.client_group
             jr.cpu = resources.request_cpus
-            jr.memory = resources.request_memory
-            jr.disk = resources.request_disk
+            # Memory always in mb
+            # Space always in gb
+            jr.memory = resources.request_memory[:-1]
+            jr.disk = resources.request_disk[:-2]
             inputs.requirements = jr
 
         job.job_input = inputs
