@@ -138,7 +138,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
 
         cls.cr = condor_resources(
-            request_cpus=1, request_disk=1, request_memory=1, client_group="njs"
+            request_cpus="1",
+            request_disk="1GB",
+            request_memory="100M",
+            client_group="njs",
         )
 
     def getRunner(self) -> SDKMethodRunner:
