@@ -111,12 +111,13 @@ class SDKMethodRunner:
             {"module_name": module_name, "function_name": function_name}
         )
 
+        client_groups = ""
         if group_config:
-            client_groups = group_config[0].get("client_groups")[0]
-        else:
-            client_groups = ""
+            client_groups = group_config[0].get("client_groups")
+            if len(client_groups) > 0:
+                client_groups = " ".join(client_groups)
 
-        return client_groups
+        return normalize_catalog_cgroups(client_groups)
 
     def _check_ws_objects(self, source_objects):
         """
@@ -527,13 +528,10 @@ class SDKMethodRunner:
         logging.info(f"User {self.user_id} attempting to run job {method}")
 
         # Normalize multiple formats into one format (csv vs json)
-        resource_requirements = normalize_catalog_cgroups(
-            self._get_client_groups(method)
-        )
+        app_settings = self._get_client_groups(method)
+
         # These are for saving into job inputs. Maybe its best to pass this into condor as well?
-        extracted_resources = self.get_condor().extract_resources(
-            cgrr=resource_requirements
-        )
+        extracted_resources = self.get_condor().extract_resources(cgrr=app_settings)
         # TODO Validate MB/GB from both config and catalog.
 
         # perform sanity checks before creating job
@@ -547,12 +545,12 @@ class SDKMethodRunner:
         job_id = self._init_job_rec(self.user_id, params, extracted_resources)
 
         logging.debug("About to run job with")
-        logging.debug(resource_requirements)
+        logging.debug(app_settings)
 
         params["job_id"] = job_id
         params["user_id"] = self.user_id
         params["token"] = self.token
-        params["cg_resources_requirements"] = resource_requirements
+        params["cg_resources_requirements"] = app_settings
         try:
             submission_info = self.get_condor().run_job(params)
             condor_job_id = submission_info.clusterid
