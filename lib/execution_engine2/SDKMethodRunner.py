@@ -91,31 +91,31 @@ class SDKMethodRunner:
 
         return inner
 
-def _get_client_groups(method):
-    """
-    get client groups info from Catalog
-    """
-    if method is None:
-        raise ValueError("Please input module_name.function_name")
+    def _get_client_groups(method):
+        """
+        get client groups info from Catalog
+        """
+        if method is None:
+            raise ValueError("Please input module_name.function_name")
 
-    if method is not None and "." not in method:
-        raise ValueError(
-            "unrecognized method: {}. Please input module_name.function_name".format(
-                method
+        if method is not None and "." not in method:
+            raise ValueError(
+                "unrecognized method: {}. Please input module_name.function_name".format(
+                    method
+                )
             )
+
+        module_name, function_name = method.split(".")
+
+        group_config = self.catalog.list_client_group_configs(
+            {"module_name": module_name, "function_name": function_name}
         )
 
-    module_name, function_name = method.split(".")
-
-    group_config = self.catalog.list_client_group_configs(
-        {"module_name": module_name, "function_name": function_name}
-    )
-
-    client_groups = ""
-    if group_config:
-       client_groups = " ".join(group_config[0].get("client_groups"))
-        
-    return normalize_catalog_cgroups(client_groups)
+        client_groups = ""
+        if group_config:
+        client_groups = " ".join(group_config[0].get("client_groups"))
+            
+        return normalize_catalog_cgroups(client_groups)
 
     def _check_ws_objects(self, source_objects):
         """
