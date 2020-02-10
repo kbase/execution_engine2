@@ -91,7 +91,7 @@ class SDKMethodRunner:
 
         return inner
 
-    def _get_client_groups(self,method):
+    def _get_client_groups(self, method):
         """
         get client groups info from Catalog
         """
@@ -114,7 +114,7 @@ class SDKMethodRunner:
         client_groups = ""
         if group_config:
             client_groups = " ".join(group_config[0].get("client_groups"))
-            
+
         return normalize_catalog_cgroups(client_groups)
 
     def _check_ws_objects(self, source_objects):
