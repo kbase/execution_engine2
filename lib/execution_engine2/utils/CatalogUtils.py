@@ -8,7 +8,7 @@ class CatalogUtils:
     def __init__(self, url):
         self.catalog = Catalog(url=url)
 
-    def _get_client_groups(self, method) -> Dict:
+    def get_client_groups(self, method) -> Dict:
         """
         get client groups info from Catalog
         """
