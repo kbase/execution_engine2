@@ -389,8 +389,6 @@ class SDKMethodRunner:
 
     def __init__(self, config, user_id=None, token=None, job_permission_cache=None):
 
-        self.logger = self.set_log_level()
-
         self.deployment_config_fp = os.environ.get("KB_DEPLOYMENT_CONFIG")
         self.config = config
         self.mongo_util = None
@@ -410,7 +408,7 @@ class SDKMethodRunner:
         self.is_admin = False
 
         self.debug = SDKMethodRunner.parse_bool_from_string(config.get("debug"))
-        self.set_log_level()
+        self.logger = self.set_log_level()
 
         if job_permission_cache is None:
             self.job_permission_cache = TTLCache(
