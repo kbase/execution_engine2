@@ -400,18 +400,15 @@ class SDKMethodRunner:
         """
         log_format = "%(created)s %(levelname)s: %(message)s"
         logger = logging.getLogger("ee2")
-        logger.setFormatter(logging.Formatter(log_format))
+        fh = logging.StreamHandler()
+        fh.setFormatter(logging.Formatter(log_format))
+        fh.setLevel(logging.WARN)
 
         if self.debug:
-            logger.setLevel(logging.DEBUG)
-            logging.debug(
-                f"Debugging is enabled. Set log level to debug and higher (debug/info) {logging.DEBUG}"
-            )
-        else:
-            self.logger.setLevel(logging.WARN)
-            logging.warning(
-                f"Debugging is DISABLED. Set log level to warnings and higher (warning/error){logging.WARN}"
-            )
+            fh.setLevel(logging.DEBUG)
+
+        logger.addHandler(fh)
+        logging.warning(f"DEBUG is {self.debug}. T=(debug/info/w/e) F=(warning/error)")
 
         return logger
 
