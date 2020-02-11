@@ -146,7 +146,7 @@ class Condor(Scheduler):
         :param cgrr:
         :return:
         """
-        logging.debug("About to extract from", cgrr)
+        logging.debug(f"About to extract from {cgrr}")
         client_group = cgrr.get("client_group", None)
         if client_group is None or client_group == "":
             client_group = self.config.get(
