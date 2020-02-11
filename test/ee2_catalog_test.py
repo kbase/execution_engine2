@@ -36,6 +36,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         method = "simple_app.simple_add"
         app_settings = runner._get_client_groups(method)
         self.assertEquals(app_settings["client_group"], "njs")
+        client_group = app_settings.get("client_group", None)
+
+        print(client_group)
 
         # These are for saving into job inputs. Maybe its best to pass this into condor as well?
         # extracted_resources = self.get_condor().extract_resources(cgrr=app_settings)

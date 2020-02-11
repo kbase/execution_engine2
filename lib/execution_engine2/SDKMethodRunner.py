@@ -37,7 +37,7 @@ from execution_engine2.exceptions import (
     RecordNotFoundException,
     InvalidStatusTransitionException,
 )
-from execution_engine2.utils.CatalogUtils import normalize_catalog_cgroups
+from execution_engine2.utils.CatalogUtils import CatalogUtils
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.Condor import condor_resources
 from execution_engine2.utils.KafkaUtils import (
@@ -51,7 +51,6 @@ from execution_engine2.utils.KafkaUtils import (
     KafkaQueueChange,
 )
 from execution_engine2.utils.SlackUtils import SlackClient
-from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.authclient import KBaseAuth
 
@@ -88,30 +87,6 @@ class SDKMethodRunner:
 
         return inner
 
-    def _get_client_groups(self, method) -> Dict:
-        """
-        get client groups info from Catalog
-        """
-        if method is None:
-            raise ValueError("Please input module_name.function_name")
-
-        if method is not None and "." not in method:
-            raise ValueError(
-                "unrecognized method: {}. Please input module_name.function_name".format(
-                    method
-                )
-            )
-
-        module_name, function_name = method.split(".")
-
-        group_config = self.catalog.list_client_group_configs(
-            {"module_name": module_name, "function_name": function_name}
-        )
-
-        client_groups = group_config[0].get("client_groups", [])
-
-        return normalize_catalog_cgroups(client_groups)
-
     def _check_ws_objects(self, source_objects) -> None:
         """
         perform sanity checks on input WS objects
@@ -133,7 +108,7 @@ class SDKMethodRunner:
         if not service_ver:
             service_ver = "release"
 
-        module_version = self.catalog.get_module_version(
+        module_version = self.catalog_utils.catalog.get_module_version(
             {"module_name": module_name, "version": service_ver}
         )
 
@@ -290,7 +265,7 @@ class SDKMethodRunner:
         log_exec_stats_params["is_error"] = int(job.status == Status.error.value)
         log_exec_stats_params["job_id"] = job_id
 
-        self.catalog.log_exec_stats(log_exec_stats_params)
+        self.catalog_utils.catalog.log_exec_stats(log_exec_stats_params)
 
     @staticmethod
     def _create_new_log(pk):
@@ -424,7 +399,7 @@ class SDKMethodRunner:
         self.workspace_auth = None
         self.admin_roles = config.get("admin_roles", ["EE2_ADMIN", "EE2_ADMIN_RO"])
 
-        self.catalog = Catalog(config.get("catalog-url"))
+        self.catalog_utils = CatalogUtils(config.get("catalog-url"))
         self.workspace_url = config.get("workspace-url")
 
         self.auth_url = config.get("auth-url")
