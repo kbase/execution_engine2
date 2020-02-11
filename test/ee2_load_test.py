@@ -15,6 +15,7 @@ from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job, Status
 from execution_engine2.execution_engine2Impl import execution_engine2
 from execution_engine2.utils.Condor import Condor, submission_info
+from installed_clients.CatalogClient import Catalog
 from test.mongo_test_helper import MongoTestHelper
 from test.test_utils import bootstrap
 
@@ -25,11 +26,13 @@ bootstrap()
 class ee2_server_load_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+
         config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
         config_parser = ConfigParser()
         config_parser.read(config_file)
 
         cls.cfg = {}
+
         for nameval in config_parser.items("execution_engine2"):
             cls.cfg[nameval[0]] = nameval[1]
 
@@ -97,8 +100,8 @@ class ee2_server_load_test(unittest.TestCase):
             runner = self.getRunner()
 
             # set job method differently to distinguish
-            method_1 = "a_method"
-            method_2 = "b_method"
+            method_1 = "app_1.a_method"
+            method_2 = "app_1.b_method"
             job_params_1 = self.get_sample_job_params(method=method_1)
             job_params_2 = self.get_sample_job_params(method=method_2)
 
@@ -238,8 +241,11 @@ class ee2_server_load_test(unittest.TestCase):
             jobs.delete()
             self.assertEqual(ori_job_count, Job.objects.count())
 
+    @patch.object(
+        Catalog, "list_client_group_configs", return_value=[{"client_groups": ["njs"]}]
+    )
     @patch.object(WorkspaceAuth, "can_write", return_value=True)
-    @patch.object(SDKMethodRunner, "_get_client_groups", return_value="njs")
+    # @patch.object(SDKMethodRunner, "_get_client_groups", return_value="njs")
     @patch.object(SDKMethodRunner, "_get_module_git_commit", return_value="a version")
     @patch.object(
         Condor,
@@ -258,9 +264,9 @@ class ee2_server_load_test(unittest.TestCase):
             ori_job_count = Job.objects.count()
 
             # set job method differently to distinguish
-            method_1 = "a_method"
-            method_2 = "b_method"
-            method_3 = "c_method"
+            method_1 = "app1.a_method"
+            method_2 = "app2.b_method"
+            method_3 = "app3.c_method"
             job_params_1 = self.get_sample_job_params(method=method_1)
             job_params_2 = self.get_sample_job_params(method=method_2)
             job_params_3 = self.get_sample_job_params(method=method_3)
