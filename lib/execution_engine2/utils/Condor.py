@@ -9,7 +9,7 @@ import htcondor
 from execution_engine2.exceptions import MissingRunJobParamsException
 from execution_engine2.utils.Scheduler import Scheduler
 
-logging.getLogger("ee2")
+logging.getLogger()
 
 import os
 import pwd
@@ -147,7 +147,11 @@ class Condor(Scheduler):
         :return:
         """
         logging.debug(f"About to extract from {cgrr}")
-        client_group = cgrr.get("client_group", None)
+        print(f"About to extract from {cgrr}")
+        try:
+            client_group = cgrr.get("client_group", None)
+        except Exception:
+            raise Exception(cgrr)
         if client_group is None or client_group == "":
             client_group = self.config.get(
                 section="DEFAULT", option=self.DEFAULT_CLIENT_GROUP
