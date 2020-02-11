@@ -5,7 +5,7 @@ import time
 from collections import namedtuple, OrderedDict
 from datetime import datetime
 from enum import Enum
-
+from logging import Logger
 from typing import Dict, AnyStr
 
 import dateutil
@@ -393,23 +393,32 @@ class SDKMethodRunner:
 
         return log["stored_line_count"]
 
-    def set_log_level(self):
+    def set_log_level(self) -> Logger:
         """
         Enable this setting to get output for development purposes
         Otherwise, only emit warnings or errors for production
         """
         log_format = "%(created)s %(levelname)s: %(message)s"
+        logger = logging.getLogger("ee2")
+        logger.setFormatter(logging.Formatter(log_format))
 
         if self.debug:
-            logging.basicConfig(level=logging.DEBUG, format=log_format)
-            logging.info(f"Debugging is enabled. Set log level to {logging.DEBUG}")
-            logging.debug(f"Debugging is enabled. Set log level to {logging.DEBUG}")
+            logger.setLevel(logging.DEBUG)
+            logging.debug(
+                f"Debugging is enabled. Set log level to debug and higher (debug/info) {logging.DEBUG}"
+            )
         else:
-            logging.basicConfig(level=logging.WARN, format=log_format)
-            logging.info(f"Debugging is DISABLED. Set log level to {logging.WARN}")
-            logging.warning(f"Debugging is DISABLED. Set log level to {logging.WARN}")
+            self.logger.setLevel(logging.WARN)
+            logging.warning(
+                f"Debugging is DISABLED. Set log level to warnings and higher (warning/error){logging.WARN}"
+            )
+
+        return logger
 
     def __init__(self, config, user_id=None, token=None, job_permission_cache=None):
+
+        self.logger = self.set_log_level()
+
         self.deployment_config_fp = os.environ.get("KB_DEPLOYMENT_CONFIG")
         self.config = config
         self.mongo_util = None

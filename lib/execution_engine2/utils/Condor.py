@@ -9,7 +9,7 @@ import htcondor
 from execution_engine2.exceptions import MissingRunJobParamsException
 from execution_engine2.utils.Scheduler import Scheduler
 
-logging.basicConfig(level=logging.INFO)
+logging.getLogger("ee2")
 
 import os
 import pwd
