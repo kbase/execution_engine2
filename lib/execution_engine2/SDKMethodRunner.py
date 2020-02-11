@@ -6,6 +6,8 @@ from collections import namedtuple, OrderedDict
 from datetime import datetime
 from enum import Enum
 
+from typing import List, Dict
+
 import dateutil
 from bson import ObjectId
 from cachetools import TTLCache
@@ -86,7 +88,7 @@ class SDKMethodRunner:
 
         return inner
 
-    def _get_client_groups(self, method):
+    def _get_client_groups(self, method) -> Dict:
         """
         get client groups info from Catalog
         """
@@ -106,9 +108,7 @@ class SDKMethodRunner:
             {"module_name": module_name, "function_name": function_name}
         )
 
-        client_groups = ""
-        if group_config:
-            client_groups = " ".join(group_config[0].get("client_groups"))
+        client_groups = group_config[0].get("client_groups", [])
 
         return normalize_catalog_cgroups(client_groups)
 
