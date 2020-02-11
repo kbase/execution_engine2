@@ -252,9 +252,7 @@ class ee2_server_load_test(unittest.TestCase):
         "run_job",
         return_value=submission_info(clusterid="test", submit="job", error=None),
     )
-    def test_run_job_stress(
-        self, can_write, _get_client_groups, _get_module_git_commit, run_job
-    ):
+    def test_run_job_stress(self, catalog, can_write, _get_module_git_commit, run_job):
         """
         testing running 3 different jobs in multiple theads.
         """

@@ -502,7 +502,7 @@ class SDKMethodRunner:
         logging.info(f"User {self.user_id} attempting to run job {method}")
 
         # Normalize multiple formats into one format (csv vs json)
-        app_settings = self._get_client_groups(method)
+        app_settings = self.catalog_utils.get_client_groups(method)
 
         # These are for saving into job inputs. Maybe its best to pass this into condor as well?
         extracted_resources = self.get_condor().extract_resources(cgrr=app_settings)
