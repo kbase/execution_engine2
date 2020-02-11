@@ -6,7 +6,7 @@ from collections import namedtuple, OrderedDict
 from datetime import datetime
 from enum import Enum
 
-from typing import List, Dict
+from typing import Dict, AnyStr
 
 import dateutil
 from bson import ObjectId
@@ -112,7 +112,7 @@ class SDKMethodRunner:
 
         return normalize_catalog_cgroups(client_groups)
 
-    def _check_ws_objects(self, source_objects):
+    def _check_ws_objects(self, source_objects) -> None:
         """
         perform sanity checks on input WS objects
         """
@@ -127,7 +127,7 @@ class SDKMethodRunner:
             if None in paths:
                 raise ValueError("Some workspace object is inaccessible")
 
-    def _get_module_git_commit(self, method, service_ver=None):
+    def _get_module_git_commit(self, method, service_ver=None) -> AnyStr:
         module_name = method.split(".")[0]
 
         if not service_ver:
@@ -141,7 +141,9 @@ class SDKMethodRunner:
 
         return git_commit_hash
 
-    def _init_job_rec(self, user_id, params, resources: condor_resources = None):
+    def _init_job_rec(
+        self, user_id, params, resources: condor_resources = None
+    ) -> AnyStr:
 
         job = Job()
 
@@ -192,14 +194,14 @@ class SDKMethodRunner:
 
         return str(job.id)
 
-    def get_workspace_auth(self):
+    def get_workspace_auth(self) -> WorkspaceAuth:
         if self.workspace_auth is None:
             self.workspace_auth = WorkspaceAuth(
                 self.token, self.user_id, self.workspace_url
             )
         return self.workspace_auth
 
-    def get_mongo_util(self):
+    def get_mongo_util(self) -> MongoUtil:
         if self.mongo_util is None:
             self.mongo_util = MongoUtil(self.config)
         return self.mongo_util
@@ -209,12 +211,12 @@ class SDKMethodRunner:
             self.condor = Condor(self.deployment_config_fp)
         return self.condor
 
-    def get_workspace(self):
+    def get_workspace(self) -> Workspace:
         if self.workspace is None:
             self.workspace = Workspace(token=self.token, url=self.workspace_url)
         return self.workspace
 
-    def _get_job_log(self, job_id, skip_lines):
+    def _get_job_log(self, job_id, skip_lines) -> Dict:
         """
         # TODO Do I have to query this another way so I don't load all lines into memory?
         # Does mongoengine lazy-load it?
