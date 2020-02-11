@@ -28,6 +28,9 @@ class CatalogUtils:
             {"module_name": module_name, "function_name": function_name}
         )
 
+        if len(group_config) == 0:
+            group_config = {"client_groups": []}
+
         client_groups = group_config[0].get("client_groups", [])
 
         return self.normalize_catalog_cgroups(client_groups)
