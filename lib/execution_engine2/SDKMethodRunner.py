@@ -380,7 +380,7 @@ class SDKMethodRunner:
         fh.setLevel(logging.WARN)
 
         if self.debug:
-            fh.setLevel(self.logger.debug)
+            fh.setLevel(logging.DEBUG)
 
         logger.addHandler(fh)
         logging.warning(f"DEBUG is {self.debug}. T=(debug/info/w/e) F=(warning/error)")
