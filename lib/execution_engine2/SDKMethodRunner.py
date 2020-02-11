@@ -2,15 +2,13 @@ import json
 import logging
 import os
 import time
-
-
 from collections import namedtuple, OrderedDict
 from datetime import datetime
 from enum import Enum
-from cachetools import TTLCache
 
 import dateutil
 from bson import ObjectId
+from cachetools import TTLCache
 
 from execution_engine2.authorization.authstrategy import (
     can_read_job,
@@ -39,6 +37,7 @@ from execution_engine2.exceptions import (
 )
 from execution_engine2.utils.CatalogUtils import normalize_catalog_cgroups
 from execution_engine2.utils.Condor import Condor
+from execution_engine2.utils.Condor import condor_resources
 from execution_engine2.utils.KafkaUtils import (
     KafkaClient,
     KafkaCancelJob,
@@ -53,7 +52,6 @@ from execution_engine2.utils.SlackUtils import SlackClient
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.authclient import KBaseAuth
-from execution_engine2.utils.Condor import condor_resources
 
 
 class JobPermissions(Enum):
@@ -63,13 +61,11 @@ class JobPermissions(Enum):
 
 
 class SDKMethodRunner:
-
     JOB_PERMISSION_CACHE_SIZE = 500
     JOB_PERMISSION_CACHE_EXPIRE_TIME = 300  # seconds
 
     def allow_job_read(func):
         def inner(self, *args, **kwargs):
-
             job_id = kwargs.get("job_id")
             if job_id is None:
                 raise ValueError("Please provide valid job_id")
@@ -81,7 +77,6 @@ class SDKMethodRunner:
 
     def allow_job_write(func):
         def inner(self, *args, **kwargs):
-
             job_id = kwargs.get("job_id")
             if job_id is None:
                 raise ValueError("Please provide valid job_id")
@@ -858,8 +853,18 @@ class SDKMethodRunner:
             logging.info(e)
             error_message = "Something was wrong with the output object"
             error_code = ErrorCode.job_missing_output.value
+            error = {
+                "code": -1,
+                "name": "Output object is invalid",
+                "message": str(e),
+                "error": str(e),
+            }
+
             self.get_mongo_util().finish_job_with_error(
-                job_id=job_id, error_message=error_message, error_code=error_code
+                job_id=job_id,
+                error_message=error_message,
+                error_code=error_code,
+                error=error,
             )
             raise Exception(str(e) + str(error_message))
 
@@ -885,7 +890,9 @@ class SDKMethodRunner:
         :param job_output: dict - default None, if given this job has some output
         """
 
-        job = self._get_job_with_permission(job_id=job_id)
+        job = self._get_job_with_permission(
+            job_id=job_id, permission=JobPermissions.WRITE
+        )
 
         if error_message:
             if error_code is None:
