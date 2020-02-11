@@ -7,9 +7,7 @@ the Server. This just takes an auth token and discerns whether there's
 a valid EE2 admin role attached to the user.
 """
 from typing import List, Set
-from installed_clients.authclient import (
-    TokenCache
-)
+from installed_clients.authclient import TokenCache
 import requests
 from json import JSONDecodeError
 from execution_engine2.exceptions import AuthError
@@ -25,6 +23,7 @@ class AdminAuthUtil:
     A simple Auth utility. This is NOT an auth client, but a utility class that's
     used to look up user roles.
     """
+
     def __init__(self, auth_url: str, admin_roles: List):
         """
         :param auth_url: string - the base url of the KBase auth2 service.
@@ -73,22 +72,26 @@ class AdminAuthUtil:
         if not token:
             raise ValueError("Must supply a token to fetch user roles")
         try:
-            ret = requests.get(self.auth_url + "/api/V2/me", headers={"Authorization": token})
+            ret = requests.get(
+                self.auth_url + "/api/V2/me", headers={"Authorization": token}
+            )
             ret.raise_for_status()  # this is a no-op if all is well
             user_info = ret.json()
-            return set(user_info.get('customroles', []))
+            return set(user_info.get("customroles", []))
         except requests.HTTPError as e:
             err_msg = dict()
             try:
-                err_msg = e.response.json().get('error', {})
+                err_msg = e.response.json().get("error", {})
             except JSONDecodeError:
                 pass
             if e.response.status_code == 401:
                 raise AuthError("Token is not valid")
-            raise RuntimeError("An error occurred while fetching user roles from auth service: {} {}\n{}".format(
-                e.response.status_code,
-                e.response.reason,
-                err_msg.get('message', 'Unknown Auth error')
-            ))
+            raise RuntimeError(
+                "An error occurred while fetching user roles from auth service: {} {}\n{}".format(
+                    e.response.status_code,
+                    e.response.reason,
+                    err_msg.get("message", "Unknown Auth error"),
+                )
+            )
         except requests.exceptions.ConnectTimeout:
             raise RuntimeError("The auth service timed out while fetching user roles.")

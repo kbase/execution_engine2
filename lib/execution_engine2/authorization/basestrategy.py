@@ -12,6 +12,7 @@ class AuthStrategy(abc.ABC):
     Note that this is intended only for users - admins can do most things with jobs and don't go
     through the authstrategy to figure that out.
     """
+
     @abc.abstractmethod
     def can_read(self, auth_param: str) -> bool:
         """

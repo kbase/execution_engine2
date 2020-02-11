@@ -148,10 +148,10 @@ class Condor(Scheduler):
         """
         logging.debug(f"About to extract from {cgrr}")
         print(f"About to extract from {cgrr}")
-        try:
-            client_group = cgrr.get("client_group", None)
-        except Exception:
-            raise Exception(cgrr)
+
+        client_group = cgrr.get("client_group", None)
+        print(client_group)
+
         if client_group is None or client_group == "":
             client_group = self.config.get(
                 section="DEFAULT", option=self.DEFAULT_CLIENT_GROUP

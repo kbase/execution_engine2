@@ -333,7 +333,7 @@ class SDKMethodRunner:
         :param log_lines:
         :return:
         """
-        logging.debug(f"About to add logs for {job_id}")
+        self.logger.debug(f"About to add logs for {job_id}")
         mongo_util = self.get_mongo_util()
 
         try:
@@ -380,7 +380,7 @@ class SDKMethodRunner:
         fh.setLevel(logging.WARN)
 
         if self.debug:
-            fh.setLevel(logging.DEBUG)
+            fh.setLevel(self.logger.debug)
 
         logger.addHandler(fh)
         logging.warning(f"DEBUG is {self.debug}. T=(debug/info/w/e) F=(warning/error)")
@@ -430,12 +430,12 @@ class SDKMethodRunner:
         """
         # Is it inefficient to get the job twice? Is it cached?
         # Maybe if the call fails, we don't actually cancel the job?
-        logging.debug(f"Attempting to cancel job {job_id}")
+        self.logger.debug(f"Attempting to cancel job {job_id}")
 
         job = self._get_job_with_permission(job_id, JobPermissions.WRITE)
 
         logging.info(f"User has permission to cancel job {job_id}")
-        logging.debug(f"User has permission to cancel job {job_id}")
+        self.logger.debug(f"User has permission to cancel job {job_id}")
 
         if terminated_code is None:
             terminated_code = TerminatedCode.terminated_by_user.value
@@ -453,10 +453,10 @@ class SDKMethodRunner:
         )
 
         logging.info(f"About to cancel job in CONDOR using {job.scheduler_id}")
-        logging.debug(f"About to cancel job in CONDOR using {job.scheduler_id}")
+        self.logger.debug(f"About to cancel job in CONDOR using {job.scheduler_id}")
         rv = self.get_condor().cancel_job(job_id=job.scheduler_id)
         logging.info(rv)
-        logging.debug(f"{rv}")
+        self.logger.debug(f"{rv}")
 
         self.kafka_client.send_kafka_message(
             message=KafkaCondorCommand(
@@ -491,7 +491,7 @@ class SDKMethodRunner:
         wsid = params.get("wsid")
         ws_auth = self.get_workspace_auth()
         if wsid and not ws_auth.can_write(wsid):
-            logging.debug(
+            self.logger.debug(
                 f"User {self.user_id} doesn't have permission to run jobs in workspace {wsid}."
             )
             raise PermissionError(
@@ -518,8 +518,8 @@ class SDKMethodRunner:
         # insert initial job document
         job_id = self._init_job_rec(self.user_id, params, extracted_resources)
 
-        logging.debug("About to run job with")
-        logging.debug(app_settings)
+        self.logger.debug("About to run job with")
+        self.logger.debug(app_settings)
 
         params["job_id"] = job_id
         params["user_id"] = self.user_id
@@ -528,7 +528,7 @@ class SDKMethodRunner:
         try:
             submission_info = self.get_condor().run_job(params)
             condor_job_id = submission_info.clusterid
-            logging.debug(f"Submitted job id and got '{condor_job_id}'")
+            self.logger.debug(f"Submitted job id and got '{condor_job_id}'")
         except Exception as e:
             ## delete job from database? Or mark it to a state it will never run?
             logging.error(e)
@@ -541,10 +541,10 @@ class SDKMethodRunner:
                 "Condor job not ran, and error not found. Something went wrong"
             )
 
-        logging.debug("Submission info is")
-        logging.debug(submission_info)
-        logging.debug(condor_job_id)
-        logging.debug(type(condor_job_id))
+        self.logger.debug("Submission info is")
+        self.logger.debug(submission_info)
+        self.logger.debug(condor_job_id)
+        self.logger.debug(type(condor_job_id))
 
         logging.info(f"Attempting to update job to queued  {job_id} {condor_job_id}")
         self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
@@ -664,7 +664,7 @@ class SDKMethodRunner:
             job = self.get_mongo_util().get_job(job_id=job_id)
             self._test_job_permissions(job, job_id, permission)
 
-        logging.debug("you have permission to {} job {}".format(permission, job_id))
+        self.logger.debug("you have permission to {} job {}".format(permission, job_id))
 
     def _get_job_with_permission(self, job_id, permission):
         job = self.get_mongo_util().get_job(job_id=job_id)
@@ -1082,7 +1082,7 @@ class SDKMethodRunner:
 
         ws_auth = self.get_workspace_auth()
         if not ws_auth.can_read(workspace_id):
-            logging.debug(
+            self.logger.debug(
                 f"User {self.user_id} doesn't have permission to read jobs in workspace {workspace_id}."
             )
             raise PermissionError(
