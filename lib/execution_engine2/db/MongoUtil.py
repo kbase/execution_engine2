@@ -241,9 +241,8 @@ class MongoUtil:
             Status.completed.value,
             Status.terminated.value,
         ]:
-            raise InvalidStatusTransitionException(
-                f"A job with status {job_status} cannot be terminated. It is already cancelled."
-            )
+            return True
+        return False
 
     def cancel_job(self, job_id=None, terminated_code=None):
         """
@@ -256,13 +255,16 @@ class MongoUtil:
 
         with self.mongo_engine_connection():
             j = self.get_job(job_id)
-            self.check_if_already_finished(j.status)
+            if self.check_if_already_finished(j.status):
+                return False
             if terminated_code is None:
                 terminated_code = TerminatedCode.terminated_by_user.value
             j.finished = time.time()
             j.terminated_code = terminated_code
             j.status = Status.terminated.value
             j.save()
+
+        return True
 
     def finish_job_with_error(self, job_id, error_message, error_code, error):
         """

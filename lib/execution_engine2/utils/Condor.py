@@ -339,5 +339,5 @@ class Condor(Scheduler):
             logging.debug(f"{cancel_jobs}")
             return cancel_jobs
         except Exception as e:
-            logging.error(scheduler_ids)
+            logging.error("Couldn't cancel jobs" + str(scheduler_ids))
             logging.error(e)

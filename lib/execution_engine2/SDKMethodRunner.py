@@ -209,7 +209,7 @@ class SDKMethodRunner:
             self.mongo_util = MongoUtil(self.config)
         return self.mongo_util
 
-    def get_condor(self):
+    def get_condor(self) -> Condor:
         if self.condor is None:
             self.condor = Condor(self.deployment_config_fp)
         return self.condor
@@ -867,7 +867,6 @@ class SDKMethodRunner:
             job_id=job_id, job_output=job_output
         )
 
-    @allow_job_write
     def finish_job(
         self, job_id, error_message=None, error_code=None, error=None, job_output=None
     ):
@@ -886,7 +885,7 @@ class SDKMethodRunner:
         :param job_output: dict - default None, if given this job has some output
         """
 
-        job = self._check_job_is_running(job_id=job_id)
+        job = self._get_job_with_permission(job_id=job_id)
 
         if error_message:
             if error_code is None:
@@ -908,26 +907,37 @@ class SDKMethodRunner:
                     scheduler_id=job.scheduler_id,
                 )
             )
+            return
 
-        elif job_output is None:
+        if job_output is None:
             if error_code is None:
                 error_code = ErrorCode.job_missing_output.value
             msg = "Missing job output required in order to successfully finish job. Something went wrong"
             self._finish_job_with_error(
                 job_id=job_id, error_message=msg, error_code=error_code
             )
-            raise ValueError(msg)
-            # No Kafka Message Here as this finish_job call failed due to insufficient requirements
-        else:
-            self._finish_job_with_success(job_id=job_id, job_output=job_output)
+
             self.kafka_client.send_kafka_message(
                 message=KafkaFinishJob(
                     job_id=str(job_id),
-                    new_status=Status.completed.value,
+                    new_status=Status.error.value,
                     previous_status=job.status,
+                    error_message=msg,
+                    error_code=error_code,
                     scheduler_id=job.scheduler_id,
                 )
             )
+            return
+
+        self._finish_job_with_success(job_id=job_id, job_output=job_output)
+        self.kafka_client.send_kafka_message(
+            message=KafkaFinishJob(
+                job_id=str(job_id),
+                new_status=Status.completed.value,
+                previous_status=job.status,
+                scheduler_id=job.scheduler_id,
+            )
+        )
 
     def start_job(self, job_id, skip_estimation=True):
         """
