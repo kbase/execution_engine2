@@ -195,16 +195,17 @@ class Condor(Scheduler):
         else:
             requirements_statement.append(f'(CLIENTGROUP == "{client_group}")')
 
-        special_requirements = [
+        restricted_requirements = [
             "client_group",
             "client_group_regex",
             self.REQUEST_MEMORY,
             self.REQUEST_DISK,
             self.REQUEST_CPUS,
+            "debug_mode",
         ]
 
         for key, value in cgrr.items():
-            if key not in special_requirements:
+            if key not in restricted_requirements:
                 requirements_statement.append(f'({key} == "{value}")')
 
         return requirements_statement
