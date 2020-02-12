@@ -27,7 +27,7 @@ class ee2_server_load_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
 
-        config_file = "deploy.cfg"
+        config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
         config_parser = ConfigParser()
         config_parser.read(config_file)
 
