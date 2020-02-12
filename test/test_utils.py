@@ -58,8 +58,8 @@ def read_config_into_dict(config="deploy.cfg", section="execution_engine2"):
 def bootstrap():
     test_env = "test.env"
     pwd = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
-    if not os.path.exists(test_env):
-        copyfile(f"{pwd}/test/env/{test_env}", f"{test_env}")
+    # Copy a fresh test env each time
+    copyfile(f"{pwd}/test/env/{test_env}", f"{test_env}")
     load_dotenv("test.env", verbose=True)
 
 

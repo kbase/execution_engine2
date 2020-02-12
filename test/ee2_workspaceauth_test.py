@@ -22,10 +22,7 @@ class WorkspaceAuthTestCase(unittest.TestCase):
         :param ws_id_map: dict where key = workspace id, value = workspace permission
         """
         perm_response = [{user_id: ws_id_map[ws_id]} for ws_id in ws_id_map]
-        ws_response = {
-            "result": [{"perms": perm_response}],
-            "version": "1.1"
-        }
+        ws_response = {"result": [{"perms": perm_response}], "version": "1.1"}
         rq_mock.register_uri("POST", self.ws_url, json=ws_response)
 
     def _mock_ws_deleted(self, rq_mock, ws_id):
@@ -34,11 +31,13 @@ class WorkspaceAuthTestCase(unittest.TestCase):
                 "code": -32500,
                 "error": "An error occurred!",
                 "message": f"Workspace {ws_id} is deleted",
-                "name": "JSONRpcError"
+                "name": "JSONRpcError",
             },
-            "version": "1.1"
+            "version": "1.1",
         }
-        rq_mock.register_uri("POST", self.ws_url, [{"json": response, "status_code": 500}])
+        rq_mock.register_uri(
+            "POST", self.ws_url, [{"json": response, "status_code": 500}]
+        )
 
     @requests_mock.Mocker()
     def test_can_read_ok(self, rq_mock):
@@ -57,7 +56,10 @@ class WorkspaceAuthTestCase(unittest.TestCase):
         with self.assertRaises(RuntimeError) as e:
             wsauth = WorkspaceAuth("foo", self.user, self.ws_url)
             wsauth.can_read(ws_id)
-        self.assertIn("An error occurred while fetching user permissions from the Workspace", str(e.exception))
+        self.assertIn(
+            "An error occurred while fetching user permissions from the Workspace",
+            str(e.exception),
+        )
 
     @requests_mock.Mocker()
     def test_can_write_ok(self, rq_mock):
@@ -76,7 +78,10 @@ class WorkspaceAuthTestCase(unittest.TestCase):
         with self.assertRaises(RuntimeError) as e:
             wsauth = WorkspaceAuth("foo", self.user, self.ws_url)
             wsauth.can_write(ws_id)
-        self.assertIn("An error occurred while fetching user permissions from the Workspace", str(e.exception))
+        self.assertIn(
+            "An error occurred while fetching user permissions from the Workspace",
+            str(e.exception),
+        )
 
     @requests_mock.Mocker()
     def test_can_read_list_ok(self, rq_mock):
@@ -94,7 +99,10 @@ class WorkspaceAuthTestCase(unittest.TestCase):
         with self.assertRaises(RuntimeError) as e:
             wsauth = WorkspaceAuth("foo", self.user, self.ws_url)
             wsauth.can_read_list([ws_id])
-        self.assertIn("An error occurred while fetching user permissions from the Workspace", str(e.exception))
+        self.assertIn(
+            "An error occurred while fetching user permissions from the Workspace",
+            str(e.exception),
+        )
 
     @requests_mock.Mocker()
     def test_can_write_list_ok(self, rq_mock):
@@ -112,4 +120,7 @@ class WorkspaceAuthTestCase(unittest.TestCase):
         with self.assertRaises(RuntimeError) as e:
             wsauth = WorkspaceAuth("foo", self.user, self.ws_url)
             wsauth.can_write_list([ws_id])
-        self.assertIn("An error occurred while fetching user permissions from the Workspace", str(e.exception))
+        self.assertIn(
+            "An error occurred while fetching user permissions from the Workspace",
+            str(e.exception),
+        )

@@ -2,6 +2,7 @@ import unittest
 from configparser import ConfigParser
 import os
 from lib.execution_engine2.SDKMethodRunner import SDKMethodRunner
+from lib.execution_engine2.utils.Condor import Condor
 import copy
 
 
@@ -9,6 +10,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
+        cls.config_file = config_file
         config_parser = ConfigParser()
         config_parser.read(config_file)
 
@@ -27,18 +29,28 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         cls.method_runner = SDKMethodRunner(
             cls.cfg, user_id=cls.user_id, token=cls.token
         )
+        cls.condor = cls.method_runner.condor
 
     def getRunner(self) -> SDKMethodRunner:
         return copy.deepcopy(self.__class__.method_runner)
 
     def test_cg(self):
         runner = self.getRunner()
-        method = "simple_app.simple_add"
-        app_settings = runner._get_client_groups(method)
-        self.assertEquals(app_settings["client_group"], "njs")
-        client_group = app_settings.get("client_group", None)
+        method = "simpleapp.simple_add"
+        print("A")
+        app_settings1 = runner.catalog_utils.get_client_groups(method)
+        self.assertEquals(app_settings1["client_group"], "njs")
+        self.assertIsInstance(app_settings1, dict)
 
-        print(client_group)
+        print("B")
+        method = "simpleapp.simple_add2"
+        app_settings2 = runner.catalog_utils.get_client_groups(method)
+        self.assertEquals(app_settings2, {})
+        self.assertIsInstance(app_settings2, dict)
+
+        condor = Condor(self.config_file)
+        req = condor.extract_requirements(cgrr=app_settings1, client_group="njs")
+        print(req)
 
         # These are for saving into job inputs. Maybe its best to pass this into condor as well?
         # extracted_resources = self.get_condor().extract_resources(cgrr=app_settings)

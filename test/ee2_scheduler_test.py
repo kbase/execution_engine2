@@ -16,7 +16,8 @@ bootstrap()
 class ExecutionEngine2SchedulerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.condor = Condor("deploy.cfg")
+        deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
+        cls.condor = Condor(deploy)
         cls.job_id = "1234"
         cls.user = "kbase"
         cls.catalog_utils = CatalogUtils(url="https://ci.kbase.us/services/Catalog")
