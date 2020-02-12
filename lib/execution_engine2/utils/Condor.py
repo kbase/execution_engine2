@@ -107,6 +107,10 @@ class Condor(Scheduler):
 
     def setup_environment_vars(self, params):
         # 7 day docker job timeout default, Catalog token used to get access to volume mounts
+        dm = (
+            str(params.get("cg_resources_requirements").get("debug_mode", "")).lower()
+            == "true"
+        )
 
         environment_vars = {
             "DOCKER_JOB_TIMEOUT": self.docker_timeout,
@@ -117,10 +121,7 @@ class Condor(Scheduler):
             # "WORKDIR": f"{config.get('WORKDIR')}/{params.get('USER')}/{params.get('JOB_ID')}",
             "CONDOR_ID": "$(Cluster).$(Process)",
             "PYTHON_EXECUTABLE": self.python_executable,
-            "DEBUG_MODE": str(
-                params.get("cg_resources_requirements").get("debug_mode", "").lower()
-                == "true"
-            ),
+            "DEBUG_MODE": str(dm),
         }
 
         environment = ""
