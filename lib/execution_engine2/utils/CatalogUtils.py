@@ -28,20 +28,22 @@ class CatalogUtils:
             {"module_name": module_name, "function_name": function_name}
         )
 
-        if len(group_config) == 0:
-            group_config = {"client_groups": []}
+        job_settings = []
+        if len(group_config) > 0:
+            job_settings = group_config[0].get("client_groups")
 
-        client_groups = group_config[0].get("client_groups", [])
+        normalize = self.normalize_job_settings(job_settings)
 
-        return self.normalize_catalog_cgroups(client_groups)
+        return normalize
 
     @staticmethod
-    def normalize_catalog_cgroups(resources_request: List):
+    def normalize_job_settings(resources_request: List):
         """
         Ensure that the client_groups are processed as a dictionary and has at least one value
         :param resources_request: either an empty string, a json object, or cg,key1=value,key2=value
         :return:
         """
+
         # No client group provided
         if len(resources_request) == 0:
             return {}
@@ -49,7 +51,7 @@ class CatalogUtils:
         if "{" in resources_request[0]:
             rr = ", ".join(resources_request)
             return json.loads(rr)
-
+        # CSV Format
         rr = resources_request[0].split(",")
         rv = {"client_group": rr.pop(0)}
         for item in rr:

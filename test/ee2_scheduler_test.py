@@ -16,7 +16,6 @@ bootstrap()
 class ExecutionEngine2SchedulerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
         cls.condor = Condor("deploy.cfg")
         cls.job_id = "1234"
         cls.user = "kbase"
@@ -33,7 +32,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         params["job_id"] = self.job_id
         params["user_id"] = "kbase"
         params["token"] = "test_token"
-        rr = CatalogUtils.normalize_catalog_cgroups(cgroups)
+        rr = CatalogUtils.normalize_job_settings(cgroups)
 
         print(rr)
         params["cg_resources_requirements"] = rr
