@@ -252,6 +252,9 @@ class Condor(Scheduler):
         sub["gentenv"] = "false"
         sub["environment"] = self.setup_environment_vars(params)
 
+        # Ensure all values are a string
+        for item in sub.keys():
+            sub[item] = str(sub[item])
         return sub
 
     def run_job(self, params, submit_file=None):
