@@ -191,7 +191,7 @@ class MongoUtil:
     def get_job(self, job_id=None, exclude_fields=None) -> Job:
 
         if job_id is None:
-            raise ValueError("Please provide a job id")
+            raise ValueError("Please provide a valid job id")
 
         job = self.get_jobs(job_ids=[job_id], exclude_fields=exclude_fields)[0]
 

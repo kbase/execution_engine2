@@ -29,7 +29,7 @@ class CatalogUtils:
         )
 
         job_settings = []
-        if len(group_config) > 0:
+        if group_config and len(group_config) > 0:
             job_settings = group_config[0].get("client_groups")
 
         normalize = self.normalize_job_settings(job_settings)

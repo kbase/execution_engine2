@@ -111,7 +111,7 @@ def _run_job_adapter(
 class ee2_SDKMethodRunner_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
+        config_file = "deploy.cfg"
         config_parser = ConfigParser()
         config_parser.read(config_file)
 
@@ -193,7 +193,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         return str(job.id)
 
     def test_init_ok(self):
-        class_attri = ["config", "catalog", "workspace", "mongo_util", "condor"]
+        class_attri = ["config", "catalog_utils", "workspace", "mongo_util", "condor"]
         runner = self.getRunner()
         self.assertTrue(set(class_attri) <= set(runner.__dict__.keys()))
 
@@ -771,19 +771,19 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             runner = self.getRunner()
             runner._test_job_permissions = MagicMock(return_value=True)
-            runner.catalog.log_exec_stats = MagicMock(return_value=True)
+            runner.catalog_utils.catalog.log_exec_stats = MagicMock(return_value=True)
 
             # test missing job_id input
-            with self.assertRaises(ValueError) as context:
+            with self.assertRaises(ValueError) as context1:
                 logging.info("Finish Job Case 0 Raises Error")
                 runner.finish_job(job_id=None)
-            self.assertEqual("Please provide valid job_id", str(context.exception))
+            self.assertEqual("Please provide a valid job id", str(context1.exception))
 
-            # test finish job with invalid status
-            with self.assertRaises(ValueError) as context:
-                logging.info("Finish Job Case 1 Raises Error")
-                runner.finish_job(job_id=job_id)
-            self.assertIn("Unexpected job status", str(context.exception))
+            # test finish job with invalid status (This was removed)
+            # with self.assertRaises(ValueError) as context2:
+            #     logging.info("Finish Job Case 1 Raises Error")
+            #     runner.finish_job(job_id=job_id)
+            # self.assertIn("Unexpected job status", str(context2.exception))
 
             # update job status to running
 
@@ -831,11 +831,11 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         runner = self.getRunner()
         runner._send_exec_stats_to_catalog = MagicMock(return_value=True)
-        runner.catalog.log_exec_stats = MagicMock(return_value=True)
+        runner.catalog_utils = MagicMock(return_value=True)
         runner._test_job_permissions = MagicMock(return_value=True)
 
-        with self.assertRaises(InvalidStatusTransitionException):
-            runner.finish_job(job_id=job_id, error_message="error message")
+        # with self.assertRaises(InvalidStatusTransitionException):
+        #     runner.finish_job(job_id=job_id, error_message="error message")
 
         runner.start_job(job_id=job_id, skip_estimation=True)
         runner.finish_job(job_id=job_id, error_message="error message")

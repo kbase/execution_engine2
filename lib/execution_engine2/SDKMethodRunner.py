@@ -878,7 +878,7 @@ class SDKMethodRunner:
         if error_message:
             if error_code is None:
                 error_code = ErrorCode.job_crashed.value
-            self._finish_job_with_error(
+            db_update = self._finish_job_with_error(
                 job_id=job_id,
                 error_message=error_message,
                 error_code=error_code,
@@ -895,13 +895,13 @@ class SDKMethodRunner:
                     scheduler_id=job.scheduler_id,
                 )
             )
-            return
+            return db_update
 
         if job_output is None:
             if error_code is None:
                 error_code = ErrorCode.job_missing_output.value
             msg = "Missing job output required in order to successfully finish job. Something went wrong"
-            self._finish_job_with_error(
+            db_update = self._finish_job_with_error(
                 job_id=job_id, error_message=msg, error_code=error_code
             )
 
@@ -915,7 +915,7 @@ class SDKMethodRunner:
                     scheduler_id=job.scheduler_id,
                 )
             )
-            return
+            return db_update
 
         self._finish_job_with_success(job_id=job_id, job_output=job_output)
         self.kafka_client.send_kafka_message(
