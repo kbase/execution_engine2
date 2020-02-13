@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.INFO)
 
 from execution_engine2.utils.CatalogUtils import CatalogUtils
 from execution_engine2.utils.Condor import Condor
-from test.test_utils import bootstrap
+from test.utils.test_utils import bootstrap
 
 import os
 

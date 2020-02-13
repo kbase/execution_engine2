@@ -32,7 +32,7 @@ from execution_engine2.exceptions import AuthError
 from execution_engine2.exceptions import InvalidStatusTransitionException
 from execution_engine2.utils.Condor import submission_info
 from test.mongo_test_helper import MongoTestHelper
-from test.test_utils import bootstrap, get_example_job, validate_job_state
+from test.utils.test_utils import bootstrap, get_example_job, validate_job_state
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()

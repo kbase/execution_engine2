@@ -8,7 +8,7 @@ from execution_engine2.authorization.authstrategy import (
     can_write_job,
     can_write_jobs,
 )
-from test.test_utils import get_example_job, custom_ws_perm_maker
+from test.utils.test_utils import get_example_job, custom_ws_perm_maker
 
 
 class AuthStrategyTestCase(unittest.TestCase):

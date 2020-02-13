@@ -17,7 +17,7 @@ from execution_engine2.execution_engine2Impl import execution_engine2
 from execution_engine2.utils.Condor import Condor, submission_info
 from installed_clients.CatalogClient import Catalog
 from test.mongo_test_helper import MongoTestHelper
-from test.test_utils import bootstrap
+from test.utils.test_utils import bootstrap
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()

@@ -14,6 +14,7 @@ logging.getLogger()
 import os
 import pwd
 import pathlib
+from exceptions import MissingCondorRequirementsException
 
 job_info = namedtuple("job_info", "info error")
 submission_info = namedtuple("submission_info", "clusterid submit error")
@@ -183,7 +184,9 @@ class Condor(Scheduler):
         :return: A list of condor submit file requirements in (key == value) format
         """
         if cgrr is None or client_group is None:
-            raise Exception("Please provide normalized cgrr and client_group")
+            raise MissingCondorRequirementsException(
+                "Please provide normalized cgrr and client_group"
+            )
 
         requirements_statement = []
 

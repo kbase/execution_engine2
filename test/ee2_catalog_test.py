@@ -1,14 +1,24 @@
+import copy
 import unittest
 from configparser import ConfigParser
-import os
+
 from lib.execution_engine2.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.Condor import Condor
-import copy
+from test.utils.test_utils import bootstrap
+
+bootstrap()
+import os
+
+print("Current in ", os.getcwd())
 
 
-class ee2_SDKMethodRunner_test(unittest.TestCase):
+class ee2_CatalogUtils_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        import os
+
+        print("Current in ", os.getcwd())
+        bootstrap()
         config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
         cls.config_file = config_file
         config_parser = ConfigParser()
@@ -52,8 +62,16 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         req = condor.extract_requirements(cgrr=app_settings1, client_group="njs")
         print(req)
 
-        # These are for saving into job inputs. Maybe its best to pass this into condor as well?
-        # extracted_resources = self.get_condor().extract_resources(cgrr=app_settings)
+        req = condor.extract_requirements(cgrr=app_settings2, client_group="njs")
+
+    # def test_bad_cg(self):
+    #     runner = self.getRunner()
+    #     method = "AppliePie"
+    #     print("A")
+    #     app_settings1 = runner.catalog_utils.get_client_groups(method)
+    #
+    #     # These are for saving into job inputs. Maybe its best to pass this into condor as well?
+    #     # extracted_resources = self.get_condor().extract_resources(cgrr=app_settings)
 
 
 # def test_get_client_groups(self):

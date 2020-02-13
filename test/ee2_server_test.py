@@ -2,7 +2,7 @@ import unittest
 import os
 from configparser import ConfigParser
 from execution_engine2.execution_engine2Impl import execution_engine2
-from .test_utils import is_timestamp
+from test.utils.test_utils import is_timestamp
 
 
 class EE2ServerTest(unittest.TestCase):

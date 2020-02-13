@@ -1,32 +1,40 @@
-class IncorrectParamsException(ValueError):
+class ExecutionEngineValueError(ValueError):
     pass
 
 
-class MissingRunJobParamsException(ValueError):
+class ExecutionEngineException(Exception):
     pass
 
 
-class InvalidStatusTransitionException(ValueError):
+class IncorrectParamsException(ExecutionEngineValueError):
     pass
 
 
-class MissingCondorRequirementsException(ValueError):
+class MissingRunJobParamsException(ExecutionEngineValueError):
     pass
 
 
-class MalformedJobIdException(Exception):
+class InvalidStatusTransitionException(ExecutionEngineValueError):
     pass
 
 
-class MalformedTimestampException(Exception):
+class MissingCondorRequirementsException(ExecutionEngineValueError):
     pass
 
 
-class RecordNotFoundException(Exception):
+class MalformedJobIdException(ExecutionEngineValueError):
     pass
 
 
-class AuthError(Exception):
+class MalformedTimestampException(ExecutionEngineException):
+    pass
+
+
+class RecordNotFoundException(ExecutionEngineException):
+    pass
+
+
+class AuthError(ExecutionEngineException):
     """Raised if a user is unauthorized for a particular action, or doesn't have the right auth role"""
 
     pass
