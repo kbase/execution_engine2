@@ -1,20 +1,19 @@
 import enum
 import json
 import logging
+import os
+import pathlib
+import pwd
 from collections import namedtuple
 from configparser import ConfigParser
 
 import htcondor
 
+from execution_engine2.exceptions import MissingCondorRequirementsException
 from execution_engine2.exceptions import MissingRunJobParamsException
 from execution_engine2.utils.Scheduler import Scheduler
 
 logging.getLogger()
-
-import os
-import pwd
-import pathlib
-from exceptions import MissingCondorRequirementsException
 
 job_info = namedtuple("job_info", "info error")
 submission_info = namedtuple("submission_info", "clusterid submit error")

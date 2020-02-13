@@ -15,8 +15,6 @@ print("Current in ", os.getcwd())
 class ee2_CatalogUtils_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        import os
-
         print("Current in ", os.getcwd())
         bootstrap()
         config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
