@@ -389,7 +389,7 @@ class SDKMethodRunner:
 
     def __init__(self, config, user_id=None, token=None, job_permission_cache=None):
 
-        self.deployment_config_fp = os.environ.get("KB_DEPLOYMENT_CONFIG")
+        self.deployment_config_fp = os.environ["KB_DEPLOYMENT_CONFIG"]
         self.config = config
         self.mongo_util = None
         self.condor = None
