@@ -766,7 +766,7 @@ class execution_engine2:
         #BEGIN cancel_job
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
                              job_permission_cache=self.job_permission_cache)
-        mr.cancel_job(job_id=params["job_id"], terminated_code=params['terminated_code'] )
+        mr.cancel_job(job_id=params["job_id"], terminated_code=params.get('terminated_code') )
         #END cancel_job
         pass
 

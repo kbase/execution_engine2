@@ -56,14 +56,11 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         for item in conf:
             print(item, conf[item])
 
-
-    def test_jobs_range(self):
-        check_jobs_date_range_params = {}
-        check_jobs_date_range_params = {''
-                                        }
-
-        self.ee2.check_jobs_date_range_for_user()
-        self.ee2.check_jobs_date_range_for_all()
+    # def test_jobs_range(self):
+    #     check_jobs_date_range_params = {}
+    #     check_jobs_date_range_params = {""}
+    #     self.ee2.check_jobs_date_range_for_user()
+    #     self.ee2.check_jobs_date_range_for_all()
 
     def test_run_job(self):
         """
@@ -103,10 +100,11 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
                 print(self.ee2.get_job_status(job_id=job_id))
                 print(self.ee2.get_job_logs(job_log_params))
                 status = self.ee2.get_job_status(job_id=job_id)
-                if (status == {'status': 'finished'}):
+                if status == {"status": "finished"}:
                     break
             except Exception as e:
                 print("Not yet", e)
+
 
 #         import datetime
 

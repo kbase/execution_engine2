@@ -1,19 +1,19 @@
 import enum
 import json
 import logging
+import os
+import pathlib
+import pwd
 from collections import namedtuple
 from configparser import ConfigParser
 
 import htcondor
 
+from execution_engine2.exceptions import MissingCondorRequirementsException
 from execution_engine2.exceptions import MissingRunJobParamsException
 from execution_engine2.utils.Scheduler import Scheduler
 
-logging.basicConfig(level=logging.INFO)
-
-import os
-import pwd
-import pathlib
+logging.getLogger()
 
 job_info = namedtuple("job_info", "info error")
 submission_info = namedtuple("submission_info", "clusterid submit error")
@@ -107,6 +107,10 @@ class Condor(Scheduler):
 
     def setup_environment_vars(self, params):
         # 7 day docker job timeout default, Catalog token used to get access to volume mounts
+        dm = (
+            str(params.get("cg_resources_requirements").get("debug_mode", "")).lower()
+            == "true"
+        )
 
         environment_vars = {
             "DOCKER_JOB_TIMEOUT": self.docker_timeout,
@@ -117,10 +121,7 @@ class Condor(Scheduler):
             # "WORKDIR": f"{config.get('WORKDIR')}/{params.get('USER')}/{params.get('JOB_ID')}",
             "CONDOR_ID": "$(Cluster).$(Process)",
             "PYTHON_EXECUTABLE": self.python_executable,
-            "DEBUG_MODE": str(
-                params.get("cg_resources_requirements").get("debug_mode", "").lower()
-                == "true"
-            ),
+            "DEBUG_MODE": str(dm),
         }
 
         environment = ""
@@ -146,8 +147,12 @@ class Condor(Scheduler):
         :param cgrr:
         :return:
         """
-        print("About to extract from", cgrr)
+        logging.debug(f"About to extract from {cgrr}")
+        print(f"About to extract from {cgrr}")
+
         client_group = cgrr.get("client_group", None)
+        print(client_group)
+
         if client_group is None or client_group == "":
             client_group = self.config.get(
                 section="DEFAULT", option=self.DEFAULT_CLIENT_GROUP
@@ -178,7 +183,9 @@ class Condor(Scheduler):
         :return: A list of condor submit file requirements in (key == value) format
         """
         if cgrr is None or client_group is None:
-            raise Exception("Please provide normalized cgrr and client_group")
+            raise MissingCondorRequirementsException(
+                "Please provide normalized cgrr and client_group"
+            )
 
         requirements_statement = []
 
@@ -190,16 +197,17 @@ class Condor(Scheduler):
         else:
             requirements_statement.append(f'(CLIENTGROUP == "{client_group}")')
 
-        special_requirements = [
+        restricted_requirements = [
             "client_group",
             "client_group_regex",
             self.REQUEST_MEMORY,
             self.REQUEST_DISK,
             self.REQUEST_CPUS,
+            "debug_mode",
         ]
 
         for key, value in cgrr.items():
-            if key not in special_requirements:
+            if key not in restricted_requirements:
                 requirements_statement.append(f'({key} == "{value}")')
 
         return requirements_statement
@@ -247,6 +255,9 @@ class Condor(Scheduler):
         sub["gentenv"] = "false"
         sub["environment"] = self.setup_environment_vars(params)
 
+        # Ensure all values are a string
+        for item in sub.keys():
+            sub[item] = str(sub[item])
         return sub
 
     def run_job(self, params, submit_file=None):
@@ -339,5 +350,5 @@ class Condor(Scheduler):
             logging.debug(f"{cancel_jobs}")
             return cancel_jobs
         except Exception as e:
-            logging.error(scheduler_ids)
+            logging.error("Couldn't cancel jobs" + str(scheduler_ids))
             logging.error(e)

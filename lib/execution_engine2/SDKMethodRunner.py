@@ -2,15 +2,15 @@ import json
 import logging
 import os
 import time
-
-
 from collections import namedtuple, OrderedDict
 from datetime import datetime
 from enum import Enum
-from cachetools import TTLCache
+from logging import Logger
+from typing import Dict, AnyStr
 
 import dateutil
 from bson import ObjectId
+from cachetools import TTLCache
 
 from execution_engine2.authorization.authstrategy import (
     can_read_job,
@@ -37,8 +37,9 @@ from execution_engine2.exceptions import (
     RecordNotFoundException,
     InvalidStatusTransitionException,
 )
-from execution_engine2.utils.CatalogUtils import normalize_catalog_cgroups
+from execution_engine2.utils.CatalogUtils import CatalogUtils
 from execution_engine2.utils.Condor import Condor
+from execution_engine2.utils.Condor import condor_resources
 from execution_engine2.utils.KafkaUtils import (
     KafkaClient,
     KafkaCancelJob,
@@ -50,10 +51,8 @@ from execution_engine2.utils.KafkaUtils import (
     KafkaQueueChange,
 )
 from execution_engine2.utils.SlackUtils import SlackClient
-from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.authclient import KBaseAuth
-from execution_engine2.utils.Condor import condor_resources
 
 
 class JobPermissions(Enum):
@@ -63,13 +62,11 @@ class JobPermissions(Enum):
 
 
 class SDKMethodRunner:
-
     JOB_PERMISSION_CACHE_SIZE = 500
     JOB_PERMISSION_CACHE_EXPIRE_TIME = 300  # seconds
 
     def allow_job_read(func):
         def inner(self, *args, **kwargs):
-
             job_id = kwargs.get("job_id")
             if job_id is None:
                 raise ValueError("Please provide valid job_id")
@@ -81,7 +78,6 @@ class SDKMethodRunner:
 
     def allow_job_write(func):
         def inner(self, *args, **kwargs):
-
             job_id = kwargs.get("job_id")
             if job_id is None:
                 raise ValueError("Please provide valid job_id")
@@ -91,33 +87,7 @@ class SDKMethodRunner:
 
         return inner
 
-    def _get_client_groups(self, method):
-        """
-        get client groups info from Catalog
-        """
-        if method is None:
-            raise ValueError("Please input module_name.function_name")
-
-        if method is not None and "." not in method:
-            raise ValueError(
-                "unrecognized method: {}. Please input module_name.function_name".format(
-                    method
-                )
-            )
-
-        module_name, function_name = method.split(".")
-
-        group_config = self.catalog.list_client_group_configs(
-            {"module_name": module_name, "function_name": function_name}
-        )
-
-        client_groups = ""
-        if group_config:
-            client_groups = " ".join(group_config[0].get("client_groups"))
-
-        return normalize_catalog_cgroups(client_groups)
-
-    def _check_ws_objects(self, source_objects):
+    def _check_ws_objects(self, source_objects) -> None:
         """
         perform sanity checks on input WS objects
         """
@@ -132,13 +102,13 @@ class SDKMethodRunner:
             if None in paths:
                 raise ValueError("Some workspace object is inaccessible")
 
-    def _get_module_git_commit(self, method, service_ver=None):
+    def _get_module_git_commit(self, method, service_ver=None) -> AnyStr:
         module_name = method.split(".")[0]
 
         if not service_ver:
             service_ver = "release"
 
-        module_version = self.catalog.get_module_version(
+        module_version = self.catalog_utils.catalog.get_module_version(
             {"module_name": module_name, "version": service_ver}
         )
 
@@ -146,7 +116,9 @@ class SDKMethodRunner:
 
         return git_commit_hash
 
-    def _init_job_rec(self, user_id, params, resources: condor_resources = None):
+    def _init_job_rec(
+        self, user_id, params, resources: condor_resources = None
+    ) -> AnyStr:
 
         job = Job()
 
@@ -197,29 +169,29 @@ class SDKMethodRunner:
 
         return str(job.id)
 
-    def get_workspace_auth(self):
+    def get_workspace_auth(self) -> WorkspaceAuth:
         if self.workspace_auth is None:
             self.workspace_auth = WorkspaceAuth(
                 self.token, self.user_id, self.workspace_url
             )
         return self.workspace_auth
 
-    def get_mongo_util(self):
+    def get_mongo_util(self) -> MongoUtil:
         if self.mongo_util is None:
             self.mongo_util = MongoUtil(self.config)
         return self.mongo_util
 
-    def get_condor(self):
+    def get_condor(self) -> Condor:
         if self.condor is None:
             self.condor = Condor(self.deployment_config_fp)
         return self.condor
 
-    def get_workspace(self):
+    def get_workspace(self) -> Workspace:
         if self.workspace is None:
             self.workspace = Workspace(token=self.token, url=self.workspace_url)
         return self.workspace
 
-    def _get_job_log(self, job_id, skip_lines):
+    def _get_job_log(self, job_id, skip_lines) -> Dict:
         """
         # TODO Do I have to query this another way so I don't load all lines into memory?
         # Does mongoengine lazy-load it?
@@ -293,7 +265,7 @@ class SDKMethodRunner:
         log_exec_stats_params["is_error"] = int(job.status == Status.error.value)
         log_exec_stats_params["job_id"] = job_id
 
-        self.catalog.log_exec_stats(log_exec_stats_params)
+        self.catalog_utils.catalog.log_exec_stats(log_exec_stats_params)
 
     @staticmethod
     def _create_new_log(pk):
@@ -361,7 +333,7 @@ class SDKMethodRunner:
         :param log_lines:
         :return:
         """
-        logging.debug(f"About to add logs for {job_id}")
+        self.logger.debug(f"About to add logs for {job_id}")
         mongo_util = self.get_mongo_util()
 
         try:
@@ -396,24 +368,28 @@ class SDKMethodRunner:
 
         return log["stored_line_count"]
 
-    def set_log_level(self):
+    def set_log_level(self) -> Logger:
         """
         Enable this setting to get output for development purposes
         Otherwise, only emit warnings or errors for production
         """
         log_format = "%(created)s %(levelname)s: %(message)s"
+        logger = logging.getLogger("ee2")
+        fh = logging.StreamHandler()
+        fh.setFormatter(logging.Formatter(log_format))
+        fh.setLevel(logging.WARN)
 
         if self.debug:
-            logging.basicConfig(level=logging.DEBUG, format=log_format)
-            logging.info(f"Debugging is enabled. Set log level to {logging.DEBUG}")
-            logging.debug(f"Debugging is enabled. Set log level to {logging.DEBUG}")
-        else:
-            logging.basicConfig(level=logging.WARN, format=log_format)
-            logging.info(f"Debugging is DISABLED. Set log level to {logging.WARN}")
-            logging.warning(f"Debugging is DISABLED. Set log level to {logging.WARN}")
+            fh.setLevel(logging.DEBUG)
+
+        logger.addHandler(fh)
+        # logging.warning(f"DEBUG is {self.debug}. T=(debug/info/w/e) F=(warning/error)")
+
+        return logger
 
     def __init__(self, config, user_id=None, token=None, job_permission_cache=None):
-        self.deployment_config_fp = os.environ.get("KB_DEPLOYMENT_CONFIG")
+
+        self.deployment_config_fp = os.environ["KB_DEPLOYMENT_CONFIG"]
         self.config = config
         self.mongo_util = None
         self.condor = None
@@ -421,7 +397,7 @@ class SDKMethodRunner:
         self.workspace_auth = None
         self.admin_roles = config.get("admin_roles", ["EE2_ADMIN", "EE2_ADMIN_RO"])
 
-        self.catalog = Catalog(config.get("catalog-url"))
+        self.catalog_utils = CatalogUtils(config.get("catalog-url"))
         self.workspace_url = config.get("workspace-url")
 
         self.auth_url = config.get("auth-url")
@@ -432,7 +408,7 @@ class SDKMethodRunner:
         self.is_admin = False
 
         self.debug = SDKMethodRunner.parse_bool_from_string(config.get("debug"))
-        self.set_log_level()
+        self.logger = self.set_log_level()
 
         if job_permission_cache is None:
             self.job_permission_cache = TTLCache(
@@ -454,12 +430,12 @@ class SDKMethodRunner:
         """
         # Is it inefficient to get the job twice? Is it cached?
         # Maybe if the call fails, we don't actually cancel the job?
-        logging.debug(f"Attempting to cancel job {job_id}")
+        self.logger.debug(f"Attempting to cancel job {job_id}")
 
         job = self._get_job_with_permission(job_id, JobPermissions.WRITE)
 
         logging.info(f"User has permission to cancel job {job_id}")
-        logging.debug(f"User has permission to cancel job {job_id}")
+        self.logger.debug(f"User has permission to cancel job {job_id}")
 
         if terminated_code is None:
             terminated_code = TerminatedCode.terminated_by_user.value
@@ -477,10 +453,10 @@ class SDKMethodRunner:
         )
 
         logging.info(f"About to cancel job in CONDOR using {job.scheduler_id}")
-        logging.debug(f"About to cancel job in CONDOR using {job.scheduler_id}")
+        self.logger.debug(f"About to cancel job in CONDOR using {job.scheduler_id}")
         rv = self.get_condor().cancel_job(job_id=job.scheduler_id)
         logging.info(rv)
-        logging.debug(f"{rv}")
+        self.logger.debug(f"{rv}")
 
         self.kafka_client.send_kafka_message(
             message=KafkaCondorCommand(
@@ -515,7 +491,7 @@ class SDKMethodRunner:
         wsid = params.get("wsid")
         ws_auth = self.get_workspace_auth()
         if wsid and not ws_auth.can_write(wsid):
-            logging.debug(
+            self.logger.debug(
                 f"User {self.user_id} doesn't have permission to run jobs in workspace {wsid}."
             )
             raise PermissionError(
@@ -526,7 +502,7 @@ class SDKMethodRunner:
         logging.info(f"User {self.user_id} attempting to run job {method}")
 
         # Normalize multiple formats into one format (csv vs json)
-        app_settings = self._get_client_groups(method)
+        app_settings = self.catalog_utils.get_client_groups(method)
 
         # These are for saving into job inputs. Maybe its best to pass this into condor as well?
         extracted_resources = self.get_condor().extract_resources(cgrr=app_settings)
@@ -542,8 +518,8 @@ class SDKMethodRunner:
         # insert initial job document
         job_id = self._init_job_rec(self.user_id, params, extracted_resources)
 
-        logging.debug("About to run job with")
-        logging.debug(app_settings)
+        self.logger.debug("About to run job with")
+        self.logger.debug(app_settings)
 
         params["job_id"] = job_id
         params["user_id"] = self.user_id
@@ -552,7 +528,7 @@ class SDKMethodRunner:
         try:
             submission_info = self.get_condor().run_job(params)
             condor_job_id = submission_info.clusterid
-            logging.debug(f"Submitted job id and got '{condor_job_id}'")
+            self.logger.debug(f"Submitted job id and got '{condor_job_id}'")
         except Exception as e:
             ## delete job from database? Or mark it to a state it will never run?
             logging.error(e)
@@ -565,10 +541,10 @@ class SDKMethodRunner:
                 "Condor job not ran, and error not found. Something went wrong"
             )
 
-        logging.debug("Submission info is")
-        logging.debug(submission_info)
-        logging.debug(condor_job_id)
-        logging.debug(type(condor_job_id))
+        self.logger.debug("Submission info is")
+        self.logger.debug(submission_info)
+        self.logger.debug(condor_job_id)
+        self.logger.debug(type(condor_job_id))
 
         logging.info(f"Attempting to update job to queued  {job_id} {condor_job_id}")
         self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
@@ -688,7 +664,7 @@ class SDKMethodRunner:
             job = self.get_mongo_util().get_job(job_id=job_id)
             self._test_job_permissions(job, job_id, permission)
 
-        logging.debug("you have permission to {} job {}".format(permission, job_id))
+        self.logger.debug("you have permission to {} job {}".format(permission, job_id))
 
     def _get_job_with_permission(self, job_id, permission):
         job = self.get_mongo_util().get_job(job_id=job_id)
@@ -858,8 +834,18 @@ class SDKMethodRunner:
             logging.info(e)
             error_message = "Something was wrong with the output object"
             error_code = ErrorCode.job_missing_output.value
+            error = {
+                "code": -1,
+                "name": "Output object is invalid",
+                "message": str(e),
+                "error": str(e),
+            }
+
             self.get_mongo_util().finish_job_with_error(
-                job_id=job_id, error_message=error_message, error_code=error_code
+                job_id=job_id,
+                error_message=error_message,
+                error_code=error_code,
+                error=error,
             )
             raise Exception(str(e) + str(error_message))
 
@@ -867,7 +853,6 @@ class SDKMethodRunner:
             job_id=job_id, job_output=job_output
         )
 
-    @allow_job_write
     def finish_job(
         self, job_id, error_message=None, error_code=None, error=None, job_output=None
     ):
@@ -886,12 +871,14 @@ class SDKMethodRunner:
         :param job_output: dict - default None, if given this job has some output
         """
 
-        job = self._check_job_is_running(job_id=job_id)
+        job = self._get_job_with_permission(
+            job_id=job_id, permission=JobPermissions.WRITE
+        )
 
         if error_message:
             if error_code is None:
                 error_code = ErrorCode.job_crashed.value
-            self._finish_job_with_error(
+            db_update = self._finish_job_with_error(
                 job_id=job_id,
                 error_message=error_message,
                 error_code=error_code,
@@ -908,26 +895,37 @@ class SDKMethodRunner:
                     scheduler_id=job.scheduler_id,
                 )
             )
+            return db_update
 
-        elif job_output is None:
+        if job_output is None:
             if error_code is None:
                 error_code = ErrorCode.job_missing_output.value
             msg = "Missing job output required in order to successfully finish job. Something went wrong"
-            self._finish_job_with_error(
+            db_update = self._finish_job_with_error(
                 job_id=job_id, error_message=msg, error_code=error_code
             )
-            raise ValueError(msg)
-            # No Kafka Message Here as this finish_job call failed due to insufficient requirements
-        else:
-            self._finish_job_with_success(job_id=job_id, job_output=job_output)
+
             self.kafka_client.send_kafka_message(
                 message=KafkaFinishJob(
                     job_id=str(job_id),
-                    new_status=Status.completed.value,
+                    new_status=Status.error.value,
                     previous_status=job.status,
+                    error_message=msg,
+                    error_code=error_code,
                     scheduler_id=job.scheduler_id,
                 )
             )
+            return db_update
+
+        self._finish_job_with_success(job_id=job_id, job_output=job_output)
+        self.kafka_client.send_kafka_message(
+            message=KafkaFinishJob(
+                job_id=str(job_id),
+                new_status=Status.completed.value,
+                previous_status=job.status,
+                scheduler_id=job.scheduler_id,
+            )
+        )
 
     def start_job(self, job_id, skip_estimation=True):
         """
@@ -1084,7 +1082,7 @@ class SDKMethodRunner:
 
         ws_auth = self.get_workspace_auth()
         if not ws_auth.can_read(workspace_id):
-            logging.debug(
+            self.logger.debug(
                 f"User {self.user_id} doesn't have permission to read jobs in workspace {workspace_id}."
             )
             raise PermissionError(

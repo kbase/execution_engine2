@@ -17,7 +17,7 @@ from execution_engine2.execution_engine2Impl import execution_engine2
 from execution_engine2.utils.Condor import Condor, submission_info
 from installed_clients.CatalogClient import Catalog
 from test.mongo_test_helper import MongoTestHelper
-from test.test_utils import bootstrap
+from test.utils.test_utils import bootstrap
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
@@ -252,9 +252,7 @@ class ee2_server_load_test(unittest.TestCase):
         "run_job",
         return_value=submission_info(clusterid="test", submit="job", error=None),
     )
-    def test_run_job_stress(
-        self, can_write, _get_client_groups, _get_module_git_commit, run_job
-    ):
+    def test_run_job_stress(self, catalog, can_write, _get_module_git_commit, run_job):
         """
         testing running 3 different jobs in multiple theads.
         """

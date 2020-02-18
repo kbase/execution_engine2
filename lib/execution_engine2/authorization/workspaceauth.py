@@ -72,7 +72,7 @@ class WorkspaceAuth(AuthStrategy):
         read_perms = [
             WorkspacePermission.ADMINISTRATOR,
             WorkspacePermission.READ_WRITE,
-            WorkspacePermission.READ
+            WorkspacePermission.READ,
         ]
         return perm in read_perms
 
@@ -88,7 +88,9 @@ class WorkspaceAuth(AuthStrategy):
         ]
         return perm in write_permissions
 
-    def _get_workspace_permissions(self, ws_ids: List[str]) -> Dict[str, WorkspacePermission]:
+    def _get_workspace_permissions(
+        self, ws_ids: List[str]
+    ) -> Dict[str, WorkspacePermission]:
         """
         Fetches workspaces by id (expects a string, but an int should be ok), and
         returns user permissions as a dictionary. Keys are the workspace ids, and permissions
@@ -99,9 +101,14 @@ class WorkspaceAuth(AuthStrategy):
         """
         params = [{"id": w} for w in ws_ids]
         try:
-            perm_list = self.ws_client.get_permissions_mass({"workspaces": params})["perms"]
+            perm_list = self.ws_client.get_permissions_mass({"workspaces": params})[
+                "perms"
+            ]
         except ServerError as e:
-            raise RuntimeError("An error occurred while fetching user permissions from the Workspace", e)
+            raise RuntimeError(
+                "An error occurred while fetching user permissions from the Workspace",
+                e,
+            )
 
         perms = dict()
         for idx, ws_id in enumerate(ws_ids):

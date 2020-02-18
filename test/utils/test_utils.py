@@ -56,11 +56,12 @@ def read_config_into_dict(config="deploy.cfg", section="execution_engine2"):
 
 
 def bootstrap():
-    test_env = "test.env"
-    pwd = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
-    if not os.path.exists(test_env):
-        copyfile(f"{pwd}/test/env/{test_env}", f"{test_env}")
-    load_dotenv("test.env", verbose=True)
+    test_env_1 = "test.env"
+    test_env_2 = "test/test.env"
+    try:
+        load_dotenv(test_env_1, verbose=True)
+    except Exception:
+        load_dotenv(test_env_2, verbose=True)
 
 
 # flake8: noqa: C901

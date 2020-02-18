@@ -9,7 +9,7 @@ from bson.objectid import ObjectId
 from execution_engine2.db.models.models import Job, JobLog
 from execution_engine2.db.MongoUtil import MongoUtil
 from test.mongo_test_helper import MongoTestHelper
-from test.test_utils import bootstrap, get_example_job
+from test.utils.test_utils import bootstrap, get_example_job
 
 logging.basicConfig(level=logging.INFO)
 
@@ -188,7 +188,9 @@ class MongoUtilTest(unittest.TestCase):
     def test_insert_one_ok(self):
         mongo_util = self.getMongoUtil()
 
-        with mongo_util.pymongo_client(self.config["mongo-jobs-collection"]) as pymongo_client:
+        with mongo_util.pymongo_client(
+            self.config["mongo-jobs-collection"]
+        ) as pymongo_client:
             col = pymongo_client[self.config["mongo-database"]][
                 self.config["mongo-jobs-collection"]
             ]
@@ -207,7 +209,9 @@ class MongoUtilTest(unittest.TestCase):
     def test_find_in_ok(self):
         mongo_util = self.getMongoUtil()
 
-        with mongo_util.pymongo_client(self.config["mongo-jobs-collection"]) as pymongo_client:
+        with mongo_util.pymongo_client(
+            self.config["mongo-jobs-collection"]
+        ) as pymongo_client:
             col = pymongo_client[self.config["mongo-database"]][
                 self.config["mongo-jobs-collection"]
             ]
@@ -237,7 +241,9 @@ class MongoUtilTest(unittest.TestCase):
     def test_update_one_ok(self):
         mongo_util = self.getMongoUtil()
 
-        with mongo_util.pymongo_client(self.config["mongo-jobs-collection"]) as pymongo_client:
+        with mongo_util.pymongo_client(
+            self.config["mongo-jobs-collection"]
+        ) as pymongo_client:
             col = pymongo_client[self.config["mongo-database"]][
                 self.config["mongo-jobs-collection"]
             ]
@@ -298,7 +304,9 @@ class MongoUtilTest(unittest.TestCase):
         jl.stored_line_count = 0
         jl.lines = []
 
-        with mongo_util.pymongo_client(self.config["mongo-jobs-collection"]) as pymongo_client:
+        with mongo_util.pymongo_client(
+            self.config["mongo-jobs-collection"]
+        ) as pymongo_client:
             jl_col = pymongo_client[self.config["mongo-database"]][
                 self.config["mongo-logs-collection"]
             ]

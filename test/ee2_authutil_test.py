@@ -19,7 +19,9 @@ class AdminAuthUtilTestCase(unittest.TestCase):
         cls.auth_endpt = cls.cfg["auth-url"] + "/api/V2/me"
 
     def init_auth_util(self) -> AdminAuthUtil:
-        return AdminAuthUtil(self.cfg["auth-url"], self.cfg.get("admin_roles", ["EE2_ADMIN"]))
+        return AdminAuthUtil(
+            self.cfg["auth-url"], self.cfg.get("admin_roles", ["EE2_ADMIN"])
+        )
 
     @requests_mock.Mocker()
     def test_auth_util_isadmin_ok(self, rq_mock):
@@ -35,12 +37,10 @@ class AdminAuthUtilTestCase(unittest.TestCase):
 
     @requests_mock.Mocker()
     def test_auth_util_isadmin_fail(self, rq_mock):
-        error = {
-            "error": {
-                "message": "10021 Not Allowed"
-            }
-        }
-        rq_mock.register_uri("GET", self.auth_endpt, [{"json": error, "status_code": 401}])
+        error = {"error": {"message": "10021 Not Allowed"}}
+        rq_mock.register_uri(
+            "GET", self.auth_endpt, [{"json": error, "status_code": 401}]
+        )
         auth_util = self.init_auth_util()
 
         # test invalid token
@@ -49,16 +49,25 @@ class AdminAuthUtilTestCase(unittest.TestCase):
         self.assertIn("Token is not valid", str(e.exception))
 
         # test HTTP error
-        rq_mock.register_uri("GET", self.auth_endpt, [{"text": "error", "status_code": 500}])
+        rq_mock.register_uri(
+            "GET", self.auth_endpt, [{"text": "error", "status_code": 500}]
+        )
         with self.assertRaises(RuntimeError) as e:
             auth_util.is_admin("some_fail_token")
-        self.assertIn("An error occurred while fetching user roles from auth service", str(e.exception))
+        self.assertIn(
+            "An error occurred while fetching user roles from auth service",
+            str(e.exception),
+        )
 
         # test timeout
-        rq_mock.register_uri("GET", self.auth_endpt, exc=requests.exceptions.ConnectTimeout)
+        rq_mock.register_uri(
+            "GET", self.auth_endpt, exc=requests.exceptions.ConnectTimeout
+        )
         with self.assertRaises(RuntimeError) as e:
             auth_util.is_admin("some_timeout_token")
-        self.assertIn("The auth service timed out while fetching user roles.", str(e.exception))
+        self.assertIn(
+            "The auth service timed out while fetching user roles.", str(e.exception)
+        )
 
     def test_auth_util_isadmin_bad_params(self):
         auth_util = self.init_auth_util()
@@ -74,8 +83,8 @@ class AdminAuthUtilTestCase(unittest.TestCase):
         rq_mock.get(self.auth_endpt, json={"customroles": ["some_role"]})
         auth_util.is_admin(token)
         auth_util.is_admin(token)
-        self.assertEqual(rq_mock.call_count, 1)   # should cache the first result
+        self.assertEqual(rq_mock.call_count, 1)  # should cache the first result
 
         auth_util2 = self.init_auth_util()
         auth_util2.is_admin(token)
-        self.assertEqual(rq_mock.call_count, 1)   # cache should be a singleton
+        self.assertEqual(rq_mock.call_count, 1)  # cache should be a singleton

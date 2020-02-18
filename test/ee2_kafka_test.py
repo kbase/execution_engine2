@@ -10,7 +10,7 @@ from execution_engine2.utils.KafkaUtils import (
     KafkaStartJob,
     KafkaFinishJob,
 )
-from test.test_utils import read_config_into_dict
+from test.utils.test_utils import read_config_into_dict
 
 
 class ExecutionEngine2SchedulerTest(unittest.TestCase):

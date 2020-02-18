@@ -6,12 +6,9 @@ from execution_engine2.authorization.authstrategy import (
     can_read_job,
     can_read_jobs,
     can_write_job,
-    can_write_jobs
+    can_write_jobs,
 )
-from test.test_utils import (
-    get_example_job,
-    custom_ws_perm_maker
-)
+from test.utils.test_utils import get_example_job, custom_ws_perm_maker
 
 
 class AuthStrategyTestCase(unittest.TestCase):
@@ -62,23 +59,29 @@ class AuthStrategyTestCase(unittest.TestCase):
                 "code": -32500,
                 "error": "An error occurred!",
                 "message": f"Workspace {ws_id} is deleted",
-                "name": "JSONRpcError"
+                "name": "JSONRpcError",
             },
-            "version": "1.1"
+            "version": "1.1",
         }
-        rq_mock.register_uri("POST", self.ws_url, [{"json": response, "status_code": 500}])
+        rq_mock.register_uri(
+            "POST", self.ws_url, [{"json": response, "status_code": 500}]
+        )
 
     @requests_mock.Mocker()
     def test_can_read_job_ok(self, rq_mock):
         rq_mock.add_matcher(custom_ws_perm_maker(self.user, self.ws_access))
         (jobs, expected_perms) = self._generate_all_test_jobs(perm="read")
         for idx, job in enumerate(jobs):
-            self.assertEqual(expected_perms[idx], can_read_job(job, self.user, "foo", self.cfg))
+            self.assertEqual(
+                expected_perms[idx], can_read_job(job, self.user, "foo", self.cfg)
+            )
 
     @requests_mock.Mocker()
     def test_can_read_job_fail(self, rq_mock):
         self._mock_ws_deleted(rq_mock, 123)
-        job = get_example_job(user=self.other_user, wsid=123, authstrat="kbaseworkspace")
+        job = get_example_job(
+            user=self.other_user, wsid=123, authstrat="kbaseworkspace"
+        )
         with self.assertRaises(RuntimeError) as e:
             can_read_job(job, self.user, "token", self.cfg)
         self.assertIn("Workspace 123 is deleted", str(e.exception))
@@ -88,12 +91,16 @@ class AuthStrategyTestCase(unittest.TestCase):
         rq_mock.add_matcher(custom_ws_perm_maker(self.user, self.ws_access))
         (jobs, expected_perms) = self._generate_all_test_jobs(perm="write")
         for idx, job in enumerate(jobs):
-            self.assertEqual(expected_perms[idx], can_write_job(job, self.user, "foo", self.cfg))
+            self.assertEqual(
+                expected_perms[idx], can_write_job(job, self.user, "foo", self.cfg)
+            )
 
     @requests_mock.Mocker()
     def test_can_write_job_fail(self, rq_mock):
         self._mock_ws_deleted(rq_mock, 123)
-        job = get_example_job(user=self.other_user, wsid=123, authstrat="kbaseworkspace")
+        job = get_example_job(
+            user=self.other_user, wsid=123, authstrat="kbaseworkspace"
+        )
         with self.assertRaises(RuntimeError) as e:
             can_write_job(job, self.user, "token", self.cfg)
         self.assertIn("Workspace 123 is deleted", str(e.exception))
@@ -107,12 +114,16 @@ class AuthStrategyTestCase(unittest.TestCase):
         rq_mock.add_matcher(custom_ws_perm_maker(self.user, self.ws_access))
         (jobs, expected_perms) = self._generate_all_test_jobs(perm="read")
         for idx, job in enumerate(jobs):
-            self.assertEqual([expected_perms[idx]], can_read_jobs([job], self.user, "foo", self.cfg))
+            self.assertEqual(
+                [expected_perms[idx]], can_read_jobs([job], self.user, "foo", self.cfg)
+            )
 
     @requests_mock.Mocker()
     def test_can_read_jobs_fail(self, rq_mock):
         self._mock_ws_deleted(rq_mock, 123)
-        job = get_example_job(user=self.other_user, wsid=123, authstrat="kbaseworkspace")
+        job = get_example_job(
+            user=self.other_user, wsid=123, authstrat="kbaseworkspace"
+        )
         with self.assertRaises(RuntimeError) as e:
             can_read_jobs([job], self.user, "token", self.cfg)
         self.assertIn("Workspace 123 is deleted", str(e.exception))
@@ -122,14 +133,16 @@ class AuthStrategyTestCase(unittest.TestCase):
         rq_mock.add_matcher(custom_ws_perm_maker(self.user, self.ws_access))
         (jobs, expected_perms) = self._generate_all_test_jobs(perm="write")
         for idx, job in enumerate(jobs):
-            self.assertEqual([expected_perms[idx]], can_write_jobs([job], self.user, "foo", self.cfg))
+            self.assertEqual(
+                [expected_perms[idx]], can_write_jobs([job], self.user, "foo", self.cfg)
+            )
 
     @requests_mock.Mocker()
     def test_can_write_jobs_fail(self, rq_mock):
         self._mock_ws_deleted(rq_mock, 123)
-        job = get_example_job(user=self.other_user, wsid=123, authstrat="kbaseworkspace")
+        job = get_example_job(
+            user=self.other_user, wsid=123, authstrat="kbaseworkspace"
+        )
         with self.assertRaises(RuntimeError) as e:
             can_write_jobs([job], self.user, "token", self.cfg)
         self.assertIn("Workspace 123 is deleted", str(e.exception))
-
-
