@@ -233,7 +233,7 @@ class Condor(Scheduler):
         #  Allow up to 12 hours of no response from job
         sub["JobLeaseDuration"] = "43200"
         #  Allow up to 12 hours for condor drain
-        sub["JobLeaseDuration"] = "604800"
+        sub["MaxJobRetirementTime"] = "43200"
         # Remove jobs running longer than 7 days
         sub["Periodic_Remove"] = "( RemoteWallClockTime > 604800 )"
 
