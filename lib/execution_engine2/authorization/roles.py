@@ -63,6 +63,17 @@ class AdminAuthUtil:
             _admin_cache.add_valid_token(token, NOT_ADMIN)
             return False
 
+    def get_admin_role(self, token : str, read_role, write_role) -> str:
+        roles = self._fetch_user_roles(token)
+        if write_role in roles:
+            return write_role
+        if read_role in roles:
+            return read_role
+        return None
+
+    def get_user_roles(self, token: str) -> List:
+        return list(self._fetch_user_roles(token=token))
+
     def _fetch_user_roles(self, token: str) -> Set:
         """
         Returns the user's custom roles from the auth server as a Set.

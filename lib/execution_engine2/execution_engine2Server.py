@@ -229,7 +229,7 @@ class MethodContext(dict):
         self._log(level, message)
 
     def set_log_level(self, level):
-        self._logger.set_log_level(level)
+        self._logger._set_log_level(level)
 
     def get_log_level(self):
         return self._logger.get_log_level()
@@ -335,7 +335,7 @@ class Application(object):
         self.serverlog = log.log(
             submod, ip_address=True, authuser=True, module=True, method=True,
             call_id=True, logfile=self.userlog.get_log_file())
-        self.serverlog.set_log_level(6)
+        self.serverlog._set_log_level(6)
         self.rpc_service = JSONRPCServiceCustom()
         self.method_authentication = dict()
         self.rpc_service.add(impl_execution_engine2.list_config,

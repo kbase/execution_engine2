@@ -14,7 +14,7 @@ from bson import ObjectId
 import os
 
 
-class ExecutionEngine2SchedulerTest(unittest.TestCase):
+class ee2_models_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
@@ -62,6 +62,8 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         :return:
         """
         with self.mongo_util.mongo_engine_connection():
+            logging.info(self.mongo_util.config)
+
             job = get_example_job()
             job.save()
 
