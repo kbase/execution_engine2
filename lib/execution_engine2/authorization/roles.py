@@ -63,7 +63,7 @@ class AdminAuthUtil:
             _admin_cache.add_valid_token(token, NOT_ADMIN)
             return False
 
-    def get_admin_role(self, token : str, read_role, write_role) -> str:
+    def get_admin_role(self, token: str, read_role, write_role) -> str:
         roles = self._fetch_user_roles(token)
         if write_role in roles:
             return write_role

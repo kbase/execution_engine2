@@ -628,7 +628,7 @@ class execution_engine2:
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
         returnVal = mr.check_jobs(
             params.get("job_ids"),
-            exclude_fields=params.get("exclude_fields", []),
+            exclude_fields=params.get("exclude_fields", None),
             return_list=params.get("return_list", 1),
         )
         #END check_jobs

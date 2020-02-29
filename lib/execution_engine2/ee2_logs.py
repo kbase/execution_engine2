@@ -2,21 +2,14 @@ import time
 from enum import Enum
 from typing import Dict
 
-from execution_engine2.db.models.models import (
-    JobLog,
-    LogLines,
-)
-from execution_engine2.exceptions import (
-    RecordNotFoundException,
-)
+from execution_engine2.db.models.models import JobLog, LogLines
+from execution_engine2.exceptions import RecordNotFoundException
 
 
 class JobPermissions(Enum):
     READ = "r"
     WRITE = "w"
     NONE = "n"
-
-
 
 
 def _create_new_log(pk):
@@ -86,6 +79,7 @@ def add_job_logs(sdkmr, job_id, log_lines, as_admin=False):
 
     return log["stored_line_count"]
 
+
 def _get_job_log(self, job_id, skip_lines) -> Dict:
     """
     # TODO Do I have to query this another way so I don't load all lines into memory?
@@ -140,6 +134,5 @@ def view_job_logs(sdkmr, job_id, skip_lines):
     :param skip_lines: An offset of the job logs
     :return:
     """
-
 
     return sdkmr._get_job_log(job_id, skip_lines)

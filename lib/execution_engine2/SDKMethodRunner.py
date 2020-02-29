@@ -2,53 +2,18 @@ import json
 import logging
 import os
 import time
-from collections import namedtuple, OrderedDict
 from datetime import datetime
 from enum import Enum
 from logging import Logger
-from typing import Dict, AnyStr
 
 import dateutil
-from bson import ObjectId
-from cachetools import TTLCache
 
-from execution_engine2.authorization.authstrategy import (
-    can_read_job,
-    can_read_jobs,
-    can_write_job,
-)
-from execution_engine2.authorization.roles import AdminAuthUtil
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.db.models.models import (
-    Job,
-    JobInput,
-    JobOutput,
-    Meta,
-    Status,
-    JobLog,
-    LogLines,
-    ErrorCode,
-    TerminatedCode,
-    JobRequirements,
-)
-from execution_engine2.exceptions import AuthError
-from execution_engine2.exceptions import (
-    RecordNotFoundException,
-    InvalidStatusTransitionException,
-)
 from execution_engine2.utils.CatalogUtils import CatalogUtils
 from execution_engine2.utils.Condor import Condor
-from execution_engine2.utils.Condor import condor_resources
 from execution_engine2.utils.KafkaUtils import (
     KafkaClient,
-    KafkaCancelJob,
-    KafkaCondorCommand,
-    KafkaFinishJob,
-    KafkaStartJob,
-    KafkaStatusChange,
-    KafkaCreateJob,
-    KafkaQueueChange,
 )
 from execution_engine2.utils.SlackUtils import SlackClient
 from installed_clients.WorkspaceClient import Workspace
@@ -66,13 +31,21 @@ import ee2_status
 import ee2_cache
 import ee2_logs
 
+
 class SDKMethodRunner:
     JOB_PERMISSION_CACHE_SIZE = 500
     JOB_PERMISSION_CACHE_EXPIRE_TIME = 300  # seconds
-    ADMIN_READ_ROLE = 'EE2_ADMIN_RO'
-    ADMIN_WRITE_ROLE = 'EE2_ADMIN'
+    ADMIN_READ_ROLE = "EE2_ADMIN_RO"
+    ADMIN_WRITE_ROLE = "EE2_ADMIN"
 
-    def __init__(self, config, user_id=None, token=None, job_permission_cache=None, roles_cache=None):
+    def __init__(
+            self,
+            config,
+            user_id=None,
+            token=None,
+            job_permission_cache=None,
+            roles_cache=None,
+    ):
         self.deployment_config_fp = os.environ["KB_DEPLOYMENT_CONFIG"]
         self.config = config
         self.mongo_util = None
@@ -89,13 +62,34 @@ class SDKMethodRunner:
         self.debug = SDKMethodRunner.parse_bool_from_string(config.get("debug"))
         self.logger = self._set_log_level()
 
-        self.job_permission_cache = ee2_cache.get_cache(cache=job_permission_cache, size=self.JOB_PERMISSION_CACHE_SIZE, expire=self.JOB_PERMISSION_CACHE_EXPIRE_TIME)
-        self.roles_cache = ee2_cache.get_cache(cache=roles_cache, size=self.JOB_PERMISSION_CACHE_SIZE, expire=self.JOB_PERMISSION_CACHE_EXPIRE_TIME)
+        self.job_permission_cache = ee2_cache.get_cache(
+            cache=job_permission_cache,
+            size=self.JOB_PERMISSION_CACHE_SIZE,
+            expire=self.JOB_PERMISSION_CACHE_EXPIRE_TIME,
+        )
+        self.roles_cache = ee2_cache.get_cache(
+            cache=roles_cache,
+            size=self.JOB_PERMISSION_CACHE_SIZE,
+            expire=self.JOB_PERMISSION_CACHE_EXPIRE_TIME,
+        )
+
         self.is_admin = False
         # self.roles = self.roles_cache.get_roles(user_id,token) or list()
+        self._ee2_runjob = None
+        self._ee2_status = None
+
         self.kafka_client = KafkaClient(config.get("kafka-host"))
         self.slack_client = SlackClient(config.get("slack-token"), debug=self.debug)
 
+    def get_runjob(self):
+        if self._ee2_runjob is None:
+            self._ee2_runjob = ee2_runjob.RunJob(self)
+        return self._ee2_runjob
+
+    def get_jobs_status(self) -> ee2_status.JobsStatus:
+        if self._ee2_status is None:
+            self._ee2_status = ee2_status.JobsStatus(self)
+        return self._ee2_status
 
     def allow_job_read(func):
         def inner(self, *args, **kwargs):
@@ -141,7 +135,6 @@ class SDKMethodRunner:
             self.workspace = Workspace(token=self.token, url=self.workspace_url)
         return self.workspace
 
-
     def _set_log_level(self) -> Logger:
         """
         Enable this setting to get output for development purposes
@@ -162,14 +155,54 @@ class SDKMethodRunner:
         return logger
 
     def run_job(self, params, as_admin=False):
-        return ee2_runjob.run(sdkmr=self, params=params, as_admin=as_admin)
+        return self.get_runjob().run(params=params, as_admin=as_admin)
 
     def get_job_params(self, job_id, as_admin=False):
-        return ee2_runjob.get_job_params(sdkmr=self, job_id=job_id, as_admin=as_admin)
+        return self.get_runjob().get_job_params(job_id=job_id, as_admin=as_admin)
 
     def add_job_logs(self, job_id, log_lines, as_admin=False):
-        return ee2_logs.add_job_logs(sdkmr=self, job_id=job_id, log_lines=log_lines, as_admin=as_admin)
+        return ee2_logs.add_job_logs(
+            sdkmr=self, job_id=job_id, log_lines=log_lines, as_admin=as_admin
+        )
 
+    def cancel_job(self, job_id, terminated_code=None, as_admin=False):
+        return self.get_jobs_status().cancel_job(job_id=job_id, terminated_code=terminated_code,
+                                                 as_admin=as_admin)
+
+    def get_admin_permission(self, requested_permission):
+        # Get role form cache TODO
+        if self.user_id in self.job_permission_cache:
+            permission = self.job_permission_cache.get(self.user_id)
+
+        if requested_permission is JobPermissions.READ:
+            if permission in [JobPermissions.READ, JobPermissions.WRITE]:
+                return True
+            return False
+        elif requested_permission is JobPermissions.WRITE:
+            return permission in [JobPermissions.WRITE]
+        else:
+            raise Exception("Programming Error! Something went wrong here.")
+
+    def check_job(self, job_id, check_permission=None, exclude_fields=None, as_admin=False):
+        return self.get_jobs_status().check_job(job_id=job_id, check_permission=check_permission,
+                                                exclude_fields=exclude_fields)
+
+    def check_jobs(self, job_ids, check_permission=None,exclude_fields = None, return_list=1):
+        return self.get_jobs_status().check_jobs(job_ids=job_ids, check_permission=check_permission, exclude_fields=exclude_fields, return_list=return_list)
+
+    # TODO Write 2 decorators, one AS_READ_ADMIN() and one AS_WRITE_ADMIN()
+    # IF as_admin is True, call get_admin_permission
+
+    def check_job_canceled(self, job_id, as_admin=False):
+        if as_admin is True:
+            if not self.get_admin_permission(requested_permission=JobPermissions.READ):
+                raise Exception(
+                    f"You are not permitted to cancel this job. Required permission={JobPermissions.READ}")
+
+        return self.get_jobs_status().check_job_canceled(job_id=job_id, as_admin=as_admin)
+
+    def _get_job_with_permission(self, job_id, permission, as_admin=False):
+        return ee2_cache._get_job_with_permission(sdkmr=self, job_id=job_id, permission=permission)
 
     @staticmethod
     def parse_bool_from_string(str_or_bool):

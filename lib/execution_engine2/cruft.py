@@ -1,9 +1,7 @@
 def _run_admin_command(self, command, params):
     available_commands = ["cancel_job", "view_job_logs"]
     if command not in available_commands:
-        raise ValueError(
-            f"{command} not an admin command. See {available_commands} "
-        )
+        raise ValueError(f"{command} not an admin command. See {available_commands} ")
     commands = {"cancel_job": self.cancel_job, "view_job_logs": self.view_job_logs}
     p = {
         "cancel_job": {
@@ -16,16 +14,17 @@ def _run_admin_command(self, command, params):
     }
     return commands[command](**p[command])
 
-
     def admin_role(self, token):
         """
         Check to see which role the given token has
         :param token: Token to inspect
         :return: One of 'EE2_ADMIN_RO' or 'EE2_ADMIN` or None
         """
-        return AdminAuthUtil(self.auth_url, self.admin_roles).get_admin_role(token=token, read_role='EE2_ADMIN_RO', write_role='EE2_ADMIN')
+        return AdminAuthUtil(self.auth_url, self.admin_roles).get_admin_role(
+            token=token, read_role="EE2_ADMIN_RO", write_role="EE2_ADMIN"
+        )
 
-    def get_job_wrapper(self,job_id, required_admin_role=None):
+    def get_job_wrapper(self, job_id, required_admin_role=None):
         """
         If you are an admin, you can
         If you are not an admin, you
@@ -41,12 +40,6 @@ def _run_admin_command(self, command, params):
             logging.info(f"User has permission to cancel job {job_id}")
             self.logger.debug(f"User has permission to cancel job {job_id}")
         return job
-
-
-
-
-
-
 
     def administer(self, command, params, token):
         """

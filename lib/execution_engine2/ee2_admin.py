@@ -18,6 +18,7 @@ def check_is_admin(self):
     """
     return int(self._is_admin(self.token))
 
+
 def get_admin_permission(self):
     """
     Get your your type of admin permissions
@@ -32,17 +33,14 @@ def get_admin_permission(self):
         permission = "r"
     return {"permission": permission}
 
+
 def _is_admin(self, token: str) -> bool:
     try:
-        self.is_admin = AdminAuthUtil(self.auth_url, self.admin_roles).is_admin(
-            token
-        )
+        self.is_admin = AdminAuthUtil(self.auth_url, self.admin_roles).is_admin(token)
         return self.is_admin
     except AuthError as e:
         logging.error(f"An auth error occurred: {str(e)}")
         raise e
     except RuntimeError as e:
-        logging.error(
-            f"A runtime error occurred while looking up user roles: {str(e)}"
-        )
+        logging.error(f"A runtime error occurred while looking up user roles: {str(e)}")
         raise e

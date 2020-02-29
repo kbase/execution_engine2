@@ -7,6 +7,7 @@
 ############################################################
 
 from __future__ import print_function
+
 # the following is a hack to get the baseclient to import whether we're in a
 # package or not. This makes pep8 unhappy hence the annotations.
 try:
@@ -18,26 +19,37 @@ except ImportError:
 
 
 class DataFileUtil(object):
-
     def __init__(
-            self, url=None, timeout=30 * 60, user_id=None,
-            password=None, token=None, ignore_authrc=False,
-            trust_all_ssl_certificates=False,
-            auth_svc='https://ci.kbase.us/services/auth/api/legacy/KBase/Sessions/Login',
-            service_ver='release',
-            async_job_check_time_ms=100, async_job_check_time_scale_percent=150, 
-            async_job_check_max_time_ms=300000):
+        self,
+        url=None,
+        timeout=30 * 60,
+        user_id=None,
+        password=None,
+        token=None,
+        ignore_authrc=False,
+        trust_all_ssl_certificates=False,
+        auth_svc="https://ci.kbase.us/services/auth/api/legacy/KBase/Sessions/Login",
+        service_ver="release",
+        async_job_check_time_ms=100,
+        async_job_check_time_scale_percent=150,
+        async_job_check_max_time_ms=300000,
+    ):
         if url is None:
-            raise ValueError('A url is required')
+            raise ValueError("A url is required")
         self._service_ver = service_ver
         self._client = _BaseClient(
-            url, timeout=timeout, user_id=user_id, password=password,
-            token=token, ignore_authrc=ignore_authrc,
+            url,
+            timeout=timeout,
+            user_id=user_id,
+            password=password,
+            token=token,
+            ignore_authrc=ignore_authrc,
             trust_all_ssl_certificates=trust_all_ssl_certificates,
             auth_svc=auth_svc,
             async_job_check_time_ms=async_job_check_time_ms,
             async_job_check_time_scale_percent=async_job_check_time_scale_percent,
-            async_job_check_max_time_ms=async_job_check_max_time_ms)
+            async_job_check_max_time_ms=async_job_check_max_time_ms,
+        )
 
     def shock_to_file(self, params, context=None):
         """
@@ -75,8 +87,9 @@ class DataFileUtil(object):
            parameter "file_path" of String, parameter "size" of Long,
            parameter "attributes" of mapping from String to unspecified object
         """
-        return self._client.run_job('DataFileUtil.shock_to_file',
-                                    [params], self._service_ver, context)
+        return self._client.run_job(
+            "DataFileUtil.shock_to_file", [params], self._service_ver, context
+        )
 
     def shock_to_file_mass(self, params, context=None):
         """
@@ -114,8 +127,9 @@ class DataFileUtil(object):
            parameter "file_path" of String, parameter "size" of Long,
            parameter "attributes" of mapping from String to unspecified object
         """
-        return self._client.run_job('DataFileUtil.shock_to_file_mass',
-                                    [params], self._service_ver, context)
+        return self._client.run_job(
+            "DataFileUtil.shock_to_file_mass", [params], self._service_ver, context
+        )
 
     def file_to_shock(self, params, context=None):
         """
@@ -160,8 +174,9 @@ class DataFileUtil(object):
            parameter "type" of String, parameter "remote_md5" of String,
            parameter "node_file_name" of String, parameter "size" of String
         """
-        return self._client.run_job('DataFileUtil.file_to_shock',
-                                    [params], self._service_ver, context)
+        return self._client.run_job(
+            "DataFileUtil.file_to_shock", [params], self._service_ver, context
+        )
 
     def unpack_file(self, params, context=None):
         """
@@ -175,8 +190,9 @@ class DataFileUtil(object):
         :returns: instance of type "UnpackFileResult" -> structure: parameter
            "file_path" of String
         """
-        return self._client.run_job('DataFileUtil.unpack_file',
-                                    [params], self._service_ver, context)
+        return self._client.run_job(
+            "DataFileUtil.unpack_file", [params], self._service_ver, context
+        )
 
     def pack_file(self, params, context=None):
         """
@@ -202,8 +218,9 @@ class DataFileUtil(object):
            pack_file function. file_path - the path to the packed file.) ->
            structure: parameter "file_path" of String
         """
-        return self._client.run_job('DataFileUtil.pack_file',
-                                    [params], self._service_ver, context)
+        return self._client.run_job(
+            "DataFileUtil.pack_file", [params], self._service_ver, context
+        )
 
     def package_for_download(self, params, context=None):
         """
@@ -234,8 +251,9 @@ class DataFileUtil(object):
            "shock_id" of String, parameter "node_file_name" of String,
            parameter "size" of String
         """
-        return self._client.run_job('DataFileUtil.package_for_download',
-                                    [params], self._service_ver, context)
+        return self._client.run_job(
+            "DataFileUtil.package_for_download", [params], self._service_ver, context
+        )
 
     def file_to_shock_mass(self, params, context=None):
         """
@@ -281,8 +299,9 @@ class DataFileUtil(object):
            parameter "type" of String, parameter "remote_md5" of String,
            parameter "node_file_name" of String, parameter "size" of String
         """
-        return self._client.run_job('DataFileUtil.file_to_shock_mass',
-                                    [params], self._service_ver, context)
+        return self._client.run_job(
+            "DataFileUtil.file_to_shock_mass", [params], self._service_ver, context
+        )
 
     def copy_shock_node(self, params, context=None):
         """
@@ -308,8 +327,9 @@ class DataFileUtil(object):
            of String, parameter "type" of String, parameter "remote_md5" of
            String
         """
-        return self._client.run_job('DataFileUtil.copy_shock_node',
-                                    [params], self._service_ver, context)
+        return self._client.run_job(
+            "DataFileUtil.copy_shock_node", [params], self._service_ver, context
+        )
 
     def own_shock_node(self, params, context=None):
         """
@@ -343,8 +363,9 @@ class DataFileUtil(object):
            of String, parameter "type" of String, parameter "remote_md5" of
            String
         """
-        return self._client.run_job('DataFileUtil.own_shock_node',
-                                    [params], self._service_ver, context)
+        return self._client.run_job(
+            "DataFileUtil.own_shock_node", [params], self._service_ver, context
+        )
 
     def ws_name_to_id(self, name, context=None):
         """
@@ -352,8 +373,9 @@ class DataFileUtil(object):
         :param name: instance of String
         :returns: instance of Long
         """
-        return self._client.run_job('DataFileUtil.ws_name_to_id',
-                                    [name], self._service_ver, context)
+        return self._client.run_job(
+            "DataFileUtil.ws_name_to_id", [name], self._service_ver, context
+        )
 
     def save_objects(self, params, context=None):
         """
@@ -411,8 +433,9 @@ class DataFileUtil(object):
            parameter "chsum" of String, parameter "size" of Long, parameter
            "meta" of mapping from String to String
         """
-        return self._client.run_job('DataFileUtil.save_objects',
-                                    [params], self._service_ver, context)
+        return self._client.run_job(
+            "DataFileUtil.save_objects", [params], self._service_ver, context
+        )
 
     def get_objects(self, params, context=None):
         """
@@ -457,8 +480,9 @@ class DataFileUtil(object):
            parameter "chsum" of String, parameter "size" of Long, parameter
            "meta" of mapping from String to String
         """
-        return self._client.run_job('DataFileUtil.get_objects',
-                                    [params], self._service_ver, context)
+        return self._client.run_job(
+            "DataFileUtil.get_objects", [params], self._service_ver, context
+        )
 
     def versions(self, context=None):
         """
@@ -466,8 +490,9 @@ class DataFileUtil(object):
         :returns: multiple set - (1) parameter "wsver" of String, (2)
            parameter "shockver" of String
         """
-        return self._client.run_job('DataFileUtil.versions',
-                                    [], self._service_ver, context)
+        return self._client.run_job(
+            "DataFileUtil.versions", [], self._service_ver, context
+        )
 
     def download_staging_file(self, params, context=None):
         """
@@ -485,8 +510,9 @@ class DataFileUtil(object):
            scratch area path) -> structure: parameter "copy_file_path" of
            String
         """
-        return self._client.run_job('DataFileUtil.download_staging_file',
-                                    [params], self._service_ver, context)
+        return self._client.run_job(
+            "DataFileUtil.download_staging_file", [params], self._service_ver, context
+        )
 
     def download_web_file(self, params, context=None):
         """
@@ -500,9 +526,11 @@ class DataFileUtil(object):
            download_web_file function. copy_file_path: copied file scratch
            area path) -> structure: parameter "copy_file_path" of String
         """
-        return self._client.run_job('DataFileUtil.download_web_file',
-                                    [params], self._service_ver, context)
+        return self._client.run_job(
+            "DataFileUtil.download_web_file", [params], self._service_ver, context
+        )
 
     def status(self, context=None):
-        return self._client.run_job('DataFileUtil.status',
-                                    [], self._service_ver, context)
+        return self._client.run_job(
+            "DataFileUtil.status", [], self._service_ver, context
+        )

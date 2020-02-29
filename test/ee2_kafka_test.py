@@ -11,6 +11,7 @@ from execution_engine2.utils.KafkaUtils import (
     KafkaFinishJob,
 )
 from test.utils.test_utils import read_config_into_dict, bootstrap
+
 bootstrap()
 
 

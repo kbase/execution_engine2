@@ -7,17 +7,18 @@ import time
 from enum import Enum
 from typing import AnyStr
 
+#from lib.execution_engine2.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.db.models.models import (
     Job,
     JobInput,
     Meta,
-    JobRequirements, Status
+    JobRequirements,
+    Status,
 )
 from execution_engine2.utils.Condor import condor_resources
-from execution_engine2.utils.KafkaUtils import (
-    KafkaCreateJob, KafkaQueueChange
-)
-
+from execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
+from test.utils.test_utils import bootstrap
+bootstrap()
 
 class JobPermissions(Enum):
     READ = "r"
@@ -25,265 +26,261 @@ class JobPermissions(Enum):
     NONE = "n"
 
 
-def _init_job_rec(
-        self, user_id, params, resources: condor_resources = None
-) -> AnyStr:
-    job = Job()
+class RunJob:
+    def __init__(self, sdkmr):
+        self.sdkmr = sdkmr
 
-    inputs = JobInput()
+    def _init_job_rec(self, user_id, params, resources: condor_resources = None) -> AnyStr:
+        job = Job()
 
-    job.user = user_id
-    job.authstrat = "kbaseworkspace"
-    job.wsid = params.get("wsid")
-    job.status = "created"
-    inputs.wsid = job.wsid
-    inputs.method = params.get("method")
-    inputs.params = params.get("params")
-    inputs.service_ver = params.get("service_ver")
-    inputs.app_id = params.get("app_id")
-    inputs.source_ws_objects = params.get("source_ws_objects")
-    inputs.parent_job_id = str(params.get("parent_job_id"))
+        inputs = JobInput()
 
-    inputs.narrative_cell_info = Meta()
-    meta = params.get("meta")
-    if meta:
-        inputs.narrative_cell_info.run_id = meta.get("run_id")
-        inputs.narrative_cell_info.token_id = meta.get("token_id")
-        inputs.narrative_cell_info.tag = meta.get("tag")
-        inputs.narrative_cell_info.cell_id = meta.get("cell_id")
-        inputs.narrative_cell_info.status = meta.get("status")
+        job.user = user_id
+        job.authstrat = "kbaseworkspace"
+        job.wsid = params.get("wsid")
+        job.status = "created"
+        inputs.wsid = job.wsid
+        inputs.method = params.get("method")
+        inputs.params = params.get("params")
+        inputs.service_ver = params.get("service_ver")
+        inputs.app_id = params.get("app_id")
+        inputs.source_ws_objects = params.get("source_ws_objects")
+        inputs.parent_job_id = str(params.get("parent_job_id"))
 
-    if resources:
-        jr = JobRequirements()
-        jr.clientgroup = resources.client_group
-        jr.cpu = resources.request_cpus
-        # Should probably do some type checking on these before its passed in
-        # Memory always in mb
-        # Space always in gb
+        inputs.narrative_cell_info = Meta()
+        meta = params.get("meta")
+        if meta:
+            inputs.narrative_cell_info.run_id = meta.get("run_id")
+            inputs.narrative_cell_info.token_id = meta.get("token_id")
+            inputs.narrative_cell_info.tag = meta.get("tag")
+            inputs.narrative_cell_info.cell_id = meta.get("cell_id")
+            inputs.narrative_cell_info.status = meta.get("status")
 
-        jr.memory = resources.request_memory[:-1]
-        jr.disk = resources.request_disk[:-2]
-        inputs.requirements = jr
+        if resources:
+            jr = JobRequirements()
+            jr.clientgroup = resources.client_group
+            jr.cpu = resources.request_cpus
+            # Should probably do some type checking on these before its passed in
+            # Memory always in mb
+            # Space always in gb
 
-    job.job_input = inputs
-    logging.info(job.job_input.to_mongo().to_dict())
+            jr.memory = resources.request_memory[:-1]
+            jr.disk = resources.request_disk[:-2]
+            inputs.requirements = jr
 
-    with self.get_mongo_util().mongo_engine_connection():
-        job.save()
+        job.job_input = inputs
+        logging.info(job.job_input.to_mongo().to_dict())
 
-    self.kafka_client.send_kafka_message(
-        message=KafkaCreateJob(job_id=str(job.id), user=user_id)
-    )
+        with self.sdkmr.get_mongo_util().mongo_engine_connection():
+            job.save()
 
-    return str(job.id)
-
-
-def _get_module_git_commit(self, method, service_ver=None) -> AnyStr:
-    module_name = method.split(".")[0]
-
-    if not service_ver:
-        service_ver = "release"
-
-    module_version = self.catalog_utils.catalog.get_module_version(
-        {"module_name": module_name, "version": service_ver}
-    )
-
-    git_commit_hash = module_version.get("git_commit_hash")
-
-    return git_commit_hash
-
-
-def _check_ws_objects(self, source_objects) -> None:
-    """
-    perform sanity checks on input WS objects
-    """
-
-    if source_objects:
-        objects = [{"ref": ref} for ref in source_objects]
-        info = self.get_workspace().get_object_info3(
-            {"objects": objects, "ignoreErrors": 1}
-        )
-        paths = info.get("paths")
-
-        if None in paths:
-            raise ValueError("Some workspace object is inaccessible")
-
-
-def run(sdkmr=None, params=None, as_admin=None) -> AnyStr:
-    """
-    :param params: RunJobParams object (See spec file)
-    :return: The condor job id
-    """
-    wsid = params.get("wsid")
-    ws_auth = sdkmr.get_workspace_auth()
-    if wsid and not ws_auth.can_write(wsid):
-        sdkmr.logger.debug(
-            f"User {sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
-        )
-        raise PermissionError(
-            f"User {sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
+        self.sdkmr.kafka_client.send_kafka_message(
+            message=KafkaCreateJob(job_id=str(job.id), user=user_id)
         )
 
-    method = params.get("method")
-    sdkmr.logger.info(f"User {sdkmr.user_id} attempting to run job {method}")
+        return str(job.id)
 
-    # Normalize multiple formats into one format (csv vs json)
-    app_settings = sdkmr.catalog_utils.get_client_groups(method)
+    def _get_module_git_commit(self, method, service_ver=None) -> AnyStr:
+        module_name = method.split(".")[0]
 
-    # These are for saving into job inputs. Maybe its best to pass this into condor as well?
-    extracted_resources = sdkmr.get_condor().extract_resources(cgrr=app_settings)
-    # TODO Validate MB/GB from both config and catalog.
+        if not service_ver:
+            service_ver = "release"
 
-    # perform sanity checks before creating job
-    _check_ws_objects(source_objects=params.get("source_ws_objects"))
-
-    # update service_ver
-    git_commit_hash = _get_module_git_commit(method, params.get("service_ver"))
-    params["service_ver"] = git_commit_hash
-
-    # insert initial job document
-    job_id = _init_job_rec(sdkmr.user_id, params, extracted_resources)
-
-    sdkmr.logger.debug("About to run job with")
-    sdkmr.logger.debug(app_settings)
-
-    params["job_id"] = job_id
-    params["user_id"] = sdkmr.user_id
-    params["token"] = sdkmr.token
-    params["cg_resources_requirements"] = app_settings
-    try:
-        submission_info = sdkmr.get_condor().run_job(params)
-        condor_job_id = submission_info.clusterid
-        sdkmr.logger.debug(f"Submitted job id and got '{condor_job_id}'")
-    except Exception as e:
-        ## delete job from database? Or mark it to a state it will never run?
-        logging.error(e)
-        raise e
-
-    if submission_info.error is not None:
-        raise submission_info.error
-    if condor_job_id is None:
-        raise RuntimeError(
-            "Condor job not ran, and error not found. Something went wrong"
+        module_version = self.sdkmr.catalog_utils.catalog.get_module_version(
+            {"module_name": module_name, "version": service_ver}
         )
 
-    sdkmr.logger.debug("Submission info is")
-    sdkmr.logger.debug(submission_info)
-    sdkmr.logger.debug(condor_job_id)
-    sdkmr.logger.debug(type(condor_job_id))
+        git_commit_hash = module_version.get("git_commit_hash")
 
-    logging.info(f"Attempting to update job to queued  {job_id} {condor_job_id}")
-    update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
-    sdkmr.slack_client.run_job_message(
-        job_id=job_id, scheduler_id=condor_job_id, username=sdkmr.user_id
-    )
+        return git_commit_hash
 
-    return job_id
+    def _check_ws_objects(self, source_objects) -> None:
+        """
+        perform sanity checks on input WS objects
+        """
 
+        if source_objects:
+            objects = [{"ref": ref} for ref in source_objects]
+            info = self.sdkmr.get_workspace().get_object_info3(
+                {"objects": objects, "ignoreErrors": 1}
+            )
+            paths = info.get("paths")
 
-def update_job_to_queued(sdkmr, job_id, scheduler_id):
-    # TODO RETRY FOR RACE CONDITION OF RUN/CANCEL
-    # TODO PASS QUEUE TIME IN FROM SCHEDULER ITSELF?
-    # TODO PASS IN SCHEDULER TYPE?
-    with sdkmr.get_mongo_util().mongo_engine_connection():
-        j = sdkmr.get_mongo_util().get_job(job_id=job_id)
-        previous_status = j.status
-        j.status = Status.queued.value
-        j.queued = time.time()
-        j.scheduler_id = scheduler_id
-        j.scheduler_type = "condor"
-        j.save()
+            if None in paths:
+                raise ValueError("Some workspace object is inaccessible")
 
-        sdkmr.kafka_client.send_kafka_message(
-            message=KafkaQueueChange(
-                job_id=str(j.id),
-                new_status=j.status,
-                previous_status=previous_status,
-                scheduler_id=scheduler_id,
+    def run(self, params=None, as_admin=None) -> AnyStr:
+        """
+        :param params: RunJobParams object (See spec file)
+        :return: The condor job id
+        """
+        wsid = params.get("wsid")
+        ws_auth = self.sdkmr.get_workspace_auth()
+        if wsid and not ws_auth.can_write(wsid):
+            self.sdkmr.logger.debug(
+                f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
+            )
+            raise PermissionError(
+                f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
+            )
+
+        method = params.get("method")
+        self.sdkmr.logger.info(f"User {self.sdkmr.user_id} attempting to run job {method}")
+
+        # Normalize multiple formats into one format (csv vs json)
+        app_settings = self.sdkmr.catalog_utils.get_client_groups(method)
+
+        # These are for saving into job inputs. Maybe its best to pass this into condor as well?
+        extracted_resources = self.sdkmr.get_condor().extract_resources(cgrr=app_settings)
+        # TODO Validate MB/GB from both config and catalog.
+
+        # perform sanity checks before creating job
+        self._check_ws_objects(source_objects=params.get("source_ws_objects"))
+
+        # update service_ver
+        git_commit_hash = self._get_module_git_commit(method, params.get("service_ver"))
+        params["service_ver"] = git_commit_hash
+
+        # insert initial job document
+        job_id = self._init_job_rec(self.sdkmr.user_id, params, extracted_resources)
+
+        self.sdkmr.logger.debug("About to run job with")
+        self.sdkmr.logger.debug(app_settings)
+
+        params["job_id"] = job_id
+        params["user_id"] = self.sdkmr.user_id
+        params["token"] = self.sdkmr.token
+        params["cg_resources_requirements"] = app_settings
+        try:
+            submission_info = self.sdkmr.get_condor().run_job(params)
+            condor_job_id = submission_info.clusterid
+            self.sdkmr.logger.debug(f"Submitted job id and got '{condor_job_id}'")
+        except Exception as e:
+            ## delete job from database? Or mark it to a state it will never run?
+            logging.error(e)
+            raise e
+
+        if submission_info.error is not None:
+            raise submission_info.error
+        if condor_job_id is None:
+            raise RuntimeError(
+                "Condor job not ran, and error not found. Something went wrong"
+            )
+
+        self.sdkmr.logger.debug("Submission info is")
+        self.sdkmr.logger.debug(submission_info)
+        self.sdkmr.logger.debug(condor_job_id)
+        self.sdkmr.logger.debug(type(condor_job_id))
+
+        logging.info(f"Attempting to update job to queued  {job_id} {condor_job_id}")
+        self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
+        self.sdkmr.slack_client.run_job_message(
+            job_id=job_id, scheduler_id=condor_job_id, username=self.sdkmr.user_id
+        )
+
+        return job_id
+
+    def update_job_to_queued(self, job_id, scheduler_id):
+        # TODO RETRY FOR RACE CONDITION OF RUN/CANCEL
+        # TODO PASS QUEUE TIME IN FROM SCHEDULER ITSELF?
+        # TODO PASS IN SCHEDULER TYPE?
+        with self.sdkmr.get_mongo_util().mongo_engine_connection():
+            j = self.sdkmr.get_mongo_util().get_job(job_id=job_id)
+            previous_status = j.status
+            j.status = Status.queued.value
+            j.queued = time.time()
+            j.scheduler_id = scheduler_id
+            j.scheduler_type = "condor"
+            j.save()
+
+            self.sdkmr.kafka_client.send_kafka_message(
+                message=KafkaQueueChange(
+                    job_id=str(j.id),
+                    new_status=j.status,
+                    previous_status=previous_status,
+                    scheduler_id=scheduler_id,
+                )
+            )
+
+    def get_job_params(self, job_id, as_admin=False):
+        """
+        get_job_params: fetch SDK method params passed to job runner
+    
+        Parameters:
+        job_id: id of job
+    
+        Returns:
+        job_params:
+        """
+        job_params = dict()
+
+        job = self.sdkmr._get_job_with_permission(job_id, JobPermissions.READ)
+
+        job_input = job.job_input
+
+        job_params["method"] = job_input.method
+        job_params["params"] = job_input.params
+        job_params["service_ver"] = job_input.service_ver
+        job_params["app_id"] = job_input.app_id
+        job_params["wsid"] = job_input.wsid
+        job_params["parent_job_id"] = job_input.parent_job_id
+        job_params["source_ws_objects"] = job_input.source_ws_objects
+
+        return job_params
+
+    def start_job(self, job_id, skip_estimation=True):
+        """
+        start_job: set job record to start status ("estimating" or "running") and update timestamp
+                   (set job status to "estimating" by default, if job status currently is "created" or "queued".
+                    set job status to "running", if job status currently is "estimating")
+                   raise error if job is not found or current job status is not "created", "queued" or "estimating"
+                   (general work flow for job status created -> queued -> estimating -> running -> finished/error/terminated)
+    
+        Parameters:
+        job_id: id of job
+        skip_estimation: skip estimation step and set job to running directly
+        """
+
+        if not job_id:
+            raise ValueError("Please provide valid job_id")
+
+        job = self._get_job_with_permission(job_id, JobPermissions.WRITE)
+        job_status = job.status
+
+        allowed_states = [
+            Status.created.value,
+            Status.queued.value,
+            Status.estimating.value,
+        ]
+        if job_status not in allowed_states:
+            raise ValueError(
+                f"Unexpected job status for {job_id}: {job_status}.  You cannot start a job that is not in {allowed_states}"
+            )
+
+        with self.get_mongo_util().mongo_engine_connection():
+            if job_status == Status.estimating.value or skip_estimation:
+                # set job to running status
+
+                job.running = time.time()
+                self.get_mongo_util().update_job_status(
+                    job_id=job_id, status=Status.running.value
+                )
+            else:
+                # set job to estimating status
+
+                job.estimating = time.time()
+                self.get_mongo_util().update_job_status(
+                    job_id=job_id, status=Status.estimating.value
+                )
+            job.save()
+
+        job.reload("status")
+
+        self.kafka_client.send_kafka_message(
+            message=KafkaStartJob(
+                job_id=str(job_id),
+                new_status=job.status,
+                previous_status=job_status,
+                scheduler_id=job.scheduler_id,
             )
         )
-
-
-def get_job_params(sdkmr, job_id, as_admin=False):
-    """
-    get_job_params: fetch SDK method params passed to job runner
-
-    Parameters:
-    job_id: id of job
-
-    Returns:
-    job_params:
-    """
-    job_params = dict()
-
-    job = self._get_job_with_permission(job_id, JobPermissions.READ)
-
-    job_input = job.job_input
-
-    job_params["method"] = job_input.method
-    job_params["params"] = job_input.params
-    job_params["service_ver"] = job_input.service_ver
-    job_params["app_id"] = job_input.app_id
-    job_params["wsid"] = job_input.wsid
-    job_params["parent_job_id"] = job_input.parent_job_id
-    job_params["source_ws_objects"] = job_input.source_ws_objects
-
-    return job_params
-
-
-def start_job(self, job_id, skip_estimation=True):
-    """
-    start_job: set job record to start status ("estimating" or "running") and update timestamp
-               (set job status to "estimating" by default, if job status currently is "created" or "queued".
-                set job status to "running", if job status currently is "estimating")
-               raise error if job is not found or current job status is not "created", "queued" or "estimating"
-               (general work flow for job status created -> queued -> estimating -> running -> finished/error/terminated)
-
-    Parameters:
-    job_id: id of job
-    skip_estimation: skip estimation step and set job to running directly
-    """
-
-    if not job_id:
-        raise ValueError("Please provide valid job_id")
-
-    job = self._get_job_with_permission(job_id, JobPermissions.WRITE)
-    job_status = job.status
-
-    allowed_states = [
-        Status.created.value,
-        Status.queued.value,
-        Status.estimating.value,
-    ]
-    if job_status not in allowed_states:
-        raise ValueError(
-            f"Unexpected job status for {job_id}: {job_status}.  You cannot start a job that is not in {allowed_states}"
-        )
-
-    with self.get_mongo_util().mongo_engine_connection():
-        if job_status == Status.estimating.value or skip_estimation:
-            # set job to running status
-
-            job.running = time.time()
-            self.get_mongo_util().update_job_status(
-                job_id=job_id, status=Status.running.value
-            )
-        else:
-            # set job to estimating status
-
-            job.estimating = time.time()
-            self.get_mongo_util().update_job_status(
-                job_id=job_id, status=Status.estimating.value
-            )
-        job.save()
-
-    job.reload("status")
-
-    self.kafka_client.send_kafka_message(
-        message=KafkaStartJob(
-            job_id=str(job_id),
-            new_status=job.status,
-            previous_status=job_status,
-            scheduler_id=job.scheduler_id,
-        )
-    )

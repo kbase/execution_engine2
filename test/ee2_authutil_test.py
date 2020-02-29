@@ -7,7 +7,9 @@ from execution_engine2.authorization.roles import AdminAuthUtil
 from execution_engine2.exceptions import AuthError
 
 from test.utils.test_utils import bootstrap
+
 bootstrap()
+
 
 class AdminAuthUtilTestCase(unittest.TestCase):
     @classmethod
