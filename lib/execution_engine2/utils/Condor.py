@@ -148,10 +148,8 @@ class Condor(Scheduler):
         :return:
         """
         logging.debug(f"About to extract from {cgrr}")
-        print(f"About to extract from {cgrr}")
 
         client_group = cgrr.get("client_group", None)
-        print(client_group)
 
         if client_group is None or client_group == "":
             client_group = self.config.get(
@@ -251,8 +249,8 @@ class Condor(Scheduler):
         sub["requirements"] = " && ".join(requirements)
 
         params["extracted_client_group"] = client_group
-        sub["client_group"] = client_group
-        sub["gentenv"] = "false"
+        sub["+CLIENTGROUP"] = client_group
+        sub["getenv"] = "false"
         sub["environment"] = self.setup_environment_vars(params)
 
         # Ensure all values are a string

@@ -262,41 +262,16 @@ class ee2_server_load_test(unittest.TestCase):
             jobs.delete()
             self.assertEqual(ori_job_count, Job.objects.count())
 
-    # @patch.object(SDKMethodRunner, "_get_client_groups", return_value="njs")
 
-    @patch(
-        "lib.execution_engine2.SDKMethodRunner.CatalogUtils",
-        autospec=True,
-        return_value="123",
-    )
-    @patch(
-        "lib.execution_engine2.SDKMethodRunner.ee2_runjob",
-        autospec=True,
-        return_value="123",
-    )
+    # @patch.object(Catalog, "get_module_version", return_value="module.version")
     @patch.object(WorkspaceAuth, "can_write", return_value=True)
-    @patch.object(
-        Condor,
-        "run_job",
-        return_value=submission_info(clusterid="test", submit="job", error=None),
-    )
-    @patch.object(
-        RunJob, "_get_module_git_commit", return_value="modulecommit"
-    )  # , catalog2, wkspce, condor, rj):
-    @patch.object(
-        Catalog, "list_client_group_configs", return_value=[{"client_groups": ["njs"]}]
-    )
-    @patch.object(Catalog, "get_module_version", return_value="module_version")
-    def test_run_job_stress(
-        self, catalog_gmv, catalog_lcgc, runjob, condor, wsk, runjob2, catalog1
-    ):
+    @patch("lib.installed_clients.CatalogClient.Catalog.get_module_version", autospec=True)
+    def test_run_job_stress(            self,   cc,  workspace,):
         """
         testing running 3 different jobs in multiple theads.
         """
+        cc.return_value = {'git_commit_hash' : "moduleversiongoeshere"}
 
-        # runner._ee2_runjob._get_module_git_commit = MagicMock(return_value='hash_goes_here')
-
-        # ee2_runjob.RunJob
 
         thread_count = self.thread_count  # threads to test
 
