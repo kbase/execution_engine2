@@ -8,8 +8,6 @@ from bson import ObjectId
 from execution_engine2.db.models.models import Job
 from execution_engine2.exceptions import AuthError
 
-from execution_engine2.SDKMethodRunner import SDKMethodRunner
-
 
 class JobPermissions(Enum):
     READ = "r"
@@ -159,12 +157,11 @@ class JobStatusRange:
 
         return dummy_ids(start=dummy_start_id, stop=dummy_end_id)
 
-    @staticmethod
-    def get_sort_order(ascending):
+    def get_sort_order(self, ascending):
         if ascending is None:
             return "+"
         else:
-            if SDKMethodRunner.parse_bool_from_string(ascending):
+            if self.sdkmr.parse_bool_from_string(ascending):
                 return "+"
             else:
                 return "-"
