@@ -292,8 +292,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.mongo_util.get_job(job_id=job_id).delete()
             self.assertEqual(ori_job_count, Job.objects.count())
 
-    @patch("execution_engine2.SDKMethodRunner.SDKMethodRunner", autospec=True)
-    def test_cancel_job(self, runner):
+    # @patch("execution_engine2.SDKMethodRunner.SDKMethodRunner", autospec=True)
+    def test_cancel_job(self,):
         logging.info("\n\n  Test cancel job")
         sdk = copy.deepcopy(self.getRunner())
 

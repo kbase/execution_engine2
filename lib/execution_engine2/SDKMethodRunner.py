@@ -18,11 +18,11 @@ from logging import Logger
 
 import dateutil
 
-import ee2_cache
-import ee2_logs
-import ee2_runjob
-import ee2_status
-import ee2_status_range
+from execution_engine2 import ee2_cache
+from execution_engine2 import ee2_logs
+from execution_engine2 import ee2_runjob
+from execution_engine2 import ee2_status
+from execution_engine2 import ee2_status_range
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.utils.CatalogUtils import CatalogUtils
