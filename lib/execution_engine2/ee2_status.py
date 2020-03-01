@@ -1,7 +1,7 @@
 import logging
 from collections import OrderedDict
 from enum import Enum
-
+import time
 from bson import ObjectId
 
 from execution_engine2.authorization.authstrategy import can_read_jobs
@@ -18,6 +18,7 @@ from execution_engine2.utils.KafkaUtils import (
     KafkaCondorCommand,
     KafkaFinishJob,
     KafkaStatusChange,
+    KafkaStartJob,
 )
 
 
@@ -48,7 +49,9 @@ class JobsStatus:
         if terminated_code is None:
             terminated_code = TerminatedCode.terminated_by_user.value
 
-        self.sdkmr.get_mongo_util().cancel_job(job_id=job_id, terminated_code=terminated_code)
+        self.sdkmr.get_mongo_util().cancel_job(
+            job_id=job_id, terminated_code=terminated_code
+        )
 
         self.sdkmr.kafka_client.send_kafka_message(
             message=KafkaCancelJob(
@@ -61,7 +64,9 @@ class JobsStatus:
         )
 
         logging.info(f"About to cancel job in CONDOR using {job.scheduler_id}")
-        self.sdkmr.logger.debug(f"About to cancel job in CONDOR using {job.scheduler_id}")
+        self.sdkmr.logger.debug(
+            f"About to cancel job in CONDOR using {job.scheduler_id}"
+        )
         rv = self.sdkmr.get_condor().cancel_job(job_id=job.scheduler_id)
         logging.info(rv)
         self.sdkmr.logger.debug(f"{rv}")
@@ -126,7 +131,7 @@ class JobsStatus:
 
         return str(job.id)
 
-    def get_job_status(self, job_id):
+    def get_job_status(self, job_id, as_admin=None):
         """
         get_job_status: fetch status of a job runner record.
                         raise error if job is not found
@@ -160,14 +165,14 @@ class JobsStatus:
     def _check_job_is_created(self, job_id):
         return self.sdkmr._check_job_is_status(job_id, Status.created.value)
 
-    def _check_job_is_running(es, job_id):
-        return sdkmr._check_job_is_status(job_id, Status.running.value)
+    def _check_job_is_running(self, job_id):
+        return self.sdkmr._check_job_is_status(job_id, Status.running.value)
 
     def _finish_job_with_error(self, job_id, error_message, error_code, error=None):
         if error_code is None:
             error_code = ErrorCode.unknown_error.value
 
-        sdkmr.get_mongo_util().finish_job_with_error(
+        self.sdkmr.get_mongo_util().finish_job_with_error(
             job_id=job_id,
             error_message=error_message,
             error_code=error_code,
@@ -192,7 +197,7 @@ class JobsStatus:
                 "error": str(e),
             }
 
-            sdkmr.get_mongo_util().finish_job_with_error(
+            self.sdkmr.get_mongo_util().finish_job_with_error(
                 job_id=job_id,
                 error_message=error_message,
                 error_code=error_code,
@@ -200,12 +205,18 @@ class JobsStatus:
             )
             raise Exception(str(e) + str(error_message))
 
-        sdkmr.get_mongo_util().finish_job_with_success(
+        self.sdkmr.get_mongo_util().finish_job_with_success(
             job_id=job_id, job_output=job_output
         )
 
     def finish_job(
-            sdkmr, job_id, error_message=None, error_code=None, error=None, job_output=None
+        self,
+        job_id,
+        error_message=None,
+        error_code=None,
+        error=None,
+        job_output=None,
+        as_admin=None,
     ):
         """
         #TODO Fix too many open connections to mongoengine
@@ -222,21 +233,21 @@ class JobsStatus:
         :param job_output: dict - default None, if given this job has some output
         """
 
-        job = sdkmr._get_job_with_permission(
+        job = self.sdkmr._get_job_with_permission(
             job_id=job_id, permission=JobPermissions.WRITE
         )
 
         if error_message:
             if error_code is None:
                 error_code = ErrorCode.job_crashed.value
-            db_update = sdkmr._finish_job_with_error(
+            db_update = self._finish_job_with_error(
                 job_id=job_id,
                 error_message=error_message,
                 error_code=error_code,
                 error=error,
             )
 
-            sdkmr.kafka_client.send_kafka_message(
+            self.sdkmr.kafka_client.send_kafka_message(
                 message=KafkaFinishJob(
                     job_id=str(job_id),
                     new_status=Status.error.value,
@@ -252,11 +263,11 @@ class JobsStatus:
             if error_code is None:
                 error_code = ErrorCode.job_missing_output.value
             msg = "Missing job output required in order to successfully finish job. Something went wrong"
-            db_update = sdkmr._finish_job_with_error(
+            db_update = self._finish_job_with_error(
                 job_id=job_id, error_message=msg, error_code=error_code
             )
 
-            sdkmr.kafka_client.send_kafka_message(
+            self.sdkmr.kafka_client.send_kafka_message(
                 message=KafkaFinishJob(
                     job_id=str(job_id),
                     new_status=Status.error.value,
@@ -268,8 +279,8 @@ class JobsStatus:
             )
             return db_update
 
-        sdkmr._finish_job_with_success(job_id=job_id, job_output=job_output)
-        sdkmr.kafka_client.send_kafka_message(
+        self._finish_job_with_success(job_id=job_id, job_output=job_output)
+        self.sdkmr.kafka_client.send_kafka_message(
             message=KafkaFinishJob(
                 job_id=str(job_id),
                 new_status=Status.completed.value,
@@ -305,7 +316,7 @@ class JobsStatus:
         return job_state
 
     def check_jobs(
-            self, job_ids, check_permission=True, exclude_fields=None, return_list=None
+        self, job_ids, check_permission=True, exclude_fields=None, return_list=None
     ):
         """
         check_jobs: check and return job status for a given of list job_ids
@@ -323,7 +334,9 @@ class JobsStatus:
 
         if check_permission:
             try:
-                perms = can_read_jobs(jobs, self.sdkmr.user_id, self.sdkmr.token, self.sdkmr.config)
+                perms = can_read_jobs(
+                    jobs, self.sdkmr.user_id, self.sdkmr.token, self.sdkmr.config
+                )
             except RuntimeError as e:
                 logging.error(
                     f"An error occurred while checking read permissions for jobs"
@@ -356,9 +369,7 @@ class JobsStatus:
             {job_id: job_states.get(job_id, []) for job_id in job_ids}
         )
 
-        if return_list is not None and self.sdkmr.parse_bool_from_string(
-                return_list
-        ):
+        if return_list is not None and self.sdkmr.parse_bool_from_string(return_list):
             job_states = {"job_states": list(job_states.values())}
 
         return job_states
@@ -398,36 +409,6 @@ class JobsStatus:
 
         return job_states
 
-    @staticmethod
-    def _job_state_from_jobs(jobs):
-        """
-        Returns as per the spec file
-
-        :param jobs: MongoEngine Job Objects Query
-        :return: list of job states of format
-        Special Cases:
-        str(_id)
-        str(job_id)
-        float(created/queued/estimating/running/finished/updated/) (Time in MS)
-        """
-        job_states = []
-        for job in jobs:
-            mongo_rec = job.to_mongo().to_dict()
-            mongo_rec["_id"] = str(job.id)
-            mongo_rec["job_id"] = str(job.id)
-            mongo_rec["created"] = int(job.id.generation_time.timestamp() * 1000)
-            mongo_rec["updated"] = int(job.updated * 1000)
-            if job.estimating:
-                mongo_rec["estimating"] = int(job.estimating * 1000)
-            if job.queued:
-                mongo_rec["queued"] = int(job.queued * 1000)
-            if job.running:
-                mongo_rec["running"] = int(job.running * 1000)
-            if job.finished:
-                mongo_rec["finished"] = int(job.finished * 1000)
-            job_states.append(mongo_rec)
-        return job_states
-
     def _send_exec_stats_to_catalog(self, job_id):
         job = self.sdkmr.get_mongo_util().get_job(job_id)
 
@@ -449,3 +430,60 @@ class JobsStatus:
         log_exec_stats_params["job_id"] = job_id
 
         self.sdkmr.catalog_utils.catalog.log_exec_stats(log_exec_stats_params)
+
+    def start_job(self, job_id, skip_estimation=True, as_admin=False):
+        """
+        start_job: set job record to start status ("estimating" or "running") and update timestamp
+                   (set job status to "estimating" by default, if job status currently is "created" or "queued".
+                    set job status to "running", if job status currently is "estimating")
+                   raise error if job is not found or current job status is not "created", "queued" or "estimating"
+                   (general work flow for job status created -> queued -> estimating -> running -> finished/error/terminated)
+
+        Parameters:
+        job_id: id of job
+        skip_estimation: skip estimation step and set job to running directly
+        """
+
+        if not job_id:
+            raise ValueError("Please provide valid job_id")
+
+        job = self.sdkmr._get_job_with_permission(job_id, JobPermissions.WRITE)
+        job_status = job.status
+
+        allowed_states = [
+            Status.created.value,
+            Status.queued.value,
+            Status.estimating.value,
+        ]
+        if job_status not in allowed_states:
+            raise ValueError(
+                f"Unexpected job status for {job_id}: {job_status}.  You cannot start a job that is not in {allowed_states}"
+            )
+
+        with self.sdkmr.get_mongo_util().mongo_engine_connection():
+            if job_status == Status.estimating.value or skip_estimation:
+                # set job to running status
+
+                job.running = time.time()
+                self.sdkmr.get_mongo_util().update_job_status(
+                    job_id=job_id, status=Status.running.value
+                )
+            else:
+                # set job to estimating status
+
+                job.estimating = time.time()
+                self.sdkmr.get_mongo_util().update_job_status(
+                    job_id=job_id, status=Status.estimating.value
+                )
+            job.save()
+
+        job.reload("status")
+
+        self.sdkmr.kafka_client.send_kafka_message(
+            message=KafkaStartJob(
+                job_id=str(job_id),
+                new_status=job.status,
+                previous_status=job_status,
+                scheduler_id=job.scheduler_id,
+            )
+        )

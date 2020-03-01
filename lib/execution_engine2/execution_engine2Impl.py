@@ -821,7 +821,7 @@ class execution_engine2:
         #BEGIN get_job_status
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
                              job_permission_cache=self.job_permission_cache, admin_roles_cache=self.admin_roles_cache)
-        result = mr.get_job_status(job_id)
+        result = mr.get_job_status_field(job_id)
         #END get_job_status
 
         # At some point might do deeper type checking...

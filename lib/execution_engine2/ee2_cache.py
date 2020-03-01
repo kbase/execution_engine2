@@ -34,8 +34,6 @@ def _get_job_permission_from_cache(sdkmr, job_id, user_id, level):
         return False
     else:
         job_permission = sdkmr.job_permission_cache[job_id]
-
-        print("JOB PERMISSION IS", job_permission)
         if not job_permission.get(user_id):
             return False
         else:
@@ -53,8 +51,9 @@ def _test_job_permission_with_cache(sdkmr, job_id, permission):
 def _get_job_with_permission(sdkmr, job_id, permission):
     job = sdkmr.get_mongo_util().get_job(job_id=job_id)
 
-    if not _get_job_permission_from_cache(sdkmr=sdkmr, job_id=job_id, user_id=sdkmr.user_id,
-                                          level=permission):
+    if not _get_job_permission_from_cache(
+        sdkmr=sdkmr, job_id=job_id, user_id=sdkmr.user_id, level=permission
+    ):
         _test_job_permissions(sdkmr=sdkmr, job=job, job_id=job_id, level=permission)
     return job
 
@@ -105,7 +104,9 @@ def _test_job_permissions(sdkmr, job: Job, job_id: str, level: JobPermissions) -
             perm = can_write_job(job, sdkmr.user_id, sdkmr.token, sdkmr.config)
             _update_job_permission_cache(sdkmr, job_id, sdkmr.user_id, level, perm)
         else:
-            raise PermissionError(f"Please provide a valid level of permissions  {level}")
+            raise PermissionError(
+                f"Please provide a valid level of permissions  {level}"
+            )
         if not perm:
             raise PermissionError(
                 f"User {sdkmr.user_id} does not have permission to {level} job {job_id}"

@@ -13,6 +13,10 @@ from execution_engine2.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job, Status
+from execution_engine2.ee2_runjob import RunJob
+from execution_engine2.ee2_status import JobsStatus
+from execution_engine2.ee2_logs import JobLog
+
 from execution_engine2.execution_engine2Impl import execution_engine2
 from execution_engine2.utils.Condor import Condor, submission_info
 from installed_clients.CatalogClient import Catalog
@@ -58,8 +62,13 @@ class ee2_server_load_test(unittest.TestCase):
 
         cls.thread_count = 50
 
-    def getRunner(self):
-        return copy.deepcopy(self.__class__.method_runner)
+    def getRunner(self) -> SDKMethodRunner:
+        # Initialize these clients from None
+        runner = copy.deepcopy(self.__class__.method_runner)  # type : SDKMethodRunner
+        runner.get_jobs_status()
+        runner.get_runjob()
+        runner.get_job_logs()
+        return runner
 
     def get_sample_job_params(self, method=None):
 
@@ -112,12 +121,16 @@ class ee2_server_load_test(unittest.TestCase):
             # execute _init_job_rec for 2 different jobs in threads
             for index in range(thread_count):
                 x = threading.Thread(
-                    target=que.put(runner._init_job_rec(self.user_id, job_params_1))
+                    target=que.put(
+                        runner.get_runjob()._init_job_rec(self.user_id, job_params_1)
+                    )
                 )
                 threads.append(x)
                 x.start()
                 y = threading.Thread(
-                    target=que.put(runner._init_job_rec(self.user_id, job_params_2))
+                    target=que.put(
+                        runner.get_runjob()._init_job_rec(self.user_id, job_params_2)
+                    )
                 )
                 threads.append(y)
                 y.start()
@@ -165,9 +178,15 @@ class ee2_server_load_test(unittest.TestCase):
 
             # initializing jobs to be tested
             for index in range(thread_count):
-                job_ids_queued.append(runner._init_job_rec(self.user_id, job_params))
-                job_ids_running.append(runner._init_job_rec(self.user_id, job_params))
-                job_ids_completed.append(runner._init_job_rec(self.user_id, job_params))
+                job_ids_queued.append(
+                    runner.get_runjob()._init_job_rec(self.user_id, job_params)
+                )
+                job_ids_running.append(
+                    runner.get_runjob()._init_job_rec(self.user_id, job_params)
+                )
+                job_ids_completed.append(
+                    runner.get_runjob()._init_job_rec(self.user_id, job_params)
+                )
 
             # examing newly created job status
             queued_jobs = self.mongo_util.get_jobs(job_ids=job_ids_queued)
@@ -194,9 +213,11 @@ class ee2_server_load_test(unittest.TestCase):
                 """
                 update jobs status in one thread
                 """
-                runner.update_job_to_queued(job_ids_queued[index], "scheduler_id")
-                runner.start_job(job_ids_running[index])
-                runner.start_job(job_ids_finish[index])
+                runner.get_runjob().update_job_to_queued(
+                    job_ids_queued[index], "scheduler_id"
+                )
+                runner.get_jobs_status().start_job(job_ids_running[index])
+                runner.get_jobs_status().start_job(job_ids_finish[index])
                 job_output = {
                     "version": "11",
                     "result": {"result": 1},
@@ -241,21 +262,42 @@ class ee2_server_load_test(unittest.TestCase):
             jobs.delete()
             self.assertEqual(ori_job_count, Job.objects.count())
 
-    @patch.object(
-        Catalog, "list_client_group_configs", return_value=[{"client_groups": ["njs"]}]
+    # @patch.object(SDKMethodRunner, "_get_client_groups", return_value="njs")
+
+    @patch(
+        "lib.execution_engine2.SDKMethodRunner.CatalogUtils",
+        autospec=True,
+        return_value="123",
+    )
+    @patch(
+        "lib.execution_engine2.SDKMethodRunner.ee2_runjob",
+        autospec=True,
+        return_value="123",
     )
     @patch.object(WorkspaceAuth, "can_write", return_value=True)
-    # @patch.object(SDKMethodRunner, "_get_client_groups", return_value="njs")
-    @patch.object(SDKMethodRunner, "_get_module_git_commit", return_value="a version")
     @patch.object(
         Condor,
         "run_job",
         return_value=submission_info(clusterid="test", submit="job", error=None),
     )
-    def test_run_job_stress(self, catalog, can_write, _get_module_git_commit, run_job):
+    @patch.object(
+        RunJob, "_get_module_git_commit", return_value="modulecommit"
+    )  # , catalog2, wkspce, condor, rj):
+    @patch.object(
+        Catalog, "list_client_group_configs", return_value=[{"client_groups": ["njs"]}]
+    )
+    @patch.object(Catalog, "get_module_version", return_value="module_version")
+    def test_run_job_stress(
+        self, catalog_gmv, catalog_lcgc, runjob, condor, wsk, runjob2, catalog1
+    ):
         """
         testing running 3 different jobs in multiple theads.
         """
+
+        # runner._ee2_runjob._get_module_git_commit = MagicMock(return_value='hash_goes_here')
+
+        # ee2_runjob.RunJob
+
         thread_count = self.thread_count  # threads to test
 
         with self.mongo_util.mongo_engine_connection():
@@ -265,6 +307,7 @@ class ee2_server_load_test(unittest.TestCase):
             method_1 = "app1.a_method"
             method_2 = "app2.b_method"
             method_3 = "app3.c_method"
+
             job_params_1 = self.get_sample_job_params(method=method_1)
             job_params_2 = self.get_sample_job_params(method=method_2)
             job_params_3 = self.get_sample_job_params(method=method_3)
@@ -342,9 +385,15 @@ class ee2_server_load_test(unittest.TestCase):
 
             # initializing jobs to be tested
             for index in range(thread_count):
-                job_ids_queued.append(runner._init_job_rec(self.user_id, job_params))
-                job_ids_running.append(runner._init_job_rec(self.user_id, job_params))
-                job_ids_completed.append(runner._init_job_rec(self.user_id, job_params))
+                job_ids_queued.append(
+                    runner.get_runjob()._init_job_rec(self.user_id, job_params)
+                )
+                job_ids_running.append(
+                    runner.get_runjob()._init_job_rec(self.user_id, job_params)
+                )
+                job_ids_completed.append(
+                    runner.get_runjob()._init_job_rec(self.user_id, job_params)
+                )
 
             # examing newly created job status
             init_jobs = self.mongo_util.get_jobs(
@@ -423,8 +472,8 @@ class ee2_server_load_test(unittest.TestCase):
             job_params_2 = self.get_sample_job_params(method=method_2)
 
             # create jobs
-            job_id_1 = runner._init_job_rec(self.user_id, job_params_1)
-            job_id_2 = runner._init_job_rec(self.user_id, job_params_2)
+            job_id_1 = runner.get_runjob()._init_job_rec(self.user_id, job_params_1)
+            job_id_2 = runner.get_runjob()._init_job_rec(self.user_id, job_params_2)
 
             threads = list()
             job_status = list()
@@ -474,9 +523,13 @@ class ee2_server_load_test(unittest.TestCase):
             job_params = self.get_sample_job_params()
 
             # create jobs
-            job_id_running = runner._init_job_rec(self.user_id, job_params)
-            job_id_terminated = runner._init_job_rec(self.user_id, job_params)
-            job_id_completed = runner._init_job_rec(self.user_id, job_params)
+            job_id_running = runner.get_runjob()._init_job_rec(self.user_id, job_params)
+            job_id_terminated = runner.get_runjob()._init_job_rec(
+                self.user_id, job_params
+            )
+            job_id_completed = runner.get_runjob()._init_job_rec(
+                self.user_id, job_params
+            )
 
             self.impl.update_job_status(
                 ctx=self.ctx, params={"job_id": job_id_running, "status": "running"}
@@ -576,7 +629,9 @@ class ee2_server_load_test(unittest.TestCase):
             runner = self.getRunner()
 
             # create job
-            job_id = runner._init_job_rec(self.user_id, self.get_sample_job_params())
+            job_id = runner.get_runjob()._init_job_rec(
+                self.user_id, self.get_sample_job_params()
+            )
 
             # add one line to job
             ts = time.time()
@@ -633,7 +688,9 @@ class ee2_server_load_test(unittest.TestCase):
             runner = self.getRunner()
 
             # create job
-            job_id = runner._init_job_rec(self.user_id, self.get_sample_job_params())
+            job_id = runner.get_runjob()._init_job_rec(
+                self.user_id, self.get_sample_job_params()
+            )
 
             # job line to be added
             ts = time.time()

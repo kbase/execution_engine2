@@ -7,7 +7,7 @@ import time
 from enum import Enum
 from typing import AnyStr
 
-#from lib.execution_engine2.SDKMethodRunner import SDKMethodRunner
+# from lib.execution_engine2.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.db.models.models import (
     Job,
     JobInput,
@@ -18,7 +18,9 @@ from execution_engine2.db.models.models import (
 from execution_engine2.utils.Condor import condor_resources
 from execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
 from test.utils.test_utils import bootstrap
+
 bootstrap()
+
 
 class JobPermissions(Enum):
     READ = "r"
@@ -30,7 +32,9 @@ class RunJob:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr
 
-    def _init_job_rec(self, user_id, params, resources: condor_resources = None) -> AnyStr:
+    def _init_job_rec(
+        self, user_id, params, resources: condor_resources = None
+    ) -> AnyStr:
         job = Job()
 
         inputs = JobInput()
@@ -125,13 +129,17 @@ class RunJob:
             )
 
         method = params.get("method")
-        self.sdkmr.logger.info(f"User {self.sdkmr.user_id} attempting to run job {method}")
+        self.sdkmr.logger.info(
+            f"User {self.sdkmr.user_id} attempting to run job {method}"
+        )
 
         # Normalize multiple formats into one format (csv vs json)
         app_settings = self.sdkmr.catalog_utils.get_client_groups(method)
 
         # These are for saving into job inputs. Maybe its best to pass this into condor as well?
-        extracted_resources = self.sdkmr.get_condor().extract_resources(cgrr=app_settings)
+        extracted_resources = self.sdkmr.get_condor().extract_resources(
+            cgrr=app_settings
+        )
         # TODO Validate MB/GB from both config and catalog.
 
         # perform sanity checks before creating job
@@ -205,10 +213,8 @@ class RunJob:
     def get_job_params(self, job_id, as_admin=False):
         """
         get_job_params: fetch SDK method params passed to job runner
-    
         Parameters:
         job_id: id of job
-    
         Returns:
         job_params:
         """
@@ -227,60 +233,3 @@ class RunJob:
         job_params["source_ws_objects"] = job_input.source_ws_objects
 
         return job_params
-
-    def start_job(self, job_id, skip_estimation=True):
-        """
-        start_job: set job record to start status ("estimating" or "running") and update timestamp
-                   (set job status to "estimating" by default, if job status currently is "created" or "queued".
-                    set job status to "running", if job status currently is "estimating")
-                   raise error if job is not found or current job status is not "created", "queued" or "estimating"
-                   (general work flow for job status created -> queued -> estimating -> running -> finished/error/terminated)
-    
-        Parameters:
-        job_id: id of job
-        skip_estimation: skip estimation step and set job to running directly
-        """
-
-        if not job_id:
-            raise ValueError("Please provide valid job_id")
-
-        job = self._get_job_with_permission(job_id, JobPermissions.WRITE)
-        job_status = job.status
-
-        allowed_states = [
-            Status.created.value,
-            Status.queued.value,
-            Status.estimating.value,
-        ]
-        if job_status not in allowed_states:
-            raise ValueError(
-                f"Unexpected job status for {job_id}: {job_status}.  You cannot start a job that is not in {allowed_states}"
-            )
-
-        with self.get_mongo_util().mongo_engine_connection():
-            if job_status == Status.estimating.value or skip_estimation:
-                # set job to running status
-
-                job.running = time.time()
-                self.get_mongo_util().update_job_status(
-                    job_id=job_id, status=Status.running.value
-                )
-            else:
-                # set job to estimating status
-
-                job.estimating = time.time()
-                self.get_mongo_util().update_job_status(
-                    job_id=job_id, status=Status.estimating.value
-                )
-            job.save()
-
-        job.reload("status")
-
-        self.kafka_client.send_kafka_message(
-            message=KafkaStartJob(
-                job_id=str(job_id),
-                new_status=job.status,
-                previous_status=job_status,
-                scheduler_id=job.scheduler_id,
-            )
-        )

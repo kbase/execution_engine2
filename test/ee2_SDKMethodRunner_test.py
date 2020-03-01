@@ -41,11 +41,11 @@ from lib.execution_engine2.ee2_runjob import RunJob
 
 
 def _run_job_adapter(
-        ws_perms_info: Dict = None,
-        ws_perms_global: List = [],
-        client_groups_info: Dict = None,
-        module_versions: Dict = None,
-        user_roles: List = None,
+    ws_perms_info: Dict = None,
+    ws_perms_global: List = [],
+    client_groups_info: Dict = None,
+    module_versions: Dict = None,
+    user_roles: List = None,
 ):
     """
     Mocks POST calls to:
@@ -148,7 +148,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
 
     def getRunner(self) -> SDKMethodRunner:
-        return copy.deepcopy(self.__class__.method_runner)
+        # Initialize these clients from None
+        runner = copy.deepcopy(self.__class__.method_runner)  # type : SDKMethodRunner
+        runner.get_jobs_status()
+        runner.get_runjob()
+        runner.get_job_logs()
+        return runner
 
     def create_job_rec(self):
         job = Job()
@@ -258,7 +263,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 "meta": {"tag": "dev", "token_id": "12345"},
             }
 
-            job_id = runner._init_job_rec(self.user_id, job_params)
+            job_id = runner.get_runjob()._init_job_rec(self.user_id, job_params)
 
             self.assertEqual(ori_job_count, Job.objects.count() - 1)
 
@@ -357,7 +362,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         runner.get_condor = MagicMock(return_value=condor_mock)
         fixed_rj = RunJob(runner)
-        fixed_rj._get_module_git_commit = MagicMock(return_value='hash_goes_here')
+        fixed_rj._get_module_git_commit = MagicMock(return_value="hash_goes_here")
 
         runner.get_runjob = MagicMock(return_value=fixed_rj)
 
@@ -759,10 +764,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             # test missing job_id input
             with self.assertRaises(ValueError) as context:
-                runner.get_job_status(None)
+                runner.get_job_status_field(None)
             self.assertEqual("Please provide valid job_id", str(context.exception))
 
-            returnVal = runner.get_job_status(job_id)
+            returnVal = runner.get_job_status_field(job_id)
 
             self.assertTrue("status" in returnVal)
             self.assertEqual(returnVal["status"], "created")
@@ -813,10 +818,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             logging.info("Case2 : Finish a running job")
 
             print(f"About to finish job {job_id}. The job status is currently")
-            print(runner.get_job_status(job_id))
+            print(runner.get_job_status_field(job_id))
             runner.finish_job(job_id=job_id, job_output=job_output)
             print("Job is now finished, status is")
-            print(runner.get_job_status(job_id))
+            print(runner.get_job_status_field(job_id))
 
             job = self.mongo_util.get_job(job_id=job_id)
             self.assertEqual(job.status, Status.completed.value)
@@ -964,7 +969,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             )
 
             # test globally
-            job_states = runner.check_workspace_jobs(self.ws_id)
+            job_states = runner.get_jobs_status().check_workspace_jobs(self.ws_id)
             self.assertTrue(job_id in job_states)
             self.assertEqual(job_states[job_id]["status"], "created")
 
@@ -972,7 +977,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             other_method_runner = SDKMethodRunner(
                 self.cfg, user_id="some_other_user", token="other_token"
             )
-            job_states = other_method_runner.check_workspace_jobs(self.ws_id)
+            job_states = other_method_runner.get_jobs_status().check_workspace_jobs(
+                self.ws_id
+            )
             self.assertTrue(job_id in job_states)
             self.assertEqual(job_states[job_id]["status"], "created")
 
@@ -1020,7 +1027,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_state["wsid"], self.ws_id)
 
             # test check_jobs
-            job_states = runner.check_jobs([job_id, job_id_1, job_id_fake], return_list=0)
+            job_states = runner.check_jobs(
+                [job_id, job_id_1, job_id_fake], return_list=0
+            )
             logging.info(json.dumps(job_states))  # make sure it's JSON serializable
             self.assertEqual(len(job_states.keys()), 3)
             self.assertEqual(list(job_states.keys())[0], job_id)
@@ -1061,8 +1070,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_states[job_id]["status"], "created")
 
             # test check_workspace_jobs
-            job_states = runner.get_jobs_status().check_workspace_jobs(self.ws_id,
-                                                                       return_list="False")
+            job_states = runner.get_jobs_status().check_workspace_jobs(
+                self.ws_id, return_list="False"
+            )
             for job_id in job_states:
                 self.assertTrue(job_states[job_id])
             json.dumps(job_states)  # make sure it's JSON serializable
@@ -1118,14 +1128,24 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         user_name = "wsadmin"
 
         runner = self.getRunner()
+
         runner.workspace_auth = MagicMock()
         runner.auth.get_user = MagicMock(return_value=user_name)
         runner.is_admin = True
         runner._is_admin = MagicMock(return_value=True)
 
         runner.workspace_auth.can_read = MagicMock(return_value=True)
-        runner.get_permissions_for_workspace = MagicMock(return_value=True)
+
+        self.mock = MagicMock(return_value=True)
+        runner._ee2_runjob._get_module_git_commit = MagicMock(
+            return_value="hash_goes_here"
+        )
+
+        # fixed_rj = RunJob(runner)
+        # fixed_rj._get_module_git_commit = MagicMock(return_value='hash_goes_here')
+
         runner._get_module_git_commit = MagicMock(return_value="git_commit_goes_here")
+
         runner.get_condor = MagicMock(return_value=condor_mock)
         # ctx = {"user_id": self.user_id, "wsid": self.ws_id, "token": self.token}
         job = get_example_job().to_mongo().to_dict()
@@ -1287,8 +1307,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             runner.is_admin = False
             runner._is_admin = MagicMock(return_value=False)
             with self.assertRaisesRegex(
-                    AuthError,
-                    "You are not authorized to view all records or records for others.",
+                AuthError,
+                "You are not authorized to view all records or records for others.",
             ) as error:
                 job_state = runner.check_jobs_date_range_for_user(
                     creation_end_time=str(tomorrow),
@@ -1496,3 +1516,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             for key in job_state_limit_desc.keys():
                 print(key)
                 print(job_state_limit_desc[key])
+
+
+# TODO  TEST _finish_job_with_success, TEST finish_job_with_error

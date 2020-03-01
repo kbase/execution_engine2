@@ -1,17 +1,14 @@
 import logging
-import logging
-import time
 from collections import namedtuple
 from datetime import datetime
 from enum import Enum
 
-import dateutil
 from bson import ObjectId
 
-from execution_engine2.db.models.models import (
-    Job,
-)
+from execution_engine2.db.models.models import Job
 from execution_engine2.exceptions import AuthError
+
+from execution_engine2.SDKMethodRunner import SDKMethodRunner
 
 
 class JobPermissions(Enum):
@@ -20,10 +17,11 @@ class JobPermissions(Enum):
     NONE = "n"
 
 
+class JobStatusRange:
+    def __init__(self, sdkmr):
+        self.sdkmr = sdkmr
 
-
-
-  def check_jobs_date_range_for_user(
+    def check_jobs_date_range_for_user(
         self,
         creation_start_time,
         creation_end_time,
@@ -51,16 +49,16 @@ class JobPermissions(Enum):
         if offset is None:
             offset = 0
 
-        if self.token is None:
+        if self.sdkmr.token is None:
             raise AuthError("Please provide a token to check jobs date range")
 
-        token_user = self.auth.get_user(self.token)
+        token_user = self.sdkmr.auth.get_user(self.sdkmr.token)
         if user is None:
             user = token_user
 
         # Admins can view "ALL" or check_jobs for other users
         if user != token_user:
-            if not self._is_admin(self.token):
+            if not self.sdkmr._is_admin(self.sdkmr.token):
                 raise AuthError(
                     f"You are not authorized to view all records or records for others. user={user} token={token_user}"
                 )
@@ -98,7 +96,7 @@ class JobPermissions(Enum):
         if user != "ALL":
             job_filter_temp["user"] = user
 
-        with self.get_mongo_util().mongo_engine_connection():
+        with self.sdkmr.get_mongo_util().mongo_engine_connection():
             count = Job.objects.filter(**job_filter_temp).count()
             jobs = (
                 Job.objects[:limit]
@@ -143,14 +141,14 @@ class JobPermissions(Enum):
                 "Please provide a valid start time for when job was created"
             )
 
-        creation_start_time = self._check_and_convert_time(creation_start_time)
+        creation_start_time = self.sdkmr._check_and_convert_time(creation_start_time)
         creation_start_date = datetime.fromtimestamp(creation_start_time)
         dummy_start_id = ObjectId.from_datetime(creation_start_date)
 
         if creation_end_time is None:
             raise Exception("Please provide a valid end time for when job was created")
 
-        creation_end_time = self._check_and_convert_time(creation_end_time)
+        creation_end_time = self.sdkmr._check_and_convert_time(creation_end_time)
         creation_end_date = datetime.fromtimestamp(creation_end_time)
         dummy_end_id = ObjectId.from_datetime(creation_end_date)
 
@@ -171,3 +169,32 @@ class JobPermissions(Enum):
             else:
                 return "-"
 
+    @staticmethod
+    def _job_state_from_jobs(jobs):
+        """
+        Returns as per the spec file
+
+        :param jobs: MongoEngine Job Objects Query
+        :return: list of job states of format
+        Special Cases:
+        str(_id)
+        str(job_id)
+        float(created/queued/estimating/running/finished/updated/) (Time in MS)
+        """
+        job_states = []
+        for job in jobs:
+            mongo_rec = job.to_mongo().to_dict()
+            mongo_rec["_id"] = str(job.id)
+            mongo_rec["job_id"] = str(job.id)
+            mongo_rec["created"] = int(job.id.generation_time.timestamp() * 1000)
+            mongo_rec["updated"] = int(job.updated * 1000)
+            if job.estimating:
+                mongo_rec["estimating"] = int(job.estimating * 1000)
+            if job.queued:
+                mongo_rec["queued"] = int(job.queued * 1000)
+            if job.running:
+                mongo_rec["running"] = int(job.running * 1000)
+            if job.finished:
+                mongo_rec["finished"] = int(job.finished * 1000)
+            job_states.append(mongo_rec)
+        return job_states
