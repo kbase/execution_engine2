@@ -30,14 +30,14 @@ from execution_engine2.exceptions import AuthError
 from execution_engine2.exceptions import InvalidStatusTransitionException
 from execution_engine2.utils.Condor import condor_resources
 from execution_engine2.utils.Condor import submission_info
-from lib.execution_engine2.SDKMethodRunner import SDKMethodRunner
+from execution_engine2.SDKMethodRunner import SDKMethodRunner
 from test.mongo_test_helper import MongoTestHelper
 from test.utils.test_utils import bootstrap, get_example_job, validate_job_state
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
 
-from lib.execution_engine2.ee2_runjob import RunJob
+from execution_engine2.ee2_runjob import RunJob
 
 
 def _run_job_adapter(

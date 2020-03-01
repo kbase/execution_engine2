@@ -17,6 +17,7 @@ from execution_engine2.ee2_runjob import RunJob
 from execution_engine2.ee2_status import JobsStatus
 from execution_engine2.ee2_logs import JobLog
 
+
 from execution_engine2.execution_engine2Impl import execution_engine2
 from execution_engine2.utils.Condor import Condor, submission_info
 from installed_clients.CatalogClient import Catalog
@@ -262,16 +263,16 @@ class ee2_server_load_test(unittest.TestCase):
             jobs.delete()
             self.assertEqual(ori_job_count, Job.objects.count())
 
-
     # @patch.object(Catalog, "get_module_version", return_value="module.version")
     @patch.object(WorkspaceAuth, "can_write", return_value=True)
-    @patch("lib.installed_clients.CatalogClient.Catalog.get_module_version", autospec=True)
-    def test_run_job_stress(            self,   cc,  workspace,):
+    @patch(
+        "lib.installed_clients.CatalogClient.Catalog.get_module_version", autospec=True
+    )
+    def test_run_job_stress(self, cc, workspace):
         """
         testing running 3 different jobs in multiple theads.
         """
-        cc.return_value = {'git_commit_hash' : "moduleversiongoeshere"}
-
+        cc.return_value = {"git_commit_hash": "moduleversiongoeshere"}
 
         thread_count = self.thread_count  # threads to test
 
