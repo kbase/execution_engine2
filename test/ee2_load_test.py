@@ -13,14 +13,8 @@ from execution_engine2.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job, Status
-from execution_engine2.ee2_runjob import RunJob
-from execution_engine2.ee2_status import JobsStatus
-from execution_engine2.ee2_logs import JobLog
-
-
 from execution_engine2.execution_engine2Impl import execution_engine2
 from execution_engine2.utils.Condor import Condor, submission_info
-from installed_clients.CatalogClient import Catalog
 from test.mongo_test_helper import MongoTestHelper
 from test.utils.test_utils import bootstrap
 
@@ -264,11 +258,16 @@ class ee2_server_load_test(unittest.TestCase):
             self.assertEqual(ori_job_count, Job.objects.count())
 
     # @patch.object(Catalog, "get_module_version", return_value="module.version")
+    # @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+
+    si = submission_info(clusterid="test", submit="job", error=None)
+
+    @patch.object(Condor, "run_job", return_value=si)
     @patch.object(WorkspaceAuth, "can_write", return_value=True)
     @patch(
         "lib.installed_clients.CatalogClient.Catalog.get_module_version", autospec=True
     )
-    def test_run_job_stress(self, cc, workspace):
+    def test_run_job_stress(self, cc, workspace, condor):
         """
         testing running 3 different jobs in multiple theads.
         """
