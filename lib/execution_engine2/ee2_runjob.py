@@ -1,13 +1,14 @@
 """
 Authors @bsadkhin, @tgu
-All functions related to running a job, and starting a job
+All functions related to running a job, and starting a job, including the initial state change and
+the logic to retrieve info needed by the runnner to start the job
+
 """
 import logging
 import time
 from enum import Enum
 from typing import AnyStr
 
-# from lib.execution_engine2.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.db.models.models import (
     Job,
     JobInput,
@@ -113,20 +114,22 @@ class RunJob:
             if None in paths:
                 raise ValueError("Some workspace object is inaccessible")
 
-    def run(self, params=None, as_admin=None) -> AnyStr:
+    def run(self, params=None, as_admin=False) -> AnyStr:
         """
         :param params: RunJobParams object (See spec file)
         :return: The condor job id
         """
         wsid = params.get("wsid")
-        ws_auth = self.sdkmr.get_workspace_auth()
-        if wsid and not ws_auth.can_write(wsid):
-            self.sdkmr.logger.debug(
-                f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
-            )
-            raise PermissionError(
-                f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
-            )
+
+        if as_admin is False:
+            ws_auth = self.sdkmr.get_workspace_auth()
+            if wsid and not ws_auth.can_write(wsid):
+                self.sdkmr.logger.debug(
+                    f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
+                )
+                raise PermissionError(
+                    f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
+                )
 
         method = params.get("method")
         self.sdkmr.logger.info(
