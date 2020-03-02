@@ -49,19 +49,23 @@ class JobsStatus:
         if terminated_code is None:
             terminated_code = TerminatedCode.terminated_by_user.value
 
-        self.sdkmr.get_mongo_util().cancel_job(
+        success = self.sdkmr.get_mongo_util().cancel_job(
             job_id=job_id, terminated_code=terminated_code
         )
-
-        self.sdkmr.kafka_client.send_kafka_message(
-            message=KafkaCancelJob(
-                job_id=str(job_id),
-                previous_status=job.status,
-                new_status=Status.terminated.value,
-                scheduler_id=job.scheduler_id,
-                terminated_code=terminated_code,
+        if success is not False:
+            self.sdkmr.kafka_client.send_kafka_message(
+                message=KafkaCancelJob(
+                    job_id=str(job_id),
+                    previous_status=job.status,
+                    new_status=Status.terminated.value,
+                    scheduler_id=job.scheduler_id,
+                    terminated_code=terminated_code,
+                )
             )
-        )
+        else:
+            logging.error(
+                f"Couldn't cancel the job {job_id}, so not sending message to Kafka"
+            )
 
         logging.info(f"About to cancel job in CONDOR using {job.scheduler_id}")
         self.sdkmr.logger.debug(
