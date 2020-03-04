@@ -37,7 +37,7 @@ from test.utils.test_utils import bootstrap, get_example_job, validate_job_state
 logging.basicConfig(level=logging.INFO)
 bootstrap()
 
-from execution_engine2.ee2_runjob import RunJob
+from execution_engine2.EE2Runjob import RunJob
 
 
 def _run_job_adapter(

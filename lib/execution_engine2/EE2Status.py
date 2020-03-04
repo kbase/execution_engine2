@@ -44,7 +44,7 @@ class JobsStatus:
         # Maybe if the call fails, we don't actually cancel the job?
         self.sdkmr.logger.debug(f"Attempting to cancel job {job_id}")
 
-        job = self.sdkmr._get_job_with_permission(job_id, JobPermissions.WRITE)
+        job = self.sdkmr.get_job_with_permission(job_id, JobPermissions.WRITE, as_admin=as_admin)
 
         if terminated_code is None:
             terminated_code = TerminatedCode.terminated_by_user.value
@@ -97,7 +97,7 @@ class JobsStatus:
             rv["finished"] = True
         return rv
 
-    def update_job_status(self, job_id, status):
+    def update_job_status(self, job_id, status, as_admin=False ):
         """
         #TODO Deprecate this in favor of specific methods with specific checks?
         update_job_status: update status of a job runner record.
@@ -113,7 +113,7 @@ class JobsStatus:
         if not (job_id and status):
             raise ValueError("Please provide both job_id and status")
 
-        job = self.sdkmr._get_job_with_permission(job_id, JobPermissions.WRITE)
+        job = self.sdkmr.get_job_with_permission(job_id, JobPermissions.WRITE, as_admin=as_admin)
 
         previous_status = job.status
         job.status = status
@@ -131,7 +131,7 @@ class JobsStatus:
 
         return str(job.id)
 
-    def get_job_status(self, job_id, as_admin=None):
+    def get_job_status(self, job_id, as_admin=False):
         """
         get_job_status: fetch status of a job runner record.
                         raise error if job is not found
@@ -148,7 +148,7 @@ class JobsStatus:
         if not job_id:
             raise ValueError("Please provide valid job_id")
 
-        job = self.sdkmr._get_job_with_permission(job_id, JobPermissions.READ)
+        job = self.sdkmr.get_job_with_permission(job_id, JobPermissions.READ,as_admin=as_admin)
 
         returnVal["status"] = job.status
 
@@ -216,7 +216,7 @@ class JobsStatus:
         error_code=None,
         error=None,
         job_output=None,
-        as_admin=None,
+        as_admin=False,
     ):
         """
         #TODO Fix too many open connections to mongoengine
@@ -233,8 +233,8 @@ class JobsStatus:
         :param job_output: dict - default None, if given this job has some output
         """
 
-        job = self.sdkmr._get_job_with_permission(
-            job_id=job_id, permission=JobPermissions.WRITE
+        job = self.sdkmr.get_job_with_permission(
+            job_id=job_id, permission=JobPermissions.WRITE, as_admin=as_admin
         )
 
         if error_message:
@@ -289,7 +289,7 @@ class JobsStatus:
             )
         )
 
-    def check_job(self, job_id, check_permission=True, exclude_fields=None):
+    def check_job(self, job_id, check_permission=True, exclude_fields=None, as_admin=False):
 
         """
         check_job: check and return job status for a given job_id
@@ -311,12 +311,13 @@ class JobsStatus:
             check_permission=check_permission,
             exclude_fields=exclude_fields,
             return_list=0,
+            as_admin=as_admin,
         ).get(job_id)
 
         return job_state
 
     def check_jobs(
-        self, job_ids, check_permission=True, exclude_fields=None, return_list=None
+        self, job_ids, check_permission=True, exclude_fields=None, return_list=None, as_admin=False
     ):
         """
         check_jobs: check and return job status for a given of list job_ids
@@ -447,7 +448,8 @@ class JobsStatus:
         if not job_id:
             raise ValueError("Please provide valid job_id")
 
-        job = self.sdkmr._get_job_with_permission(job_id, JobPermissions.WRITE)
+        job = self.sdkmr.get_job_with_permission(job_id, JobPermissions.WRITE, as_admin=as_admin)
+
         job_status = job.status
 
         allowed_states = [

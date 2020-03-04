@@ -121,7 +121,9 @@ class RunJob:
         """
         wsid = params.get("wsid")
 
-        if as_admin is False:
+        if as_admin:
+            self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
+        else:
             ws_auth = self.sdkmr.get_workspace_auth()
             if wsid and not ws_auth.can_write(wsid):
                 self.sdkmr.logger.debug(
@@ -130,7 +132,7 @@ class RunJob:
                 raise PermissionError(
                     f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
                 )
-
+        
         method = params.get("method")
         self.sdkmr.logger.info(
             f"User {self.sdkmr.user_id} attempting to run job {method}"
@@ -222,8 +224,7 @@ class RunJob:
         job_params:
         """
         job_params = dict()
-
-        job = self.sdkmr._get_job_with_permission(job_id, JobPermissions.READ)
+        job = self.sdkmr.get_job_with_permission(job_id, JobPermissions.READ, as_admin=as_admin)
 
         job_input = job.job_input
 

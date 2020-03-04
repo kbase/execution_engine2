@@ -19,19 +19,7 @@ def check_is_admin(self):
     return int(self._is_admin(self.token))
 
 
-def get_admin_permission(self):
-    """
-    Get your your type of admin permissions
-    :return:
-    """
-    aau = AdminAuthUtil(self.auth_url, self.admin_roles)
-    roles = list(aau._fetch_user_roles(self.token))
-    permission = None
-    if "EE2_ADMIN" in roles:
-        permission = "w"
-    elif "EE2_ADMIN_RO" in roles:
-        permission = "r"
-    return {"permission": permission}
+
 
 
 def _is_admin(self, token: str) -> bool:

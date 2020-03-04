@@ -46,9 +46,11 @@ class JobLog:
         :param as_admin:
         :return:
         """
+        self.sdkmr.get_job_with_permission(job_id, JobPermissions.WRITE, as_admin=as_admin)
 
         self.sdkmr.logger.debug(f"About to add logs for {job_id}")
         mongo_util = self.sdkmr.get_mongo_util()
+
 
         try:
             log = mongo_util.get_job_log_pymongo(job_id)
@@ -135,5 +137,7 @@ class JobLog:
         :param skip_lines: An offset of the job logs
         :return:
         """
+        #TODO Pass this into decorator?
+        self.sdkmr.get_job_with_permission(job_id, JobPermissions.READ, as_admin=as_admin)
 
         return self._get_job_log(job_id, skip_lines)

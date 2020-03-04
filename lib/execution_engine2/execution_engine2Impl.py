@@ -48,8 +48,8 @@ class execution_engine2:
         self.config.setdefault("mongo-authmechanism", self.MONGO_AUTHMECHANISM)
         self.job_permission_cache = TTLCache(maxsize=self.JOB_PERMISSION_CACHE_SIZE,
                                              ttl=self.JOB_PERMISSION_CACHE_EXPIRE_TIME)
-        self.admin_roles_cache = TTLCache(maxsize=self.ADMIN_ROLES_CACHE_SIZE,
-                                             ttl=self.ADMIN_ROLES_CACHE_EXPIRE_TIME)
+        self.admin_permissions_cache = TTLCache(maxsize=self.ADMIN_ROLES_CACHE_SIZE,
+                                                ttl=self.ADMIN_ROLES_CACHE_EXPIRE_TIME)
         #END_CONSTRUCTOR
         pass
 
@@ -267,7 +267,7 @@ class execution_engine2:
         # return variables are: params
         #BEGIN get_job_params
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
-                             job_permission_cache=self.job_permission_cache, admin_roles_cache=self.admin_roles_cache)
+                             job_permission_cache=self.job_permission_cache, admin_permissions_cache=self.admin_permissions_cache)
         params = mr.get_job_params(job_id)
         #END get_job_params
 
@@ -290,7 +290,7 @@ class execution_engine2:
         # return variables are: job_id
         #BEGIN update_job_status
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
-                             job_permission_cache=self.job_permission_cache, admin_roles_cache=self.admin_roles_cache)
+                             job_permission_cache=self.job_permission_cache, admin_permissions_cache=self.admin_permissions_cache)
         job_id = mr.update_job_status(params.get("job_id"), params.get("status"))
         #END update_job_status
 
@@ -317,7 +317,7 @@ class execution_engine2:
         #BEGIN add_job_logs
 
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
-                             job_permission_cache=self.job_permission_cache, admin_roles_cache=self.admin_roles_cache)
+                             job_permission_cache=self.job_permission_cache, admin_permissions_cache=self.admin_permissions_cache)
         line_number = mr.add_job_logs(job_id=job_id, log_lines=lines)
         #END add_job_logs
 
@@ -350,7 +350,7 @@ class execution_engine2:
         # return variables are: returnVal
         #BEGIN get_job_logs
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
-                             job_permission_cache=self.job_permission_cache, admin_roles_cache=self.admin_roles_cache)
+                             job_permission_cache=self.job_permission_cache, admin_permissions_cache=self.admin_permissions_cache)
         returnVal = mr.view_job_logs(
             job_id=params["job_id"], skip_lines=params.get("skip_lines", None)
         )
@@ -382,7 +382,7 @@ class execution_engine2:
         # ctx is the context object
         #BEGIN finish_job
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
-                             job_permission_cache=self.job_permission_cache, admin_roles_cache=self.admin_roles_cache)
+                             job_permission_cache=self.job_permission_cache, admin_permissions_cache=self.admin_permissions_cache)
         mr.finish_job(job_id=params.get('job_id'),
                       error_message=params.get('error_message'),
                       error_code=params.get('error_code'),
@@ -403,7 +403,7 @@ class execution_engine2:
         # ctx is the context object
         #BEGIN start_job
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
-                             job_permission_cache=self.job_permission_cache, admin_roles_cache=self.admin_roles_cache)
+                             job_permission_cache=self.job_permission_cache, admin_permissions_cache=self.admin_permissions_cache)
         mr.start_job(
             params.get("job_id"),
             skip_estimation=params.get("skip_estimation", True),
@@ -512,7 +512,7 @@ class execution_engine2:
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"))
         job_state = mr.check_job(
             params.get("job_id"),
-            exclude_fields=params.get("exclude_fields", []),
+            exclude_fields=params.get("exclude_fields", None),
         )
         #END check_job
 
@@ -744,7 +744,7 @@ class execution_engine2:
         mr = SDKMethodRunner(self.config, user_id=ctx["user_id"], token=ctx["token"])
         returnVal = mr.check_workspace_jobs(
             params.get("workspace_id"),
-            exclude_fields=params.get("exclude_fields", []),
+            exclude_fields=params.get("exclude_fields", None),
             return_list=params.get("return_list", 1),
         )
         #END check_workspace_jobs
@@ -770,7 +770,7 @@ class execution_engine2:
         # ctx is the context object
         #BEGIN cancel_job
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
-                             job_permission_cache=self.job_permission_cache, admin_roles_cache=self.admin_roles_cache)
+                             job_permission_cache=self.job_permission_cache, admin_permissions_cache=self.admin_permissions_cache)
 
         mr.cancel_job(job_id=params["job_id"], terminated_code=params.get('terminated_code') )
         #END cancel_job
@@ -820,7 +820,7 @@ class execution_engine2:
         # return variables are: result
         #BEGIN get_job_status
         mr = SDKMethodRunner(self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
-                             job_permission_cache=self.job_permission_cache, admin_roles_cache=self.admin_roles_cache)
+                             job_permission_cache=self.job_permission_cache, admin_permissions_cache=self.admin_permissions_cache)
         result = mr.get_job_status_field(job_id)
         #END get_job_status
 
@@ -1115,7 +1115,7 @@ class execution_engine2:
         Check if current user has ee2 admin rights.
         If so, return the type of rights and their roles
         :returns: instance of type "AdminRolesResults" (str permission; # One
-           of 'r|w|x' (('read' | 'write' | 'none'))) -> structure: parameter
+           of 'r|w|n' (('read' | 'write' | 'none'))) -> structure: parameter
            "permission" of String
         """
         # ctx is the context object
