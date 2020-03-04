@@ -57,8 +57,9 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
             print(item, conf[item])
 
     def test_check_jobs_date_range_for_all(self):
-       self.ee2.check_jobs_date_range_for_all(
-            params={'start_time': 0, 'creation_end_date': time.time()})
+        self.ee2.check_jobs_date_range_for_all(
+            params={"start_time": 0, "creation_end_date": time.time()}
+        )
 
     # def test_jobs_range(self):
     #     check_jobs_date_range_params = {}
