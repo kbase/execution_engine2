@@ -1,39 +1,19 @@
 # -*- coding: utf-8 -*-
 import copy
-import json
 import logging
 import os
-import time
 import unittest
-import bson
-
-import dateutil
-import requests
-import requests_mock
-from bson import ObjectId
 from configparser import ConfigParser
-from datetime import datetime, timedelta
-from mock import MagicMock
-from mongoengine import ValidationError
 from typing import Dict, List
-from unittest.mock import patch
-from execution_engine2.utils.Condor import condor_resources
+
+import requests_mock
+
 from execution_engine2.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.db.models.models import (
-    Job,
-    JobInput,
-    Meta,
-    Status,
-    JobLog,
-    TerminatedCode,
-)
-from execution_engine2.exceptions import AuthError
-from execution_engine2.exceptions import InvalidStatusTransitionException
-from execution_engine2.utils.Condor import submission_info
-from test.mongo_test_helper import MongoTestHelper
-from test.utils.test_utils import bootstrap, get_example_job, validate_job_state
+from execution_engine2.db.models.models import Job, JobLog
 from test.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
+from test.mongo_test_helper import MongoTestHelper
+from test.utils.test_utils import bootstrap
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()

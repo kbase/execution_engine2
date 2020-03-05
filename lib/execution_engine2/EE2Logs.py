@@ -16,7 +16,8 @@ class JobLog:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr
 
-    def _create_new_log(self, pk):
+    @staticmethod
+    def _create_new_log(pk):
         jl = JL()
         jl.primary_key = pk
         jl.original_line_count = 0

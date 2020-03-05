@@ -97,10 +97,7 @@ class SDKMethodRunner:
         self.kafka_client = KafkaClient(config.get("kafka-host"))
         self.slack_client = SlackClient(config.get("slack-token"), debug=self.debug)
 
-    """
-    Get various clients
-    # TODO: Think about sending in just required clients, not entire SDKMR
-    """
+    # Various Clients: TODO: Think about sending in just required clients, not entire SDKMR
 
     def get_ee2_auth(self):
         if self._ee2_auth is None:
@@ -166,7 +163,7 @@ class SDKMethodRunner:
         logger.addHandler(fh)
         return logger
 
-    """  Permissions Decorators    #TODO Verify these actually work     #TODO add as_admin to these    """
+    # Permissions Decorators    #TODO Verify these actually work     #TODO add as_admin to these
 
     def allow_job_read(func):
         def inner(self, *args, **kwargs):
@@ -199,7 +196,7 @@ class SDKMethodRunner:
     # ENDPOINTS: Admin Related Endpoints
     def check_is_admin(self):
         """ Authorization Required Read """
-        "Check whether if at minimum, a read only admin"
+        # Check whether if at minimum, a read only admin"
         try:
             return self.check_as_admin(requested_perm=JobPermissions.READ)
         except PermissionError:
@@ -381,25 +378,29 @@ class SDKMethodRunner:
                 )
         return job
 
-    def check_workspace_jobs(self, workspace_id, exclude_fields=None, return_list=None):
+    def check_workspace_jobs(
+        self, workspace_id, exclude_fields=None, return_list=None, as_admin=True
+    ):
         """
         check_workspace_jobs: check job status for all jobs in a given workspace
         """
-        logging.info(
+        logging.debug(
             "Start fetching all jobs status in workspace: {}".format(workspace_id)
         )
 
         if exclude_fields is None:
             exclude_fields = []
-
-        ws_auth = self.get_workspace_auth()
-        if not ws_auth.can_read(workspace_id):
-            self.logger.debug(
-                f"User {self.user_id} doesn't have permission to read jobs in workspace {workspace_id}."
-            )
-            raise PermissionError(
-                f"User {self.user_id} does not have permission to read jobs in workspace {workspace_id}"
-            )
+        if as_admin:
+            self.check_as_admin(requested_perm=JobPermissions.READ)
+        else:
+            ws_auth = self.get_workspace_auth()
+            if not ws_auth.can_read(workspace_id):
+                self.logger.debug(
+                    f"User {self.user_id} doesn't have permission to read jobs in workspace {workspace_id}."
+                )
+                raise PermissionError(
+                    f"User {self.user_id} does not have permission to read jobs in workspace {workspace_id}"
+                )
 
         job_ids = self.get_mongo_util().get_workspace_jobs(workspace_id=workspace_id)
 

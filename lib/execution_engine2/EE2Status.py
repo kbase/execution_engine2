@@ -1,9 +1,10 @@
 import logging
+import time
 from collections import OrderedDict
 from enum import Enum
-import time
+from typing import Dict
+
 from bson import ObjectId
-from typing import NoReturn, Optional, Dict
 
 from execution_engine2.authorization.authstrategy import can_read_jobs
 from execution_engine2.db.models.models import (
@@ -13,7 +14,6 @@ from execution_engine2.db.models.models import (
     ErrorCode,
     TerminatedCode,
 )
-from execution_engine2.exceptions import InvalidStatusTransitionException
 from execution_engine2.utils.KafkaUtils import (
     KafkaCancelJob,
     KafkaCondorCommand,
@@ -33,9 +33,7 @@ class JobsStatus:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr
 
-    def cancel_job(
-        self, job_id, terminated_code=None, as_admin=False
-    ) -> Optional[NoReturn]:
+    def cancel_job(self, job_id, terminated_code=None, as_admin=False):
         """
         Authorization Required: Ability to Read and Write to the Workspace
         Default for terminated code is Terminated By User

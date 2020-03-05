@@ -429,10 +429,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
     @patch("execution_engine2.db.MongoUtil.MongoUtil", autospec=True)
     def test_check_job_canceled(self, mongo_util):
-        def generateJob(job_id):
-            j = Job()
-            j.status = job_id
-            return j
+        # def generateJob(job_id):
+        #     j = Job()
+        #     j.status = job_id
+        #     return j
 
         #
         # runner.get_mongo_util = MagicMock(return_value=mongo_util)
@@ -441,7 +441,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         #
         runner = self.getRunner()
         with self.mongo_util.mongo_engine_connection():
-            ori_job_count = Job.objects.count()
+
             job_id = self.create_job_rec()
 
             call_count = 0
