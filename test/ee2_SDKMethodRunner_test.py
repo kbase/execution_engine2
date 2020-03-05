@@ -434,48 +434,57 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             j.status = job_id
             return j
 
+        #
+        # runner.get_mongo_util = MagicMock(return_value=mongo_util)
+        # mongo_util.get_job = MagicMock(side_effect=generateJob)
+        #
+        #
         runner = self.getRunner()
-        runner.get_mongo_util = MagicMock(return_value=mongo_util)
-        mongo_util.get_job = MagicMock(side_effect=generateJob)
+        with self.mongo_util.mongo_engine_connection():
+            ori_job_count = Job.objects.count()
+            job_id = self.create_job_rec()
 
-        call_count = 0
-        rv = runner.check_job_canceled("created")
-        self.assertFalse(rv["canceled"])
-        self.assertFalse(rv["finished"])
-        call_count += 1
+            call_count = 0
+            rv = runner.check_job_canceled(job_id)
+            self.assertFalse(rv["canceled"])
+            self.assertFalse(rv["finished"])
+            call_count += 1
+            # estimating
+            runner.update_job_status(job_id=job_id, status=Status.estimating.value)
+            rv = runner.check_job_canceled(job_id)
+            self.assertFalse(rv["canceled"])
+            self.assertFalse(rv["finished"])
+            call_count += 1
 
-        rv = runner.check_job_canceled("estimating")
-        self.assertFalse(rv["canceled"])
-        self.assertFalse(rv["finished"])
-        call_count += 1
+            runner.update_job_status(job_id=job_id, status=Status.queued.value)
+            rv = runner.check_job_canceled(job_id)
+            self.assertFalse(rv["canceled"])
+            self.assertFalse(rv["finished"])
+            call_count += 1
 
-        rv = runner.check_job_canceled("queued")
-        self.assertFalse(rv["canceled"])
-        self.assertFalse(rv["finished"])
-        call_count += 1
+            runner.update_job_status(job_id=job_id, status=Status.running.value)
+            rv = runner.check_job_canceled(job_id)
+            self.assertFalse(rv["canceled"])
+            self.assertFalse(rv["finished"])
+            call_count += 1
 
-        rv = runner.check_job_canceled("running")
-        self.assertFalse(rv["canceled"])
-        self.assertFalse(rv["finished"])
-        call_count += 1
+            runner.update_job_status(job_id=job_id, status=Status.completed.value)
+            rv = runner.check_job_canceled(job_id)
+            self.assertFalse(rv["canceled"])
+            self.assertTrue(rv["finished"])
+            call_count += 1
 
-        rv = runner.check_job_canceled("completed")
-        self.assertFalse(rv["canceled"])
-        self.assertTrue(rv["finished"])
-        call_count += 1
+            runner.update_job_status(job_id=job_id, status=Status.error.value)
+            rv = runner.check_job_canceled(job_id)
+            self.assertFalse(rv["canceled"])
+            self.assertTrue(rv["finished"])
+            call_count += 1
 
-        rv = runner.check_job_canceled("error")
-        self.assertFalse(rv["canceled"])
-        self.assertTrue(rv["finished"])
-        call_count += 1
-
-        rv = runner.check_job_canceled("terminated")
-        self.assertTrue(rv["canceled"])
-        self.assertTrue(rv["finished"])
-        call_count += 1
-
-        self.assertEqual(call_count, mongo_util.get_job.call_count)
-        self.assertEqual(call_count, runner.get_mongo_util.call_count)
+            runner.update_job_status(job_id=job_id, status=Status.terminated.value)
+            rv = runner.check_job_canceled(job_id)
+            self.assertTrue(rv["canceled"])
+            self.assertTrue(rv["finished"])
+            call_count += 1
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)

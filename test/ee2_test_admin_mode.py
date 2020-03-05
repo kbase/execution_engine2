@@ -64,8 +64,6 @@ class EE2TestAdminMode(unittest.TestCase):
         # self.good_job_id_user1 = setup_runner.run_job(params=job_params_1,as_admin=False)
         # self.good_job_id_user2 = setup_runner.run_job(params=job_params_1,as_admin=False)
 
-
-
     def tearDown(self) -> None:
         self.catalog_patch.stop()
         self.condor_patch.stop()
@@ -119,8 +117,6 @@ class EE2TestAdminMode(unittest.TestCase):
     #             if 'method' in str(member[1]):
     #                 print(inspect.signature(member))
 
-
-
     @patch.object(AdminAuthUtil, "_fetch_user_roles")
     @patch.object(WorkspaceAuth, "can_write", return_value=True)
     def test_regular_user(self, aau, workspace):
@@ -138,7 +134,7 @@ class EE2TestAdminMode(unittest.TestCase):
 
         # Check Admin Status
         admin_type = runner.get_admin_permission()
-        self.assertEquals(admin_type, {'permission' : 'n'})
+        self.assertEquals(admin_type, {"permission": "n"})
 
         # RUNJOB
         job_id = runner.run_job(params=job_params_1, as_admin=False)
@@ -170,7 +166,6 @@ class EE2TestAdminMode(unittest.TestCase):
         runner.add_job_logs(job_id=job_id, log_lines=lines)
         runner.view_job_logs(job_id=job_id)
 
-
         # add_job_logs and view them, BUT ATTEMPT TO BE AN ADMIN
         with self.assertRaisesRegexp(
             expected_exception=PermissionError, expected_regex=lowly_user
@@ -185,15 +180,15 @@ class EE2TestAdminMode(unittest.TestCase):
         # Start the job and get it's status
         runner.start_job(job_id=job_id)
         status_field = runner.get_job_status_field(job_id=job_id)
-        self.assertEquals(status_field['status'],Status.running.value)
-        runner.finish_job(job_id=job_id,error_message='Fail')
-        check_job  = runner.check_job(job_id=job_id)
-        self.assertEquals(check_job['status'], Status.error.value)
+        self.assertEquals(status_field["status"], Status.running.value)
+        runner.finish_job(job_id=job_id, error_message="Fail")
+        check_job = runner.check_job(job_id=job_id)
+        self.assertEquals(check_job["status"], Status.error.value)
         job_id2 = runner.run_job(params=job_params_1, as_admin=False)
         self.assertTrue(bson.objectid.ObjectId.is_valid(job_id2))
         runner.cancel_job(job_id=job_id2)
         check_job2 = runner.check_job(job_id=job_id2)
-        self.assertEquals(check_job2['status'], Status.terminated.value)
+        self.assertEquals(check_job2["status"], Status.terminated.value)
 
         # TODO do the above with as_admin=True and assert failure each time
 
@@ -217,7 +212,7 @@ class EE2TestAdminMode(unittest.TestCase):
 
         # Check Admin Status
         admin_type = runner.get_admin_permission()
-        self.assertEquals(admin_type, {'permission' : 'w'})
+        self.assertEquals(admin_type, {"permission": "w"})
 
         # RUNJOB
         job_id = runner.run_job(params=job_params_1, as_admin=True)
@@ -255,14 +250,13 @@ class EE2TestAdminMode(unittest.TestCase):
         job_params_1 = self.get_sample_job_params(method=method_1)
         runner = self.getRunner()
 
-
         # Check Admin Status
         is_admin = runner.check_is_admin()
         self.assertTrue(is_admin)
 
         # Check Admin Status
         admin_type = runner.get_admin_permission()
-        self.assertEquals(admin_type, {'permission' : 'r'})
+        self.assertEquals(admin_type, {"permission": "r"})
 
         # RUNJOB
         with self.assertRaisesRegexp(

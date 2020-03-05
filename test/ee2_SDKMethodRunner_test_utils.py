@@ -35,7 +35,6 @@ from test.mongo_test_helper import MongoTestHelper
 from test.utils.test_utils import bootstrap, get_example_job, validate_job_state
 
 
-
 class ee2_sdkmr_test_helper:
     def __init__(self, cfg):
         self.user_id = "wsadmin"
@@ -47,7 +46,6 @@ class ee2_sdkmr_test_helper:
         )
 
     def create_job_rec(self):
-
 
         job = Job()
 

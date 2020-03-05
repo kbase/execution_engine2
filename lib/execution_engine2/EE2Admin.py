@@ -19,9 +19,6 @@ def check_is_admin(self):
     return int(self._is_admin(self.token))
 
 
-
-
-
 def _is_admin(self, token: str) -> bool:
     try:
         self.is_admin = AdminAuthUtil(self.auth_url, self.admin_roles).is_admin(token)

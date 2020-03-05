@@ -234,7 +234,7 @@ class MethodContext(dict):
         self._log(level, message)
 
     def set_log_level(self, level):
-        self._logger._set_log_level(level)
+        self._logger.set_log_level(level)
 
     def get_log_level(self):
         return self._logger.get_log_level()
@@ -364,7 +364,7 @@ class Application(object):
             call_id=True,
             logfile=self.userlog.get_log_file(),
         )
-        self.serverlog._set_log_level(6)
+        self.serverlog.set_log_level(6)
         self.rpc_service = JSONRPCServiceCustom()
         self.method_authentication = dict()
         self.rpc_service.add(
@@ -388,12 +388,28 @@ class Application(object):
         )
         self.method_authentication["execution_engine2.run_job"] = "required"  # noqa
         self.rpc_service.add(
+            impl_execution_engine2.run_job_as_admin,
+            name="execution_engine2.run_job_as_admin",
+            types=[dict, int],
+        )
+        self.method_authentication[
+            "execution_engine2.run_job_as_admin"
+        ] = "required"  # noqa
+        self.rpc_service.add(
             impl_execution_engine2.get_job_params,
             name="execution_engine2.get_job_params",
             types=[str],
         )
         self.method_authentication[
             "execution_engine2.get_job_params"
+        ] = "required"  # noqa
+        self.rpc_service.add(
+            impl_execution_engine2.get_job_params_as_admin,
+            name="execution_engine2.get_job_params_as_admin",
+            types=[str, int],
+        )
+        self.method_authentication[
+            "execution_engine2.get_job_params_as_admin"
         ] = "required"  # noqa
         self.rpc_service.add(
             impl_execution_engine2.update_job_status,
@@ -404,12 +420,28 @@ class Application(object):
             "execution_engine2.update_job_status"
         ] = "required"  # noqa
         self.rpc_service.add(
+            impl_execution_engine2.update_job_status_as_admin,
+            name="execution_engine2.update_job_status_as_admin",
+            types=[dict, int],
+        )
+        self.method_authentication[
+            "execution_engine2.update_job_status_as_admin"
+        ] = "required"  # noqa
+        self.rpc_service.add(
             impl_execution_engine2.add_job_logs,
             name="execution_engine2.add_job_logs",
             types=[str, list],
         )
         self.method_authentication[
             "execution_engine2.add_job_logs"
+        ] = "required"  # noqa
+        self.rpc_service.add(
+            impl_execution_engine2.add_job_logs_as_admin,
+            name="execution_engine2.add_job_logs_as_admin",
+            types=[str, list, int],
+        )
+        self.method_authentication[
+            "execution_engine2.add_job_logs_as_admin"
         ] = "required"  # noqa
         self.rpc_service.add(
             impl_execution_engine2.get_job_logs,
@@ -420,11 +452,27 @@ class Application(object):
             "execution_engine2.get_job_logs"
         ] = "required"  # noqa
         self.rpc_service.add(
+            impl_execution_engine2.get_job_logs_as_admin,
+            name="execution_engine2.get_job_logs_as_admin",
+            types=[dict, int],
+        )
+        self.method_authentication[
+            "execution_engine2.get_job_logs_as_admin"
+        ] = "required"  # noqa
+        self.rpc_service.add(
             impl_execution_engine2.finish_job,
             name="execution_engine2.finish_job",
             types=[dict],
         )
         self.method_authentication["execution_engine2.finish_job"] = "required"  # noqa
+        self.rpc_service.add(
+            impl_execution_engine2.finish_job_as_admin,
+            name="execution_engine2.finish_job_as_admin",
+            types=[dict, int],
+        )
+        self.method_authentication[
+            "execution_engine2.finish_job_as_admin"
+        ] = "required"  # noqa
         self.rpc_service.add(
             impl_execution_engine2.start_job,
             name="execution_engine2.start_job",
@@ -432,17 +480,41 @@ class Application(object):
         )
         self.method_authentication["execution_engine2.start_job"] = "required"  # noqa
         self.rpc_service.add(
+            impl_execution_engine2.start_job_as_admin,
+            name="execution_engine2.start_job_as_admin",
+            types=[dict, int],
+        )
+        self.method_authentication[
+            "execution_engine2.start_job_as_admin"
+        ] = "required"  # noqa
+        self.rpc_service.add(
             impl_execution_engine2.check_job,
             name="execution_engine2.check_job",
             types=[dict],
         )
         self.method_authentication["execution_engine2.check_job"] = "required"  # noqa
         self.rpc_service.add(
+            impl_execution_engine2.check_job_as_admin,
+            name="execution_engine2.check_job_as_admin",
+            types=[dict, int],
+        )
+        self.method_authentication[
+            "execution_engine2.check_job_as_admin"
+        ] = "required"  # noqa
+        self.rpc_service.add(
             impl_execution_engine2.check_jobs,
             name="execution_engine2.check_jobs",
             types=[dict],
         )
         self.method_authentication["execution_engine2.check_jobs"] = "required"  # noqa
+        self.rpc_service.add(
+            impl_execution_engine2.check_jobs_as_admin,
+            name="execution_engine2.check_jobs_as_admin",
+            types=[dict, int],
+        )
+        self.method_authentication[
+            "execution_engine2.check_jobs_as_admin"
+        ] = "required"  # noqa
         self.rpc_service.add(
             impl_execution_engine2.check_workspace_jobs,
             name="execution_engine2.check_workspace_jobs",
@@ -452,11 +524,27 @@ class Application(object):
             "execution_engine2.check_workspace_jobs"
         ] = "required"  # noqa
         self.rpc_service.add(
+            impl_execution_engine2.check_workspace_jobs_as_admin,
+            name="execution_engine2.check_workspace_jobs_as_admin",
+            types=[dict, int],
+        )
+        self.method_authentication[
+            "execution_engine2.check_workspace_jobs_as_admin"
+        ] = "required"  # noqa
+        self.rpc_service.add(
             impl_execution_engine2.cancel_job,
             name="execution_engine2.cancel_job",
             types=[dict],
         )
         self.method_authentication["execution_engine2.cancel_job"] = "required"  # noqa
+        self.rpc_service.add(
+            impl_execution_engine2.cancel_job_as_admin,
+            name="execution_engine2.cancel_job_as_admin",
+            types=[dict, int],
+        )
+        self.method_authentication[
+            "execution_engine2.cancel_job_as_admin"
+        ] = "required"  # noqa
         self.rpc_service.add(
             impl_execution_engine2.check_job_canceled,
             name="execution_engine2.check_job_canceled",
@@ -464,6 +552,14 @@ class Application(object):
         )
         self.method_authentication[
             "execution_engine2.check_job_canceled"
+        ] = "required"  # noqa
+        self.rpc_service.add(
+            impl_execution_engine2.check_job_canceled_as_admin,
+            name="execution_engine2.check_job_canceled_as_admin",
+            types=[dict, int],
+        )
+        self.method_authentication[
+            "execution_engine2.check_job_canceled_as_admin"
         ] = "required"  # noqa
         self.rpc_service.add(
             impl_execution_engine2.get_job_status,
@@ -474,6 +570,14 @@ class Application(object):
             "execution_engine2.get_job_status"
         ] = "required"  # noqa
         self.rpc_service.add(
+            impl_execution_engine2.get_job_status_as_admin,
+            name="execution_engine2.get_job_status_as_admin",
+            types=[str, int],
+        )
+        self.method_authentication[
+            "execution_engine2.get_job_status_as_admin"
+        ] = "required"  # noqa
+        self.rpc_service.add(
             impl_execution_engine2.check_jobs_date_range_for_user,
             name="execution_engine2.check_jobs_date_range_for_user",
             types=[dict],
@@ -482,12 +586,28 @@ class Application(object):
             "execution_engine2.check_jobs_date_range_for_user"
         ] = "required"  # noqa
         self.rpc_service.add(
+            impl_execution_engine2.check_jobs_date_range_for_user_as_admin,
+            name="execution_engine2.check_jobs_date_range_for_user_as_admin",
+            types=[dict, int],
+        )
+        self.method_authentication[
+            "execution_engine2.check_jobs_date_range_for_user_as_admin"
+        ] = "required"  # noqa
+        self.rpc_service.add(
             impl_execution_engine2.check_jobs_date_range_for_all,
             name="execution_engine2.check_jobs_date_range_for_all",
             types=[dict],
         )
         self.method_authentication[
             "execution_engine2.check_jobs_date_range_for_all"
+        ] = "required"  # noqa
+        self.rpc_service.add(
+            impl_execution_engine2.check_jobs_date_range_for_all_as_admin,
+            name="execution_engine2.check_jobs_date_range_for_all_as_admin",
+            types=[dict, int],
+        )
+        self.method_authentication[
+            "execution_engine2.check_jobs_date_range_for_all_as_admin"
         ] = "required"  # noqa
         self.rpc_service.add(
             impl_execution_engine2.is_admin, name="execution_engine2.is_admin", types=[]

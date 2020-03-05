@@ -33,6 +33,26 @@ class RunJob:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr
 
+    def extract_special_params(self):
+        """
+        int request_cpu;
+        int request_memory_mb;
+        int request_disk_mb;
+        string request_clientgroup;
+        list<string> request_staging_volume_mounts;
+        list<string> request_refdata_volume_mounts;
+        :return:
+        """
+        pass
+
+    def _create_job_requirements(self, resources, condor_resources):
+        """ #TODO, maybe require specification of ALL resources, or else throw an exception
+            #TODO, ADD more variables to condor ENVIRONMENT
+            #TODO, move environment variables to a file
+            #TODO, ADD VOLUME MOUNTS TO JOB INPUT MODEL
+        """
+        pass
+
     def _init_job_rec(
         self, user_id, params, resources: condor_resources = None
     ) -> AnyStr:
@@ -60,6 +80,8 @@ class RunJob:
             inputs.narrative_cell_info.tag = meta.get("tag")
             inputs.narrative_cell_info.cell_id = meta.get("cell_id")
             inputs.narrative_cell_info.status = meta.get("status")
+
+        # special_resources = self.extract_special_params(params)
 
         if resources:
             jr = JobRequirements()
@@ -116,7 +138,9 @@ class RunJob:
 
     def run(self, params=None, as_admin=False) -> AnyStr:
         """
+        :param params: SpecialRunJobParamsParams object (See spec file)
         :param params: RunJobParams object (See spec file)
+        :param as_admin: Allows you to run jobs in other people's workspaces
         :return: The condor job id
         """
         wsid = params.get("wsid")
@@ -132,7 +156,7 @@ class RunJob:
                 raise PermissionError(
                     f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
                 )
-        
+
         method = params.get("method")
         self.sdkmr.logger.info(
             f"User {self.sdkmr.user_id} attempting to run job {method}"
@@ -224,7 +248,9 @@ class RunJob:
         job_params:
         """
         job_params = dict()
-        job = self.sdkmr.get_job_with_permission(job_id, JobPermissions.READ, as_admin=as_admin)
+        job = self.sdkmr.get_job_with_permission(
+            job_id, JobPermissions.READ, as_admin=as_admin
+        )
 
         job_input = job.job_input
 

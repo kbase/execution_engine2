@@ -3,6 +3,7 @@ from collections import OrderedDict
 from enum import Enum
 import time
 from bson import ObjectId
+from typing import NoReturn, Optional, Dict
 
 from execution_engine2.authorization.authstrategy import can_read_jobs
 from execution_engine2.db.models.models import (
@@ -32,19 +33,23 @@ class JobsStatus:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr
 
-    def cancel_job(self, job_id, terminated_code=None, as_admin=False):
+    def cancel_job(
+        self, job_id, terminated_code=None, as_admin=False
+    ) -> Optional[NoReturn]:
         """
         Authorization Required: Ability to Read and Write to the Workspace
         Default for terminated code is Terminated By User
-        :param job_id:
+        :param job_id: Job ID To cancel
         :param terminated_code:
-        :return:
+        :param as_admin: Cancel the job for a different user
         """
         # Is it inefficient to get the job twice? Is it cached?
         # Maybe if the call fails, we don't actually cancel the job?
         self.sdkmr.logger.debug(f"Attempting to cancel job {job_id}")
 
-        job = self.sdkmr.get_job_with_permission(job_id, JobPermissions.WRITE, as_admin=as_admin)
+        job = self.sdkmr.get_job_with_permission(
+            job_id, JobPermissions.WRITE, as_admin=as_admin
+        )
 
         if terminated_code is None:
             terminated_code = TerminatedCode.terminated_by_user.value
@@ -79,42 +84,48 @@ class JobsStatus:
             )
         )
 
-    def check_job_canceled(self, job_id, as_admin=False):
+    def check_job_canceled(self, job_id, as_admin=False) -> Dict:
         """
         Authorization Required: None
         Check to see if job is terminated by the user
+        :param job_id: KBase Job ID
+        :param as_admin: Check whether the job is terminated for a different user
         :return: job_id, whether or not job is canceled, and whether or not job is finished
         """
-
-        job_status = self.sdkmr.get_mongo_util().get_job(job_id=job_id).status
+        print(job_id)
+        print(self.sdkmr.user_id)
+        job = self.sdkmr.get_job_with_permission(
+            job_id, JobPermissions.READ, as_admin=as_admin
+        )
+        job_status = job.status
         rv = {"job_id": job_id, "canceled": False, "finished": False}
-
         if Status(job_status) is Status.terminated:
             rv["canceled"] = True
             rv["finished"] = True
-
         if Status(job_status) in [Status.completed, Status.error, Status.terminated]:
             rv["finished"] = True
         return rv
 
-    def update_job_status(self, job_id, status, as_admin=False ):
+    def update_job_status(self, job_id, status, as_admin=False) -> str:
         """
         #TODO Deprecate this in favor of specific methods with specific checks?
-        update_job_status: update status of a job runner record.
-                           raise error if job is not found or status is not listed in models.Status
+        * update_job_status: update status of a job runner record.
+        * raise error if job is not found or status is not listed in models.Status
         * Does not update TerminatedCode or ErrorCode
         * Does not update Timestamps
         * Allows invalid state transitions, e.g. Running -> Created
-
-        Parameters:
-        job_id: id of job
+        :param job_id: KBase Job ID
+        :param status: A Valid Status based on Status Enum
+        :param as_admin: Update the job status for an arbitrary status for a different user
+        :return: KBase Job ID
         """
 
         if not (job_id and status):
             raise ValueError("Please provide both job_id and status")
 
-        job = self.sdkmr.get_job_with_permission(job_id, JobPermissions.WRITE, as_admin=as_admin)
-
+        job = self.sdkmr.get_job_with_permission(
+            job_id, JobPermissions.WRITE, as_admin=as_admin
+        )
         previous_status = job.status
         job.status = status
         with self.sdkmr.get_mongo_util().mongo_engine_connection():
@@ -131,42 +142,21 @@ class JobsStatus:
 
         return str(job.id)
 
-    def get_job_status(self, job_id, as_admin=False):
+    def get_job_status(self, job_id, as_admin=False) -> Dict:
         """
-        get_job_status: fetch status of a job runner record.
-                        raise error if job is not found
-
-        Parameters:
-        job_id: id of job
-
-        Returns:
-        returnVal: returnVal['status'] status of job
+        fetch status of a job runner record. raise error if job is not found
+        :param job_id: The KBase Job ID
+        :param as_admin: Get the status of someone else's job
+        :return: The status of the job
         """
-
-        returnVal = dict()
-
+        return_val = dict()
         if not job_id:
             raise ValueError("Please provide valid job_id")
-
-        job = self.sdkmr.get_job_with_permission(job_id, JobPermissions.READ,as_admin=as_admin)
-
-        returnVal["status"] = job.status
-
-        return returnVal
-
-    def _check_job_is_status(self, job_id, status):
-        job = self.sdkmr.get_mongo_util().get_job(job_id=job_id)
-        if job.status != status:
-            raise InvalidStatusTransitionException(
-                f"Unexpected job status: {job.status} . Expected {status} "
-            )
-        return job
-
-    def _check_job_is_created(self, job_id):
-        return self.sdkmr._check_job_is_status(job_id, Status.created.value)
-
-    def _check_job_is_running(self, job_id):
-        return self.sdkmr._check_job_is_status(job_id, Status.running.value)
+        job = self.sdkmr.get_job_with_permission(
+            job_id, JobPermissions.READ, as_admin=as_admin
+        )
+        return_val["status"] = job.status
+        return return_val
 
     def _finish_job_with_error(self, job_id, error_message, error_code, error=None):
         if error_code is None:
@@ -234,7 +224,7 @@ class JobsStatus:
         """
 
         job = self.sdkmr.get_job_with_permission(
-            job_id=job_id, permission=JobPermissions.WRITE, as_admin=as_admin
+            job_id=job_id, requested_job_perm=JobPermissions.WRITE, as_admin=as_admin
         )
 
         if error_message:
@@ -289,7 +279,9 @@ class JobsStatus:
             )
         )
 
-    def check_job(self, job_id, check_permission=True, exclude_fields=None, as_admin=False):
+    def check_job(
+        self, job_id, check_permission=True, exclude_fields=None, as_admin=False
+    ):
 
         """
         check_job: check and return job status for a given job_id
@@ -317,7 +309,12 @@ class JobsStatus:
         return job_state
 
     def check_jobs(
-        self, job_ids, check_permission=True, exclude_fields=None, return_list=None, as_admin=False
+        self,
+        job_ids,
+        check_permission=True,
+        exclude_fields=None,
+        return_list=None,
+        as_admin=False,
     ):
         """
         check_jobs: check and return job status for a given of list job_ids
@@ -448,7 +445,9 @@ class JobsStatus:
         if not job_id:
             raise ValueError("Please provide valid job_id")
 
-        job = self.sdkmr.get_job_with_permission(job_id, JobPermissions.WRITE, as_admin=as_admin)
+        job = self.sdkmr.get_job_with_permission(
+            job_id, JobPermissions.WRITE, as_admin=as_admin
+        )
 
         job_status = job.status
 

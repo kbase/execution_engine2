@@ -67,6 +67,7 @@ def _run_job_adapter(
     :return: an adapter function to be passed to request_mock
     """
 
+
 class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -99,8 +100,6 @@ class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
         )
 
         cls.test_helper = ee2_sdkmr_test_helper(cfg)
-
-
 
     def getRunner(self) -> SDKMethodRunner:
         return copy.deepcopy(self.__class__.method_runner)

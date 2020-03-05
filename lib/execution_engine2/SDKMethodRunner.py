@@ -11,10 +11,12 @@ The purpose of this class is to
 import json
 import logging
 import os
+import time
+from datetime import datetime
 from enum import Enum
 from logging import Logger
+
 import dateutil
-from datetime import datetime
 
 from execution_engine2 import EE2Authentication
 from execution_engine2 import EE2Logs
@@ -29,7 +31,7 @@ from execution_engine2.utils.KafkaUtils import KafkaClient
 from execution_engine2.utils.SlackUtils import SlackClient
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.authclient import KBaseAuth
-import time
+
 
 class JobPermissions(Enum):
     READ = "r"
@@ -51,12 +53,12 @@ class SDKMethodRunner:
     ADMIN_WRITE_ROLE = "EE2_ADMIN"
 
     def __init__(
-            self,
-            config,
-            user_id=None,
-            token=None,
-            job_permission_cache=None,
-            admin_permissions_cache=None,
+        self,
+        config,
+        user_id=None,
+        token=None,
+        job_permission_cache=None,
+        admin_permissions_cache=None,
     ):
         self.deployment_config_fp = os.environ["KB_DEPLOYMENT_CONFIG"]
         self.config = config
@@ -190,9 +192,7 @@ class SDKMethodRunner:
 
     def check_as_admin(self, requested_perm):
         """Check if you have the requested admin permission"""
-        return self.get_ee2_auth().check_admin_permission(
-            requested_perm=requested_perm
-        )
+        return self.get_ee2_auth().check_admin_permission(requested_perm=requested_perm)
 
     # API ENDPOINTS
 
@@ -222,14 +222,12 @@ class SDKMethodRunner:
     # ENDPOINTS: Adding and retrieving Logs
     def add_job_logs(self, job_id, log_lines, as_admin=False):
         """ Authorization Required Read/Write """
-
         return self.get_job_logs().add_job_logs(
             job_id=job_id, log_lines=log_lines, as_admin=as_admin
         )
 
     def view_job_logs(self, job_id, skip_lines=None, as_admin=False):
         """ Authorization Required Read """
-
         return self.get_job_logs().view_job_logs(
             job_id=job_id, skip_lines=skip_lines, as_admin=as_admin
         )
@@ -237,7 +235,6 @@ class SDKMethodRunner:
     # Endpoints: Changing a job's status
     def start_job(self, job_id, skip_estimation=True, as_admin=False):
         """ Authorization Required Read/Write """
-
         return self.get_jobs_status().start_job(
             job_id=job_id, skip_estimation=skip_estimation, as_admin=as_admin
         )
@@ -245,25 +242,24 @@ class SDKMethodRunner:
     def update_job_status(self, job_id, status, as_admin=False):
         # TODO: Make this an ADMIN ONLY function? Why would anyone need to call this who is not an admin?
         """ Authorization Required: Read/Write """
-
-        return self.get_jobs_status().update_job_status(job_id=job_id, status=status,
-                                                        as_admin=as_admin)
+        return self.get_jobs_status().update_job_status(
+            job_id=job_id, status=status, as_admin=as_admin
+        )
 
     def cancel_job(self, job_id, terminated_code=None, as_admin=False):
         """ Authorization Required Read/Write """
-
         return self.get_jobs_status().cancel_job(
             job_id=job_id, terminated_code=terminated_code, as_admin=as_admin
         )
 
     def finish_job(
-            self,
-            job_id,
-            error_message=None,
-            error_code=None,
-            error=None,
-            job_output=None,
-            as_admin=False,
+        self,
+        job_id,
+        error_message=None,
+        error_code=None,
+        error=None,
+        job_output=None,
+        as_admin=False,
     ):
         """ Authorization Required Read/Write """
 
@@ -279,7 +275,7 @@ class SDKMethodRunner:
     # Endpoints: Checking a job's status
 
     def check_job(
-            self, job_id, check_permission=None, exclude_fields=None, as_admin=False
+        self, job_id, check_permission=None, exclude_fields=None, as_admin=False
     ):
         """ Authorization Required: Read """
         if as_admin:
@@ -294,26 +290,26 @@ class SDKMethodRunner:
 
     def check_job_canceled(self, job_id, as_admin=False):
         """ Authorization Required: Read """
-        #TODO Why don't we have any auth on here?
-        if as_admin:
-            self.check_as_admin(requested_perm=JobPermissions.READ)
-
         return self.get_jobs_status().check_job_canceled(
             job_id=job_id, as_admin=as_admin
         )
 
     def get_job_status_field(self, job_id, as_admin=False):
         """ Authorization Required: Read """
-
         return self.get_jobs_status().get_job_status(job_id=job_id, as_admin=as_admin)
 
     def check_jobs(
-            self, job_ids, check_permission=None, exclude_fields=None, return_list=1, as_admin=False
+        self,
+        job_ids,
+        check_permission=None,
+        exclude_fields=None,
+        return_list=1,
+        as_admin=False,
     ):
         """ Authorization Required: Read """
         if as_admin:
             self.check_as_admin(requested_perm=JobPermissions.READ)
-            check_permission=False
+            check_permission = False
 
         return self.get_jobs_status().check_jobs(
             job_ids=job_ids,
@@ -323,16 +319,16 @@ class SDKMethodRunner:
         )
 
     def check_jobs_date_range_for_user(
-            self,
-            creation_start_time,
-            creation_end_time,
-            job_projection=None,
-            job_filter=None,
-            limit=None,
-            user=None,
-            offset=None,
-            ascending=None,
-            as_admin=False
+        self,
+        creation_start_time,
+        creation_end_time,
+        job_projection=None,
+        job_filter=None,
+        limit=None,
+        user=None,
+        offset=None,
+        ascending=None,
+        as_admin=False,
     ):
         """ Authorization Required: Read """
         if as_admin:
@@ -349,14 +345,40 @@ class SDKMethodRunner:
             ascending=ascending,
         )
 
-    def get_job_with_permission(self, job_id, permission, as_admin=False):
-        job = self.get_mongo_util().get_job(job_id=job_id)
+    def get_job_with_permission(
+        self, job_id, requested_job_perm: JobPermissions, as_admin=False
+    ):
+        """
+        Get the job.
+        When as_admin, check if you have the required admin_perm or raise a Permissions Exception.
+        When requesting as a normal user, check the cache for permissions for the job.
+        If the cache contains your permission, return the job
+        If the cache doesn't contain your permission, check the job_id and workspace, and then add it to the cache
+        If you don't have permissions or are requesting a None permission, raise a Permissions Exception
+
+        :param job_id: KBase Job ID
+        :param requested_job_perm: Read or Write Access
+        :param as_admin: Check if you have admin permissions based on Permission
+        :return: The Job or Raise a Permissions Exception
+        """
+        # TODO CHeck if a valid ENUM is passed in?
+        if requested_job_perm is JobPermissions.NONE:
+            raise PermissionError(f"Requesting No Permissions for {job_id}")
+
         if as_admin:
-            self.get_ee2_auth().check_admin_permission(requested_perm=permission)
+            self.get_ee2_auth().check_admin_permission(
+                requested_perm=requested_job_perm
+            )
+            job = self.get_mongo_util().get_job(job_id=job_id)
         else:
-            if not self.get_ee2_auth().get_job_permission_from_cache(job_id=job_id,
-                                                                     level=permission):
-                self.get_ee2_auth().test_job_permissions(job=job, job_id=job_id, level=permission)
+            permission_found_in_cache = self.get_ee2_auth().get_job_permission_from_cache(
+                job_id=job_id, level=requested_job_perm
+            )
+            job = self.get_mongo_util().get_job(job_id=job_id)
+            if not permission_found_in_cache:
+                self.get_ee2_auth().test_job_permissions(
+                    job=job, job_id=job_id, level=requested_job_perm
+                )
         return job
 
     def check_workspace_jobs(self, workspace_id, exclude_fields=None, return_list=None):
@@ -415,7 +437,7 @@ class SDKMethodRunner:
         try:
             if isinstance(time_input, str):  # input time_input as string
                 if time_input.replace(
-                        ".", "", 1
+                    ".", "", 1
                 ).isdigit():  # input time_input as numeric string
                     time_input = (
                         float(time_input)
@@ -425,7 +447,7 @@ class SDKMethodRunner:
                 else:  # input time_input as datetime string
                     time_input = dateutil.parser.parse(time_input).timestamp()
             elif isinstance(
-                    time_input, int
+                time_input, int
             ):  # input time_input as epoch timestamps in milliseconds
                 time_input = time_input / 1000.0
             elif isinstance(time_input, datetime):
@@ -444,4 +466,3 @@ class SDKMethodRunner:
                 )
 
         return time_input
-

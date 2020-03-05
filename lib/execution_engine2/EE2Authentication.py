@@ -56,8 +56,14 @@ class EE2Auth:
         return {"permission": self._get_user_admin_permissions().value}
 
     def check_admin_permission(self, requested_perm):
-        user_permission = self._get_user_admin_permissions()
         requested_perm = AdminPermissions(requested_perm.value)
+        if requested_perm is AdminPermissions.NONE:
+            raise PermissionError(
+                "Permission Denied. You cannot request NONE admin permissions"
+            )
+
+        user_permission = self._get_user_admin_permissions()
+
         self.sdkmr.logger.debug(f"Requesting perm {requested_perm}, {user_permission}")
         if requested_perm == AdminPermissions.WRITE:
             if user_permission == AdminPermissions.WRITE:
@@ -77,11 +83,17 @@ class EE2Auth:
             else:
                 raise PermissionError("Access Denied: You are not an administrator")
         else:
-            raise Exception(
-                "Programming Error: You didn't supply the correct job permissions types"
+            raise PermissionError(
+                "You didn't supply the correct job permissions types: READ or WRITE"
             )
 
     def get_job_permission_from_cache(self, job_id, level):
+        """
+        Permission[job_id][user_id][level]
+        :param job_id:
+        :param level:
+        :return:
+        """
         if not self.sdkmr.job_permission_cache.get(job_id):
             return False
         else:
@@ -95,9 +107,9 @@ class EE2Auth:
         if not self.get_job_permission_from_cache(job_id, permission):
             job = self.sdkmr.get_mongo_util().get_job(job_id=job_id)
             self.test_job_permissions(job, job_id, permission)
-        self.sdkmr.logger.debug("you have permission to {} job {}".format(permission, job_id))
-
-
+        self.sdkmr.logger.debug(
+            "you have permission to {} job {}".format(permission, job_id)
+        )
 
     def _update_job_permission_cache(self, job_id, user_id, level, perm):
         if not self.sdkmr.job_permission_cache.get(job_id):
@@ -109,7 +121,9 @@ class EE2Auth:
             else:
                 job_permission[user_id][level] = perm
 
-    def test_job_permissions(self, job: Job, job_id: str, level: JobPermissions) -> bool:
+    def test_job_permissions(
+        self, job: Job, job_id: str, level: JobPermissions
+    ) -> bool:
         """
         Tests if the currently loaded token has the requested permissions for the given job.
         Returns True if so. Raises a PermissionError if not.
@@ -133,16 +147,22 @@ class EE2Auth:
         # if sdkmr.is_admin:  # bypass if we're in admin mode.
         #     _update_job_permission_cache(sdkmr, job_id, sdkmr.user_id, level, True)
         #     return True
+        perm = False
         try:
-            perm = False
             if level.value == JobPermissions.READ.value:
-
-                perm = can_read_job(job, self.sdkmr.user_id, self.sdkmr.token, self.sdkmr.config)
-                self._update_job_permission_cache(job_id, self.sdkmr.user_id, level, perm)
+                perm = can_read_job(
+                    job, self.sdkmr.user_id, self.sdkmr.token, self.sdkmr.config
+                )
+                self._update_job_permission_cache(
+                    job_id, self.sdkmr.user_id, level, perm
+                )
             elif level.value == JobPermissions.WRITE.value:
-
-                perm = can_write_job(job, self.sdkmr.user_id, self.sdkmr.token, self.sdkmr.config)
-                self._update_job_permission_cache( job_id, self.sdkmr.user_id, level, perm)
+                perm = can_write_job(
+                    job, self.sdkmr.user_id, self.sdkmr.token, self.sdkmr.config
+                )
+                self._update_job_permission_cache(
+                    job_id, self.sdkmr.user_id, level, perm
+                )
             else:
                 raise PermissionError(
                     f"Please provide a valid level of permissions  {level}"
@@ -152,8 +172,12 @@ class EE2Auth:
                     f"User {self.sdkmr.user_id} does not have permission to {level} job {job_id}"
                 )
         except RuntimeError as e:
-            logging.error(f"An error occurred while checking permissions for job {job_id}")
+            logging.error(
+                f"An error occurred while checking permissions for job {job_id}"
+            )
             raise e
+        return perm
+
 
 #
 # def check_admin_permission(requested_perm, user_id, admin_cache, auth_url, auth_roles):
