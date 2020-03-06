@@ -79,7 +79,6 @@ def _check_permissions(
     if job.authstrat == KBASE_WS_AUTHSTRAT:
         if job.wsid is None:
             return False
-
         ws_auth = WorkspaceAuth(token, user_id, config["workspace-url"])
         if level == "read":
             return ws_auth.can_read(job.wsid)

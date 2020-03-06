@@ -10,6 +10,7 @@ logging.basicConfig(level=logging.INFO)
 
 from lib.execution_engine2.utils.Condor import Condor
 
+
 class ExecutionEngine2SchedulerIntegrationTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

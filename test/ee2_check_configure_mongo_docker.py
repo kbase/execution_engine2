@@ -26,6 +26,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
             config["mongo-host"] = config["mongo-in-docker-compose"]
 
         cls.config = config
+
         cls.ctx = {"job_id": "test", "user_id": "test", "token": "test"}
 
         cls.mongo_client = MongoClient(
@@ -38,13 +39,15 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         )
 
         cls.db = cls.mongo_client.get_database(cls.config["mongo-database"])
+
         logging.info(f"Dropping user {cls.config['mongo-user']}")
         try:
             cls.db.command("dropUser", cls.config["mongo-user"])
-        except OperationFailure:
+        except OperationFailure as e:
             logging.info("Couldn't drop user")
+            logging.info(e)
 
-        logging.info("Creating privileged user")
+        # TODO ADD USER TO EE2?
 
         try:
             cls.db.command(

@@ -148,10 +148,8 @@ class Condor(Scheduler):
         :return:
         """
         logging.debug(f"About to extract from {cgrr}")
-        print(f"About to extract from {cgrr}")
 
         client_group = cgrr.get("client_group", None)
-        print(client_group)
 
         if client_group is None or client_group == "":
             client_group = self.config.get(
@@ -251,8 +249,17 @@ class Condor(Scheduler):
         sub["requirements"] = " && ".join(requirements)
 
         params["extracted_client_group"] = client_group
-        sub["client_group"] = client_group
-        sub["gentenv"] = "false"
+
+        sub["+KB_PARENT_JOB_ID"] = params.get("parent_job_id", "")
+        sub["+KB_MODULE_NAME"] = params.get("method", "").split(".")[0]
+        sub["+KB_FUNCTION_NAME"] = params.get("method", "").split(".")[-1]
+        sub["+KB_APP_ID"] = params.get("app_id", "")
+        sub["+KB_APP_MODULE_NAME"] = params.get("app_id", "").split("/")[0]
+        sub["+KB_WSID"] = params.get("wsid", "")
+        sub["+KB_SOURCE_WS_OBJECTS"] = ",".join(params.get("source_ws_objects", list()))
+
+        sub["+CLIENTGROUP"] = client_group
+        sub["getenv"] = "false"
         sub["environment"] = self.setup_environment_vars(params)
 
         # Ensure all values are a string
@@ -352,3 +359,4 @@ class Condor(Scheduler):
         except Exception as e:
             logging.error("Couldn't cancel jobs" + str(scheduler_ids))
             logging.error(e)
+            return False

@@ -147,6 +147,11 @@ class MongoUtil:
         finally:
             mc.close()
 
+    def get_workspace_jobs(self, workspace_id):
+        with self.mongo_engine_connection():
+            job_ids = [str(job.id) for job in Job.objects(wsid=workspace_id)]
+            return job_ids
+
     def get_job_log_pymongo(self, job_id: str = None):
 
         mongo_collection = self.config["mongo-logs-collection"]

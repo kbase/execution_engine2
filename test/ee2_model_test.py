@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 import logging
+import os
 import unittest
 
-logging.basicConfig(level=logging.INFO)
-
-from execution_engine2.db.models.models import LogLines, JobLog
-from execution_engine2.db.MongoUtil import MongoUtil
-from test.utils.test_utils import read_config_into_dict, bootstrap, get_example_job
-
-bootstrap()
 from bson import ObjectId
 
-import os
+from execution_engine2.db.MongoUtil import MongoUtil
+from execution_engine2.db.models.models import LogLines, JobLog
+from test.utils.test_utils import read_config_into_dict, bootstrap, get_example_job
+
+logging.basicConfig(level=logging.INFO)
+bootstrap()
 
 
-class ExecutionEngine2SchedulerTest(unittest.TestCase):
+class EE2ModelTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
@@ -62,6 +61,8 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         :return:
         """
         with self.mongo_util.mongo_engine_connection():
+            logging.info(self.mongo_util.config)
+
             job = get_example_job()
             job.save()
 

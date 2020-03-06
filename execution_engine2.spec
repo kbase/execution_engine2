@@ -122,6 +122,16 @@
                 the workspace rather than owner of the job
             parent_job_id - UJS id of the parent of a batch job. Sub jobs will add
             this id to the NJS database under the field "parent_job_id"
+            =======
+            These are optional parameters that are currently allowed if you have the KBASE_CONCIERGE/KBASE_FULL_SERVICE roles
+            =======
+            @optional request_cpu
+            @optional request_memory_mb
+            @optional request_disk_mb
+            @optional request_clientgroup
+            @optional request_staging_volume_mounts
+            @optional request_refdata_volume_mounts
+
         */
         typedef structure {
             string method;
@@ -134,6 +144,12 @@
             mapping<string, string> meta;
             int wsid;
             string parent_job_id;
+            int request_cpu;
+            int request_memory_mb;
+            int request_disk_mb;
+            string request_clientgroup;
+            list<string> request_staging_volume_mounts;
+            list<string> request_refdata_volume_mounts;
         } RunJobParams;
 
         /*
@@ -141,11 +157,13 @@
             Such job runs Docker image for this service in script mode.
         */
         funcdef run_job(RunJobParams params) returns (job_id job_id) authentication required;
+        funcdef run_job_as_admin(RunJobParams params, boolean as_admin) returns (job_id job_id) authentication required;
 
         /*
             Get job params necessary for job execution
         */
         funcdef get_job_params(job_id job_id) returns (RunJobParams params) authentication required;
+        funcdef get_job_params_as_admin(job_id job_id, boolean as_admin) returns (RunJobParams params) authentication required;
 
         /*
             job_id - a job id
@@ -156,8 +174,9 @@
             string status;
         } UpdateJobStatusParams;
 
-        funcdef update_job_status(UpdateJobStatusParams params) returns (job_id job_id)
-            authentication required;
+        funcdef update_job_status(UpdateJobStatusParams params) returns (job_id job_id) authentication required;
+        funcdef update_job_status_as_admin(UpdateJobStatusParams params, boolean as_admin) returns (job_id job_id)  authentication required;
+
 
         /*
             line - string - a string to set for the log line.
@@ -171,8 +190,9 @@
             boolean is_error;
             int ts;
         } LogLine;
-        funcdef add_job_logs(job_id job_id, list<LogLine> lines)
-            returns (int line_number) authentication required;
+        funcdef add_job_logs(job_id job_id, list<LogLine> lines) returns (int line_number) authentication required;
+        funcdef add_job_logs_as_admin(job_id job_id, list<LogLine> lines, boolean as_admin) returns (int line_number) authentication required;
+
 
         /*
             skip_lines - optional parameter, number of lines to skip (in case they were
@@ -192,8 +212,9 @@
             list<LogLine> lines;
             int last_line_number;
         } GetJobLogsResults;
-        funcdef get_job_logs(GetJobLogsParams params) returns (GetJobLogsResults)
-            authentication required;
+        funcdef get_job_logs(GetJobLogsParams params) returns (GetJobLogsResults) authentication required;
+        funcdef get_job_logs_as_admin(GetJobLogsParams params, boolean as_admin) returns (GetJobLogsResults) authentication required;
+
 
         /* Error block of JSON RPC response */
         typedef structure {
@@ -222,6 +243,7 @@
             Register results of already started job
         */
         funcdef finish_job(FinishJobParams params) returns () authentication required;
+        funcdef finish_job_as_admin(FinishJobParams params, boolean as_admin) returns () authentication required;
 
         /*
             skip_estimation: default true. If set true, job will set to running status skipping estimation step
@@ -231,6 +253,7 @@
             boolean skip_estimation;
         } StartJobParams;
         funcdef start_job(StartJobParams params) returns () authentication required;
+        funcdef start_job_as_admin(StartJobParams params, boolean as_admin) returns () authentication required;
 
         /*
             exclude_fields: exclude certain fields to return. default None.
@@ -309,6 +332,7 @@
             get current status of a job
         */
         funcdef check_job(CheckJobParams params) returns (JobState job_state) authentication required;
+        funcdef check_job_as_admin(CheckJobParams params, boolean as_admin) returns (JobState job_state) authentication required;
 
         /*
             job_states - states of jobs
@@ -332,6 +356,8 @@
         } CheckJobsParams;
 
         funcdef check_jobs(CheckJobsParams params) returns (CheckJobsResults) authentication required;
+        funcdef check_jobs_as_admin(CheckJobsParams params,boolean as_admin) returns (CheckJobsResults) authentication required;
+
 
         /*
             Check status of all jobs in a given workspace. Only checks jobs that have been associated
@@ -345,6 +371,7 @@
             boolean return_list;
         } CheckWorkspaceJobsParams;
         funcdef check_workspace_jobs(CheckWorkspaceJobsParams params) returns (CheckJobsResults) authentication required;
+        funcdef check_workspace_jobs_as_admin(CheckWorkspaceJobsParams params, boolean as_admin) returns (CheckJobsResults) authentication required;
 
         /*
         cancel_and_sigterm
@@ -367,6 +394,7 @@
             Cancels a job. This results in the status becoming "terminated" with termination_code 0.
         */
         funcdef cancel_job(CancelJobParams params) returns () authentication required;
+        funcdef cancel_job_as_admin(CancelJobParams params, boolean as_admin) returns () authentication required;
 
         /*
             job_id - id of job running method
@@ -382,8 +410,9 @@
         } CheckJobCanceledResult;
 
         /* Check whether a job has been canceled. This method is lightweight compared to check_job. */
-        funcdef check_job_canceled(CancelJobParams params) returns (CheckJobCanceledResult result)
-            authentication required;
+        funcdef check_job_canceled(CancelJobParams params) returns (CheckJobCanceledResult result)            authentication required;
+        funcdef check_job_canceled_as_admin(CancelJobParams params, boolean as_admin) returns (CheckJobCanceledResult result)            authentication required;
+
 
         typedef structure {
             string status;
@@ -391,6 +420,7 @@
 
         /* Just returns the status string for a job of a given id. */
         funcdef get_job_status(job_id job_id) returns (GetJobStatusResult result) authentication required;
+        funcdef get_job_status_as_admin(job_id job_id, boolean as_admin) returns (GetJobStatusResult result) authentication required;
 
 
         /*
@@ -462,7 +492,12 @@
             boolean ascending;
         } CheckJobsDateRangeParams;
         funcdef check_jobs_date_range_for_user(CheckJobsDateRangeParams params) returns (CheckJobsResults) authentication required;
+        funcdef check_jobs_date_range_for_user_as_admin(CheckJobsDateRangeParams params, boolean as_admin) returns (CheckJobsResults) authentication required;
+
+
         funcdef check_jobs_date_range_for_all(CheckJobsDateRangeParams params) returns (CheckJobsResults) authentication required;
+        funcdef check_jobs_date_range_for_all_as_admin(CheckJobsDateRangeParams params, boolean as_admin) returns (CheckJobsResults) authentication required;
+
 
         /*
             Check if current user has ee2 admin rights.

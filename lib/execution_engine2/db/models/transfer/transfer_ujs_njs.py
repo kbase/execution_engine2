@@ -168,7 +168,7 @@ class MigrateDatabases:
             if authstrat != "DEFAULT" and authparam != "DEFAULT":
                 job.wsid = authparam
             else:
-                job.wsid = -1
+                job.wsid = None
 
             if njs_job is not None:
                 njs_job_input = self.get_njs_job_input(njs_job)
@@ -196,19 +196,16 @@ class MigrateDatabases:
             status = ujs_job.get("status")
 
             if njs_job is None:
-                finish_time = 0
-                exec_start_time = 0
+                finish_time = None
+                exec_start_time = None
 
             else:
-                finish_time = njs_job.get("finish_time", 0)
-                if finish_time is None:
-                    finish_time = 0
-                else:
+                finish_time = njs_job.get("finish_time", None)
+                exec_start_time = njs_job.get("exec_start_time", None)
+
+                if finish_time:
                     finish_time = finish_time / 1000.0
-                exec_start_time = njs_job.get("exec_start_time", 0)
-                if exec_start_time is None:
-                    exec_start_time = 0
-                else:
+                if exec_start_time:
                     exec_start_time = exec_start_time / 1000.0
 
             if status == "canceled by user":
@@ -310,9 +307,9 @@ class MigrateDatabases:
 
                 job.validate()
 
-            # self.save_job(job)
+            self.save_job(job)
             # Save leftover jobs
-        # self.save_remnants()
+        self.save_remnants()
 
         # TODO SAVE up to 5000 in memory and do a bulk insert
         # a = []
