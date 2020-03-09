@@ -15,12 +15,9 @@ class JobPermissions(Enum):
     NONE = "n"
 
 
-from execution_engine2.SDKMethodRunner import SDKMethodRunner
-
-
 class JobStatusRange:
     def __init__(self, sdkmr):
-        self.sdkmr = sdkmr  # type: SDKMethodRunner
+        self.sdkmr = sdkmr
 
     def check_jobs_date_range_for_user(
         self,
