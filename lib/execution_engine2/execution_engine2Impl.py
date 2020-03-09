@@ -16,7 +16,7 @@ class execution_engine2:
     execution_engine2
 
     Module Description:
-    
+
     '''
 
     ######## WARNING FOR GEVENT USERS ####### noqa
@@ -26,8 +26,8 @@ class execution_engine2:
     # the latter method is running.
     ######################################### noqa
     VERSION = "0.0.1"
-    GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "c9b6b6be1a7e82a49f30fafa191e189d607fe6b4"
+    GIT_URL = "https://github.com/Tianhao-Gu/execution_engine2.git"
+    GIT_COMMIT_HASH = "a65fa4281d7ec6e24eafc8d601898d45672fbe46"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -607,10 +607,12 @@ class execution_engine2:
 
     def get_job_logs(self, ctx, params):
         """
-        :param params: instance of type "GetJobLogsParams" (skip_lines -
-           optional parameter, number of lines to skip (in case they were
-           already loaded before).) -> structure: parameter "job_id" of type
-           "job_id" (A job id.), parameter "skip_lines" of Long
+        :param params: instance of type "GetJobLogsParams" (skip_lines or
+           offset - optional parameter, number of lines to skip (in case they
+           were already loaded before). limit - optional parameter, maximum
+           number of lines returned) -> structure: parameter "job_id" of type
+           "job_id" (A job id.), parameter "skip_lines" of Long, parameter
+           "offset" of Long, parameter "limit" of Long
         :returns: instance of type "GetJobLogsResults" (last_line_number -
            common number of lines (including those in skip_lines parameter),
            this number can be used as next skip_lines value to skip already
@@ -626,6 +628,9 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: returnVal
         #BEGIN get_job_logs
+        if params.get("skip_lines") and params.get("offset"):
+            raise ValueError("Please provide only one of skip_lines or offset")
+
         mr = SDKMethodRunner(
             self.config,
             user_id=ctx.get("user_id"),
@@ -634,7 +639,9 @@ class execution_engine2:
             admin_permissions_cache=self.admin_permissions_cache,
         )
         returnVal = mr.view_job_logs(
-            job_id=params["job_id"], skip_lines=params.get("skip_lines", None)
+            job_id=params["job_id"],
+            skip_lines=params.get("skip_lines", params.get("offset", None)),
+            limit=params.get("limit", None),
         )
         #END get_job_logs
 
@@ -647,10 +654,12 @@ class execution_engine2:
 
     def get_job_logs_as_admin(self, ctx, params, as_admin):
         """
-        :param params: instance of type "GetJobLogsParams" (skip_lines -
-           optional parameter, number of lines to skip (in case they were
-           already loaded before).) -> structure: parameter "job_id" of type
-           "job_id" (A job id.), parameter "skip_lines" of Long
+        :param params: instance of type "GetJobLogsParams" (skip_lines or
+           offset - optional parameter, number of lines to skip (in case they
+           were already loaded before). limit - optional parameter, maximum
+           number of lines returned) -> structure: parameter "job_id" of type
+           "job_id" (A job id.), parameter "skip_lines" of Long, parameter
+           "offset" of Long, parameter "limit" of Long
         :param as_admin: instance of type "boolean" (@range [0,1])
         :returns: instance of type "GetJobLogsResults" (last_line_number -
            common number of lines (including those in skip_lines parameter),
@@ -667,6 +676,9 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: returnVal
         #BEGIN get_job_logs_as_admin
+        if params.get("skip_lines") and params.get("offset"):
+            raise ValueError("Please provide only one of skip_lines or offset")
+
         mr = SDKMethodRunner(
             self.config,
             user_id=ctx.get("user_id"),
@@ -676,8 +688,9 @@ class execution_engine2:
         )
         returnVal = mr.view_job_logs(
             job_id=params["job_id"],
-            skip_lines=params.get("skip_lines", None),
+            skip_lines=params.get("skip_lines", params.get("offset", None)),
             as_admin=as_admin,
+            limit=params.get("limit", None),
         )
         #END get_job_logs_as_admin
 

@@ -223,10 +223,10 @@ class SDKMethodRunner:
             job_id=job_id, log_lines=log_lines, as_admin=as_admin
         )
 
-    def view_job_logs(self, job_id, skip_lines=None, as_admin=False):
+    def view_job_logs(self, job_id, skip_lines=None, as_admin=False, limit=None):
         """ Authorization Required Read """
         return self.get_job_logs().view_job_logs(
-            job_id=job_id, skip_lines=skip_lines, as_admin=as_admin
+            job_id=job_id, skip_lines=skip_lines, as_admin=as_admin, limit=limit
         )
 
     # Endpoints: Changing a job's status

@@ -86,7 +86,7 @@ class JobLog:
 
         return log["stored_line_count"]
 
-    def _get_job_log(self, job_id, skip_lines) -> Dict:
+    def _get_job_log(self, job_id, skip_lines, limit=None) -> Dict:
         """
         # TODO Do I have to query this another way so I don't load all lines into memory?
         # Does mongoengine lazy-load it?
@@ -115,23 +115,31 @@ class JobLog:
         log = self.sdkmr.get_mongo_util().get_job_log_pymongo(job_id)
 
         lines = []
+        last_line_number = 0
         for log_line in log.get("lines", []):  # type: LogLines
             if skip_lines and int(skip_lines) >= log_line.get("linepos", 0):
                 continue
+            linepos = log_line.get("linepos")
             lines.append(
                 {
                     "line": log_line.get("line"),
-                    "linepos": log_line.get("linepos"),
+                    "linepos": linepos,
                     "error": log_line.get("error"),
                     "ts": int(log_line.get("ts", 0) * 1000),
                 }
             )
+            last_line_number = max(int(linepos), last_line_number)
+            if limit and limit <= len(lines):
+                break
 
-        log_obj = {"lines": lines, "last_line_number": log["stored_line_count"]}
+        if not lines:  # skipped all lines
+            last_line_number = log["stored_line_count"]
+
+        log_obj = {"lines": lines, "last_line_number": last_line_number}
         return log_obj
 
     # @allow_job_read
-    def view_job_logs(self, job_id, skip_lines, as_admin=False):
+    def view_job_logs(self, job_id, skip_lines, as_admin=False, limit=None):
         """
         Authorization Required: Ability to read from the workspace
         :param sdkmr: An instance of the SDK Method Runner, which contains the current request context
@@ -144,4 +152,4 @@ class JobLog:
             job_id, JobPermissions.READ, as_admin=as_admin
         )
 
-        return self._get_job_log(job_id, skip_lines)
+        return self._get_job_log(job_id, skip_lines, limit)

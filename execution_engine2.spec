@@ -195,12 +195,15 @@
 
 
         /*
-            skip_lines - optional parameter, number of lines to skip (in case they were
+            skip_lines or offset - optional parameter, number of lines to skip (in case they were
                 already loaded before).
+            limit - optional parameter, maximum number of lines returned
         */
         typedef structure {
             job_id job_id;
             int skip_lines;
+            int offset;
+            int limit;
         } GetJobLogsParams;
 
         /*

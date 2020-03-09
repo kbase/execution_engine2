@@ -615,6 +615,27 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         log = runner.view_job_logs(job_id=job_id, skip_lines=8)
         self.assertEqual(log, {"lines": [], "last_line_number": 8})
 
+        # Test limit
+        log = runner.view_job_logs(job_id=job_id, limit=2)
+        self.assertEqual(len(log["lines"]), 2)
+        self.assertEqual(log["lines"][0]["linepos"], 1)
+        self.assertEqual(log["lines"][-1]["linepos"], 2)
+        self.assertEqual(log["last_line_number"], 2)
+
+        log = runner.view_job_logs(job_id=job_id, limit=3, skip_lines=2)
+        self.assertEqual(len(log["lines"]), 3)
+        self.assertEqual(log["lines"][0]["linepos"], 3)
+        self.assertEqual(log["lines"][-1]["linepos"], 5)
+        self.assertEqual(log["last_line_number"], 5)
+
+        log = runner.view_job_logs(job_id=job_id, limit=3, skip_lines=7)
+        self.assertEqual(len(log["lines"]), 1)
+        self.assertEqual(log["lines"][0]["linepos"], 8)
+        self.assertEqual(log["last_line_number"], 8)
+
+        log = runner.view_job_logs(job_id=job_id, limit=3, skip_lines=8)
+        self.assertEqual(log, {"lines": [], "last_line_number": 8})
+
     # @requests_mock.Mocker()
     # def test_add_job_logs_ok(self, rq_mock):
     #     rq_mock.add_matcher(
