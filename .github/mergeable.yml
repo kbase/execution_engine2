@@ -22,4 +22,8 @@ mergeable:
       - do: comment
         payload:
           body: This is old. Is it still relevant?
-
+  - when: pull_request.master
+    validate:
+    - do: dependent
+        files: ['RELEASE_NOTES.md'] # list of files that are dependent on one another and must all be part of the changes in a PR.
+        message: 'Always update release notes when merging to master.'
