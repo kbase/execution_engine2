@@ -15,9 +15,12 @@ class JobPermissions(Enum):
     NONE = "n"
 
 
+from execution_engine2.SDKMethodRunner import SDKMethodRunner
+
+
 class JobStatusRange:
     def __init__(self, sdkmr):
-        self.sdkmr = sdkmr
+        self.sdkmr = sdkmr  # type: SDKMethodRunner
 
     def check_jobs_date_range_for_user(
         self,
@@ -56,7 +59,7 @@ class JobStatusRange:
 
         # Admins can view "ALL" or check_jobs for other users
         if user != token_user:
-            if not self.sdkmr._is_admin(self.sdkmr.token):
+            if not self.sdkmr.check_is_admin():
                 raise AuthError(
                     f"You are not authorized to view all records or records for others. user={user} token={token_user}"
                 )

@@ -1141,7 +1141,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner.workspace_auth = MagicMock()
         runner.auth.get_user = MagicMock(return_value=user_name)
         runner.is_admin = True
-        runner._is_admin = MagicMock(return_value=True)
+        runner.check_is_admin = MagicMock(return_value=True)
 
         runner.workspace_auth.can_read = MagicMock(return_value=True)
 
@@ -1314,7 +1314,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             print("Test case 2B. Same as above but with FAKE user (NO ADMIN) ")
             runner.is_admin = False
-            runner._is_admin = MagicMock(return_value=False)
+            runner.check_is_admin = MagicMock(return_value=False)
             with self.assertRaisesRegex(
                 AuthError,
                 "You are not authorized to view all records or records for others.",
@@ -1328,7 +1328,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             print("Test case 2C. Same as above but with FAKE_TEST_USER + ADMIN) ")
             runner.is_admin = True
-            runner._is_admin = MagicMock(return_value=True)
+            runner.check_is_admin = MagicMock(return_value=True)
             job_state = runner.check_jobs_date_range_for_user(
                 creation_end_time=str(tomorrow),
                 creation_start_time=str(last_month_and_1_hour),
