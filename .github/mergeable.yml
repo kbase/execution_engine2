@@ -8,17 +8,13 @@ mergeable:
       - do: label
         must_exclude:
           regex: 'wip'
-      - do: description
+          
+  - when: pull_request.*
+    validate:
+    - do: description
         no_empty:
           enabled: true
           message: Description matter and should not be empty. Provide detail with **what** was changed, **why** it was changed, and **how** it was changed.
-  - when: pull_request.*
-    validate:
-      - do: dependent
-        files: ['RELEASE_NOTES.md']
-        message: 'Always update release notes when merging to master.' # list of files that are dependent on one another and must all be part of the changes in a PR.
-      
-          
 
   - when: schedule.repository
     validate:
@@ -30,3 +26,9 @@ mergeable:
         payload:
           body: This is old. Is it still relevant?
  
+#   - when: pull_request.*
+#     validate:
+#       - do: dependent
+#         files: ['RELEASE_NOTES.md']
+#         message: 'Always update release notes when merging to master.' # list of files that are dependent on one another and must all be part of the changes in a PR.
+      
