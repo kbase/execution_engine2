@@ -29,3 +29,9 @@ class EE2ServerTest(unittest.TestCase):
     def test_version(self):
         version = self.impl.ver(self.ctx)[0]
         self.assertEqual(version, self.impl.VERSION)
+
+    def test_get_job_logs_fail(self):
+        with self.assertRaises(ValueError) as context:
+            self.impl.get_job_logs(ctx=self.ctx, params={"skip_lines": 2, "offset": 2})
+            self.assertEqual("Please provide only one of skip_lines or offset",
+                             str(context.exception.args))
