@@ -196,7 +196,7 @@ class Condor(Scheduler):
             requirements_statement.append(f'(CLIENTGROUP == "{client_group}")')
 
         restricted_requirements = [
-            "client_group",
+            "clientgroup",
             "client_group_regex",
             self.REQUEST_MEMORY,
             self.REQUEST_DISK,
@@ -205,7 +205,7 @@ class Condor(Scheduler):
         ]
 
         for key, value in cgrr.items():
-            if key not in restricted_requirements:
+            if key.lower() not in restricted_requirements:
                 requirements_statement.append(f'({key} == "{value}")')
 
         return requirements_statement
@@ -258,7 +258,7 @@ class Condor(Scheduler):
         sub["+KB_WSID"] = params.get("wsid", "")
         sub["+KB_SOURCE_WS_OBJECTS"] = ",".join(params.get("source_ws_objects", list()))
 
-        sub["+CLIENTGROUP"] = client_group
+        sub["+CLIENTGROUP"] = f'"{client_group}"'
         sub["getenv"] = "false"
         sub["environment"] = self.setup_environment_vars(params)
 
