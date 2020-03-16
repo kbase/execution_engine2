@@ -276,6 +276,8 @@ class JobsStatus:
                 scheduler_id=job.scheduler_id,
             )
         )
+        # TODO Use this?
+        self._send_exec_stats_to_catalog(job_id=job_id)
 
     def check_job(
         self, job_id, check_permission=True, exclude_fields=None, as_admin=False

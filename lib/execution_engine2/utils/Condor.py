@@ -187,16 +187,14 @@ class Condor(Scheduler):
 
         requirements_statement = []
 
-        client_group_regex = str(cgrr.get("client_group_regex", True))
-        client_group_regex = json.loads(client_group_regex.lower())
-
-        if client_group_regex is True:
+        # Default to using a regex
+        if str(cgrr.get("client_group_regex", True)).lower() == "true":
             requirements_statement.append(f'regexp("{client_group}",CLIENTGROUP)')
         else:
             requirements_statement.append(f'(CLIENTGROUP == "{client_group}")')
 
         restricted_requirements = [
-            "clientgroup",
+            "client_group",
             "client_group_regex",
             self.REQUEST_MEMORY,
             self.REQUEST_DISK,
@@ -257,8 +255,8 @@ class Condor(Scheduler):
         sub["+KB_APP_MODULE_NAME"] = params.get("app_id", "").split("/")[0]
         sub["+KB_WSID"] = params.get("wsid", "")
         sub["+KB_SOURCE_WS_OBJECTS"] = ",".join(params.get("source_ws_objects", list()))
-
-        sub["+CLIENTGROUP"] = f'"{client_group}"'
+        sub["+KB_SOURCE_WS_OBJECTS"] = f'"{sub["+KB_SOURCE_WS_OBJECTS"]}"'
+        sub["+KB_CLIENTGROUP"] = f'"{client_group}"'
         sub["getenv"] = "false"
         sub["environment"] = self.setup_environment_vars(params)
 
