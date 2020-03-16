@@ -35,10 +35,10 @@ class MigrateDatabases:
     def _get_ee2_connection(self) -> MongoClient:
         parser = ConfigParser()
         parser.read(os.environ.get("KB_DEPLOYMENT_CONFIG"))
-        self.ee2_host = parser.get("NarrativeJobService", "mongodb-host")
+        self.ee2_host = parser.get("execution_engine2", "mongo-host")
         self.ee2_db = "exec_engine2"
-        self.ee2_user = parser.get("NarrativeJobService", "mongodb-user")
-        self.ee2_pwd = parser.get("NarrativeJobService", "mongodb-pwd")
+        self.ee2_user = parser.get("execution_engine2", "mongo-user")
+        self.ee2_pwd = parser.get("execution_engine2", "mongo-password")
 
         return MongoClient(
             self.ee2_host,
@@ -231,7 +231,11 @@ class MigrateDatabases:
                 job.error_code = ErrorCode.unknown_error.value
 
             job.finished = finish_time
-            job.running = exec_start_time
+
+            if job.running == 0:
+                job.running = exec_start_time
+            if exec_start_time:
+                job.running = exec_start_time
 
             msg = [ujs_job.get("status", ""), ujs_job.get("desc", "")]
             job.msg = " ".join(msg)
