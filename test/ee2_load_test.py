@@ -268,7 +268,7 @@ class ee2_server_load_test(unittest.TestCase):
         "lib.installed_clients.CatalogClient.Catalog.get_module_version", autospec=True
     )
     @patch("lib.installed_clients.CatalogClient.Catalog.log_exec_stats", autospec=True)
-    def test_run_job_stress(self, cc, workspace, condor):
+    def test_run_job_stress(self, ccles, cc, workspace, condor):
         """
         testing running 3 different jobs in multiple theads.
         """
