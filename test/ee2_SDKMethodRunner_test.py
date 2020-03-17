@@ -114,6 +114,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
+        logging.info(f"Loading config from {config_file}")
+
         config_parser = ConfigParser()
         config_parser.read(config_file)
 

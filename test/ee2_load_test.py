@@ -20,6 +20,7 @@ from test.utils.test_utils import bootstrap
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
+from mock import MagicMock
 
 
 class ee2_server_load_test(unittest.TestCase):
@@ -61,6 +62,7 @@ class ee2_server_load_test(unittest.TestCase):
         # Initialize these clients from None
         runner = copy.deepcopy(self.__class__.method_runner)  # type : SDKMethodRunner
         runner.get_jobs_status()
+        runner._ee2_status._send_exec_stats_to_catalog = MagicMock(return_val=True)
         runner.get_runjob()
         runner.get_job_logs()
         return runner
