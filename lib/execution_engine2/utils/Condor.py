@@ -267,7 +267,6 @@ class Condor(Scheduler):
         sub["+KB_APP_MODULE_NAME"] = params.get("app_id", "").split("/")[0]
         sub["+KB_WSID"] = params.get("wsid", "")
         sub["+KB_SOURCE_WS_OBJECTS"] = ",".join(params.get("source_ws_objects", list()))
-        sub["+KB_SOURCE_WS_OBJECTS"] = f'"{sub["+KB_SOURCE_WS_OBJECTS"]}"'
 
         # Ensure double quoted user inputs
         for key in sub.keys():
