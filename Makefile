@@ -65,24 +65,26 @@ TEST_FILES+= test/ee2_authstrategy_test.py test/ee2_SDKMethodRunner_ee2_logs.py 
 
 setup-database:
 	# Set up travis user in mongo
-	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc --omit /home/travis/virtualenv/ test/ee2_check_configure_mongo_docker.py
-
-test:
-	# Requires htcondor python bindings
-	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_scheduler_test.py
-	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_SDKMethodRunner_test.py
-	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_MongoUtil_test.py
-	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_server_test.py
-	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_load_test.py
-	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_kafka_test.py
-
-test-models:
-	# Requires travis user to be set up
-	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_model_test.py
+	PYTHONPATH=lib pytest --verbose /home/travis/virtualenv/ test/ee2_check_configure_mongo_docker.py
 
 test-coverage:
 	# Assumes setup-database run in previous step
 	PYTHONPATH=lib pytest --verbose  $(TEST_FILES)
+
+# test:
+# 	# Requires htcondor python bindings
+# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_scheduler_test.py
+# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_SDKMethodRunner_test.py
+# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_MongoUtil_test.py
+# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_server_test.py
+# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_load_test.py
+# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_kafka_test.py
+
+# test-models:
+# 	# Requires travis user to be set up
+# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_model_test.py
+
+
 
 #test-in-docker:
 #    docker-compose up -d -f test/dockerfiles/condor/docker-compose.yml
