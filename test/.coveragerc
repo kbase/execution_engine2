@@ -5,3 +5,4 @@ omit =
     */baseclient.py
     */authclient.py
     */installed_clients/*
+    */home/travis/virtualenv/*

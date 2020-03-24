@@ -61,28 +61,28 @@ build-test-script:
 
 TEST_FILES = test/ee2_scheduler_test.py test/ee2_SDKMethodRunner_test.py test/ee2_MongoUtil_test.py
 TEST_FILES+= test/ee2_model_test.py test/ee2_server_test.py test/ee2_authutil_test.py test/ee2_workspaceauth_test.py
-TEST_FILES+= test/ee2_authstrategy_test.py test/ee2_load_test.py test/ee2_SDKMethodRunner_ee2_logs.py test/ee2_test_admin_mode.py
+TEST_FILES+= test/ee2_authstrategy_test.py test/ee2_SDKMethodRunner_ee2_logs.py test/ee2_test_admin_mode.py test/ee2_load_test.py
 
 setup-database:
 	# Set up travis user in mongo
-	PYTHONPATH=lib pytest --cov --cov-config=test/.coveragerc test/ee2_check_configure_mongo_docker.py
+	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc --omit /home/travis/virtualenv/ test/ee2_check_configure_mongo_docker.py
 
 test:
 	# Requires htcondor python bindings
-	PYTHONPATH=lib pytest --cov --cov-config=test/.coveragerc test/ee2_scheduler_test.py
-	PYTHONPATH=lib pytest --cov --cov-config=test/.coveragerc test/ee2_SDKMethodRunner_test.py
-	PYTHONPATH=lib pytest --cov --cov-config=test/.coveragerc test/ee2_MongoUtil_test.py
-	PYTHONPATH=lib pytest --cov --cov-config=test/.coveragerc test/ee2_server_test.py
-	PYTHONPATH=lib pytest --cov --cov-config=test/.coveragerc test/ee2_load_test.py
-	PYTHONPATH=lib pytest --cov --cov-config=test/.coveragerc test/ee2_kafka_test.py
+	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_scheduler_test.py
+	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_SDKMethodRunner_test.py
+	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_MongoUtil_test.py
+	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_server_test.py
+	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_load_test.py
+	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_kafka_test.py
 
 test-models:
 	# Requires travis user to be set up
-	PYTHONPATH=lib pytest --cov --cov-config=test/.coveragerc test/ee2_model_test.py
+	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_model_test.py
 
 test-coverage:
 	# Assumes setup-database run in previous step
-	PYTHONPATH=lib pytest --cov --cov-config=test/.coveragerc $(TEST_FILES)
+	PYTHONPATH=lib pytest --verbose  $(TEST_FILES)
 
 #test-in-docker:
 #    docker-compose up -d -f test/dockerfiles/condor/docker-compose.yml
@@ -96,15 +96,15 @@ test-with-docker:
 	# Test with docker-compose versions of condor and mongo
 	./test/dockerfiles/condor/start_condor_mongo_for_tests.sh
 	# Set up travis user in mongo
-	PYTHONPATH=lib pytest --cov --cov-config=test/.coveragerc ee2_check_configure_mongo_docker
+	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc ee2_check_configure_mongo_docker
 	# Run tests using python installed in travis, but with mongo and condor running in docker containers
-	PYTHONPATH=lib pytest --cov --cov-config=test/.coveragerc test/ee2_scheduler_test.py
-	PYTHONPATH=lib pytest --cov --cov-config=test/.coveragerc ee2_model_test
+	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_scheduler_test.py
+	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc ee2_model_test
 
 
 integration_test:
 	./test/dockerfiles/condor/start_condor_docker_travis.sh
-	PYTHONPATH=lib pytest -x -v --nocapture --nologcapture --with-coverage --cover-html test/ee2_scheduler_integration_test.py
+	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_scheduler_integration_test.py
 
 clean:
 	rm -rfv $(LBIN_DIR)
