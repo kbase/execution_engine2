@@ -60,11 +60,10 @@ class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
         for nameval in config_parser.items("execution_engine2"):
             cfg[nameval[0]] = nameval[1]
         cls.cfg = cfg
-
         mongo_in_docker = cls.cfg.get("mongo-in-docker-compose", None)
         if mongo_in_docker is not None:
             cls.cfg["mongo-host"] = cls.cfg["mongo-in-docker-compose"]
-
+        logging.info(f"Mongo host is {cls.cfg['mongo-host']}")
         cls.user_id = "wsadmin"
         cls.ws_id = 9999
         cls.token = "token"

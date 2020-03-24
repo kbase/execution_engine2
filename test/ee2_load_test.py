@@ -20,6 +20,7 @@ from test.utils.test_utils import bootstrap
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
+from mock import MagicMock
 
 
 class ee2_server_load_test(unittest.TestCase):
@@ -61,6 +62,7 @@ class ee2_server_load_test(unittest.TestCase):
         # Initialize these clients from None
         runner = copy.deepcopy(self.__class__.method_runner)  # type : SDKMethodRunner
         runner.get_jobs_status()
+        runner._ee2_status._send_exec_stats_to_catalog = MagicMock(return_val=True)
         runner.get_runjob()
         runner.get_job_logs()
         return runner
@@ -267,7 +269,8 @@ class ee2_server_load_test(unittest.TestCase):
     @patch(
         "lib.installed_clients.CatalogClient.Catalog.get_module_version", autospec=True
     )
-    def test_run_job_stress(self, cc, workspace, condor):
+    @patch("lib.installed_clients.CatalogClient.Catalog.log_exec_stats", autospec=True)
+    def test_run_job_stress(self, ccles, cc, workspace, condor):
         """
         testing running 3 different jobs in multiple theads.
         """

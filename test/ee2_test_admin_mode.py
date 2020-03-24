@@ -10,6 +10,7 @@ from configparser import ConfigParser
 import copy
 from mock import patch
 from execution_engine2.utils.Condor import Condor, submission_info
+from installed_clients.CatalogClient import Catalog
 from execution_engine2.authorization.roles import AdminAuthUtil
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 import bson
@@ -119,7 +120,8 @@ class EE2TestAdminMode(unittest.TestCase):
 
     @patch.object(AdminAuthUtil, "_fetch_user_roles")
     @patch.object(WorkspaceAuth, "can_write", return_value=True)
-    def test_regular_user(self, aau, workspace):
+    @patch.object(Catalog, "get_module_version", return_value="module.version")
+    def test_regular_user(self, aau, workspace, catalog):
         # Regular User
         lowly_user = "Access Denied: You are not an administrator"
         runner = self.getRunner()

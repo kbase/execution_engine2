@@ -1,5 +1,4 @@
 import enum
-import json
 import logging
 import os
 import pathlib
@@ -187,16 +186,14 @@ class Condor(Scheduler):
 
         requirements_statement = []
 
-        client_group_regex = str(cgrr.get("client_group_regex", True))
-        client_group_regex = json.loads(client_group_regex.lower())
-
-        if client_group_regex is True:
+        # Default to using a regex
+        if str(cgrr.get("client_group_regex", True)).lower() == "true":
             requirements_statement.append(f'regexp("{client_group}",CLIENTGROUP)')
         else:
             requirements_statement.append(f'(CLIENTGROUP == "{client_group}")')
 
         restricted_requirements = [
-            "clientgroup",
+            "client_group",
             "client_group_regex",
             self.REQUEST_MEMORY,
             self.REQUEST_DISK,
@@ -250,6 +247,19 @@ class Condor(Scheduler):
 
         params["extracted_client_group"] = client_group
 
+        sub = self.extract_special_items(sub=sub, params=params)
+        sub["+KB_CLIENTGROUP"] = f'"{client_group}"'
+
+        sub["getenv"] = "false"
+        sub["environment"] = self.setup_environment_vars(params)
+
+        # Ensure all values are a string
+        for item in sub.keys():
+            sub[item] = str(sub[item])
+        return sub
+
+    @staticmethod
+    def extract_special_items(sub, params):
         sub["+KB_PARENT_JOB_ID"] = params.get("parent_job_id", "")
         sub["+KB_MODULE_NAME"] = params.get("method", "").split(".")[0]
         sub["+KB_FUNCTION_NAME"] = params.get("method", "").split(".")[-1]
@@ -258,13 +268,13 @@ class Condor(Scheduler):
         sub["+KB_WSID"] = params.get("wsid", "")
         sub["+KB_SOURCE_WS_OBJECTS"] = ",".join(params.get("source_ws_objects", list()))
 
-        sub["+CLIENTGROUP"] = f'"{client_group}"'
-        sub["getenv"] = "false"
-        sub["environment"] = self.setup_environment_vars(params)
+        # Ensure double quoted user inputs
+        for key in sub.keys():
+            if "+KB" in key:
+                value = sub[key]
+                if value != "":
+                    sub[key] = f'"{value}"'
 
-        # Ensure all values are a string
-        for item in sub.keys():
-            sub[item] = str(sub[item])
         return sub
 
     def run_job(self, params, submit_file=None):

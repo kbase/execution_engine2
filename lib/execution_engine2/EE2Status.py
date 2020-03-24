@@ -276,6 +276,8 @@ class JobsStatus:
                 scheduler_id=job.scheduler_id,
             )
         )
+        # TODO Use this?
+        self._send_exec_stats_to_catalog(job_id=job_id)
 
     def check_job(
         self, job_id, check_permission=True, exclude_fields=None, as_admin=False
@@ -420,8 +422,8 @@ class JobsStatus:
         log_exec_stats_params["func_name"] = method.split(".")[-1]
         log_exec_stats_params["git_commit_hash"] = job_input.service_ver
         log_exec_stats_params["creation_time"] = job.id.generation_time.timestamp()
-        log_exec_stats_params["exec_start_time"] = job.running.timestamp()
-        log_exec_stats_params["finish_time"] = job.finished.timestamp()
+        log_exec_stats_params["exec_start_time"] = job.running
+        log_exec_stats_params["finish_time"] = job.finished
         log_exec_stats_params["is_error"] = int(job.status == Status.error.value)
         log_exec_stats_params["job_id"] = job_id
 
