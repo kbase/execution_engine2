@@ -65,24 +65,24 @@ TEST_FILES+= test/ee2_authstrategy_test.py test/ee2_load_test.py test/ee2_SDKMet
 
 setup-database:
 	# Set up travis user in mongo
-	nosetests -x -v --nocapture --nologcapture test/ee2_check_configure_mongo_docker.py
+	pytest -x -v --nocapture --nologcapture test/ee2_check_configure_mongo_docker.py
 
 test:
 	# Requires htcondor python bindings
-	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_scheduler_test.py
-	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_SDKMethodRunner_test.py
-	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_MongoUtil_test.py
-	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_server_test.py
-	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_load_test.py
-	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_kafka_test.py
+	pytest -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_scheduler_test.py
+	pytest -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_SDKMethodRunner_test.py
+	pytest -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_MongoUtil_test.py
+	pytest -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_server_test.py
+	pytest -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_load_test.py
+	pytest -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_kafka_test.py
 
 test-models:
 	# Requires travis user to be set up
-	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_model_test.py
+	pytest -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_model_test.py
 
 test-coverage:
 	# Assumes setup-database run in previous step
-	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 $(TEST_FILES)
+	pytest -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 $(TEST_FILES)
 
 #test-in-docker:
 #    docker-compose up -d -f test/dockerfiles/condor/docker-compose.yml
@@ -95,15 +95,15 @@ test-with-docker:
 	# Test with docker-compose versions of condor and mongo
 	./test/dockerfiles/condor/start_condor_mongo_for_tests.sh
 	# Set up travis user in mongo
-	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 ee2_check_configure_mongo_docker
+	pytest -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 ee2_check_configure_mongo_docker
 	# Run tests using python installed in travis, but with mongo and condor running in docker containers
-	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_scheduler_test.py
-	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 ee2_model_test
+	pytest -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 test/ee2_scheduler_test.py
+	pytest -x -v --nocapture --nologcapture --with-coverage --cover-html --cover-package=execution_engine2 ee2_model_test
 
 
 integration_test:
 	./test/dockerfiles/condor/start_condor_docker_travis.sh
-	nosetests -x -v --nocapture --nologcapture --with-coverage --cover-html test/ee2_scheduler_integration_test.py
+	pytest -x -v --nocapture --nologcapture --with-coverage --cover-html test/ee2_scheduler_integration_test.py
 
 clean:
 	rm -rfv $(LBIN_DIR)
