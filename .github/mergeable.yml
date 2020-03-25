@@ -27,7 +27,7 @@ mergeable:
           body: "This is old. Is it still relevant?"
     validate: 
       - 
-        days: 20
+        days: 30
         do: stale
         type: "pull_request, issues"
     when: schedule.repository
