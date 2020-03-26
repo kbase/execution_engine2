@@ -379,7 +379,7 @@ class SDKMethodRunner:
         return job
 
     def check_workspace_jobs(
-        self, workspace_id, exclude_fields=None, return_list=None, as_admin=True
+        self, workspace_id, exclude_fields=None, return_list=None, as_admin=False
     ):
         """
         check_workspace_jobs: check job status for all jobs in a given workspace
