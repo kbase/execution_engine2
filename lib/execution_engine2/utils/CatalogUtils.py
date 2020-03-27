@@ -5,8 +5,8 @@ from lib.installed_clients.CatalogClient import Catalog
 
 
 class CatalogUtils:
-    def __init__(self, url):
-        self.catalog = Catalog(url=url)
+    def __init__(self, url, admin_token):
+        self.catalog = Catalog(url=url, token=admin_token)
 
     def get_client_groups(self, method) -> Dict:
         """
