@@ -614,7 +614,9 @@ class ee2_server_load_test(unittest.TestCase):
             # add one line to job
             ts = time.time()
             job_line = [{"line": "hello ee2", "is_error": True, "ts": ts}]
-            self.impl.add_job_logs(ctx=self.ctx, job_id=job_id, lines=job_line)
+            self.impl.add_job_logs(
+                ctx=self.ctx, params={"job_id": job_id}, lines=job_line
+            )
 
             threads = list()
             job_lines = list()
@@ -682,7 +684,7 @@ class ee2_server_load_test(unittest.TestCase):
                 x = threading.Thread(
                     target=que.put(
                         self.impl.add_job_logs(
-                            ctx=self.ctx, job_id=job_id, lines=job_line
+                            ctx=self.ctx, params={"job_id": job_id}, lines=job_line
                         )
                     )
                 )
