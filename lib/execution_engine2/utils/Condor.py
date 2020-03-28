@@ -109,7 +109,7 @@ class Condor(Scheduler):
             fallback="/condor_shared/JobRunner.tgz",
         )
 
-    def setup_environment_vars(self, params: Dict[str, Any]) -> str:
+    def setup_environment_vars(self, params: Dict) -> str:
         # 7 day docker job timeout default, Catalog token used to get access to volume mounts
         dm = (
             str(params["cg_resources_requirements"].get("debug_mode", "")).lower()
@@ -213,7 +213,7 @@ class Condor(Scheduler):
 
         return requirements_statement
 
-    def create_submit(self, params: Dict[str, Any]):
+    def create_submit(self, params: Dict):
         self.check_for_missing_runjob_params(params)
         sub = dict()
         sub["JobBatchName"] = params.get("job_id")
@@ -236,25 +236,19 @@ class Condor(Scheduler):
         sub["MaxJobRetirementTime"] = "43200"
         # Remove jobs running longer than 7 days
         sub["Periodic_Remove"] = "( RemoteWallClockTime > 604800 )"
-
         cgrr = params["cg_resources_requirements"]
-
         # Extract minimum condor resource requirements and client_group
         resources = self.extract_resources(cgrr)
         sub["request_cpus"] = resources.request_cpus
         sub["request_memory"] = resources.request_memory
         sub["request_disk"] = resources.request_disk
         client_group = resources.client_group
-
         # Set requirements statement
         requirements = self.extract_requirements(cgrr=cgrr, client_group=client_group)
         sub["requirements"] = " && ".join(requirements)
-
         params["extracted_client_group"] = client_group
-
         sub = self.extract_special_items(sub=sub, params=params)
         sub["+KB_CLIENTGROUP"] = f'"{client_group}"'
-
         sub["getenv"] = "false"
         sub["environment"] = self.setup_environment_vars(params)
 
@@ -264,7 +258,7 @@ class Condor(Scheduler):
         return sub
 
     @staticmethod
-    def extract_special_items(sub, params: Dict[str, str]):
+    def extract_special_items(sub: Dict, params: Dict[str, str]):
         sub["+KB_PARENT_JOB_ID"] = params.get("parent_job_id", "")
         sub["+KB_MODULE_NAME"] = params.get("method", "").split(".")[0]
         sub["+KB_FUNCTION_NAME"] = params.get("method", "").split(".")[-1]
@@ -341,7 +335,7 @@ class Condor(Scheduler):
         """
         return self.cancel_jobs([f"{job_id}"])
 
-    def cancel_jobs(self, scheduler_ids):
+    def cancel_jobs(self, scheduler_ids: list):
         """
         Possible return structure like this
         [

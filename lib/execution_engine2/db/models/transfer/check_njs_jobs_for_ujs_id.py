@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# type: ignore
 try:
     from .transfer_ujs_njs import MigrateDatabases
     from execution_engine2.db.models.models import Status, valid_status

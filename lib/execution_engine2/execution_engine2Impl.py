@@ -45,6 +45,7 @@ class execution_engine2:
         self.config = config
         self.config["mongo-collection"] = self.MONGO_COLLECTION
         self.config.setdefault("mongo-authmechanism", self.MONGO_AUTHMECHANISM)
+        
         self.job_permission_cache = TTLCache(
             maxsize=self.JOB_PERMISSION_CACHE_SIZE,
             ttl=self.JOB_PERMISSION_CACHE_EXPIRE_TIME,

@@ -7,7 +7,7 @@ the logic to retrieve info needed by the runnner to start the job
 import logging
 import time
 from enum import Enum
-from typing import AnyStr
+from typing import Optional
 
 from execution_engine2.db.models.models import (
     Job,
@@ -16,7 +16,7 @@ from execution_engine2.db.models.models import (
     JobRequirements,
     Status,
 )
-from execution_engine2.utils.Condor import condor_resources
+from execution_engine2.utils.Condor import CondorResources
 from execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
 from test.utils.test_utils import bootstrap
 
@@ -54,8 +54,8 @@ class RunJob:
         pass
 
     def _init_job_rec(
-        self, user_id, params, resources: condor_resources = None
-    ) -> AnyStr:
+        self, user_id, params, resources: CondorResources = None
+    ) -> Optional[str]:
         job = Job()
 
         inputs = JobInput()
@@ -107,7 +107,7 @@ class RunJob:
 
         return str(job.id)
 
-    def _get_module_git_commit(self, method, service_ver=None) -> AnyStr:
+    def _get_module_git_commit(self, method, service_ver=None) -> Optional[str]:
         module_name = method.split(".")[0]
 
         if not service_ver:
@@ -136,20 +136,9 @@ class RunJob:
             if None in paths:
                 raise ValueError("Some workspace object is inaccessible")
 
-    def run(self, params=None, as_admin=False) -> AnyStr:
-        """
-        :param params: SpecialRunJobParamsParams object (See spec file)
-        :param params: RunJobParams object (See spec file)
-        :param as_admin: Allows you to run jobs in other people's workspaces
-        :return: The condor job id
-        """
-        wsid = params.get("wsid")
-
-        if as_admin:
-            self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
-        else:
-            ws_auth = self.sdkmr.get_workspace_auth()
-            if wsid and not ws_auth.can_write(wsid):
+    def _check_workspace_permissions(self, wsid):
+        if wsid:
+            if not self.sdkmr.get_workspace_auth().can_write(wsid):
                 self.sdkmr.logger.debug(
                     f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
                 )
@@ -157,37 +146,31 @@ class RunJob:
                     f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
                 )
 
-        method = params.get("method")
-        self.sdkmr.logger.info(
-            f"User {self.sdkmr.user_id} attempting to run job {method}"
-        )
-
-        # Normalize multiple formats into one format (csv vs json)
-        app_settings = self.sdkmr.catalog_utils.get_client_groups(method)
-
-        # These are for saving into job inputs. Maybe its best to pass this into condor as well?
-        extracted_resources = self.sdkmr.get_condor().extract_resources(
-            cgrr=app_settings
-        )
-        # TODO Validate MB/GB from both config and catalog.
-
+    def _run(self, params):
         # perform sanity checks before creating job
         self._check_ws_objects(source_objects=params.get("source_ws_objects"))
+        method = params.get("method")
+        # Normalize multiple formats into one format (csv vs json)
+        app_settings = self.sdkmr.catalog_utils.get_client_groups(method)
+        # These are for saving into job inputs. Maybe its best to pass this into condor as well?
+        # TODO Validate MB/GB from both config and catalog.
+        extracted_resources = self.sdkmr.get_condor().extract_resources(
+            cgrr=app_settings
+        )  # type: CondorResources
 
-        # update service_ver
-        git_commit_hash = self._get_module_git_commit(method, params.get("service_ver"))
-        params["service_ver"] = git_commit_hash
-
-        # insert initial job document
+        # insert initial job document into db
         job_id = self._init_job_rec(self.sdkmr.user_id, params, extracted_resources)
-
-        self.sdkmr.logger.debug("About to run job with")
-        self.sdkmr.logger.debug(app_settings)
-
+        params["service_ver"] = self._get_module_git_commit(
+            method, params.get("service_ver")
+        )
         params["job_id"] = job_id
         params["user_id"] = self.sdkmr.user_id
         params["token"] = self.sdkmr.token
         params["cg_resources_requirements"] = app_settings
+
+        self.sdkmr.logger.info(
+            f"User {self.sdkmr.user_id} attempting to run job {method} {params}"
+        )
         try:
             submission_info = self.sdkmr.get_condor().run_job(params)
             condor_job_id = submission_info.clusterid
@@ -216,6 +199,23 @@ class RunJob:
         )
 
         return job_id
+
+    def run_concierge(self, params=None):
+        self._check_workspace_permissions(params.get("wsid"))
+        return self.run(params)
+
+    def run(self, params=None, as_admin=False) -> Optional[str]:
+        """
+        :param params: SpecialRunJobParamsParams object (See spec file)
+        :param params: RunJobParams object (See spec file)
+        :param as_admin: Allows you to run jobs in other people's workspaces
+        :return: The condor job id
+        """
+        if as_admin:
+            self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
+        else:
+            self._check_workspace_permissions(params.get("wsid"))
+        return self.run(params)
 
     def update_job_to_queued(self, job_id, scheduler_id):
         # TODO RETRY FOR RACE CONDITION OF RUN/CANCEL
