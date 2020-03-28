@@ -60,7 +60,7 @@ class JobsStatus:
             f"About to cancel job in CONDOR using jobid {job.scheduler_id}"
         )
         success = self.sdkmr.get_condor().cancel_job(job_id=job.scheduler_id)
-        logging.info(success)
+
         self.sdkmr.logger.debug(f"{success}")
 
         # TODO Issue #190 IF success is FALSE, don't send a kafka message?
@@ -175,7 +175,7 @@ class JobsStatus:
         try:
             output.validate()
         except Exception as e:
-            logging.info(e)
+            logging.debug(e)
             error_message = "Something was wrong with the output object"
             error_code = ErrorCode.job_missing_output.value
             error = {
@@ -290,7 +290,7 @@ class JobsStatus:
         job_id: id of job
         """
 
-        logging.info("Start fetching status for job: {}".format(job_id))
+        logging.debug("Start fetching status for job: {}".format(job_id))
 
         if exclude_fields is None:
             exclude_fields = []
@@ -314,7 +314,7 @@ class JobsStatus:
         check_jobs: check and return job status for a given of list job_ids
         """
 
-        logging.info("Start fetching status for jobs: {}".format(job_ids))
+        logging.debug("Start fetching status for jobs: {}".format(job_ids))
 
         if exclude_fields is None:
             exclude_fields = []
@@ -370,7 +370,7 @@ class JobsStatus:
         """
         check_workspace_jobs: check job status for all jobs in a given workspace
         """
-        logging.info(
+        logging.debug(
             "Start fetching all jobs status in workspace: {}".format(workspace_id)
         )
 

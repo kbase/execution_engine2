@@ -4,7 +4,7 @@ import os
 import pathlib
 import pwd
 from configparser import ConfigParser
-from typing import Dict, Optional, Any, NamedTuple
+from typing import Dict, Optional, NamedTuple
 
 import htcondor
 
@@ -294,11 +294,11 @@ class Condor(Scheduler):
         sub = htcondor.Submit(submit)
         try:
             schedd = htcondor.Schedd()
-            logging.info(schedd)
-            logging.info(submit)
-            logging.info(os.getuid())
-            logging.info(pwd.getpwuid(os.getuid()).pw_name)
-            logging.info(submit)
+            logging.debug(schedd)
+            logging.debug(submit)
+            logging.debug(os.getuid())
+            logging.debug(pwd.getpwuid(os.getuid()).pw_name)
+            logging.debug(submit)
             with schedd.transaction() as txn:
                 return SubmissionInfo(str(sub.queue(txn, 1)), sub, None)
         except Exception as e:

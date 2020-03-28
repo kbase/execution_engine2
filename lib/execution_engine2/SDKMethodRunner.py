@@ -459,7 +459,7 @@ class SDKMethodRunner:
             datetime.fromtimestamp(time_input)  # check current time_input is valid
         except Exception:
             if assign_default_time:
-                logging.info(
+                logging.debug(
                     "Cannot convert time_input into timestamps: {}".format(time_input)
                 )
                 time_input = time.time()

@@ -104,7 +104,7 @@ class JobStatusRange:
                 .only(*job_projection)
             )
 
-        logging.info(
+        logging.debug(
             f"Searching for jobs with id_gt {dummy_ids.start} id_lt {dummy_ids.stop}"
         )
 

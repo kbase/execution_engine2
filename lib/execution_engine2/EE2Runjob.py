@@ -6,8 +6,9 @@ the logic to retrieve info needed by the runnner to start the job
 """
 import logging
 import time
+from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from typing import Optional, Dict
 
 from execution_engine2.db.models.models import (
     Job,
@@ -27,6 +28,14 @@ class JobPermissions(Enum):
     READ = "r"
     WRITE = "w"
     NONE = "n"
+
+
+@dataclass()
+class ConciergeParams:
+    request_cpus: Optional[int]
+    request_memory: Optional[str]
+    request_disk: Optional[str]
+    client_group: Optional[str]
 
 
 class RunJob:
@@ -54,7 +63,11 @@ class RunJob:
         pass
 
     def _init_job_rec(
-        self, user_id, params, resources: CondorResources = None
+        self,
+        user_id: str,
+        params: Dict,
+        resources: CondorResources = None,
+        concierge_params: ConciergeParams = None,
     ) -> Optional[str]:
         job = Job()
 
@@ -93,10 +106,21 @@ class RunJob:
 
             jr.memory = resources.request_memory[:-1]
             jr.disk = resources.request_disk[:-2]
+
+            if concierge_params:
+                if concierge_params.request_cpus:
+                    jr.cpu = concierge_params.request_cpus
+                if concierge_params.request_cpus:
+                    jr.memory = concierge_params.request_memory
+                if concierge_params.request_cpus:
+                    jr.disk = concierge_params.request_disk
+                if concierge_params.request_cpus:
+                    jr.clientgroup = concierge_params.client_group
+
             inputs.requirements = jr
 
         job.job_input = inputs
-        logging.info(job.job_input.to_mongo().to_dict())
+        logging.debug(job.job_input.to_mongo().to_dict())
 
         with self.sdkmr.get_mongo_util().mongo_engine_connection():
             job.save()
@@ -146,7 +170,7 @@ class RunJob:
                     f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
                 )
 
-    def _run(self, params):
+    def _run(self, params, concierge_params):
         # perform sanity checks before creating job
         self._check_ws_objects(source_objects=params.get("source_ws_objects"))
         method = params.get("method")
@@ -159,7 +183,9 @@ class RunJob:
         )  # type: CondorResources
 
         # insert initial job document into db
-        job_id = self._init_job_rec(self.sdkmr.user_id, params, extracted_resources)
+        job_id = self._init_job_rec(
+            self.sdkmr.user_id, params, extracted_resources, concierge_params
+        )
         params["service_ver"] = self._get_module_git_commit(
             method, params.get("service_ver")
         )
@@ -192,7 +218,7 @@ class RunJob:
         self.sdkmr.logger.debug(condor_job_id)
         self.sdkmr.logger.debug(type(condor_job_id))
 
-        logging.info(f"Attempting to update job to queued  {job_id} {condor_job_id}")
+        logging.debug(f"Attempting to update job to queued  {job_id} {condor_job_id}")
         self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
         self.sdkmr.slack_client.run_job_message(
             job_id=job_id, scheduler_id=condor_job_id, username=self.sdkmr.user_id
@@ -200,22 +226,25 @@ class RunJob:
 
         return job_id
 
-    def run_concierge(self, params=None):
-        self._check_workspace_permissions(params.get("wsid"))
-        return self.run(params)
-
-    def run(self, params=None, as_admin=False) -> Optional[str]:
+    def run(
+        self, params=None, as_admin=False, concierge_params: Dict = None
+    ) -> Optional[str]:
         """
         :param params: SpecialRunJobParamsParams object (See spec file)
         :param params: RunJobParams object (See spec file)
         :param as_admin: Allows you to run jobs in other people's workspaces
+        :param concierge_params: Allows you to specify request_cpu, request_memory, request_disk, clientgroup
         :return: The condor job id
         """
         if as_admin:
             self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
         else:
             self._check_workspace_permissions(params.get("wsid"))
-        return self.run(params)
+
+        if concierge_params:
+            cp = ConciergeParams(**concierge_params)
+
+        return self._run(params=params, concierge_params=cp)
 
     def update_job_to_queued(self, job_id, scheduler_id):
         # TODO RETRY FOR RACE CONDITION OF RUN/CANCEL
