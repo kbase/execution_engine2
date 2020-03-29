@@ -24,7 +24,11 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         TravisCI doesn't need to run this test.
         :return:
         """
-        if "KB_AUTH_TOKEN" not in os.environ or "ENDPOINT" not in os.environ:
+        os.environ["KB_AUTH_TOKEN"] = "XXXX"
+        os.environ["EE2_ENDPOINT"] = "https://ci.kbase.us/services/ee2"
+        os.environ["WS_ENDPOINT"] = "https://ci.kbase.us/services/ws"
+
+        if "KB_AUTH_TOKEN" not in os.environ or "EE2_ENDPOINT" not in os.environ:
             logging.error(
                 "Make sure you copy the env/test.env.example file to test/env/test.env and populate it"
             )
@@ -66,6 +70,44 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
     #     check_jobs_date_range_params = {""}
     #     self.ee2.check_jobs_date_range_for_user()
     #     self.ee2.check_jobs_date_range_for_all()
+
+    def test_admin_perm(self):
+        print("is_admin", self.ee2.is_admin())
+        print("perrmission = ", self.ee2.get_admin_permission().get("permission"))
+
+    def test_run_job_concierge(self):
+        # ee2 = execution_engine2(
+        #     url=os.environ["EE2_ENDPOINT"], token=os.environ["KB_AUTH_TOKEN"]
+        # )
+
+        params = {"base_number": "105"}
+        runjob_params = {
+            "method": "simpleapp.simple_add",
+            "params": [params],
+            "service_ver": "dev",
+            "wsid": "48739",
+            "app_id": "simpleapp",
+        }
+
+        cp = dict()
+        cp["request_cpus"] = 1
+        cp["request_disk"] = 1000
+        cp["request_memory"] = 1000
+
+        job_id = self.ee2.run_job_concierge(runjob_params, concierge_params=cp)
+        print(f"Submitted job {job_id}")
+        job_log_params = {"job_id": job_id}
+
+        while True:
+            time.sleep(5)
+            try:
+                print(self.ee2.get_job_status({"job_id": job_id}))
+                print(self.ee2.get_job_logs(job_log_params))
+                status = self.ee2.get_job_status({"job_id": job_id})
+                if status == {"status": "finished"}:
+                    break
+            except Exception as e:
+                print("Not yet", e)
 
     def test_run_job(self):
         """

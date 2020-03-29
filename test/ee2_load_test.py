@@ -9,12 +9,13 @@ import unittest
 from configparser import ConfigParser
 from unittest.mock import patch
 
-from sdk.SDKMethodRunner import SDKMethodRunner
-from execution_engine2.authorization.workspaceauth import WorkspaceAuth
-from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.db.models.models import Job, Status
-from execution_engine2.execution_engine2Impl import execution_engine2
-from execution_engine2.utils.Condor import Condor, submission_info
+from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
+from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
+from lib.execution_engine2.db.MongoUtil import MongoUtil
+from lib.execution_engine2.db.models.models import Job, Status
+from lib.execution_engine2.execution_engine2Impl import execution_engine2
+from lib.execution_engine2.utils.Condor import Condor
+from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
 from test.mongo_test_helper import MongoTestHelper
 from test.utils.test_utils import bootstrap
 
@@ -262,7 +263,7 @@ class ee2_server_load_test(unittest.TestCase):
     # @patch.object(Catalog, "get_module_version", return_value="module.version")
     # @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
 
-    si = submission_info(clusterid="test", submit="job", error=None)
+    si = SubmissionInfo(clusterid="test", submit="job", error=None)
 
     @patch.object(Condor, "run_job", return_value=si)
     @patch.object(WorkspaceAuth, "can_write", return_value=True)

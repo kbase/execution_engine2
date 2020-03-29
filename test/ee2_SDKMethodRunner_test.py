@@ -18,26 +18,27 @@ from bson import ObjectId
 from mock import MagicMock
 from mongoengine import ValidationError
 
-from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.db.models.models import (
+from lib.execution_engine2.db.MongoUtil import MongoUtil
+from lib.execution_engine2.db.models.models import (
     Job,
     JobInput,
     Meta,
     Status,
     TerminatedCode,
 )
-from execution_engine2.exceptions import AuthError
-from execution_engine2.exceptions import InvalidStatusTransitionException
-from execution_engine2.utils.Condor import condor_resources
-from execution_engine2.utils.Condor import submission_info
-from sdk.SDKMethodRunner import SDKMethodRunner
+from lib.execution_engine2.exceptions import AuthError
+from lib.execution_engine2.exceptions import InvalidStatusTransitionException
+
+
+from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
+from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from test.mongo_test_helper import MongoTestHelper
 from test.utils.test_utils import bootstrap, get_example_job, validate_job_state
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
 
-from sdk.EE2Runjob import RunJob
+from lib.execution_engine2.sdk.EE2Runjob import RunJob
 
 
 def _run_job_adapter(
@@ -142,7 +143,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             db=cls.cfg["mongo-database"], col=cls.cfg["mongo-jobs-collection"]
         )
 
-        cls.cr = condor_resources(
+        cls.cr = CondorResources(
             request_cpus="1",
             request_disk="1GB",
             request_memory="100M",
@@ -373,7 +374,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job["method"] = job["job_input"]["app_id"]
         job["app_id"] = job["job_input"]["app_id"]
 
-        si = submission_info(clusterid="test", submit=job, error=None)
+        si = SubmissionInfo(clusterid="test", submit=job, error=None)
 
         condor_mock.run_job = MagicMock(return_value=si)
         condor_mock.extract_resources = MagicMock(return_value=self.cr)
@@ -502,7 +503,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job["method"] = job["job_input"]["app_id"]
         job["app_id"] = job["job_input"]["app_id"]
 
-        si = submission_info(clusterid="test", submit=job, error=None)
+        si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
         condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
@@ -529,7 +530,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job["method"] = job["job_input"]["app_id"]
         job["app_id"] = job["job_input"]["app_id"]
 
-        si = submission_info(clusterid="test", submit=job, error=None)
+        si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
         condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
@@ -1184,7 +1185,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job["method"] = job["job_input"]["app_id"]
         job["app_id"] = job["job_input"]["app_id"]
 
-        si = submission_info(clusterid="test", submit=job, error=None)
+        si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
         condor_mock.extract_resources = MagicMock(return_value=self.cr)
 

@@ -8,9 +8,9 @@ from typing import Dict, List
 
 import requests_mock
 
-from sdk.SDKMethodRunner import SDKMethodRunner
-from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.db.models.models import Job, JobLog
+from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
+from lib.execution_engine2.db.MongoUtil import MongoUtil
+from lib.execution_engine2.db.models.models import Job, JobLog
 from test.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 from test.mongo_test_helper import MongoTestHelper
 from test.utils.test_utils import bootstrap

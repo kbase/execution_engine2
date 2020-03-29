@@ -5,8 +5,8 @@ import unittest
 
 from bson import ObjectId
 
-from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.db.models.models import LogLines, JobLog
+from lib.execution_engine2.db.MongoUtil import MongoUtil
+from lib.execution_engine2.db.models.models import LogLines, JobLog
 from test.utils.test_utils import read_config_into_dict, bootstrap, get_example_job
 
 logging.basicConfig(level=logging.INFO)

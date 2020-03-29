@@ -122,26 +122,20 @@ class execution_engine2(object):
            which will share the job based on the permissions of the workspace
            rather than owner of the job parent_job_id - UJS id of the parent
            of a batch job. Sub jobs will add this id to the NJS database
-           under the field "parent_job_id" ======= These are optional
-           parameters that are currently allowed if you have the
-           KBASE_CONCIERGE/KBASE_FULL_SERVICE roles ======= @optional
-           request_cpu @optional request_memory_mb @optional request_disk_mb
-           @optional request_clientgroup @optional
-           request_staging_volume_mounts @optional
-           request_refdata_volume_mounts @optional as_admin) -> structure:
-           parameter "method" of String, parameter "params" of list of
-           unspecified object, parameter "service_ver" of String, parameter
-           "rpc_context" of type "RpcContext" (call_stack - upstream calls
-           details including nested service calls and parent jobs where calls
-           are listed in order from outer to inner.) -> structure: parameter
-           "call_stack" of list of type "MethodCall" (time - the time the
-           call was started; method - service defined in standard JSON RPC
-           way, typically it's module name from spec-file followed by '.' and
-           name of funcdef from spec-file corresponding to running method
-           (e.g. 'KBaseTrees.construct_species_tree' from trees service);
-           job_id - job id if method is asynchronous (optional field).) ->
-           structure: parameter "time" of type "timestamp" (A time in the
-           format YYYY-MM-DDThh:mm:ssZ, where Z is either the character Z
+           under the field "parent_job_id") -> structure: parameter "method"
+           of String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "rpc_context" of type
+           "RpcContext" (call_stack - upstream calls details including nested
+           service calls and parent jobs where calls are listed in order from
+           outer to inner.) -> structure: parameter "call_stack" of list of
+           type "MethodCall" (time - the time the call was started; method -
+           service defined in standard JSON RPC way, typically it's module
+           name from spec-file followed by '.' and name of funcdef from
+           spec-file corresponding to running method (e.g.
+           'KBaseTrees.construct_species_tree' from trees service); job_id -
+           job id if method is asynchronous (optional field).) -> structure:
+           parameter "time" of type "timestamp" (A time in the format
+           YYYY-MM-DDThh:mm:ssZ, where Z is either the character Z
            (representing the UTC timezone) or the difference in time to UTC
            in the format +/-HHMM, eg: 2012-12-17T23:24:06-0500 (EST time)
            2013-04-03T08:56:32+0000 (UTC time) 2013-04-03T08:56:32Z (UTC
@@ -152,17 +146,80 @@ class execution_engine2(object):
            X/Y/Z, where X is the workspace name or id, Y is the object name
            or id, Z is the version, which is optional.), parameter "app_id"
            of String, parameter "meta" of mapping from String to String,
-           parameter "wsid" of Long, parameter "parent_job_id" of String,
-           parameter "request_cpu" of Long, parameter "request_memory_mb" of
-           Long, parameter "request_disk_mb" of Long, parameter
-           "request_clientgroup" of String, parameter
-           "request_staging_volume_mounts" of list of String, parameter
-           "request_refdata_volume_mounts" of list of String, parameter
-           "as_admin" of type "boolean" (@range [0,1])
+           parameter "wsid" of Long, parameter "parent_job_id" of String
         :returns: instance of type "job_id" (A job id.)
         """
         return self._client.call_method(
             "execution_engine2.run_job", [params], self._service_ver, context
+        )
+
+    def run_job_concierge(self, params, concierge_params, context=None):
+        """
+        :param params: instance of type "RunJobParams" (method - service
+           defined in standard JSON RPC way, typically it's module name from
+           spec-file followed by '.' and name of funcdef from spec-file
+           corresponding to running method (e.g.
+           'KBaseTrees.construct_species_tree' from trees service); params -
+           the parameters of the method that performed this call; Optional
+           parameters: service_ver - specific version of deployed service,
+           last version is used if this parameter is not defined rpc_context
+           - context of current method call including nested call history
+           remote_url - run remote service call instead of local command line
+           execution. source_ws_objects - denotes the workspace objects that
+           will serve as a source of data when running the SDK method. These
+           references will be added to the autogenerated provenance. app_id -
+           the id of the Narrative application running this job (e.g.
+           repo/name) mapping<string, string> meta - user defined metadata to
+           associate with the job. wsid - an optional workspace id to
+           associate with the job. This is passed to the workspace service,
+           which will share the job based on the permissions of the workspace
+           rather than owner of the job parent_job_id - UJS id of the parent
+           of a batch job. Sub jobs will add this id to the NJS database
+           under the field "parent_job_id") -> structure: parameter "method"
+           of String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "rpc_context" of type
+           "RpcContext" (call_stack - upstream calls details including nested
+           service calls and parent jobs where calls are listed in order from
+           outer to inner.) -> structure: parameter "call_stack" of list of
+           type "MethodCall" (time - the time the call was started; method -
+           service defined in standard JSON RPC way, typically it's module
+           name from spec-file followed by '.' and name of funcdef from
+           spec-file corresponding to running method (e.g.
+           'KBaseTrees.construct_species_tree' from trees service); job_id -
+           job id if method is asynchronous (optional field).) -> structure:
+           parameter "time" of type "timestamp" (A time in the format
+           YYYY-MM-DDThh:mm:ssZ, where Z is either the character Z
+           (representing the UTC timezone) or the difference in time to UTC
+           in the format +/-HHMM, eg: 2012-12-17T23:24:06-0500 (EST time)
+           2013-04-03T08:56:32+0000 (UTC time) 2013-04-03T08:56:32Z (UTC
+           time)), parameter "method" of String, parameter "job_id" of type
+           "job_id" (A job id.), parameter "run_id" of String, parameter
+           "remote_url" of String, parameter "source_ws_objects" of list of
+           type "wsref" (A workspace object reference of the form X/Y or
+           X/Y/Z, where X is the workspace name or id, Y is the object name
+           or id, Z is the version, which is optional.), parameter "app_id"
+           of String, parameter "meta" of mapping from String to String,
+           parameter "wsid" of Long, parameter "parent_job_id" of String
+        :param concierge_params: instance of type "ConciergeParams"
+           (EE2Constants Concierge Params are request_cpus: int
+           request_memory: int in MB request_disk: int in MB job_priority:
+           int = None  range from -20 to +20, with higher values meaning
+           better priority. account_group: str = None # Someone elses account
+           requirements_list: list = None ['machine=worker102','color=red']
+           client_group: Optional[str] = CONCIERGE_CLIENTGROUP # You can
+           leave default or specify a clientgroup) -> structure: parameter
+           "request_cpu" of Long, parameter "request_memory_mb" of Long,
+           parameter "request_disk_mb" of Long, parameter "job_priority" of
+           Long, parameter "account_group" of String, parameter
+           "requirements_list" of list of String, parameter "client_group" of
+           String
+        :returns: instance of type "job_id" (A job id.)
+        """
+        return self._client.call_method(
+            "execution_engine2.run_job_concierge",
+            [params, concierge_params],
+            self._service_ver,
+            context,
         )
 
     def get_job_params(self, params, context=None):
@@ -191,26 +248,20 @@ class execution_engine2(object):
            which will share the job based on the permissions of the workspace
            rather than owner of the job parent_job_id - UJS id of the parent
            of a batch job. Sub jobs will add this id to the NJS database
-           under the field "parent_job_id" ======= These are optional
-           parameters that are currently allowed if you have the
-           KBASE_CONCIERGE/KBASE_FULL_SERVICE roles ======= @optional
-           request_cpu @optional request_memory_mb @optional request_disk_mb
-           @optional request_clientgroup @optional
-           request_staging_volume_mounts @optional
-           request_refdata_volume_mounts @optional as_admin) -> structure:
-           parameter "method" of String, parameter "params" of list of
-           unspecified object, parameter "service_ver" of String, parameter
-           "rpc_context" of type "RpcContext" (call_stack - upstream calls
-           details including nested service calls and parent jobs where calls
-           are listed in order from outer to inner.) -> structure: parameter
-           "call_stack" of list of type "MethodCall" (time - the time the
-           call was started; method - service defined in standard JSON RPC
-           way, typically it's module name from spec-file followed by '.' and
-           name of funcdef from spec-file corresponding to running method
-           (e.g. 'KBaseTrees.construct_species_tree' from trees service);
-           job_id - job id if method is asynchronous (optional field).) ->
-           structure: parameter "time" of type "timestamp" (A time in the
-           format YYYY-MM-DDThh:mm:ssZ, where Z is either the character Z
+           under the field "parent_job_id") -> structure: parameter "method"
+           of String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "rpc_context" of type
+           "RpcContext" (call_stack - upstream calls details including nested
+           service calls and parent jobs where calls are listed in order from
+           outer to inner.) -> structure: parameter "call_stack" of list of
+           type "MethodCall" (time - the time the call was started; method -
+           service defined in standard JSON RPC way, typically it's module
+           name from spec-file followed by '.' and name of funcdef from
+           spec-file corresponding to running method (e.g.
+           'KBaseTrees.construct_species_tree' from trees service); job_id -
+           job id if method is asynchronous (optional field).) -> structure:
+           parameter "time" of type "timestamp" (A time in the format
+           YYYY-MM-DDThh:mm:ssZ, where Z is either the character Z
            (representing the UTC timezone) or the difference in time to UTC
            in the format +/-HHMM, eg: 2012-12-17T23:24:06-0500 (EST time)
            2013-04-03T08:56:32+0000 (UTC time) 2013-04-03T08:56:32Z (UTC
@@ -221,13 +272,7 @@ class execution_engine2(object):
            X/Y/Z, where X is the workspace name or id, Y is the object name
            or id, Z is the version, which is optional.), parameter "app_id"
            of String, parameter "meta" of mapping from String to String,
-           parameter "wsid" of Long, parameter "parent_job_id" of String,
-           parameter "request_cpu" of Long, parameter "request_memory_mb" of
-           Long, parameter "request_disk_mb" of Long, parameter
-           "request_clientgroup" of String, parameter
-           "request_staging_volume_mounts" of list of String, parameter
-           "request_refdata_volume_mounts" of list of String, parameter
-           "as_admin" of type "boolean" (@range [0,1])
+           parameter "wsid" of Long, parameter "parent_job_id" of String
         """
         return self._client.call_method(
             "execution_engine2.get_job_params", [params], self._service_ver, context
@@ -386,26 +431,20 @@ class execution_engine2(object):
            which will share the job based on the permissions of the workspace
            rather than owner of the job parent_job_id - UJS id of the parent
            of a batch job. Sub jobs will add this id to the NJS database
-           under the field "parent_job_id" ======= These are optional
-           parameters that are currently allowed if you have the
-           KBASE_CONCIERGE/KBASE_FULL_SERVICE roles ======= @optional
-           request_cpu @optional request_memory_mb @optional request_disk_mb
-           @optional request_clientgroup @optional
-           request_staging_volume_mounts @optional
-           request_refdata_volume_mounts @optional as_admin) -> structure:
-           parameter "method" of String, parameter "params" of list of
-           unspecified object, parameter "service_ver" of String, parameter
-           "rpc_context" of type "RpcContext" (call_stack - upstream calls
-           details including nested service calls and parent jobs where calls
-           are listed in order from outer to inner.) -> structure: parameter
-           "call_stack" of list of type "MethodCall" (time - the time the
-           call was started; method - service defined in standard JSON RPC
-           way, typically it's module name from spec-file followed by '.' and
-           name of funcdef from spec-file corresponding to running method
-           (e.g. 'KBaseTrees.construct_species_tree' from trees service);
-           job_id - job id if method is asynchronous (optional field).) ->
-           structure: parameter "time" of type "timestamp" (A time in the
-           format YYYY-MM-DDThh:mm:ssZ, where Z is either the character Z
+           under the field "parent_job_id") -> structure: parameter "method"
+           of String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "rpc_context" of type
+           "RpcContext" (call_stack - upstream calls details including nested
+           service calls and parent jobs where calls are listed in order from
+           outer to inner.) -> structure: parameter "call_stack" of list of
+           type "MethodCall" (time - the time the call was started; method -
+           service defined in standard JSON RPC way, typically it's module
+           name from spec-file followed by '.' and name of funcdef from
+           spec-file corresponding to running method (e.g.
+           'KBaseTrees.construct_species_tree' from trees service); job_id -
+           job id if method is asynchronous (optional field).) -> structure:
+           parameter "time" of type "timestamp" (A time in the format
+           YYYY-MM-DDThh:mm:ssZ, where Z is either the character Z
            (representing the UTC timezone) or the difference in time to UTC
            in the format +/-HHMM, eg: 2012-12-17T23:24:06-0500 (EST time)
            2013-04-03T08:56:32+0000 (UTC time) 2013-04-03T08:56:32Z (UTC
@@ -417,20 +456,14 @@ class execution_engine2(object):
            or id, Z is the version, which is optional.), parameter "app_id"
            of String, parameter "meta" of mapping from String to String,
            parameter "wsid" of Long, parameter "parent_job_id" of String,
-           parameter "request_cpu" of Long, parameter "request_memory_mb" of
-           Long, parameter "request_disk_mb" of Long, parameter
-           "request_clientgroup" of String, parameter
-           "request_staging_volume_mounts" of list of String, parameter
-           "request_refdata_volume_mounts" of list of String, parameter
-           "as_admin" of type "boolean" (@range [0,1]), parameter "created"
-           of Long, parameter "queued" of Long, parameter "estimating" of
-           Long, parameter "running" of Long, parameter "finished" of Long,
-           parameter "updated" of Long, parameter "error" of type
-           "JsonRpcError" (Error block of JSON RPC response) -> structure:
-           parameter "name" of String, parameter "code" of Long, parameter
-           "message" of String, parameter "error" of String, parameter
-           "error_code" of Long, parameter "errormsg" of String, parameter
-           "terminated_code" of Long
+           parameter "created" of Long, parameter "queued" of Long, parameter
+           "estimating" of Long, parameter "running" of Long, parameter
+           "finished" of Long, parameter "updated" of Long, parameter "error"
+           of type "JsonRpcError" (Error block of JSON RPC response) ->
+           structure: parameter "name" of String, parameter "code" of Long,
+           parameter "message" of String, parameter "error" of String,
+           parameter "error_code" of Long, parameter "errormsg" of String,
+           parameter "terminated_code" of Long
         """
         return self._client.call_method(
             "execution_engine2.check_job", [params], self._service_ver, context
@@ -500,26 +533,20 @@ class execution_engine2(object):
            which will share the job based on the permissions of the workspace
            rather than owner of the job parent_job_id - UJS id of the parent
            of a batch job. Sub jobs will add this id to the NJS database
-           under the field "parent_job_id" ======= These are optional
-           parameters that are currently allowed if you have the
-           KBASE_CONCIERGE/KBASE_FULL_SERVICE roles ======= @optional
-           request_cpu @optional request_memory_mb @optional request_disk_mb
-           @optional request_clientgroup @optional
-           request_staging_volume_mounts @optional
-           request_refdata_volume_mounts @optional as_admin) -> structure:
-           parameter "method" of String, parameter "params" of list of
-           unspecified object, parameter "service_ver" of String, parameter
-           "rpc_context" of type "RpcContext" (call_stack - upstream calls
-           details including nested service calls and parent jobs where calls
-           are listed in order from outer to inner.) -> structure: parameter
-           "call_stack" of list of type "MethodCall" (time - the time the
-           call was started; method - service defined in standard JSON RPC
-           way, typically it's module name from spec-file followed by '.' and
-           name of funcdef from spec-file corresponding to running method
-           (e.g. 'KBaseTrees.construct_species_tree' from trees service);
-           job_id - job id if method is asynchronous (optional field).) ->
-           structure: parameter "time" of type "timestamp" (A time in the
-           format YYYY-MM-DDThh:mm:ssZ, where Z is either the character Z
+           under the field "parent_job_id") -> structure: parameter "method"
+           of String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "rpc_context" of type
+           "RpcContext" (call_stack - upstream calls details including nested
+           service calls and parent jobs where calls are listed in order from
+           outer to inner.) -> structure: parameter "call_stack" of list of
+           type "MethodCall" (time - the time the call was started; method -
+           service defined in standard JSON RPC way, typically it's module
+           name from spec-file followed by '.' and name of funcdef from
+           spec-file corresponding to running method (e.g.
+           'KBaseTrees.construct_species_tree' from trees service); job_id -
+           job id if method is asynchronous (optional field).) -> structure:
+           parameter "time" of type "timestamp" (A time in the format
+           YYYY-MM-DDThh:mm:ssZ, where Z is either the character Z
            (representing the UTC timezone) or the difference in time to UTC
            in the format +/-HHMM, eg: 2012-12-17T23:24:06-0500 (EST time)
            2013-04-03T08:56:32+0000 (UTC time) 2013-04-03T08:56:32Z (UTC
@@ -531,20 +558,14 @@ class execution_engine2(object):
            or id, Z is the version, which is optional.), parameter "app_id"
            of String, parameter "meta" of mapping from String to String,
            parameter "wsid" of Long, parameter "parent_job_id" of String,
-           parameter "request_cpu" of Long, parameter "request_memory_mb" of
-           Long, parameter "request_disk_mb" of Long, parameter
-           "request_clientgroup" of String, parameter
-           "request_staging_volume_mounts" of list of String, parameter
-           "request_refdata_volume_mounts" of list of String, parameter
-           "as_admin" of type "boolean" (@range [0,1]), parameter "created"
-           of Long, parameter "queued" of Long, parameter "estimating" of
-           Long, parameter "running" of Long, parameter "finished" of Long,
-           parameter "updated" of Long, parameter "error" of type
-           "JsonRpcError" (Error block of JSON RPC response) -> structure:
-           parameter "name" of String, parameter "code" of Long, parameter
-           "message" of String, parameter "error" of String, parameter
-           "error_code" of Long, parameter "errormsg" of String, parameter
-           "terminated_code" of Long
+           parameter "created" of Long, parameter "queued" of Long, parameter
+           "estimating" of Long, parameter "running" of Long, parameter
+           "finished" of Long, parameter "updated" of Long, parameter "error"
+           of type "JsonRpcError" (Error block of JSON RPC response) ->
+           structure: parameter "name" of String, parameter "code" of Long,
+           parameter "message" of String, parameter "error" of String,
+           parameter "error_code" of Long, parameter "errormsg" of String,
+           parameter "terminated_code" of Long
         """
         return self._client.call_method(
             "execution_engine2.check_jobs", [params], self._service_ver, context
@@ -615,26 +636,20 @@ class execution_engine2(object):
            which will share the job based on the permissions of the workspace
            rather than owner of the job parent_job_id - UJS id of the parent
            of a batch job. Sub jobs will add this id to the NJS database
-           under the field "parent_job_id" ======= These are optional
-           parameters that are currently allowed if you have the
-           KBASE_CONCIERGE/KBASE_FULL_SERVICE roles ======= @optional
-           request_cpu @optional request_memory_mb @optional request_disk_mb
-           @optional request_clientgroup @optional
-           request_staging_volume_mounts @optional
-           request_refdata_volume_mounts @optional as_admin) -> structure:
-           parameter "method" of String, parameter "params" of list of
-           unspecified object, parameter "service_ver" of String, parameter
-           "rpc_context" of type "RpcContext" (call_stack - upstream calls
-           details including nested service calls and parent jobs where calls
-           are listed in order from outer to inner.) -> structure: parameter
-           "call_stack" of list of type "MethodCall" (time - the time the
-           call was started; method - service defined in standard JSON RPC
-           way, typically it's module name from spec-file followed by '.' and
-           name of funcdef from spec-file corresponding to running method
-           (e.g. 'KBaseTrees.construct_species_tree' from trees service);
-           job_id - job id if method is asynchronous (optional field).) ->
-           structure: parameter "time" of type "timestamp" (A time in the
-           format YYYY-MM-DDThh:mm:ssZ, where Z is either the character Z
+           under the field "parent_job_id") -> structure: parameter "method"
+           of String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "rpc_context" of type
+           "RpcContext" (call_stack - upstream calls details including nested
+           service calls and parent jobs where calls are listed in order from
+           outer to inner.) -> structure: parameter "call_stack" of list of
+           type "MethodCall" (time - the time the call was started; method -
+           service defined in standard JSON RPC way, typically it's module
+           name from spec-file followed by '.' and name of funcdef from
+           spec-file corresponding to running method (e.g.
+           'KBaseTrees.construct_species_tree' from trees service); job_id -
+           job id if method is asynchronous (optional field).) -> structure:
+           parameter "time" of type "timestamp" (A time in the format
+           YYYY-MM-DDThh:mm:ssZ, where Z is either the character Z
            (representing the UTC timezone) or the difference in time to UTC
            in the format +/-HHMM, eg: 2012-12-17T23:24:06-0500 (EST time)
            2013-04-03T08:56:32+0000 (UTC time) 2013-04-03T08:56:32Z (UTC
@@ -646,20 +661,14 @@ class execution_engine2(object):
            or id, Z is the version, which is optional.), parameter "app_id"
            of String, parameter "meta" of mapping from String to String,
            parameter "wsid" of Long, parameter "parent_job_id" of String,
-           parameter "request_cpu" of Long, parameter "request_memory_mb" of
-           Long, parameter "request_disk_mb" of Long, parameter
-           "request_clientgroup" of String, parameter
-           "request_staging_volume_mounts" of list of String, parameter
-           "request_refdata_volume_mounts" of list of String, parameter
-           "as_admin" of type "boolean" (@range [0,1]), parameter "created"
-           of Long, parameter "queued" of Long, parameter "estimating" of
-           Long, parameter "running" of Long, parameter "finished" of Long,
-           parameter "updated" of Long, parameter "error" of type
-           "JsonRpcError" (Error block of JSON RPC response) -> structure:
-           parameter "name" of String, parameter "code" of Long, parameter
-           "message" of String, parameter "error" of String, parameter
-           "error_code" of Long, parameter "errormsg" of String, parameter
-           "terminated_code" of Long
+           parameter "created" of Long, parameter "queued" of Long, parameter
+           "estimating" of Long, parameter "running" of Long, parameter
+           "finished" of Long, parameter "updated" of Long, parameter "error"
+           of type "JsonRpcError" (Error block of JSON RPC response) ->
+           structure: parameter "name" of String, parameter "code" of Long,
+           parameter "message" of String, parameter "error" of String,
+           parameter "error_code" of Long, parameter "errormsg" of String,
+           parameter "terminated_code" of Long
         """
         return self._client.call_method(
             "execution_engine2.check_workspace_jobs",
@@ -796,26 +805,20 @@ class execution_engine2(object):
            which will share the job based on the permissions of the workspace
            rather than owner of the job parent_job_id - UJS id of the parent
            of a batch job. Sub jobs will add this id to the NJS database
-           under the field "parent_job_id" ======= These are optional
-           parameters that are currently allowed if you have the
-           KBASE_CONCIERGE/KBASE_FULL_SERVICE roles ======= @optional
-           request_cpu @optional request_memory_mb @optional request_disk_mb
-           @optional request_clientgroup @optional
-           request_staging_volume_mounts @optional
-           request_refdata_volume_mounts @optional as_admin) -> structure:
-           parameter "method" of String, parameter "params" of list of
-           unspecified object, parameter "service_ver" of String, parameter
-           "rpc_context" of type "RpcContext" (call_stack - upstream calls
-           details including nested service calls and parent jobs where calls
-           are listed in order from outer to inner.) -> structure: parameter
-           "call_stack" of list of type "MethodCall" (time - the time the
-           call was started; method - service defined in standard JSON RPC
-           way, typically it's module name from spec-file followed by '.' and
-           name of funcdef from spec-file corresponding to running method
-           (e.g. 'KBaseTrees.construct_species_tree' from trees service);
-           job_id - job id if method is asynchronous (optional field).) ->
-           structure: parameter "time" of type "timestamp" (A time in the
-           format YYYY-MM-DDThh:mm:ssZ, where Z is either the character Z
+           under the field "parent_job_id") -> structure: parameter "method"
+           of String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "rpc_context" of type
+           "RpcContext" (call_stack - upstream calls details including nested
+           service calls and parent jobs where calls are listed in order from
+           outer to inner.) -> structure: parameter "call_stack" of list of
+           type "MethodCall" (time - the time the call was started; method -
+           service defined in standard JSON RPC way, typically it's module
+           name from spec-file followed by '.' and name of funcdef from
+           spec-file corresponding to running method (e.g.
+           'KBaseTrees.construct_species_tree' from trees service); job_id -
+           job id if method is asynchronous (optional field).) -> structure:
+           parameter "time" of type "timestamp" (A time in the format
+           YYYY-MM-DDThh:mm:ssZ, where Z is either the character Z
            (representing the UTC timezone) or the difference in time to UTC
            in the format +/-HHMM, eg: 2012-12-17T23:24:06-0500 (EST time)
            2013-04-03T08:56:32+0000 (UTC time) 2013-04-03T08:56:32Z (UTC
@@ -827,20 +830,14 @@ class execution_engine2(object):
            or id, Z is the version, which is optional.), parameter "app_id"
            of String, parameter "meta" of mapping from String to String,
            parameter "wsid" of Long, parameter "parent_job_id" of String,
-           parameter "request_cpu" of Long, parameter "request_memory_mb" of
-           Long, parameter "request_disk_mb" of Long, parameter
-           "request_clientgroup" of String, parameter
-           "request_staging_volume_mounts" of list of String, parameter
-           "request_refdata_volume_mounts" of list of String, parameter
-           "as_admin" of type "boolean" (@range [0,1]), parameter "created"
-           of Long, parameter "queued" of Long, parameter "estimating" of
-           Long, parameter "running" of Long, parameter "finished" of Long,
-           parameter "updated" of Long, parameter "error" of type
-           "JsonRpcError" (Error block of JSON RPC response) -> structure:
-           parameter "name" of String, parameter "code" of Long, parameter
-           "message" of String, parameter "error" of String, parameter
-           "error_code" of Long, parameter "errormsg" of String, parameter
-           "terminated_code" of Long
+           parameter "created" of Long, parameter "queued" of Long, parameter
+           "estimating" of Long, parameter "running" of Long, parameter
+           "finished" of Long, parameter "updated" of Long, parameter "error"
+           of type "JsonRpcError" (Error block of JSON RPC response) ->
+           structure: parameter "name" of String, parameter "code" of Long,
+           parameter "message" of String, parameter "error" of String,
+           parameter "error_code" of Long, parameter "errormsg" of String,
+           parameter "terminated_code" of Long
         """
         return self._client.call_method(
             "execution_engine2.check_jobs_date_range_for_user",
@@ -923,26 +920,20 @@ class execution_engine2(object):
            which will share the job based on the permissions of the workspace
            rather than owner of the job parent_job_id - UJS id of the parent
            of a batch job. Sub jobs will add this id to the NJS database
-           under the field "parent_job_id" ======= These are optional
-           parameters that are currently allowed if you have the
-           KBASE_CONCIERGE/KBASE_FULL_SERVICE roles ======= @optional
-           request_cpu @optional request_memory_mb @optional request_disk_mb
-           @optional request_clientgroup @optional
-           request_staging_volume_mounts @optional
-           request_refdata_volume_mounts @optional as_admin) -> structure:
-           parameter "method" of String, parameter "params" of list of
-           unspecified object, parameter "service_ver" of String, parameter
-           "rpc_context" of type "RpcContext" (call_stack - upstream calls
-           details including nested service calls and parent jobs where calls
-           are listed in order from outer to inner.) -> structure: parameter
-           "call_stack" of list of type "MethodCall" (time - the time the
-           call was started; method - service defined in standard JSON RPC
-           way, typically it's module name from spec-file followed by '.' and
-           name of funcdef from spec-file corresponding to running method
-           (e.g. 'KBaseTrees.construct_species_tree' from trees service);
-           job_id - job id if method is asynchronous (optional field).) ->
-           structure: parameter "time" of type "timestamp" (A time in the
-           format YYYY-MM-DDThh:mm:ssZ, where Z is either the character Z
+           under the field "parent_job_id") -> structure: parameter "method"
+           of String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "rpc_context" of type
+           "RpcContext" (call_stack - upstream calls details including nested
+           service calls and parent jobs where calls are listed in order from
+           outer to inner.) -> structure: parameter "call_stack" of list of
+           type "MethodCall" (time - the time the call was started; method -
+           service defined in standard JSON RPC way, typically it's module
+           name from spec-file followed by '.' and name of funcdef from
+           spec-file corresponding to running method (e.g.
+           'KBaseTrees.construct_species_tree' from trees service); job_id -
+           job id if method is asynchronous (optional field).) -> structure:
+           parameter "time" of type "timestamp" (A time in the format
+           YYYY-MM-DDThh:mm:ssZ, where Z is either the character Z
            (representing the UTC timezone) or the difference in time to UTC
            in the format +/-HHMM, eg: 2012-12-17T23:24:06-0500 (EST time)
            2013-04-03T08:56:32+0000 (UTC time) 2013-04-03T08:56:32Z (UTC
@@ -954,20 +945,14 @@ class execution_engine2(object):
            or id, Z is the version, which is optional.), parameter "app_id"
            of String, parameter "meta" of mapping from String to String,
            parameter "wsid" of Long, parameter "parent_job_id" of String,
-           parameter "request_cpu" of Long, parameter "request_memory_mb" of
-           Long, parameter "request_disk_mb" of Long, parameter
-           "request_clientgroup" of String, parameter
-           "request_staging_volume_mounts" of list of String, parameter
-           "request_refdata_volume_mounts" of list of String, parameter
-           "as_admin" of type "boolean" (@range [0,1]), parameter "created"
-           of Long, parameter "queued" of Long, parameter "estimating" of
-           Long, parameter "running" of Long, parameter "finished" of Long,
-           parameter "updated" of Long, parameter "error" of type
-           "JsonRpcError" (Error block of JSON RPC response) -> structure:
-           parameter "name" of String, parameter "code" of Long, parameter
-           "message" of String, parameter "error" of String, parameter
-           "error_code" of Long, parameter "errormsg" of String, parameter
-           "terminated_code" of Long
+           parameter "created" of Long, parameter "queued" of Long, parameter
+           "estimating" of Long, parameter "running" of Long, parameter
+           "finished" of Long, parameter "updated" of Long, parameter "error"
+           of type "JsonRpcError" (Error block of JSON RPC response) ->
+           structure: parameter "name" of String, parameter "code" of Long,
+           parameter "message" of String, parameter "error" of String,
+           parameter "error_code" of Long, parameter "errormsg" of String,
+           parameter "terminated_code" of Long
         """
         return self._client.call_method(
             "execution_engine2.check_jobs_date_range_for_all",

@@ -8,7 +8,7 @@ from pymongo import MongoClient
 jobs_database_name = "ee2_jobs"
 
 try:
-    from execution_engine2.db.models.models import (
+    from lib.execution_engine2.db.models.models import (
         Job,
         Status,
         ErrorCode,
