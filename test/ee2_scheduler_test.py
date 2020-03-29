@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 import logging
+import os
 import unittest
 
-logging.basicConfig(level=logging.INFO)
-
-from execution_engine2.utils.CatalogUtils import CatalogUtils
-from execution_engine2.utils.Condor import Condor
+from lib.execution_engine2.sdk.EE2Runjob import ConciergeParams
+from lib.execution_engine2.utils.CatalogUtils import CatalogUtils
+from lib.execution_engine2.utils.Condor import Condor
 from test.utils.test_utils import bootstrap
 
-import os
+logging.basicConfig(level=logging.INFO)
 
 bootstrap()
 
@@ -17,6 +17,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
+
         cls.condor = Condor(deploy)
         cls.job_id = "1234"
         cls.user = "kbase"
@@ -67,8 +68,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         self.assertEqual(sub["+Owner"], '"condor_pool"')
         self.assertEqual(sub["ShouldTransferFiles"], "YES")
         self.assertEqual(sub["When_To_Transfer_Output"], "ON_EXIT")
-        # TODO test config here or otherplace
-        # self.assertEqual(sub["+CLIENTGROUP"], "njs")
+
         self.assertEqual(sub[Condor.REQUEST_CPUS], c.config["njs"][Condor.REQUEST_CPUS])
         self.assertEqual(
             sub[Condor.REQUEST_MEMORY], c.config["njs"][Condor.REQUEST_MEMORY]
@@ -180,3 +180,39 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
             '(CLIENTGROUP == "bigmem',
             json_sub_with_regex_disabled_bigmem["requirements"],
         )
+
+    def _get_concierge_params(self, cg=None):
+        cp = {}
+        cp["request_cpus"] = 100
+        cp["request_memory"] = 200
+        cp["request_disk"] = 1000
+        if cg:
+            cp["client_group"] = cg
+        return ConciergeParams(**cp)
+
+    def test_create_submit_file_concierge(self):
+        logging.info("Testing with concierge clientgroup")
+        c = self.condor
+        params = self._create_sample_params(cgroups=["njs"])
+        cp = self._get_concierge_params()
+        sub = c.create_submit(params=params, concierge_params=cp)
+        # Concurrency limits removed
+        self.assertNotIn("Concurrency_Limits", sub)
+        self.assertEqual(sub["+AccountingGroup"], params["user_id"])
+        self.assertEqual(sub[Condor.REQUEST_CPUS], str(cp.request_cpus))
+        self.assertEqual(sub[Condor.REQUEST_MEMORY], str(cp.request_memory))
+        self.assertEqual(sub[Condor.REQUEST_DISK], str(cp.request_disk))
+        self.assertEqual(sub["+KB_CLIENTGROUP"], f'"{str(cp.client_group)}"')
+
+        cp.client_group = "LeConcierge"
+        cp.account_group = "LeCat"
+        sub2 = c.create_submit(params=params, concierge_params=cp)
+        self.assertEqual(sub2["+KB_CLIENTGROUP"], f'"{str(cp.client_group)}"')
+        self.assertEqual(sub2["+AccountingGroup"], cp.account_group)
+        self.assertNotIn("Concurrency_Limits", sub2)
+
+        submission_info = c.run_submit(sub2)
+
+        self.assertIsNotNone(submission_info.clusterid)
+        self.assertIsNotNone(submission_info.submit)
+        self.assertIsNone(submission_info.error)

@@ -9,7 +9,7 @@ import unittest
 from configparser import ConfigParser
 from unittest.mock import patch
 
-from execution_engine2.SDKMethodRunner import SDKMethodRunner
+from sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job, Status

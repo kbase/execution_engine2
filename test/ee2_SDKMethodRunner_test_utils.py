@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from execution_engine2.SDKMethodRunner import SDKMethodRunner
+from sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.db.models.models import Job, JobInput, Meta
 
 

@@ -2,8 +2,8 @@ import time
 from enum import Enum
 from typing import Dict
 
-from execution_engine2.db.models.models import JobLog as JL, LogLines
-from execution_engine2.exceptions import RecordNotFoundException
+from lib.execution_engine2.db.models.models import JobLog as JL, LogLines
+from lib.execution_engine2.exceptions import RecordNotFoundException
 
 
 class JobPermissions(Enum):

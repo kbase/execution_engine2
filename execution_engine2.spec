@@ -122,16 +122,7 @@
                 the workspace rather than owner of the job
             parent_job_id - UJS id of the parent of a batch job. Sub jobs will add
             this id to the NJS database under the field "parent_job_id"
-            =======
-            These are optional parameters that are currently allowed if you have the KBASE_CONCIERGE/KBASE_FULL_SERVICE roles
-            =======
-            @optional request_cpu
-            @optional request_memory_mb
-            @optional request_disk_mb
-            @optional request_clientgroup
-            @optional request_staging_volume_mounts
-            @optional request_refdata_volume_mounts
-            @optional as_admin
+
         */
         typedef structure {
             string method;
@@ -144,13 +135,6 @@
             mapping<string, string> meta;
             int wsid;
             string parent_job_id;
-            int request_cpu;
-            int request_memory_mb;
-            int request_disk_mb;
-            string request_clientgroup;
-            list<string> request_staging_volume_mounts;
-            list<string> request_refdata_volume_mounts;
-            boolean as_admin;
         } RunJobParams;
 
         /*
@@ -158,6 +142,31 @@
             Such job runs Docker image for this service in script mode.
         */
         funcdef run_job(RunJobParams params) returns (job_id job_id) authentication required;
+
+
+        /* EE2Constants Concierge Params are
+            request_cpus: int
+            request_memory: int in MB
+            request_disk: int in MB
+            job_priority: int = None  range from -20 to +20, with higher values meaning better priority.
+            account_group: str = None # Someone elses account
+            requirements_list: list = None ['machine=worker102','color=red']
+            client_group: Optional[str] = CONCIERGE_CLIENTGROUP # You can leave default or specify a clientgroup
+        */
+
+        typedef structure {
+            int request_cpu;
+            int request_memory_mb;
+            int request_disk_mb;
+            int job_priority;
+            string account_group;
+            list<string> requirements_list;
+            string client_group;
+        } ConciergeParams;
+
+
+        funcdef run_job_concierge(RunJobParams params, ConciergeParams concierge_params) returns (job_id job_id) authentication required;
+
 
         /*
             Get job params necessary for job execution

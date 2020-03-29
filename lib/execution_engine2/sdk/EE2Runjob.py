@@ -10,15 +10,16 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, Dict
 
-from execution_engine2.db.models.models import (
+from lib.execution_engine2.sdk.EE2Constants import ConciergeParams
+from lib.execution_engine2.db.models.models import (
     Job,
     JobInput,
     Meta,
     JobRequirements,
     Status,
 )
-from execution_engine2.utils.Condor import CondorResources
-from execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
+from lib.execution_engine2.utils.CondorTuples import CondorResources
+from lib.execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
 from test.utils.test_utils import bootstrap
 
 bootstrap()
@@ -30,37 +31,9 @@ class JobPermissions(Enum):
     NONE = "n"
 
 
-@dataclass()
-class ConciergeParams:
-    request_cpus: Optional[int]
-    request_memory: Optional[str]
-    request_disk: Optional[str]
-    client_group: Optional[str]
-
-
 class RunJob:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr
-
-    def extract_special_params(self):
-        """
-        int request_cpu;
-        int request_memory_mb;
-        int request_disk_mb;
-        string request_clientgroup;
-        list<string> request_staging_volume_mounts;
-        list<string> request_refdata_volume_mounts;
-        :return:
-        """
-        pass
-
-    def _create_job_requirements(self, resources, condor_resources):
-        """ #TODO, maybe require specification of ALL resources, or else throw an exception
-            #TODO, ADD more variables to condor ENVIRONMENT
-            #TODO, move environment variables to a file
-            #TODO, ADD VOLUME MOUNTS TO JOB INPUT MODEL
-        """
-        pass
 
     def _init_job_rec(
         self,
@@ -68,15 +41,14 @@ class RunJob:
         params: Dict,
         resources: CondorResources = None,
         concierge_params: ConciergeParams = None,
-    ) -> Optional[str]:
+    ) -> str:
         job = Job()
-
         inputs = JobInput()
-
         job.user = user_id
         job.authstrat = "kbaseworkspace"
         job.wsid = params.get("wsid")
         job.status = "created"
+        # Inputs
         inputs.wsid = job.wsid
         inputs.method = params.get("method")
         inputs.params = params.get("params")
@@ -84,7 +56,6 @@ class RunJob:
         inputs.app_id = params.get("app_id")
         inputs.source_ws_objects = params.get("source_ws_objects")
         inputs.parent_job_id = str(params.get("parent_job_id"))
-
         inputs.narrative_cell_info = Meta()
         meta = params.get("meta")
         if meta:
@@ -94,28 +65,19 @@ class RunJob:
             inputs.narrative_cell_info.cell_id = meta.get("cell_id")
             inputs.narrative_cell_info.status = meta.get("status")
 
-        # special_resources = self.extract_special_params(params)
-
         if resources:
+            # TODO Should probably do some type checking on these before its passed in
             jr = JobRequirements()
-            jr.clientgroup = resources.client_group
-            jr.cpu = resources.request_cpus
-            # Should probably do some type checking on these before its passed in
-            # Memory always in mb
-            # Space always in gb
-
-            jr.memory = resources.request_memory[:-1]
-            jr.disk = resources.request_disk[:-2]
-
             if concierge_params:
-                if concierge_params.request_cpus:
-                    jr.cpu = concierge_params.request_cpus
-                if concierge_params.request_cpus:
-                    jr.memory = concierge_params.request_memory
-                if concierge_params.request_cpus:
-                    jr.disk = concierge_params.request_disk
-                if concierge_params.request_cpus:
-                    jr.clientgroup = concierge_params.client_group
+                jr.cpu = concierge_params.request_cpus
+                jr.memory = concierge_params.request_memory
+                jr.disk = concierge_params.request_disk
+                jr.clientgroup = concierge_params.client_group
+            else:
+                jr.clientgroup = resources.client_group
+                jr.cpu = resources.request_cpus
+                jr.memory = resources.request_memory[:-1]  # Memory always in mb
+                jr.disk = resources.request_disk[:-2]  # Space always in gb
 
             inputs.requirements = jr
 
@@ -175,11 +137,11 @@ class RunJob:
         self._check_ws_objects(source_objects=params.get("source_ws_objects"))
         method = params.get("method")
         # Normalize multiple formats into one format (csv vs json)
-        app_settings = self.sdkmr.catalog_utils.get_client_groups(method)
+        normalized_resources = self.sdkmr.catalog_utils.get_normalized_resources(method)
         # These are for saving into job inputs. Maybe its best to pass this into condor as well?
         # TODO Validate MB/GB from both config and catalog.
         extracted_resources = self.sdkmr.get_condor().extract_resources(
-            cgrr=app_settings
+            cgrr=normalized_resources
         )  # type: CondorResources
 
         # insert initial job document into db
@@ -192,13 +154,15 @@ class RunJob:
         params["job_id"] = job_id
         params["user_id"] = self.sdkmr.user_id
         params["token"] = self.sdkmr.token
-        params["cg_resources_requirements"] = app_settings
+        params["cg_resources_requirements"] = normalized_resources
 
         self.sdkmr.logger.info(
             f"User {self.sdkmr.user_id} attempting to run job {method} {params}"
         )
         try:
-            submission_info = self.sdkmr.get_condor().run_job(params)
+            submission_info = self.sdkmr.get_condor().run_job(
+                params=params, concierge_params=concierge_params
+            )
             condor_job_id = submission_info.clusterid
             self.sdkmr.logger.debug(f"Submitted job id and got '{condor_job_id}'")
         except Exception as e:
@@ -243,6 +207,9 @@ class RunJob:
 
         if concierge_params:
             cp = ConciergeParams(**concierge_params)
+            self.sdkmr.check_as_concierge()
+        else:
+            cp = None
 
         return self._run(params=params, concierge_params=cp)
 

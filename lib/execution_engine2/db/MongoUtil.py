@@ -10,11 +10,11 @@ from mongoengine import connect, connection
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
 
-from execution_engine2.exceptions import (
+from lib.execution_engine2.exceptions import (
     RecordNotFoundException,
     InvalidStatusTransitionException,
 )
-from execution_engine2.db.models.models import JobLog, Job, Status, TerminatedCode
+from lib.execution_engine2.db.models.models import JobLog, Job, Status, TerminatedCode
 
 
 class MongoUtil:

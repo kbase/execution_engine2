@@ -11,8 +11,8 @@ from typing import List, Set, Optional
 
 import requests
 
-from execution_engine2.exceptions import AuthError
-from installed_clients.authclient import TokenCache
+from lib.execution_engine2.exceptions import AuthError
+from lib.installed_clients.authclient import TokenCache
 
 IS_ADMIN = "EE2_ADMIN"
 NOT_ADMIN = "NOT_ADMIN"

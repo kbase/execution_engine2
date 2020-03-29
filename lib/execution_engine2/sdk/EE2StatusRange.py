@@ -5,8 +5,8 @@ from enum import Enum
 
 from bson import ObjectId
 
-from execution_engine2.db.models.models import Job
-from execution_engine2.exceptions import AuthError
+from lib.execution_engine2.db.models.models import Job
+from lib.execution_engine2.exceptions import AuthError
 
 
 class JobPermissions(Enum):

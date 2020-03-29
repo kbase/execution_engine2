@@ -3,17 +3,16 @@
 import json
 import logging
 from dataclasses import dataclass
+from typing import Optional, Type
 
 from confluent_kafka import Producer
 
-from execution_engine2.db.models.models import Status, ErrorCode
+from lib.execution_engine2.db.models.models import Status, ErrorCode
 
 logging.basicConfig(level=logging.INFO)
-
 STATUS_EVENT_TYPE = "job_status_update"
 CONDOR_EVENT_TYPE = "condor_request"
 
-from typing import Optional, Type
 
 VALID_CONDOR_COMMANDS = [
     "condor_q",
@@ -56,7 +55,6 @@ class StatusRequired:
 class StatusOptional:
     topic: str = DEFAULT_TOPIC
     event_type: str = STATUS_EVENT_TYPE
-
     error: bool = False
 
     def __post_init__(self):

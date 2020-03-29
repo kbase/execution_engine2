@@ -8,7 +8,7 @@ class CatalogUtils:
     def __init__(self, url, admin_token):
         self.catalog = Catalog(url=url, token=admin_token)
 
-    def get_client_groups(self, method) -> Dict:
+    def get_normalized_resources(self, method) -> Dict:
         """
         get client groups info from Catalog
         """
@@ -61,6 +61,6 @@ class CatalogUtils:
                 )
             (key, value) = item.split("=")
             rv[key] = value
-
-        print("Going to return", rv)
+        #
+        # print("Going to return", rv)
         return rv

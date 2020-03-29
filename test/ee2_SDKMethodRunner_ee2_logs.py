@@ -8,7 +8,7 @@ from typing import Dict, List
 
 import requests_mock
 
-from execution_engine2.SDKMethodRunner import SDKMethodRunner
+from sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job, JobLog
 from test.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper

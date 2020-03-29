@@ -6,15 +6,15 @@ from typing import Dict
 
 from bson import ObjectId
 
-from execution_engine2.authorization.authstrategy import can_read_jobs
-from execution_engine2.db.models.models import (
+from lib.execution_engine2.authorization.authstrategy import can_read_jobs
+from lib.execution_engine2.db.models.models import (
     Job,
     JobOutput,
     Status,
     ErrorCode,
     TerminatedCode,
 )
-from execution_engine2.utils.KafkaUtils import (
+from lib.execution_engine2.utils.KafkaUtils import (
     KafkaCancelJob,
     KafkaCondorCommand,
     KafkaFinishJob,
@@ -274,6 +274,8 @@ class JobsStatus:
                 new_status=Status.completed.value,
                 previous_status=job.status,
                 scheduler_id=job.scheduler_id,
+                error_code=None,
+                error_message=None,
             )
         )
         # TODO Use this?

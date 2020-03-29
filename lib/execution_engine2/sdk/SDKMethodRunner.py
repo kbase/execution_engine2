@@ -18,19 +18,23 @@ from logging import Logger
 
 import dateutil
 
-from execution_engine2 import EE2Authentication
-from execution_engine2 import EE2Logs
-from execution_engine2 import EE2Runjob
-from execution_engine2 import EE2Status
-from execution_engine2 import EE2StatusRange
-from execution_engine2.authorization.workspaceauth import WorkspaceAuth
-from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.utils.CatalogUtils import CatalogUtils
-from execution_engine2.utils.Condor import Condor
-from execution_engine2.utils.KafkaUtils import KafkaClient
-from execution_engine2.utils.SlackUtils import SlackClient
+from lib.execution_engine2.sdk import (
+    EE2Runjob,
+    EE2StatusRange,
+    EE2Authentication,
+    EE2Status,
+    EE2Logs,
+)
+from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
+from lib.execution_engine2.db.MongoUtil import MongoUtil
+from lib.execution_engine2.utils.CatalogUtils import CatalogUtils
+from lib.execution_engine2.utils.Condor import Condor
+from lib.execution_engine2.utils.KafkaUtils import KafkaClient
+from lib.execution_engine2.utils.SlackUtils import SlackClient
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.authclient import KBaseAuth
+from lib.execution_engine2.exceptions import AuthError
+from lib.execution_engine2.sdk.EE2Constants import KBASE_CONCIERGE_USERNAME
 
 
 class JobPermissions(Enum):
@@ -193,6 +197,13 @@ class SDKMethodRunner:
         """Check if you have the requested admin permission"""
         return self.get_ee2_auth().check_admin_permission(requested_perm=requested_perm)
 
+    def check_as_concierge(self):
+        """Check if you have the requested concierge permission"""
+        if not self.user_id == KBASE_CONCIERGE_USERNAME:
+            raise AuthError(
+                "You are not the concierge user. This method is not for you"
+            )
+
     # API ENDPOINTS
 
     # ENDPOINTS: Admin Related Endpoints
@@ -211,6 +222,10 @@ class SDKMethodRunner:
     def run_job(self, params, as_admin=False):
         """ Authorization Required Read/Write """
         return self.get_runjob().run(params=params, as_admin=as_admin)
+
+    def run_job_concierge(self, params, concierge_params):
+        """ Authorization Required : Be the kbaseconcierge user """
+        return self.get_runjob().run(params=params, concierge_params=concierge_params)
 
     def get_job_params(self, job_id, as_admin=False):
         """ Authorization Required: Read """

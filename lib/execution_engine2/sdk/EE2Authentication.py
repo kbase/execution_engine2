@@ -3,9 +3,9 @@ from enum import Enum
 
 from cachetools import TTLCache
 
-from execution_engine2.authorization.authstrategy import can_read_job, can_write_job
-from execution_engine2.authorization.roles import AdminAuthUtil
-from execution_engine2.db.models.models import Job
+from lib.execution_engine2.authorization.authstrategy import can_read_job, can_write_job
+from lib.execution_engine2.authorization.roles import AdminAuthUtil
+from lib.execution_engine2.db.models.models import Job
 
 
 class JobPermissions(Enum):

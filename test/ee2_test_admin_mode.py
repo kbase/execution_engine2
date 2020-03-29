@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 
-from execution_engine2.SDKMethodRunner import SDKMethodRunner
+from sdk.SDKMethodRunner import SDKMethodRunner
 from test.utils.test_utils import bootstrap
 
 bootstrap()
