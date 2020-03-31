@@ -9,6 +9,7 @@ from configparser import ConfigParser
 from datetime import datetime, timedelta
 from typing import Dict, List
 from unittest.mock import patch
+from pprint import pprint
 
 import bson
 import dateutil
@@ -347,8 +348,15 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     # from lib.execution_engine2.ee2_runjob import _get_module_git_commit
 
     # flake8: noqa: C901
+    @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
-    def test_cancel_job2(self, condor_mock):
+    def test_cancel_job2(self, rq_mock, condor_mock):
+        rq_mock.add_matcher(
+            _run_job_adapter(
+                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
+            )
+        )
+
         user_name = "wsadmin"
 
         runner = self.getRunner()
@@ -366,6 +374,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner.get_condor = MagicMock(return_value=condor_mock)
         fixed_rj = RunJob(runner)
         fixed_rj._get_module_git_commit = MagicMock(return_value="hash_goes_here")
+        fixed_rj.sdkmr.catalog_utils.list_client_group_configs = MagicMock(
+            return_value="cg goes her"
+        )
 
         runner.get_runjob = MagicMock(return_value=fixed_rj)
 
@@ -373,12 +384,14 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job = get_example_job().to_mongo().to_dict()
         job["method"] = job["job_input"]["app_id"]
         job["app_id"] = job["job_input"]["app_id"]
+        job["service_ver"] = job["job_input"]["service_ver"]
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
 
         condor_mock.run_job = MagicMock(return_value=si)
         condor_mock.extract_resources = MagicMock(return_value=self.cr)
-
+        print("About to run job with params")
+        pprint(job)
         job_id0 = runner.run_job(params=job)
         job_id1 = runner.run_job(params=job)
         job_id2 = runner.run_job(params=job)
@@ -502,6 +515,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job = get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
         job["method"] = job["job_input"]["app_id"]
         job["app_id"] = job["job_input"]["app_id"]
+        job["service_ver"] = job["job_input"]["service_ver"]
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
@@ -529,6 +543,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job = get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
         job["method"] = job["job_input"]["app_id"]
         job["app_id"] = job["job_input"]["app_id"]
+        job["service_ver"] = job["job_input"]["service_ver"]
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
@@ -1184,6 +1199,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job = get_example_job().to_mongo().to_dict()
         job["method"] = job["job_input"]["app_id"]
         job["app_id"] = job["job_input"]["app_id"]
+        job["service_ver"] = job["job_input"]["service_ver"]
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
