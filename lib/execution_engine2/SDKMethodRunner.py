@@ -67,7 +67,9 @@ class SDKMethodRunner:
         self.workspace = None
         self.workspace_auth = None
         self.admin_roles = config.get("admin_roles", ["EE2_ADMIN", "EE2_ADMIN_RO"])
-        self.catalog_utils = CatalogUtils(config.get("catalog-url"))
+        self.catalog_utils = CatalogUtils(
+            config["catalog-url"], config["catalog-token"]
+        )
         self.workspace_url = config.get("workspace-url")
         self.auth_url = config.get("auth-url")
         self.auth = KBaseAuth(auth_url=config.get("auth-service-url"))
@@ -379,7 +381,7 @@ class SDKMethodRunner:
         return job
 
     def check_workspace_jobs(
-        self, workspace_id, exclude_fields=None, return_list=None, as_admin=True
+        self, workspace_id, exclude_fields=None, return_list=None, as_admin=False
     ):
         """
         check_workspace_jobs: check job status for all jobs in a given workspace

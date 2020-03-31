@@ -20,7 +20,9 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         cls.condor = Condor(deploy)
         cls.job_id = "1234"
         cls.user = "kbase"
-        cls.catalog_utils = CatalogUtils(url="https://ci.kbase.us/services/Catalog")
+        cls.catalog_utils = CatalogUtils(
+            url="https://ci.kbase.us/services/Catalog", admin_token="123"
+        )
 
     @classmethod
     def tearDownClass(cls):

@@ -36,7 +36,7 @@ class Condor(Scheduler):
     ENDPOINT = "kbase-endpoint"
     EXTERNAL_URL = "external-url"
     EXECUTABLE = "executable"
-    AUTH_TOKEN = "KB_ADMIN_AUTH_TOKEN"
+    CATALOG_TOKEN = "catalog-token"
     DOCKER_TIMEOUT = "docker_timeout"
     POOL_USER = "pool_user"
     INITIAL_DIR = "initialdir"
@@ -85,7 +85,9 @@ class Condor(Scheduler):
         ):
             raise FileNotFoundError(executable)
         self.executable = executable
-        self.kb_auth_token = self.config.get(section=self.EE2, option=self.AUTH_TOKEN)
+        self.catalog_token = self.config.get(
+            section=self.EE2, option=self.CATALOG_TOKEN
+        )
         self.docker_timeout = self.config.get(
             section=self.EE2, option=self.DOCKER_TIMEOUT, fallback="604801"
         )
@@ -113,7 +115,7 @@ class Condor(Scheduler):
 
         environment_vars = {
             "DOCKER_JOB_TIMEOUT": self.docker_timeout,
-            "KB_ADMIN_AUTH_TOKEN": self.kb_auth_token,
+            "KB_ADMIN_AUTH_TOKEN": self.catalog_token,
             "KB_AUTH_TOKEN": params.get("token"),
             "CLIENTGROUP": params.get("extracted_client_group"),
             "JOB_ID": params.get("job_id"),

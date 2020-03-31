@@ -303,18 +303,12 @@ class JobsStatus:
             check_permission=check_permission,
             exclude_fields=exclude_fields,
             return_list=0,
-            as_admin=as_admin,
         ).get(job_id)
 
         return job_state
 
     def check_jobs(
-        self,
-        job_ids,
-        check_permission=True,
-        exclude_fields=None,
-        return_list=None,
-        as_admin=False,
+        self, job_ids, check_permission=True, exclude_fields=None, return_list=None
     ):
         """
         check_jobs: check and return job status for a given of list job_ids
