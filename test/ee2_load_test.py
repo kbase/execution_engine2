@@ -614,7 +614,7 @@ class ee2_server_load_test(unittest.TestCase):
 
             # add one line to job
             ts = time.time()
-            job_line = [{"line": "hello ee2", "is_error": True, "ts": ts}]
+            job_line = [{"line": "hello ee2", "is_error": 1, "ts": ts}]
             self.impl.add_job_logs(
                 ctx=self.ctx, params={"job_id": job_id}, lines=job_line
             )
@@ -648,7 +648,7 @@ class ee2_server_load_test(unittest.TestCase):
                 job_line = job_line[0]["lines"][0]
                 self.assertEqual(job_line["line"], "hello ee2")
                 self.assertEqual(job_line["linepos"], 1)
-                self.assertFalse(job_line["error"])
+                self.assertEqual(job_line["is_error"], 1)
                 self.assertEqual(job_line["ts"], int(ts * 1000))
 
             jobs = self.mongo_util.get_jobs(job_ids=[job_id])
@@ -675,7 +675,7 @@ class ee2_server_load_test(unittest.TestCase):
 
             # job line to be added
             ts = time.time()
-            job_line = [{"line": "hello ee2", "is_error": True, "ts": ts}]
+            job_line = [{"line": "hello ee2", "is_error": 1, "ts": ts}]
 
             threads = list()
             que = queue.Queue()
@@ -709,7 +709,7 @@ class ee2_server_load_test(unittest.TestCase):
             line_pos = list()
             for line in lines:
                 self.assertEqual(line["line"], "hello ee2")
-                self.assertFalse(line["error"])
+                self.assertEqual(line["is_error"], 1)
                 self.assertEqual(line["ts"], int(ts * 1000))
                 line_pos.append(line["linepos"])
             self.assertCountEqual(line_pos, list(range(1, thread_count + 1)))
