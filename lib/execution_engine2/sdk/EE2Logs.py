@@ -64,12 +64,12 @@ class JobLog:
         for input_line in log_lines:
             olc += 1
             ll = LogLines()
-            ll.error = input_line.get("error", False)
+            ll.error = input_line.get("is_error", False)
             ll.linepos = olc
             ts = input_line.get("ts")
             # TODO Maybe use strpos for efficiency?
             if ts is not None:
-                ts = self.sdkmr._check_and_convert_time(ts, assign_default_time=True)
+                ts = self.sdkmr.check_and_convert_time(ts, assign_default_time=True)
 
             ll.ts = ts
 

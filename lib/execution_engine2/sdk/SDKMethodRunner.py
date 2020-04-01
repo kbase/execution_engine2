@@ -447,7 +447,7 @@ class SDKMethodRunner:
         raise Exception("Not a boolean value")
 
     @staticmethod
-    def _check_and_convert_time(time_input, assign_default_time=False):
+    def check_and_convert_time(time_input, assign_default_time=False):
         """
         convert input time into timestamp in epoch format
         """
