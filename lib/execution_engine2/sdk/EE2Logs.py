@@ -64,7 +64,7 @@ class JobLog:
         for input_line in log_lines:
             olc += 1
             ll = LogLines()
-            ll.error = input_line.get("is_error", False)
+            ll.error = int(input_line.get("is_error", 0)) == 1
             ll.linepos = olc
             ts = input_line.get("ts")
             # TODO Maybe use strpos for efficiency?
@@ -120,11 +120,16 @@ class JobLog:
             if skip_lines and int(skip_lines) >= log_line.get("linepos", 0):
                 continue
             linepos = log_line.get("linepos")
+
+            is_error = 0
+            if log_line.get("error") is True:
+                is_error = 1
+
             lines.append(
                 {
                     "line": log_line.get("line"),
                     "linepos": linepos,
-                    "error": log_line.get("error"),
+                    "is_error": is_error,
                     "ts": int(log_line.get("ts", 0) * 1000),
                 }
             )

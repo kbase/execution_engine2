@@ -1301,7 +1301,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                     self.assertIn(js["status"], ["created", "queued"])
                     print(js["created"])
                     print(type(js["created"]))
-                    date = SDKMethodRunner._check_and_convert_time(js["created"])
+                    date = SDKMethodRunner.check_and_convert_time(js["created"])
                     ts = date
                     print(
                         f"Creation date {date}, LastWeek:{last_week}, Tomorrow{tomorrow})"
@@ -1331,7 +1331,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 if job_id in new_job_ids:
                     count += 1
                     self.assertIn(js["status"], ["created", "queued"])
-                    date = SDKMethodRunner._check_and_convert_time(js["created"])
+                    date = SDKMethodRunner.check_and_convert_time(js["created"])
                     ts = date
                     print(date, last_week, tomorrow)
                     print(ts, last_week.timestamp(), tomorrow.timestamp())
@@ -1382,7 +1382,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 if job_id in new_job_ids:
                     count += 1
                     self.assertIn(js["status"], ["created", "queued"])
-                    date = SDKMethodRunner._check_and_convert_time(js["created"])
+                    date = SDKMethodRunner.check_and_convert_time(js["created"])
                     ts = date
                     print(date, last_week, tomorrow)
                     print(ts, last_week.timestamp(), tomorrow.timestamp())
