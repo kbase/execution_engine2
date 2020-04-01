@@ -9,12 +9,13 @@ import unittest
 from configparser import ConfigParser
 from unittest.mock import patch
 
-from execution_engine2.SDKMethodRunner import SDKMethodRunner
-from execution_engine2.authorization.workspaceauth import WorkspaceAuth
-from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.db.models.models import Job, Status
-from execution_engine2.execution_engine2Impl import execution_engine2
-from execution_engine2.utils.Condor import Condor, submission_info
+from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
+from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
+from lib.execution_engine2.db.MongoUtil import MongoUtil
+from lib.execution_engine2.db.models.models import Job, Status
+from lib.execution_engine2.execution_engine2Impl import execution_engine2
+from lib.execution_engine2.utils.Condor import Condor
+from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
 from test.mongo_test_helper import MongoTestHelper
 from test.utils.test_utils import bootstrap
 
@@ -262,7 +263,7 @@ class ee2_server_load_test(unittest.TestCase):
     # @patch.object(Catalog, "get_module_version", return_value="module.version")
     # @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
 
-    si = submission_info(clusterid="test", submit="job", error=None)
+    si = SubmissionInfo(clusterid="test", submit="job", error=None)
 
     @patch.object(Condor, "run_job", return_value=si)
     @patch.object(WorkspaceAuth, "can_write", return_value=True)
@@ -613,7 +614,7 @@ class ee2_server_load_test(unittest.TestCase):
 
             # add one line to job
             ts = time.time()
-            job_line = [{"line": "hello ee2", "is_error": True, "ts": ts}]
+            job_line = [{"line": "hello ee2", "is_error": 1, "ts": ts}]
             self.impl.add_job_logs(
                 ctx=self.ctx, params={"job_id": job_id}, lines=job_line
             )
@@ -647,7 +648,7 @@ class ee2_server_load_test(unittest.TestCase):
                 job_line = job_line[0]["lines"][0]
                 self.assertEqual(job_line["line"], "hello ee2")
                 self.assertEqual(job_line["linepos"], 1)
-                self.assertFalse(job_line["error"])
+                self.assertEqual(job_line["is_error"], 1)
                 self.assertEqual(job_line["ts"], int(ts * 1000))
 
             jobs = self.mongo_util.get_jobs(job_ids=[job_id])
@@ -674,7 +675,7 @@ class ee2_server_load_test(unittest.TestCase):
 
             # job line to be added
             ts = time.time()
-            job_line = [{"line": "hello ee2", "is_error": True, "ts": ts}]
+            job_line = [{"line": "hello ee2", "is_error": 1, "ts": ts}]
 
             threads = list()
             que = queue.Queue()
@@ -708,7 +709,7 @@ class ee2_server_load_test(unittest.TestCase):
             line_pos = list()
             for line in lines:
                 self.assertEqual(line["line"], "hello ee2")
-                self.assertFalse(line["error"])
+                self.assertEqual(line["is_error"], 1)
                 self.assertEqual(line["ts"], int(ts * 1000))
                 line_pos.append(line["linepos"])
             self.assertCountEqual(line_pos, list(range(1, thread_count + 1)))

@@ -3,8 +3,8 @@ import requests
 import requests_mock
 import os
 from configparser import ConfigParser
-from execution_engine2.authorization.roles import AdminAuthUtil
-from execution_engine2.exceptions import AuthError
+from lib.execution_engine2.authorization.roles import AdminAuthUtil
+from lib.execution_engine2.exceptions import AuthError
 
 from test.utils.test_utils import bootstrap
 

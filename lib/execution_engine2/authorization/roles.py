@@ -6,11 +6,13 @@ This is an SDK-based service, so auth token validation is handled through
 the Server. This just takes an auth token and discerns whether there's
 a valid EE2 admin role attached to the user.
 """
-from typing import List, Set
-from installed_clients.authclient import TokenCache
-import requests
 from json import JSONDecodeError
-from execution_engine2.exceptions import AuthError
+from typing import List, Set, Optional
+
+import requests
+
+from lib.execution_engine2.exceptions import AuthError
+from lib.installed_clients.authclient import TokenCache
 
 IS_ADMIN = "EE2_ADMIN"
 NOT_ADMIN = "NOT_ADMIN"
@@ -63,7 +65,7 @@ class AdminAuthUtil:
             _admin_cache.add_valid_token(token, NOT_ADMIN)
             return False
 
-    def get_admin_role(self, token: str, read_role, write_role) -> str:
+    def get_admin_role(self, token: str, read_role, write_role) -> Optional[str]:
         roles = self._fetch_user_roles(token)
         if write_role in roles:
             return write_role

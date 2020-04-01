@@ -1,4 +1,6 @@
 class ExecutionEngineValueError(ValueError):
+    """Base Class for ee2 exceptions"""
+
     pass
 
 

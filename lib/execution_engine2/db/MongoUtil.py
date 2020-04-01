@@ -10,11 +10,11 @@ from mongoengine import connect, connection
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
 
-from execution_engine2.exceptions import (
+from lib.execution_engine2.exceptions import (
     RecordNotFoundException,
     InvalidStatusTransitionException,
 )
-from execution_engine2.db.models.models import JobLog, Job, Status, TerminatedCode
+from lib.execution_engine2.db.models.models import JobLog, Job, Status, TerminatedCode
 
 
 class MongoUtil:
@@ -30,9 +30,9 @@ class MongoUtil:
         if start_local:
             print("Start local is")
             print(start_local)
-            logging.info("starting local mongod service")
+            logging.debug("starting local mongod service")
 
-            logging.info("running sudo service mongodb start")
+            logging.debug("running sudo service mongodb start")
             pipe = subprocess.Popen(
                 "sudo service mongodb start",
                 shell=True,
@@ -40,9 +40,9 @@ class MongoUtil:
                 stderr=subprocess.PIPE,
             )
             stdout = pipe.communicate()
-            logging.info(stdout)
+            logging.debug(stdout)
 
-            logging.info("running mongod --version")
+            logging.debug("running mongod --version")
             pipe = subprocess.Popen(
                 "mongod --version",
                 shell=True,
@@ -51,7 +51,7 @@ class MongoUtil:
             )
 
             stdout = pipe.communicate()
-            logging.info(stdout)
+            logging.debug(stdout)
 
     @classmethod
     def _get_collection(
@@ -68,7 +68,7 @@ class MongoUtil:
         """
 
         if mongo_user:
-            logging.info(
+            logging.debug(
                 "mongo-user found in config file, configuring client for authentication using mech "
                 + str(mongo_authmechanism)
             )
@@ -91,7 +91,7 @@ class MongoUtil:
                 authentication_mechanism=mongo_authmechanism,
             )
         else:
-            logging.info("no mongo-user found in config file, connecting without auth")
+            logging.debug("no mongo-user found in config file, connecting without auth")
             pymongo_client = MongoClient(mongo_host, mongo_port)
 
             mongoengine_client = connect(
@@ -121,7 +121,7 @@ class MongoUtil:
 
         self._start_local_service()
         logging.basicConfig(
-            format="%(created)s %(levelname)s: %(message)s", level=logging.INFO
+            format="%(created)s %(levelname)s: %(message)s", level=logging.debug
         )
 
     @contextmanager
@@ -329,7 +329,7 @@ class MongoUtil:
                     f"Cannot change already finished/terminated/errored job.  {j.status} to {status}"
                 )
 
-            logging.info(f"job status is {j.status}. going to update to {status}")
+            logging.debug(f"job status is {j.status}. going to update to {status}")
 
             #  A job in status running can only be terminated/error/finished
             if j.status == Status.running.value:
@@ -411,7 +411,7 @@ class MongoUtil:
         """
         insert a doc into collection
         """
-        logging.info("start inserting document")
+        logging.debug("start inserting document")
 
         with self.pymongo_client(self.mongo_collection) as pymongo_client:
             try:
@@ -451,7 +451,7 @@ class MongoUtil:
         """
         delete a doc by _id
         """
-        logging.info("start deleting document")
+        logging.debug("start deleting document")
         with self.pymongo_client(self.mongo_collection) as pymongo_client:
             job_col = pymongo_client[self.mongo_database][self.mongo_collection]
             try:
@@ -470,7 +470,7 @@ class MongoUtil:
         """
         return cursor that contains docs which field column is in elements
         """
-        logging.info("start querying MongoDB")
+        logging.debug("start querying MongoDB")
 
         with self.pymongo_client(self.mongo_collection) as pymongo_client:
             job_col = pymongo_client[self.mongo_database][self.mongo_collection]
@@ -487,6 +487,6 @@ class MongoUtil:
                 )
                 raise ValueError(error_msg)
 
-            logging.info("returned {} results".format(result.count()))
+            logging.debug("returned {} results".format(result.count()))
 
         return result

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import unittest
 
-from execution_engine2.SDKMethodRunner import SDKMethodRunner
+from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from test.utils.test_utils import bootstrap
 
 bootstrap()
@@ -9,12 +9,13 @@ import os
 from configparser import ConfigParser
 import copy
 from mock import patch
-from execution_engine2.utils.Condor import Condor, submission_info
+from lib.execution_engine2.utils.Condor import Condor
+from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
 from installed_clients.CatalogClient import Catalog
-from execution_engine2.authorization.roles import AdminAuthUtil
-from execution_engine2.authorization.workspaceauth import WorkspaceAuth
+from lib.execution_engine2.authorization.roles import AdminAuthUtil
+from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
 import bson
-from execution_engine2.db.models.models import Status
+from lib.execution_engine2.db.models.models import Status
 
 
 class EE2TestAdminMode(unittest.TestCase):
@@ -52,7 +53,7 @@ class EE2TestAdminMode(unittest.TestCase):
         self.catalog = self.catalog_patch.start()
         self.catalog.return_value = {"git_commit_hash": "moduleversiongoeshere"}
 
-        si = submission_info(clusterid="test", submit="job", error=None)
+        si = SubmissionInfo(clusterid="test", submit="job", error=None)
         self.condor_patch = patch.object(Condor, "run_job", return_value=si)
         self.condor = self.condor_patch.start()
 

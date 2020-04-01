@@ -388,6 +388,14 @@ class Application(object):
         )
         self.method_authentication["execution_engine2.run_job"] = "required"  # noqa
         self.rpc_service.add(
+            impl_execution_engine2.run_job_concierge,
+            name="execution_engine2.run_job_concierge",
+            types=[dict, dict],
+        )
+        self.method_authentication[
+            "execution_engine2.run_job_concierge"
+        ] = "required"  # noqa
+        self.rpc_service.add(
             impl_execution_engine2.get_job_params,
             name="execution_engine2.get_job_params",
             types=[dict],

@@ -8,7 +8,7 @@ class CatalogUtils:
     def __init__(self, url, admin_token):
         self.catalog = Catalog(url=url, token=admin_token)
 
-    def get_client_groups(self, method) -> Dict:
+    def get_normalized_resources(self, method) -> Dict:
         """
         get client groups info from Catalog
         """
@@ -49,10 +49,10 @@ class CatalogUtils:
             return {}
         # JSON
         if "{" in resources_request[0]:
-            rr = ", ".join(resources_request)
-            return json.loads(rr)
+            json_resources_request = ", ".join(resources_request)
+            return json.loads(json_resources_request)
         # CSV Format
-        rr = resources_request[0].split(",")
+        rr = resources_request[0].split(",")  # type: list
         rv = {"client_group": rr.pop(0)}
         for item in rr:
             if "=" not in item:
@@ -61,6 +61,6 @@ class CatalogUtils:
                 )
             (key, value) = item.split("=")
             rv[key] = value
-
-        print("Going to return", rv)
+        #
+        # print("Going to return", rv)
         return rv

@@ -2,7 +2,7 @@ import copy
 import unittest
 from configparser import ConfigParser
 
-from lib.execution_engine2.SDKMethodRunner import SDKMethodRunner
+from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.Condor import Condor
 from test.utils.test_utils import bootstrap
 
@@ -46,13 +46,13 @@ class ee2_CatalogUtils_test(unittest.TestCase):
         runner = self.getRunner()
         method = "simpleapp.simple_add"
         print("A")
-        app_settings1 = runner.catalog_utils.get_client_groups(method)
+        app_settings1 = runner.catalog_utils.get_normalized_resources(method)
         self.assertEquals(app_settings1["client_group"], "njs")
         self.assertIsInstance(app_settings1, dict)
 
         print("B")
         method = "simpleapp.simple_add2"
-        app_settings2 = runner.catalog_utils.get_client_groups(method)
+        app_settings2 = runner.catalog_utils.get_normalized_resources(method)
         self.assertEquals(app_settings2, {})
         self.assertIsInstance(app_settings2, dict)
 

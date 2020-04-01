@@ -9,6 +9,7 @@ from configparser import ConfigParser
 from datetime import datetime, timedelta
 from typing import Dict, List
 from unittest.mock import patch
+from pprint import pprint
 
 import bson
 import dateutil
@@ -18,26 +19,27 @@ from bson import ObjectId
 from mock import MagicMock
 from mongoengine import ValidationError
 
-from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.db.models.models import (
+from lib.execution_engine2.db.MongoUtil import MongoUtil
+from lib.execution_engine2.db.models.models import (
     Job,
     JobInput,
     Meta,
     Status,
     TerminatedCode,
 )
-from execution_engine2.exceptions import AuthError
-from execution_engine2.exceptions import InvalidStatusTransitionException
-from execution_engine2.utils.Condor import condor_resources
-from execution_engine2.utils.Condor import submission_info
-from execution_engine2.SDKMethodRunner import SDKMethodRunner
+from lib.execution_engine2.exceptions import AuthError
+from lib.execution_engine2.exceptions import InvalidStatusTransitionException
+
+
+from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
+from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from test.mongo_test_helper import MongoTestHelper
 from test.utils.test_utils import bootstrap, get_example_job, validate_job_state
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
 
-from execution_engine2.EE2Runjob import RunJob
+from lib.execution_engine2.sdk.EE2Runjob import RunJob
 
 
 def _run_job_adapter(
@@ -142,7 +144,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             db=cls.cfg["mongo-database"], col=cls.cfg["mongo-jobs-collection"]
         )
 
-        cls.cr = condor_resources(
+        cls.cr = CondorResources(
             request_cpus="1",
             request_disk="1GB",
             request_memory="100M",
@@ -346,8 +348,15 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     # from lib.execution_engine2.ee2_runjob import _get_module_git_commit
 
     # flake8: noqa: C901
+    @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
-    def test_cancel_job2(self, condor_mock):
+    def test_cancel_job2(self, rq_mock, condor_mock):
+        rq_mock.add_matcher(
+            _run_job_adapter(
+                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
+            )
+        )
+
         user_name = "wsadmin"
 
         runner = self.getRunner()
@@ -365,6 +374,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner.get_condor = MagicMock(return_value=condor_mock)
         fixed_rj = RunJob(runner)
         fixed_rj._get_module_git_commit = MagicMock(return_value="hash_goes_here")
+        fixed_rj.sdkmr.catalog_utils.list_client_group_configs = MagicMock(
+            return_value="cg goes her"
+        )
 
         runner.get_runjob = MagicMock(return_value=fixed_rj)
 
@@ -372,12 +384,14 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job = get_example_job().to_mongo().to_dict()
         job["method"] = job["job_input"]["app_id"]
         job["app_id"] = job["job_input"]["app_id"]
+        job["service_ver"] = job["job_input"]["service_ver"]
 
-        si = submission_info(clusterid="test", submit=job, error=None)
+        si = SubmissionInfo(clusterid="test", submit=job, error=None)
 
         condor_mock.run_job = MagicMock(return_value=si)
         condor_mock.extract_resources = MagicMock(return_value=self.cr)
-
+        print("About to run job with params")
+        pprint(job)
         job_id0 = runner.run_job(params=job)
         job_id1 = runner.run_job(params=job)
         job_id2 = runner.run_job(params=job)
@@ -501,8 +515,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job = get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
         job["method"] = job["job_input"]["app_id"]
         job["app_id"] = job["job_input"]["app_id"]
+        job["service_ver"] = job["job_input"]["service_ver"]
 
-        si = submission_info(clusterid="test", submit=job, error=None)
+        si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
         condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
@@ -528,8 +543,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job = get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
         job["method"] = job["job_input"]["app_id"]
         job["app_id"] = job["job_input"]["app_id"]
+        job["service_ver"] = job["job_input"]["service_ver"]
 
-        si = submission_info(clusterid="test", submit=job, error=None)
+        si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
         condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
@@ -1183,8 +1199,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job = get_example_job().to_mongo().to_dict()
         job["method"] = job["job_input"]["app_id"]
         job["app_id"] = job["job_input"]["app_id"]
+        job["service_ver"] = job["job_input"]["service_ver"]
 
-        si = submission_info(clusterid="test", submit=job, error=None)
+        si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
         condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
@@ -1284,7 +1301,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                     self.assertIn(js["status"], ["created", "queued"])
                     print(js["created"])
                     print(type(js["created"]))
-                    date = SDKMethodRunner._check_and_convert_time(js["created"])
+                    date = SDKMethodRunner.check_and_convert_time(js["created"])
                     ts = date
                     print(
                         f"Creation date {date}, LastWeek:{last_week}, Tomorrow{tomorrow})"
@@ -1314,7 +1331,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 if job_id in new_job_ids:
                     count += 1
                     self.assertIn(js["status"], ["created", "queued"])
-                    date = SDKMethodRunner._check_and_convert_time(js["created"])
+                    date = SDKMethodRunner.check_and_convert_time(js["created"])
                     ts = date
                     print(date, last_week, tomorrow)
                     print(ts, last_week.timestamp(), tomorrow.timestamp())
@@ -1365,7 +1382,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 if job_id in new_job_ids:
                     count += 1
                     self.assertIn(js["status"], ["created", "queued"])
-                    date = SDKMethodRunner._check_and_convert_time(js["created"])
+                    date = SDKMethodRunner.check_and_convert_time(js["created"])
                     ts = date
                     print(date, last_week, tomorrow)
                     print(ts, last_week.timestamp(), tomorrow.timestamp())

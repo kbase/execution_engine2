@@ -3,15 +3,16 @@
 import json
 import logging
 from dataclasses import dataclass
+from typing import Optional, Type
 
 from confluent_kafka import Producer
 
-from execution_engine2.db.models.models import Status, ErrorCode
+from lib.execution_engine2.db.models.models import Status, ErrorCode
 
 logging.basicConfig(level=logging.INFO)
-
 STATUS_EVENT_TYPE = "job_status_update"
 CONDOR_EVENT_TYPE = "condor_request"
+
 
 VALID_CONDOR_COMMANDS = [
     "condor_q",
@@ -54,7 +55,6 @@ class StatusRequired:
 class StatusOptional:
     topic: str = DEFAULT_TOPIC
     event_type: str = STATUS_EVENT_TYPE
-
     error: bool = False
 
     def __post_init__(self):
@@ -70,8 +70,8 @@ class StatusOptional:
 
 @dataclass
 class ErrorOptional:
-    error_code: int = None
-    error_message: str = None
+    error_code: Optional[int]
+    error_message: Optional[str]
 
     def check_for_error(self, new_status):
         if self.error_message is None:
@@ -200,7 +200,7 @@ class KafkaClient:
             )
         self.server_address = server_address
 
-    def send_kafka_message(self, message: dataclass, topic: str = DEFAULT_TOPIC):
+    def send_kafka_message(self, message: Type, topic: str = DEFAULT_TOPIC):
         """
         :param message: The message to send to the queue, which likely has been passed thru the dataclass
         :param topic: The kafka topic, default is likely be ee2
@@ -213,11 +213,11 @@ class KafkaClient:
             )
             # TODO Remove POLL?
             producer.poll(2)
-            logging.info(
+            logging.debug(
                 f"Successfully sent message to kafka at topic={topic} message={json.dumps(message.__dict__)} server_address={self.server_address}"
             )
         except Exception as e:
-            logging.info(
+            logging.debug(
                 f"Failed to send message to kafka at topic={topic} message={json.dumps(message.__dict__)} server_address={self.server_address}"
             )
             raise Exception(e)

@@ -1,8 +1,8 @@
 from typing import List, Dict
 from enum import Enum
-from execution_engine2.authorization.basestrategy import AuthStrategy
-from installed_clients.WorkspaceClient import Workspace
-from installed_clients.baseclient import ServerError
+from lib.execution_engine2.authorization.basestrategy import AuthStrategy
+from lib.installed_clients.WorkspaceClient import Workspace
+from lib.installed_clients.baseclient import ServerError
 
 STRATEGY = "kbaseworkspace"
 

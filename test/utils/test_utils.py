@@ -7,9 +7,9 @@ from configparser import ConfigParser
 from datetime import datetime
 from dotenv import load_dotenv
 
-from execution_engine2.db.models.models import Job, JobInput, Meta
-from execution_engine2.db.models.models import Status
-from execution_engine2.exceptions import MalformedTimestampException
+from lib.execution_engine2.db.models.models import Job, JobInput, Meta
+from lib.execution_engine2.db.models.models import Status
+from lib.execution_engine2.exceptions import MalformedTimestampException
 
 
 def get_example_job(

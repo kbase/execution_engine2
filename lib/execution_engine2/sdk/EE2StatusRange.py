@@ -5,8 +5,8 @@ from enum import Enum
 
 from bson import ObjectId
 
-from execution_engine2.db.models.models import Job
-from execution_engine2.exceptions import AuthError
+from lib.execution_engine2.db.models.models import Job
+from lib.execution_engine2.exceptions import AuthError
 
 
 class JobPermissions(Enum):
@@ -104,7 +104,7 @@ class JobStatusRange:
                 .only(*job_projection)
             )
 
-        logging.info(
+        logging.debug(
             f"Searching for jobs with id_gt {dummy_ids.start} id_lt {dummy_ids.stop}"
         )
 
@@ -139,14 +139,14 @@ class JobStatusRange:
                 "Please provide a valid start time for when job was created"
             )
 
-        creation_start_time = self.sdkmr._check_and_convert_time(creation_start_time)
+        creation_start_time = self.sdkmr.check_and_convert_time(creation_start_time)
         creation_start_date = datetime.fromtimestamp(creation_start_time)
         dummy_start_id = ObjectId.from_datetime(creation_start_date)
 
         if creation_end_time is None:
             raise Exception("Please provide a valid end time for when job was created")
 
-        creation_end_time = self.sdkmr._check_and_convert_time(creation_end_time)
+        creation_end_time = self.sdkmr.check_and_convert_time(creation_end_time)
         creation_end_date = datetime.fromtimestamp(creation_end_time)
         dummy_end_id = ObjectId.from_datetime(creation_end_date)
 

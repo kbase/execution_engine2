@@ -82,7 +82,7 @@ class KBaseAuth(object):
         if not ret.ok:
             try:
                 err = ret.json()
-            except Exception:
+            except Exception as e:
                 ret.raise_for_status()
             raise ValueError(
                 "Error connecting to auth service: {} {}\n{}".format(

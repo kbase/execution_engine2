@@ -2,8 +2,8 @@ import time
 from enum import Enum
 from typing import Dict
 
-from execution_engine2.db.models.models import JobLog as JL, LogLines
-from execution_engine2.exceptions import RecordNotFoundException
+from lib.execution_engine2.db.models.models import JobLog as JL, LogLines
+from lib.execution_engine2.exceptions import RecordNotFoundException
 
 
 class JobPermissions(Enum):
@@ -64,12 +64,12 @@ class JobLog:
         for input_line in log_lines:
             olc += 1
             ll = LogLines()
-            ll.error = input_line.get("error", False)
+            ll.error = int(input_line.get("is_error", 0)) == 1
             ll.linepos = olc
             ts = input_line.get("ts")
             # TODO Maybe use strpos for efficiency?
             if ts is not None:
-                ts = self.sdkmr._check_and_convert_time(ts, assign_default_time=True)
+                ts = self.sdkmr.check_and_convert_time(ts, assign_default_time=True)
 
             ll.ts = ts
 
@@ -120,11 +120,16 @@ class JobLog:
             if skip_lines and int(skip_lines) >= log_line.get("linepos", 0):
                 continue
             linepos = log_line.get("linepos")
+
+            is_error = 0
+            if log_line.get("error") is True:
+                is_error = 1
+
             lines.append(
                 {
                     "line": log_line.get("line"),
                     "linepos": linepos,
-                    "error": log_line.get("error"),
+                    "is_error": is_error,
                     "ts": int(log_line.get("ts", 0) * 1000),
                 }
             )

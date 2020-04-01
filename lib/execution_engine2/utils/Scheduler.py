@@ -7,10 +7,6 @@ class Scheduler(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def cleanup_submit_file(self, submit_filepath):
-        raise NotImplementedError
-
-    @abstractmethod
     def create_submit(self, params):
         raise NotImplementedError
 

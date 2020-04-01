@@ -11,5 +11,7 @@ sdk.cfg
 .idea
 .coverage
 .DS_Store
+.mypy_cache
+.pytest_cache
 lib/execution_engine2/execution_engine2Impl.py.bak*
 

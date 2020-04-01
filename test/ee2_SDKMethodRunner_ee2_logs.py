@@ -8,9 +8,9 @@ from typing import Dict, List
 
 import requests_mock
 
-from execution_engine2.SDKMethodRunner import SDKMethodRunner
-from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.db.models.models import Job, JobLog
+from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
+from lib.execution_engine2.db.MongoUtil import MongoUtil
+from lib.execution_engine2.db.models.models import Job, JobLog
 from test.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 from test.mongo_test_helper import MongoTestHelper
 from test.utils.test_utils import bootstrap
@@ -118,11 +118,11 @@ class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
 
             self.assertEqual(test_line["line"], "Hello world")
             self.assertEqual(test_line["linepos"], 1)
-            self.assertFalse(test_line["error"])
+            self.assertEqual(test_line["error"], False)
 
             # add job log
             lines = [
-                {"error": True, "line": "Hello Kbase"},
+                {"is_error": True, "line": "Hello Kbase"},
                 {"line": "Hello Wrold Kbase"},
             ]
 
@@ -137,24 +137,25 @@ class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
             self.assertEqual(len(ori_lines), 3)
 
             # original line
-            test_line = ori_lines[0]
 
+            test_line = ori_lines[0]
+            print(test_line)
             self.assertEqual(test_line["line"], "Hello world")
             self.assertEqual(test_line["linepos"], 1)
-            self.assertFalse(test_line["error"])
+            self.assertEqual(test_line["error"], 0)
 
             # new line
             test_line = ori_lines[1]
 
             self.assertEqual(test_line["line"], "Hello Kbase")
             self.assertEqual(test_line["linepos"], 2)
-            self.assertTrue(test_line["error"])
+            self.assertEqual(test_line["error"], 1)
 
             test_line = ori_lines[2]
 
             self.assertEqual(test_line["line"], "Hello Wrold Kbase")
             self.assertEqual(test_line["linepos"], 3)
-            self.assertFalse(test_line["error"])
+            self.assertEqual(test_line["error"], 0)
 
             self.mongo_util.get_job(job_id=job_id).delete()
             self.assertEqual(ori_job_count, Job.objects.count())
