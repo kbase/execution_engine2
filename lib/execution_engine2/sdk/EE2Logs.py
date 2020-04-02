@@ -86,7 +86,7 @@ class JobLog:
 
         return log["stored_line_count"]
 
-    def _get_job_log(self, job_id, skip_lines, limit=None) -> Dict:
+    def _get_job_logs(self, job_id, skip_lines, limit=None) -> Dict:
         """
         # TODO Do I have to query this another way so I don't load all lines into memory?
         # Does mongoengine lazy-load it?
@@ -160,4 +160,4 @@ class JobLog:
             job_id, JobPermissions.READ, as_admin=as_admin
         )
 
-        return self._get_job_log(job_id, skip_lines, limit)
+        return self._get_job_logs(job_id, skip_lines, limit)
