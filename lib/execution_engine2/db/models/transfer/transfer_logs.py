@@ -95,7 +95,7 @@ class MigrateDatabases:
         convert input time into timestamp in epoch format
         """
         if not time_input:
-            return None
+            return -1
 
         try:
             if isinstance(time_input, str):  # input time_input as string
@@ -119,7 +119,7 @@ class MigrateDatabases:
             datetime.fromtimestamp(time_input)  # check current time_input is valid
         except Exception:
             print("Cannot convert time_input into timestamps: {}".format(time_input))
-            time_input = None
+            time_input = -1
 
         return time_input
 
