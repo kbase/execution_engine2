@@ -2,6 +2,9 @@
 # type: ignore
 import os
 from configparser import ConfigParser
+from datetime import datetime
+import dateutil
+
 
 from pymongo import MongoClient
 
@@ -88,6 +91,39 @@ class MigrateDatabases:
         self.ee2_logs.insert_many(self.logs)
         self.logs = []
 
+    def check_and_convert_time(self, time_input):
+        """
+        convert input time into timestamp in epoch format
+        """
+        if not time_input:
+            return 0
+
+        try:
+            if isinstance(time_input, str):  # input time_input as string
+                if time_input.replace(
+                    ".", "", 1
+                ).isdigit():  # input time_input as numeric string
+                    time_input = (
+                        float(time_input)
+                        if "." in time_input
+                        else int(time_input) / 1000.0
+                    )
+                else:  # input time_input as datetime string
+                    time_input = dateutil.parser.parse(time_input).timestamp()
+            elif isinstance(
+                time_input, int
+            ):  # input time_input as epoch timestamps in milliseconds
+                time_input = time_input / 1000.0
+            elif isinstance(time_input, datetime):
+                time_input = time_input.timestamp()
+
+            datetime.fromtimestamp(time_input)  # check current time_input is valid
+        except Exception:
+            print("Cannot convert time_input into timestamps: {}".format(time_input))
+            time_input = 0
+
+        return time_input
+
     def begin_log_transfer(self):  # flake8: noqa
 
         logs_cursor = self.njs_logs.find()
@@ -110,7 +146,7 @@ class MigrateDatabases:
                 ll.error = line["is_error"]
                 ll.linepos = line["line_pos"]
                 ll.line = line["line"]
-                ll.ts = None
+                ll.ts = self.check_and_convert_time(line.get("ts"))
                 ll.validate()
                 lines.append(ll)
             job_log.lines = lines
