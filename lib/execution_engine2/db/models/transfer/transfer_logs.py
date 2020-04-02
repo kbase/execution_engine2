@@ -90,7 +90,7 @@ class MigrateDatabases:
         self.ee2_logs.insert_many(self.logs)
         self.logs = []
 
-    def check_and_convert_time(time_input):
+    def check_and_convert_time(self, time_input):
         """
         convert input time into timestamp in epoch format
         """
