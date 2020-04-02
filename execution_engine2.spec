@@ -212,17 +212,6 @@
         funcdef add_job_logs(AddJobLogsParams params, list<LogLine> lines) returns (int line_number) authentication required;
 
 
-        /*
-            skip_lines or offset - optional parameter, number of lines to skip (in case they were
-                already loaded before).
-            limit - optional parameter, maximum number of lines returned
-        */
-        typedef structure {
-            job_id job_id;
-            int skip_lines;
-            int offset;
-            int limit;
-        } GetJobLogsParams;
 
         /*
             last_line_number - common number of lines (including those in skip_lines
@@ -232,8 +221,26 @@
         typedef structure {
             list<LogLine> lines;
             int last_line_number;
-            boolean as_admin;
+            int count;
         } GetJobLogsResults;
+
+
+        /*
+            job id - the job id
+            @optional skip_lines Legacy Parameter for Offset
+            @optional offset - Number of lines to skip (in case they were
+            already loaded before).
+            @optional limit - optional parameter, maximum number of lines returned
+            @optional as_admin - request read access to record normally not allowed..
+        */
+        typedef structure {
+            job_id job_id;
+            int skip_lines;
+            int offset;
+            int limit;
+            boolean as_admin;
+        } GetJobLogsParams;
+
         funcdef get_job_logs(GetJobLogsParams params) returns (GetJobLogsResults) authentication required;
 
 

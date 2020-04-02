@@ -110,6 +110,7 @@ class MigrateDatabases:
                 ll.error = line["is_error"]
                 ll.linepos = line["line_pos"]
                 ll.line = line["line"]
+                ll.ts = None
                 ll.validate()
                 lines.append(ll)
             job_log.lines = lines

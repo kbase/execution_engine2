@@ -116,7 +116,10 @@ class JobLog:
 
         lines = []
         last_line_number = 0
+        count = len(log.get("lines", []))
+
         for log_line in log.get("lines", []):  # type: LogLines
+
             if skip_lines and int(skip_lines) >= log_line.get("linepos", 0):
                 continue
             linepos = log_line.get("linepos")
@@ -140,7 +143,7 @@ class JobLog:
         if not lines:  # skipped all lines
             last_line_number = log["stored_line_count"]
 
-        log_obj = {"lines": lines, "last_line_number": last_line_number}
+        log_obj = {"lines": lines, "last_line_number": last_line_number, "count": count}
         return log_obj
 
     # @allow_job_read
