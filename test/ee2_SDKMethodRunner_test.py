@@ -631,7 +631,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         self.assertEqual(log["lines"][0]["linepos"], 2)
 
         log = runner.view_job_logs(job_id=job_id, skip_lines=8)
-        self.assertEqual(log, {"lines": [], "last_line_number": 8})
+        self.assertEqual(log, {"lines": [], "last_line_number": 8, "count": 8})
 
         # Test limit
         log = runner.view_job_logs(job_id=job_id, limit=2)
@@ -652,7 +652,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         self.assertEqual(log["last_line_number"], 8)
 
         log = runner.view_job_logs(job_id=job_id, limit=3, skip_lines=8)
-        self.assertEqual(log, {"lines": [], "last_line_number": 8})
+        self.assertEqual(log, {"lines": [], "last_line_number": 8, "count": 8})
 
     # @requests_mock.Mocker()
     # def test_add_job_logs_ok(self, rq_mock):
