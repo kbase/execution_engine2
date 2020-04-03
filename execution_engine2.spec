@@ -120,8 +120,8 @@
             wsid - an optional workspace id to associate with the job. This is passed to the
                 workspace service, which will share the job based on the permissions of
                 the workspace rather than owner of the job
-            parent_job_id - UJS id of the parent of a batch job. Sub jobs will add
-            this id to the NJS database under the field "parent_job_id"
+            parent_job_id - EE2 id of the parent of a batch job. Batch jobs will add
+            this id to the EE2 database under the field "parent_job_id"
 
         */
         typedef structure {

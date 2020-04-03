@@ -129,13 +129,13 @@ class JobLog:
                 is_error = 1
 
             lines.append(
-                {
-                    "line": log_line.get("line"),
-                    "linepos": linepos,
-                    "is_error": is_error,
-                    "ts": int(log_line.get("ts", 0) * 1000),
-                }
+                {"line": log_line.get("line"), "linepos": linepos, "is_error": is_error}
             )
+            ts = int(log_line.get("ts", 0) * 1000)
+            jan_1_2010 = 1262307660
+            if ts > jan_1_2010:
+                lines[-1]["ts"] = ts
+
             last_line_number = max(int(linepos), last_line_number)
             if limit and limit <= len(lines):
                 break
