@@ -227,11 +227,10 @@
 
         /*
             job id - the job id
-            @optional skip_lines Legacy Parameter for Offset
-            @optional offset - Number of lines to skip (in case they were
-            already loaded before).
-            @optional limit - optional parameter, maximum number of lines returned
-            @optional as_admin - request read access to record normally not allowed..
+            optional skip_lines Legacy Parameter for Offset
+            optional offset  Number of lines to skip (in case they were already loaded before).
+            optional limit  optional parameter, maximum number of lines returned
+            optional as_admin  request read access to record normally not allowed..
         */
         typedef structure {
             job_id job_id;
