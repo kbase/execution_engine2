@@ -86,7 +86,7 @@ class JobLog:
 
         return log["stored_line_count"]
 
-    def _get_job_log(self, job_id, skip_lines, limit=None) -> Dict:
+    def _get_job_logs(self, job_id, skip_lines, limit=None) -> Dict:
         """
         # TODO Do I have to query this another way so I don't load all lines into memory?
         # Does mongoengine lazy-load it?
@@ -116,7 +116,10 @@ class JobLog:
 
         lines = []
         last_line_number = 0
+        count = len(log.get("lines", []))
+
         for log_line in log.get("lines", []):  # type: LogLines
+
             if skip_lines and int(skip_lines) >= log_line.get("linepos", 0):
                 continue
             linepos = log_line.get("linepos")
@@ -126,13 +129,13 @@ class JobLog:
                 is_error = 1
 
             lines.append(
-                {
-                    "line": log_line.get("line"),
-                    "linepos": linepos,
-                    "is_error": is_error,
-                    "ts": int(log_line.get("ts", 0) * 1000),
-                }
+                {"line": log_line.get("line"), "linepos": linepos, "is_error": is_error}
             )
+            ts = int(log_line.get("ts", 0) * 1000)
+            jan_1_2010 = 1262307660
+            if ts > jan_1_2010:
+                lines[-1]["ts"] = ts
+
             last_line_number = max(int(linepos), last_line_number)
             if limit and limit <= len(lines):
                 break
@@ -140,7 +143,7 @@ class JobLog:
         if not lines:  # skipped all lines
             last_line_number = log["stored_line_count"]
 
-        log_obj = {"lines": lines, "last_line_number": last_line_number}
+        log_obj = {"lines": lines, "last_line_number": last_line_number, "count": count}
         return log_obj
 
     # @allow_job_read
@@ -157,4 +160,4 @@ class JobLog:
             job_id, JobPermissions.READ, as_admin=as_admin
         )
 
-        return self._get_job_log(job_id, skip_lines, limit)
+        return self._get_job_logs(job_id, skip_lines, limit)
