@@ -87,6 +87,7 @@ class execution_engine2:
             "catalog-url",
             "shock-url",
             "handle-url",
+            "srv-wiz-url",
             "auth-service-url",
             "auth-service-url-v2",
             "auth-service-url-allow-insecure",
