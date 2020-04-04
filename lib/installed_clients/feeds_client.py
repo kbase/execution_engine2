@@ -13,16 +13,16 @@ class feeds_client:
         self.admin_username = username
         self.admin_token = token
         self.service_url = uri
-        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger("ee2")
 
     def get_notifications(self):
         url = f"{self.service_url}/{self.api_version}/notifications"
-        logging.info("About to send [notifications] request to " + url)
+        self.logger.info("About to send [notifications] request to " + url)
         return requests.get(url, timeout=1, headers={"Authorization": self.admin_token})
 
     def get_permissions(self):
         url = f"{self.service_url}/permissions"
-        logging.info("About to send [permissions]request to " + url)
+        self.logger.info("About to send [permissions]request to " + url)
         return requests.get(url, timeout=1, headers={"Authorization": self.admin_token})
 
     def notify_users_workspace(
@@ -48,15 +48,15 @@ class feeds_client:
             "context": {"text": message},
         }
         url = f"{self.service_url}/{self.api_version}/notification"
-        logging.info(f"About to send [message] request to {user} at {url} ")
+        self.logger.info(f"About to send [message] request to {user} at {url} ")
 
         if dry_run is False:
             return requests.post(
                 url, json=note, headers={"Authorization": self.admin_token}
             )
         else:
-            logging.info(url)
-            logging.info(note)
+            self.logger.info(url)
+            self.logger.info(note)
 
     # TODO How do you annotate this?
     @classmethod

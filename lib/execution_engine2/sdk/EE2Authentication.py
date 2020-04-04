@@ -1,4 +1,3 @@
-import logging
 from enum import Enum
 
 from cachetools import TTLCache
@@ -172,7 +171,7 @@ class EE2Auth:
                     f"User {self.sdkmr.user_id} does not have permission to {level} job {job_id}"
                 )
         except RuntimeError as e:
-            logging.error(
+            self.sdkmr.logging.error(
                 f"An error occurred while checking permissions for job {job_id}"
             )
             raise e

@@ -1,4 +1,3 @@
-import logging
 import time
 from collections import OrderedDict
 from enum import Enum
@@ -43,7 +42,6 @@ class JobsStatus:
         """
         # Is it inefficient to get the job twice? Is it cached?
         # Maybe if the call fails, we don't actually cancel the job?
-        self.sdkmr.logger.debug(f"Attempting to cancel job {job_id}")
 
         job = self.sdkmr.get_job_with_permission(
             job_id, JobPermissions.WRITE, as_admin=as_admin
@@ -57,13 +55,11 @@ class JobsStatus:
         )
 
         self.sdkmr.logger.debug(
-            f"About to cancel job in CONDOR using jobid {job.scheduler_id}"
+            f"About to cancel job in CONDOR using jobid {job_id} {job.scheduler_id}"
         )
-        success = self.sdkmr.get_condor().cancel_job(job_id=job.scheduler_id)
 
-        self.sdkmr.logger.debug(f"{success}")
-
-        # TODO Issue #190 IF success is FALSE, don't send a kafka message?
+        # TODO Issue #190 IF success['TotalSuccess = 0'] == FALSE, don't send a kafka message?
+        self.sdkmr.get_condor().cancel_job(job_id=f"{job.scheduler_id}.0")
         self.sdkmr.kafka_client.send_kafka_message(
             message=KafkaCancelJob(
                 job_id=str(job_id),
@@ -175,7 +171,7 @@ class JobsStatus:
         try:
             output.validate()
         except Exception as e:
-            logging.debug(e)
+            self.sdkmr.logger.debug(e)
             error_message = "Something was wrong with the output object"
             error_code = ErrorCode.job_missing_output.value
             error = {
@@ -292,7 +288,7 @@ class JobsStatus:
         job_id: id of job
         """
 
-        logging.debug("Start fetching status for job: {}".format(job_id))
+        self.sdkmr.logger.debug("Start fetching status for job: {}".format(job_id))
 
         if exclude_fields is None:
             exclude_fields = []
@@ -316,7 +312,7 @@ class JobsStatus:
         check_jobs: check and return job status for a given of list job_ids
         """
 
-        logging.debug("Start fetching status for jobs: {}".format(job_ids))
+        self.sdkmr.logger.debug("Start fetching status for jobs: {}".format(job_ids))
 
         if exclude_fields is None:
             exclude_fields = []
@@ -332,7 +328,7 @@ class JobsStatus:
                     jobs, self.sdkmr.user_id, self.sdkmr.token, self.sdkmr.config
                 )
             except RuntimeError as e:
-                logging.error(
+                self.sdkmr.logger.error(
                     f"An error occurred while checking read permissions for jobs"
                 )
                 raise e
@@ -372,7 +368,7 @@ class JobsStatus:
         """
         check_workspace_jobs: check job status for all jobs in a given workspace
         """
-        logging.debug(
+        self.sdkmr.logger.debug(
             "Start fetching all jobs status in workspace: {}".format(workspace_id)
         )
 

@@ -9,7 +9,7 @@ from confluent_kafka import Producer
 
 from lib.execution_engine2.db.models.models import Status, ErrorCode
 
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("ee2")
 STATUS_EVENT_TYPE = "job_status_update"
 CONDOR_EVENT_TYPE = "condor_request"
 
@@ -47,7 +47,7 @@ class StatusRequired:
         if self.new_status not in [Status.created.value, Status.terminated.value]:
             if self.scheduler_id is None:
                 message = f"You must pass a scheduler id once the job has been created already. Job status is {self.new_status}"
-                logging.error(message)
+                logger.error(message)
                 raise Exception(message)
 
 
@@ -182,9 +182,9 @@ class KafkaStartJob(StatusOptional, StatusRequired):
 
 def _delivery_report(err, msg):
     if err is not None:
-        logging.error(msg)
+        logger.error(msg)
         msg = "Message delivery failed:", err
-        logging.error(msg)
+        logger.error(msg)
 
 
 class KafkaClient:
@@ -213,11 +213,11 @@ class KafkaClient:
             )
             # TODO Remove POLL?
             producer.poll(2)
-            logging.debug(
+            logger.debug(
                 f"Successfully sent message to kafka at topic={topic} message={json.dumps(message.__dict__)} server_address={self.server_address}"
             )
         except Exception as e:
-            logging.debug(
+            logger.debug(
                 f"Failed to send message to kafka at topic={topic} message={json.dumps(message.__dict__)} server_address={self.server_address}"
             )
             raise Exception(e)

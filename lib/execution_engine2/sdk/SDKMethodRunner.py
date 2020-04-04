@@ -9,15 +9,18 @@ The purpose of this class is to
 
 """
 import json
-import logging
 import os
 import time
 from datetime import datetime
 from enum import Enum
-from logging import Logger
 
 import dateutil
 
+from installed_clients.WorkspaceClient import Workspace
+from installed_clients.authclient import KBaseAuth
+from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
+from lib.execution_engine2.db.MongoUtil import MongoUtil
+from lib.execution_engine2.exceptions import AuthError
 from lib.execution_engine2.sdk import (
     EE2Runjob,
     EE2StatusRange,
@@ -25,16 +28,12 @@ from lib.execution_engine2.sdk import (
     EE2Status,
     EE2Logs,
 )
-from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
-from lib.execution_engine2.db.MongoUtil import MongoUtil
+from lib.execution_engine2.sdk.EE2Constants import KBASE_CONCIERGE_USERNAME
 from lib.execution_engine2.utils.CatalogUtils import CatalogUtils
 from lib.execution_engine2.utils.Condor import Condor
+from lib.execution_engine2.utils.EE2Logger import get_logger
 from lib.execution_engine2.utils.KafkaUtils import KafkaClient
 from lib.execution_engine2.utils.SlackUtils import SlackClient
-from installed_clients.WorkspaceClient import Workspace
-from installed_clients.authclient import KBaseAuth
-from lib.execution_engine2.exceptions import AuthError
-from lib.execution_engine2.sdk.EE2Constants import KBASE_CONCIERGE_USERNAME
 
 
 class JobPermissions(Enum):
@@ -80,7 +79,7 @@ class SDKMethodRunner:
         self.user_id = user_id
         self.token = token
         self.debug = SDKMethodRunner.parse_bool_from_string(config.get("debug"))
-        self.logger = self._set_log_level()
+        self.logger = get_logger()
 
         self.job_permission_cache = EE2Authentication.EE2Auth.get_cache(
             cache=job_permission_cache,
@@ -151,23 +150,6 @@ class SDKMethodRunner:
         if self.workspace is None:
             self.workspace = Workspace(token=self.token, url=self.workspace_url)
         return self.workspace
-
-    def _set_log_level(self) -> Logger:
-        """
-        Enable this setting to get output for development purposes
-        Otherwise, only emit warnings or errors for production
-        """
-        log_format = "%(created)s %(levelname)s: %(message)s"
-        logger = logging.getLogger("ee2")
-        fh = logging.StreamHandler()
-        fh.setFormatter(logging.Formatter(log_format))
-        fh.setLevel(logging.WARN)
-
-        if self.debug:
-            fh.setLevel(logging.DEBUG)
-
-        logger.addHandler(fh)
-        return logger
 
     # Permissions Decorators    #TODO Verify these actually work     #TODO add as_admin to these
 
@@ -401,7 +383,7 @@ class SDKMethodRunner:
         """
         check_workspace_jobs: check job status for all jobs in a given workspace
         """
-        logging.debug(
+        self.logger.debug(
             "Start fetching all jobs status in workspace: {}".format(workspace_id)
         )
 
@@ -474,9 +456,6 @@ class SDKMethodRunner:
             datetime.fromtimestamp(time_input)  # check current time_input is valid
         except Exception:
             if assign_default_time:
-                logging.debug(
-                    "Cannot convert time_input into timestamps: {}".format(time_input)
-                )
                 time_input = time.time()
             else:
                 raise ValueError(

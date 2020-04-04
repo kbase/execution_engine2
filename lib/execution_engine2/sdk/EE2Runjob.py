@@ -4,13 +4,10 @@ All functions related to running a job, and starting a job, including the initia
 the logic to retrieve info needed by the runnner to start the job
 
 """
-import logging
 import time
-from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, Dict
 
-from lib.execution_engine2.sdk.EE2Constants import ConciergeParams
 from lib.execution_engine2.db.models.models import (
     Job,
     JobInput,
@@ -18,11 +15,10 @@ from lib.execution_engine2.db.models.models import (
     JobRequirements,
     Status,
 )
+from lib.execution_engine2.sdk.EE2Constants import ConciergeParams
 from lib.execution_engine2.utils.CondorTuples import CondorResources
+from lib.execution_engine2.utils.EE2Logger import get_logger
 from lib.execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
-from test.utils.test_utils import bootstrap
-
-bootstrap()
 
 
 class JobPermissions(Enum):
@@ -82,7 +78,7 @@ class RunJob:
             inputs.requirements = jr
 
         job.job_input = inputs
-        logging.debug(job.job_input.to_mongo().to_dict())
+        self.sdkmr.logger.debug(job.job_input.to_mongo().to_dict())
 
         with self.sdkmr.get_mongo_util().mongo_engine_connection():
             job.save()
@@ -156,18 +152,20 @@ class RunJob:
         params["token"] = self.sdkmr.token
         params["cg_resources_requirements"] = normalized_resources
 
-        self.sdkmr.logger.info(
+        self.sdkmr.logger.debug(
             f"User {self.sdkmr.user_id} attempting to run job {method} {params}"
         )
+
         try:
             submission_info = self.sdkmr.get_condor().run_job(
                 params=params, concierge_params=concierge_params
             )
             condor_job_id = submission_info.clusterid
             self.sdkmr.logger.debug(f"Submitted job id and got '{condor_job_id}'")
+            self.sdkmr.logger.debug(f"Submitted job id and got '{condor_job_id}'")
         except Exception as e:
             ## delete job from database? Or mark it to a state it will never run?
-            logging.error(e)
+            self.sdkmr.logger.error(e)
             raise e
 
         if submission_info.error is not None:
@@ -177,12 +175,10 @@ class RunJob:
                 "Condor job not ran, and error not found. Something went wrong"
             )
 
-        self.sdkmr.logger.debug("Submission info is")
-        self.sdkmr.logger.debug(submission_info)
-        self.sdkmr.logger.debug(condor_job_id)
-        self.sdkmr.logger.debug(type(condor_job_id))
+        self.sdkmr.logger.debug(
+            f"Attempting to update job to queued  {job_id} {condor_job_id} {submission_info}"
+        )
 
-        logging.debug(f"Attempting to update job to queued  {job_id} {condor_job_id}")
         self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
         self.sdkmr.slack_client.run_job_message(
             job_id=job_id, scheduler_id=condor_job_id, username=self.sdkmr.user_id
