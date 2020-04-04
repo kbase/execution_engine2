@@ -17,7 +17,7 @@ def get_logger() -> Logger:
     ch = logging.StreamHandler()
     ch.setLevel(logging.INFO)
 
-    log_level = os.environ.get("LOGLEVEL", logging.INFO).upper()
+    log_level = os.environ.get("LOGLEVEL", "INFO").upper()
     if log_level:
         ch.setLevel(log_level)
         logger.setLevel(log_level)
