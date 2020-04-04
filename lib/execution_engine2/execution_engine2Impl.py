@@ -1,6 +1,21 @@
 # -*- coding: utf-8 -*-
 #BEGIN_HEADER
 import time
+import logging
+import sentry_sdk
+import os
+from sentry_sdk.integrations.logging import LoggingIntegration
+
+# All of this is already happening by default!
+sentry_logging = LoggingIntegration(
+    level=logging.INFO,        # Capture info and above as breadcrumbs
+    event_level=logging.ERROR  # Send errors as events
+)
+sentry_sdk.init(
+    dsn=os.environ.get("SENTRY_URL"),
+    integrations=[sentry_logging]
+)
+
 from cachetools import TTLCache
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 #END_HEADER
@@ -45,7 +60,8 @@ class execution_engine2:
         self.config = config
         self.config["mongo-collection"] = self.MONGO_COLLECTION
         self.config.setdefault("mongo-authmechanism", self.MONGO_AUTHMECHANISM)
-        
+        self.sentry_url = os.environ.get('SENTRY_URL','')
+        sentry_sdk.init(self.sentry_url)
         self.job_permission_cache = TTLCache(
             maxsize=self.JOB_PERMISSION_CACHE_SIZE,
             ttl=self.JOB_PERMISSION_CACHE_EXPIRE_TIME,

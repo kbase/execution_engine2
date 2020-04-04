@@ -4,6 +4,7 @@ Functions to call condor to manage jobs and extract resource requirements
 """
 
 import enum
+import logging
 import os
 import pathlib
 import pwd
@@ -17,13 +18,12 @@ from lib.execution_engine2.exceptions import (
     MissingRunJobParamsException,
 )
 from lib.execution_engine2.sdk.EE2Runjob import ConciergeParams
-from lib.execution_engine2.utils.Scheduler import Scheduler
 from lib.execution_engine2.utils.CondorTuples import (
     CondorResources,
     SubmissionInfo,
     JobInfo,
 )
-import logging
+from lib.execution_engine2.utils.Scheduler import Scheduler
 
 
 class Condor(Scheduler):
@@ -120,6 +120,8 @@ class Condor(Scheduler):
             "CONDOR_ID": "$(Cluster).$(Process)",
             "PYTHON_EXECUTABLE": self.python_executable,
             "DEBUG_MODE": str(dm),
+            "USER_ID": params.get("user_id"),
+            "SENTRY_URL": os.environ.get("SENTRY_URL", ""),
         }
 
         environment = ""
