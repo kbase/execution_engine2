@@ -1,23 +1,36 @@
 import logging
 import subprocess
+import time
 import traceback
 from contextlib import contextmanager
-import time
-from pprint import pprint
 
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
 
+from lib.execution_engine2.db.models.models import JobLog, Job, Status, TerminatedCode
 from lib.execution_engine2.exceptions import (
     RecordNotFoundException,
     InvalidStatusTransitionException,
 )
-from lib.execution_engine2.db.models.models import JobLog, Job, Status, TerminatedCode
 
 
 class MongoUtil:
+    def __init__(self, config: dict):
+        self.config = config
+        self.mongo_host = config["mongo-host"]
+        self.mongo_port = int(config["mongo-port"])
+        self.mongo_database = config["mongo-database"]
+        self.mongo_user = config["mongo-user"]
+        self.mongo_pass = config["mongo-password"]
+        self.mongo_authmechanism = config["mongo-authmechanism"]
+
+        self.mongo_collection = None
+
+        self._start_local_service()
+        self.logger = logging.getLogger("ee2")
+
     def _start_local_service(self):
         try:
             start_local = int(self.config.get("start-local-mongo", 0))
@@ -109,20 +122,6 @@ class MongoUtil:
             raise ValueError(error_msg)
 
         return pymongo_client, mongoengine_client
-
-    def __init__(self, config: dict):
-        self.config = config
-        self.mongo_host = config["mongo-host"]
-        self.mongo_port = int(config["mongo-port"])
-        self.mongo_database = config["mongo-database"]
-        self.mongo_user = config["mongo-user"]
-        self.mongo_pass = config["mongo-password"]
-        self.mongo_authmechanism = config["mongo-authmechanism"]
-
-        self.mongo_collection = None
-
-        self._start_local_service()
-        self.logger = logging.getLogger("ee2")
 
     @contextmanager
     def pymongo_client(self, mongo_collection):
