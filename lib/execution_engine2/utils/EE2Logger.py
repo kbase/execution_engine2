@@ -7,10 +7,11 @@ def get_logger() -> Logger:
     """
     Get a root logger at INFO level or at LOGLEVEL specified in the environment
     with a a custom set class name and custom formatter.
-
     # TODO A common scenario is to attach handlers only to the root logger, and to let propagation take care of the rest.
     # But then can we still have custom named loggers?
+    :return: EE2 Logger with format created:level:name:msg
     """
+
     logger = logging.getLogger("ee2")
     logger.propagate = False
     logger.setLevel(0)

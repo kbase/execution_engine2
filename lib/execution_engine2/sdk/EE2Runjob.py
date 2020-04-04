@@ -17,7 +17,6 @@ from lib.execution_engine2.db.models.models import (
 )
 from lib.execution_engine2.sdk.EE2Constants import ConciergeParams
 from lib.execution_engine2.utils.CondorTuples import CondorResources
-from lib.execution_engine2.utils.EE2Logger import get_logger
 from lib.execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
 
 
