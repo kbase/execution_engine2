@@ -76,7 +76,7 @@ class EE2TestAdminMode(unittest.TestCase):
         runner.get_jobs_status()
         runner.get_runjob()
         runner.get_job_logs()
-        runner._set_log_level()
+
         return runner
 
     def get_sample_job_params(self, method=None):
