@@ -497,16 +497,22 @@
 
 
 
+
         /*
           Check job for all jobs in a given date/time range for all users (Admin function)
             float start_time; # Filter based on creation timestamp since epoch
             float end_time; # Filter based on creation timestamp since epoch
             list<string> projection; # A list of fields to include in the projection, default ALL See "Projection Fields"
             list<string> filter; # A list of simple filters to "AND" together, such as error_code=1, wsid=1234, terminated_code = 1
+            list<string> filter; # Or A dictionary of keys that can accept a string or a dictionary
+            list<string> filter_in; # The same functionality as filter except it appends an '__in' to your keys and only accepts a dict
+            list<string> filter_in; # filters = {"status" : ['queued','running']} becomes filters = {"status__in" : ['queued','running']}
+
             int limit; # The maximum number of records to return
             string user; # Optional. Defaults off of your token
             @optional projection
-            @optional filter
+            @optional filter # Filters to be anded together
+            @optional filter_in # Filters with a key and values to in
             @optional limit
             @optional user
             @optional offset
@@ -517,6 +523,7 @@
             float end_time;
             list<string> projection;
             list<string> filter;
+            list<string> filter_in;
             int limit;
             string user;
             int offset;
