@@ -1,10 +1,14 @@
+"""
+Authors @bsadkhin
+Functions to call condor to manage jobs and extract resource requirements
+"""
+
 import enum
-import logging
 import os
 import pathlib
 import pwd
 from configparser import ConfigParser
-from typing import Dict, Optional, NamedTuple, Any, Tuple
+from typing import Dict, Optional, Any, Tuple
 
 import htcondor
 
@@ -19,8 +23,7 @@ from lib.execution_engine2.utils.CondorTuples import (
     SubmissionInfo,
     JobInfo,
 )
-
-logging.getLogger()
+import logging
 
 
 class Condor(Scheduler):
@@ -98,6 +101,7 @@ class Condor(Scheduler):
             option=self.TRANSFER_INPUT_FILES,
             fallback="/condor_shared/JobRunner.tgz",
         )
+        self.logger = logging.getLogger("ee2")
 
     def setup_environment_vars(self, params: Dict, client_group: str) -> str:
         # 7 day docker job timeout default, Catalog token used to get access to volume mounts
@@ -141,7 +145,7 @@ class Condor(Scheduler):
         :param cgrr:
         :return:
         """
-        logging.debug(f"About to extract from {cgrr}")
+        self.logger.debug(f"About to extract from {cgrr}")
 
         client_group = cgrr.get("client_group", "")
         if client_group is None or client_group == "":
@@ -348,11 +352,11 @@ class Condor(Scheduler):
         sub = htcondor.Submit(submit)
         try:
             schedd = htcondor.Schedd()
-            logging.debug(schedd)
-            logging.debug(submit)
-            logging.debug(os.getuid())
-            logging.debug(pwd.getpwuid(os.getuid()).pw_name)
-            logging.debug(submit)
+            self.logger.debug(schedd)
+            self.logger.debug(submit)
+            self.logger.debug(os.getuid())
+            self.logger.debug(pwd.getpwuid(os.getuid()).pw_name)
+            self.logger.debug(submit)
             with schedd.transaction() as txn:
                 return SubmissionInfo(str(sub.queue(txn, 1)), sub, None)
         except Exception as e:
@@ -411,11 +415,13 @@ class Condor(Scheduler):
 
         try:
             cancel_jobs = htcondor.Schedd().act(
-                htcondor.JobAction.Remove, scheduler_ids
+                action=htcondor.JobAction.Remove, job_spec=scheduler_ids
             )
-            logging.debug(f"{cancel_jobs}")
+            self.logger.info(f"Cancel job message for {scheduler_ids} is")
+            self.logger.debug(f"{cancel_jobs}")
             return cancel_jobs
-        except Exception as e:
-            logging.error("Couldn't cancel jobs" + str(scheduler_ids))
-            logging.error(e)
+        except Exception:
+            self.logger.error(
+                f"Couldn't cancel jobs f{scheduler_ids}", exc_info=True, stack_info=True
+            )
             return False

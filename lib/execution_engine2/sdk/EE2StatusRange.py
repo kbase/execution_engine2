@@ -1,4 +1,3 @@
-import logging
 from collections import namedtuple
 from datetime import datetime
 from enum import Enum
@@ -104,7 +103,7 @@ class JobStatusRange:
                 .only(*job_projection)
             )
 
-        logging.debug(
+        self.sdkmr.logger.debug(
             f"Searching for jobs with id_gt {dummy_ids.start} id_lt {dummy_ids.stop}"
         )
 

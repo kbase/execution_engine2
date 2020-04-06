@@ -1,23 +1,36 @@
 import logging
 import subprocess
+import time
 import traceback
 from contextlib import contextmanager
-import time
-from pprint import pprint
 
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
 
+from lib.execution_engine2.db.models.models import JobLog, Job, Status, TerminatedCode
 from lib.execution_engine2.exceptions import (
     RecordNotFoundException,
     InvalidStatusTransitionException,
 )
-from lib.execution_engine2.db.models.models import JobLog, Job, Status, TerminatedCode
 
 
 class MongoUtil:
+    def __init__(self, config: dict):
+        self.config = config
+        self.mongo_host = config["mongo-host"]
+        self.mongo_port = int(config["mongo-port"])
+        self.mongo_database = config["mongo-database"]
+        self.mongo_user = config["mongo-user"]
+        self.mongo_pass = config["mongo-password"]
+        self.mongo_authmechanism = config["mongo-authmechanism"]
+
+        self.mongo_collection = None
+
+        self._start_local_service()
+        self.logger = logging.getLogger("ee2")
+
     def _start_local_service(self):
         try:
             start_local = int(self.config.get("start-local-mongo", 0))
@@ -30,9 +43,9 @@ class MongoUtil:
         if start_local:
             print("Start local is")
             print(start_local)
-            logging.debug("starting local mongod service")
+            self.logger.debug("starting local mongod service")
 
-            logging.debug("running sudo service mongodb start")
+            self.logger.debug("running sudo service mongodb start")
             pipe = subprocess.Popen(
                 "sudo service mongodb start",
                 shell=True,
@@ -40,9 +53,9 @@ class MongoUtil:
                 stderr=subprocess.PIPE,
             )
             stdout = pipe.communicate()
-            logging.debug(stdout)
+            self.logger.debug(stdout)
 
-            logging.debug("running mongod --version")
+            self.logger.debug("running mongod --version")
             pipe = subprocess.Popen(
                 "mongod --version",
                 shell=True,
@@ -51,7 +64,7 @@ class MongoUtil:
             )
 
             stdout = pipe.communicate()
-            logging.debug(stdout)
+            self.logger.debug(stdout)
 
     @classmethod
     def _get_collection(
@@ -68,7 +81,7 @@ class MongoUtil:
         """
 
         if mongo_user:
-            logging.debug(
+            self.logger.debug(
                 "mongo-user found in config file, configuring client for authentication using mech "
                 + str(mongo_authmechanism)
             )
@@ -91,7 +104,9 @@ class MongoUtil:
                 authentication_mechanism=mongo_authmechanism,
             )
         else:
-            logging.debug("no mongo-user found in config file, connecting without auth")
+            self.logger.debug(
+                "no mongo-user found in config file, connecting without auth"
+            )
             pymongo_client = MongoClient(mongo_host, mongo_port)
 
             mongoengine_client = connect(
@@ -107,22 +122,6 @@ class MongoUtil:
             raise ValueError(error_msg)
 
         return pymongo_client, mongoengine_client
-
-    def __init__(self, config: dict):
-        self.config = config
-        self.mongo_host = config["mongo-host"]
-        self.mongo_port = int(config["mongo-port"])
-        self.mongo_database = config["mongo-database"]
-        self.mongo_user = config["mongo-user"]
-        self.mongo_pass = config["mongo-password"]
-        self.mongo_authmechanism = config["mongo-authmechanism"]
-
-        self.mongo_collection = None
-
-        self._start_local_service()
-        logging.basicConfig(
-            format="%(created)s %(levelname)s: %(message)s", level=logging.debug
-        )
 
     @contextmanager
     def pymongo_client(self, mongo_collection):
@@ -329,7 +328,7 @@ class MongoUtil:
                     f"Cannot change already finished/terminated/errored job.  {j.status} to {status}"
                 )
 
-            logging.debug(f"job status is {j.status}. going to update to {status}")
+            self.logger.debug(f"job status is {j.status}. going to update to {status}")
 
             #  A job in status running can only be terminated/error/finished
             if j.status == Status.running.value:
@@ -411,7 +410,7 @@ class MongoUtil:
         """
         insert a doc into collection
         """
-        logging.debug("start inserting document")
+        self.logger.debug("start inserting document")
 
         with self.pymongo_client(self.mongo_collection) as pymongo_client:
             try:
@@ -451,7 +450,7 @@ class MongoUtil:
         """
         delete a doc by _id
         """
-        logging.debug("start deleting document")
+        self.logger.debug("start deleting document")
         with self.pymongo_client(self.mongo_collection) as pymongo_client:
             job_col = pymongo_client[self.mongo_database][self.mongo_collection]
             try:
@@ -470,7 +469,7 @@ class MongoUtil:
         """
         return cursor that contains docs which field column is in elements
         """
-        logging.debug("start querying MongoDB")
+        self.logger.debug("start querying MongoDB")
 
         with self.pymongo_client(self.mongo_collection) as pymongo_client:
             job_col = pymongo_client[self.mongo_database][self.mongo_collection]
@@ -487,6 +486,6 @@ class MongoUtil:
                 )
                 raise ValueError(error_msg)
 
-            logging.debug("returned {} results".format(result.count()))
+            self.logger.debug("returned {} results".format(result.count()))
 
         return result
