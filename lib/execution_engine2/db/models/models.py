@@ -14,6 +14,7 @@ from mongoengine import (
     EmbeddedDocumentListField,
     DynamicField,
     ObjectIdField,
+    ReferenceField
 )
 from mongoengine import ValidationError
 
@@ -318,6 +319,26 @@ class Job(Document):
     def save(self, *args, **kwargs):
         self.updated = time.time()
         return super(Job, self).save(*args, **kwargs)
+
+
+class HeldJob(Document):
+    job_id = ReferenceField(Job)
+    used_cpu = IntField(required=True)
+    used_memory = FloatField(required=True)
+    used_memory_raw = FloatField(required=True)
+    used_disk_raw = FloatField(required=True)
+    over_memory = BooleanField(required=True)
+    over_cpu = BooleanField(required=True)
+    check_time = FloatField(required=True)
+    node_jobs = IntField(required=True)
+    node_cpu = FloatField(required=True)
+    node_memory = FloatField(required=True)
+    node_disk = FloatField(required=True)
+    node_name = StringField(required=True)
+
+    def save(self, *args, **kwargs):
+        self.updated = time.time()
+        return super(HeldJob, self).save(*args, **kwargs)
 
 
 ###

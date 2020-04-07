@@ -8,6 +8,7 @@ from bson import ObjectId
 from lib.execution_engine2.authorization.authstrategy import can_read_jobs
 from lib.execution_engine2.db.models.models import (
     Job,
+HeldJob,
     JobOutput,
     Status,
     ErrorCode,
@@ -31,6 +32,31 @@ class JobPermissions(Enum):
 class JobsStatus:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr
+
+    def handle_held_job(self, job_id):
+        job = self.sdkmr.get_job_with_permission(
+            job_id, JobPermissions.WRITE, as_admin=True
+        )
+        if job.status in [Status.queued or Status.estimating or Status.running]:
+            # Need to fix!
+            job.status = Status.error.value
+            with self.sdkmr.get_mongo_util().mongo_engine_connection():
+                job.save()
+        # Already dead
+        # Find a Held Job Entry with that ID
+        h = HeldJob.objects.find_one(job_id=job_id)
+        if h is None:
+            held_job = create_held_job()
+            hold_reason = calculate_hold_reason(held_job)
+            held_job.hold_reason = hold_reason
+
+        return h.hold_reason
+
+
+
+    def calculate_hold_reason(self):
+
+
 
     def cancel_job(self, job_id, terminated_code=None, as_admin=False):
         """
