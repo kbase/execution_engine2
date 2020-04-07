@@ -54,8 +54,8 @@ class JobsStatus:
 
 
 
-    def calculate_hold_reason(self):
-
+    def calculate_hold_reason(self, job_id=job_id):
+        h = HeldJob
 
 
     def cancel_job(self, job_id, terminated_code=None, as_admin=False):

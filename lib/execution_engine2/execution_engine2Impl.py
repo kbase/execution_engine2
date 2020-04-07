@@ -23,7 +23,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "d7abff90abdaab1d62db92f0c51fa01769aafb99"
+    GIT_COMMIT_HASH = "3c81bac39c892463b6e0b45928a06d93273c6a7f"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -1270,6 +1270,24 @@ class execution_engine2:
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
             raise ValueError('Method check_jobs_date_range_for_all return value ' +
+                             'returnVal is not type dict as required.')
+        # return the results
+        return [returnVal]
+
+    def handle_held_job(self, ctx, job_id):
+        """
+        :param job_id: instance of type "job_id" (A job id.)
+        :returns: instance of type "HeldJob" -> structure: parameter
+           "held_job" of unspecified object
+        """
+        # ctx is the context object
+        # return variables are: returnVal
+        #BEGIN handle_held_job
+        #END handle_held_job
+
+        # At some point might do deeper type checking...
+        if not isinstance(returnVal, dict):
+            raise ValueError('Method handle_held_job return value ' +
                              'returnVal is not type dict as required.')
         # return the results
         return [returnVal]
