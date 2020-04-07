@@ -530,8 +530,10 @@
         typedef structure {
             UnspecifiedObject held_job;
         } HeldJob;
-
-        funcdef handle_held_job(job_id job_id) returns (HeldJob) authentication required;
+        /*
+            Handle a held CONDOR job. You probably never want to run this, only the reaper should run it.
+        */
+        funcdef handle_held_job(float cluster_id) returns (HeldJob) authentication required;
 
         /*
             Check if current user has ee2 admin rights.
