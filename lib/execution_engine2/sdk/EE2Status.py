@@ -8,7 +8,6 @@ from bson import ObjectId
 from lib.execution_engine2.authorization.authstrategy import can_read_jobs
 from lib.execution_engine2.db.models.models import (
     Job,
-    HeldJob,
     JobOutput,
     Status,
     ErrorCode,
@@ -35,7 +34,7 @@ class JobsStatus:
 
     def handle_held_job(self, cluster_id, as_admin):
         """
-        #TODO Let normal users use this
+        #TODO Let normal users use this? Only automation should...
         #TODO Reduce number of db calls?
         #TODO Make error code a param?
         :param cluster_id:
@@ -44,7 +43,8 @@ class JobsStatus:
         batch_name = self.sdkmr.get_mongo_util().get_job_batch_name(
             cluster_id=cluster_id
         )
-        self.sdkmr.get_job_with_permission()
+        self.sdkmr.finish_job(job_id=batch_name, error_message="Job was held")
+
         self.finish_job(
             job_id=batch_name,
             error_message="Job was held",
@@ -315,7 +315,11 @@ class JobsStatus:
         job = self.sdkmr.get_job_with_permission(
             job_id=job_id, requested_job_perm=JobPermissions.WRITE, as_admin=as_admin
         )
-        if job.status != Status.completed.value:
+        if job.status not in [
+            Status.completed.value,
+            Status.terminated.value,
+            Status.error.value,
+        ]:
             raise Exception(
                 f"Cannot update job {job_id} because it was not yet finished. {job.status}"
             )

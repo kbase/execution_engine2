@@ -894,7 +894,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             ori_job_count = Job.objects.count()
             job_id = self.create_job_rec()
             job = self.mongo_util.get_job(job_id=job_id)
-            self.assertEqual(ori_job_count, Job.objects.count() - 1)
+            new_count = Job.objects.count()
+            self.assertEqual(ori_job_count, new_count - 1)
 
         runner = self.getRunner()
         runner._send_exec_stats_to_catalog = MagicMock(return_value=True)
@@ -905,8 +906,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         #     runner.finish_job(job_id=job_id, error_message="error message")
 
         runner.start_job(job_id=job_id, skip_estimation=True)
+        time.sleep(2)
+        job = self.mongo_util.get_job(job_id=job_id)
+        print("Job is", job.to_mongo().to_dict())
         runner.finish_job(job_id=job_id, error_message="error message")
-
+        job2 = self.mongo_util.get_job(job_id=job_id)
+        print("Job2 is", job2.to_mongo().to_dict())
         job = self.mongo_util.get_job(job_id=job_id)
 
         self.assertEqual(job.status, "error")
