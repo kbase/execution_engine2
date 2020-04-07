@@ -8,7 +8,7 @@ from bson import ObjectId
 from lib.execution_engine2.authorization.authstrategy import can_read_jobs
 from lib.execution_engine2.db.models.models import (
     Job,
-HeldJob,
+    HeldJob,
     JobOutput,
     Status,
     ErrorCode,
@@ -52,11 +52,8 @@ class JobsStatus:
 
         return h.hold_reason
 
-
-
     def calculate_hold_reason(self, job_id=job_id):
         h = HeldJob
-
 
     def cancel_job(self, job_id, terminated_code=None, as_admin=False):
         """

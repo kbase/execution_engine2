@@ -248,6 +248,12 @@ class SDKMethodRunner:
             job_id=job_id, terminated_code=terminated_code, as_admin=as_admin
         )
 
+    def handle_held_job(self, cluster_id):
+        """ Authorization Required Read/Write """
+        if self.check_as_admin(requested_perm=JobPermissions.WRITE):
+            return self.get_jobs_status().handle_held_job(cluster_id=cluster_id)
+
+
     def finish_job(
         self,
         job_id,

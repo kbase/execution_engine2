@@ -23,7 +23,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "3c81bac39c892463b6e0b45928a06d93273c6a7f"
+    GIT_COMMIT_HASH = "822aced5c71af56467417f3d59c06465239d3569"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -1274,15 +1274,20 @@ class execution_engine2:
         # return the results
         return [returnVal]
 
-    def handle_held_job(self, ctx, job_id):
+    def handle_held_job(self, ctx, cluster_id):
         """
-        :param job_id: instance of type "job_id" (A job id.)
+        Handle a held CONDOR job. You probably never want to run this, only the reaper should run it.
+        :param cluster_id: instance of Double
         :returns: instance of type "HeldJob" -> structure: parameter
            "held_job" of unspecified object
         """
         # ctx is the context object
         # return variables are: returnVal
         #BEGIN handle_held_job
+        mr = SDKMethodRunner(
+            self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
+        )
+        returnVal = mr.hanndle_h
         #END handle_held_job
 
         # At some point might do deeper type checking...
