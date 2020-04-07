@@ -216,3 +216,18 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         # self.assertIsNotNone(submission_info.clusterid)
         # self.assertIsNotNone(submission_info.submit)
         # self.assertIsNone(submission_info.error)
+
+    #
+    # def test_extract(self):
+    #     logging.info("Testing with concierge clientgroup")
+    #     c = self.condor
+    #     params = self._create_sample_params(cgroups=["njs"])
+    #     cp = self._get_concierge_params()
+    #     sub = c.create_submit(params=params, concierge_params=cp)
+    #     submission_info = c.run_submit(sub)
+    #     print(submission_info)
+    #
+    #
+    # def test_get_usage(self):
+    #     job_id = '732'
+    #     print(self.condor.get_job_resource_info(cluster_id=job_id))
