@@ -33,27 +33,29 @@ class JobsStatus:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr
 
-    def handle_held_job(self, job_id):
-        job = self.sdkmr.get_job_with_permission(
-            job_id, JobPermissions.WRITE, as_admin=True
+    def handle_held_job(self, cluster_id, as_admin):
+        """
+        #TODO Let normal users use this
+        #TODO Reduce number of db calls?
+        #TODO Make error code a param?
+        :param cluster_id:
+        :return:
+        """
+        batch_name = self.sdkmr.get_mongo_util().get_job_batch_name(
+            cluster_id=cluster_id
         )
-        if job.status in [Status.queued or Status.estimating or Status.running]:
-            # Need to fix!
-            job.status = Status.error.value
-            with self.sdkmr.get_mongo_util().mongo_engine_connection():
-                job.save()
-        # Already dead
-        # Find a Held Job Entry with that ID
-        h = HeldJob.objects.find_one(job_id=job_id)
-        if h is None:
-            held_job = create_held_job()
-            hold_reason = calculate_hold_reason(held_job)
-            held_job.hold_reason = hold_reason
-
-        return h.hold_reason
-
-    def calculate_hold_reason(self, job_id=job_id):
-        h = HeldJob
+        self.sdkmr.get_job_with_permission()
+        self.finish_job(
+            job_id=batch_name,
+            error_message="Job was held",
+            error_code=ErrorCode.job_terminated_by_automation,
+            as_admin=as_admin,
+        )
+        j = self.sdkmr.get_job_with_permission(
+            job_id=batch_name, requested_job_perm=JobPermissions.READ, as_admin=as_admin
+        )  # type: Job
+        # to mongo to dict?
+        return dict(j.to_json())
 
     def cancel_job(self, job_id, terminated_code=None, as_admin=False):
         """
@@ -245,9 +247,11 @@ class JobsStatus:
         )
 
         if error_message:
+            self.sdkmr.logger.info("Got to step A")
             if error_code is None:
                 error_code = ErrorCode.job_crashed.value
-            db_update = self._finish_job_with_error(
+
+            self._finish_job_with_error(
                 job_id=job_id,
                 error_message=error_message,
                 error_code=error_code,
@@ -264,13 +268,13 @@ class JobsStatus:
                     scheduler_id=job.scheduler_id,
                 )
             )
-            return db_update
-
-        if job_output is None:
+        elif job_output is None:
+            self.sdkmr.logger.info("Got to step B")
             if error_code is None:
                 error_code = ErrorCode.job_missing_output.value
             msg = "Missing job output required in order to successfully finish job. Something went wrong"
-            db_update = self._finish_job_with_error(
+
+            self._finish_job_with_error(
                 job_id=job_id, error_message=msg, error_code=error_code
             )
 
@@ -284,21 +288,42 @@ class JobsStatus:
                     scheduler_id=job.scheduler_id,
                 )
             )
-            return db_update
-
-        self._finish_job_with_success(job_id=job_id, job_output=job_output)
-        self.sdkmr.kafka_client.send_kafka_message(
-            message=KafkaFinishJob(
-                job_id=str(job_id),
-                new_status=Status.completed.value,
-                previous_status=job.status,
-                scheduler_id=job.scheduler_id,
-                error_code=None,
-                error_message=None,
+        else:
+            self.sdkmr.logger.info("Got to step C")
+            self._finish_job_with_success(job_id=job_id, job_output=job_output)
+            self.sdkmr.kafka_client.send_kafka_message(
+                message=KafkaFinishJob(
+                    job_id=str(job_id),
+                    new_status=Status.completed.value,
+                    previous_status=job.status,
+                    scheduler_id=job.scheduler_id,
+                    error_code=None,
+                    error_message=None,
+                )
             )
+            self._send_exec_stats_to_catalog(job_id=job_id)
+        self.sdkmr.logger.info("Got to step D")
+        self.update_finished_job_with_usage(job_id, as_admin=as_admin)
+
+    def update_finished_job_with_usage(self, job_id, as_admin=None):
+        """
+        # TODO Does this need a kafka message?
+        :param job_id:
+        :param as_admin:
+        :return:
+        """
+        job = self.sdkmr.get_job_with_permission(
+            job_id=job_id, requested_job_perm=JobPermissions.WRITE, as_admin=as_admin
         )
-        # TODO Use this?
-        self._send_exec_stats_to_catalog(job_id=job_id)
+        if job.status != Status.completed.value:
+            raise Exception(
+                f"Cannot update job {job_id} because it was not yet finished. {job.status}"
+            )
+        condor = self.sdkmr.get_condor()
+        resources = condor.get_job_resource_info(job_id=job_id)
+        self.sdkmr.get_mongo_util().update_job_resources(
+            job_id=job_id, resources=resources
+        )
 
     def check_job(
         self, job_id, check_permission=True, exclude_fields=None, as_admin=False

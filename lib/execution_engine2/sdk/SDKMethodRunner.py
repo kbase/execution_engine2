@@ -34,6 +34,7 @@ from lib.execution_engine2.utils.Condor import Condor
 from lib.execution_engine2.utils.EE2Logger import get_logger
 from lib.execution_engine2.utils.KafkaUtils import KafkaClient
 from lib.execution_engine2.utils.SlackUtils import SlackClient
+from lib.execution_engine2.db.models.models import Job
 
 
 class JobPermissions(Enum):
@@ -251,8 +252,9 @@ class SDKMethodRunner:
     def handle_held_job(self, cluster_id):
         """ Authorization Required Read/Write """
         if self.check_as_admin(requested_perm=JobPermissions.WRITE):
-            return self.get_jobs_status().handle_held_job(cluster_id=cluster_id)
-
+            return self.get_jobs_status().handle_held_job(
+                cluster_id=cluster_id, as_admin=True
+            )
 
     def finish_job(
         self,
@@ -349,7 +351,7 @@ class SDKMethodRunner:
 
     def get_job_with_permission(
         self, job_id, requested_job_perm: JobPermissions, as_admin=False
-    ):
+    ) -> Job:
         """
         Get the job.
         When as_admin, check if you have the required admin_perm or raise a Permissions Exception.

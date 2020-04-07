@@ -2,8 +2,8 @@
 Authors @bsadkhin
 Functions to call condor to manage jobs and extract resource requirements
 """
-
 import enum
+import logging
 import os
 import pathlib
 import pwd
@@ -15,15 +15,38 @@ import htcondor
 from lib.execution_engine2.exceptions import (
     MissingCondorRequirementsException,
     MissingRunJobParamsException,
+    CondorJobNotFoundException,
 )
 from lib.execution_engine2.sdk.EE2Runjob import ConciergeParams
-from lib.execution_engine2.utils.Scheduler import Scheduler
 from lib.execution_engine2.utils.CondorTuples import (
     CondorResources,
     SubmissionInfo,
     JobInfo,
 )
-import logging
+from lib.execution_engine2.utils.Scheduler import Scheduler
+
+
+class JobStatusCodes(enum.Enum):
+    UNEXPANDED = 0
+    IDLE = 1
+    RUNNING = 2
+    REMOVED = 3
+    COMPLETED = 4
+    HELD = 5
+    SUBMISSION_ERROR = 6
+    NOT_FOUND = -1
+
+
+jsc = {
+    "0": "Unexepanded",
+    1: "Idle",
+    2: "Running",
+    3: "Removed",
+    4: "Completed",
+    5: "Held",
+    6: "Submission_err",
+    -1: "Not found in condor",
+}
 
 
 class Condor(Scheduler):
@@ -44,27 +67,6 @@ class Condor(Scheduler):
     TRANSFER_INPUT_FILES = "transfer_input_files"
     PYTHON_EXECUTABLE = "PYTHON_EXECUTABLE"
     DEFAULT_CLIENT_GROUP = "default_client_group"
-
-    class JobStatusCodes(enum.Enum):
-        UNEXPANDED = 0
-        IDLE = 1
-        RUNNING = 2
-        REMOVED = 3
-        COMPLETED = 4
-        HELD = 5
-        SUBMISSION_ERROR = 6
-        NOT_FOUND = -1
-
-    jsc = {
-        "0": "Unexepanded",
-        1: "Idle",
-        2: "Running",
-        3: "Removed",
-        4: "Completed",
-        5: "Held",
-        6: "Submission_err",
-        -1: "Not found in condor",
-    }
 
     def __init__(self, config_filepath):
         self.config = ConfigParser()
@@ -362,9 +364,36 @@ class Condor(Scheduler):
         except Exception as e:
             return SubmissionInfo(None, sub, e)
 
+    def get_job_resource_info(
+        self, job_id: Optional[str] = None, cluster_id: Optional[str] = None
+    ) -> Dict[str, str]:
+        if job_id is not None and cluster_id is not None:
+            raise Exception("Use only batch name (job_id) or cluster_id, not both")
+
+        condor_stats = self.get_job_info(job_id=job_id, cluster_id=cluster_id)
+        job_info = condor_stats.info
+        if job_info is None:
+            return {}
+
+        disk_keys = ["RemoteUserCpu", "DiskUsage_RAW", "DiskUsage"]
+        cpu_keys = ["CpusUsage", "CumulativeRemoteSysCpu", "CumulativeRemoteUserCpu"]
+        memory_keys = ["ResidentSetSize_RAW", "ResidentSetSize"]
+        resource_keys = disk_keys + cpu_keys + memory_keys
+        held_job_keys = ["HoldReason", "HoldReasonCode"]
+
+        extracted_resources = dict()
+        for key in resource_keys:
+            extracted_resources[key] = job_info.get(key)
+
+        for key in held_job_keys:
+            extracted_resources[key] = job_info.get(key)
+
+        return extracted_resources
+
     def get_job_info(
         self, job_id: Optional[str] = None, cluster_id: Optional[str] = None
-    ):
+    ) -> JobInfo:
+
         if job_id is not None and cluster_id is not None:
             return JobInfo(
                 {}, Exception("Use only batch name (job_id) or cluster_id, not both")
@@ -377,10 +406,12 @@ class Condor(Scheduler):
             constraint = f"ClusterID=?={cluster_id}"
 
         try:
-            job = htcondor.Schedd().query(constraint=constraint, limit=1)[0]
-            return JobInfo(job, None)
+            job = htcondor.Schedd().query(constraint=constraint, limit=1)
+            if len(job) == 0:
+                raise CondorJobNotFoundException(f"Couldn't find job via {constraint}")
+            return JobInfo(info=job[0], error=None)
         except Exception as e:
-            return JobInfo({}, e)
+            return JobInfo(info=None, error=e)
 
     def get_user_info(self, user_id, projection=None):
         pass

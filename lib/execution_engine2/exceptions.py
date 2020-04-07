@@ -20,6 +20,10 @@ class InvalidStatusTransitionException(ExecutionEngineValueError):
     pass
 
 
+class InvalidOperationForStatusException(ExecutionEngineValueError):
+    pass
+
+
 class MissingCondorRequirementsException(ExecutionEngineValueError):
     pass
 
@@ -33,6 +37,10 @@ class MalformedTimestampException(ExecutionEngineException):
 
 
 class RecordNotFoundException(ExecutionEngineException):
+    pass
+
+
+class CondorJobNotFoundException(ExecutionEngineException):
     pass
 
 

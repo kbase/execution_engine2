@@ -1,6 +1,9 @@
 from typing import NamedTuple, Optional, Dict
 
 
+# TODO: Update this with proper htcondor type
+
+
 class JobInfo(NamedTuple):
     info: Optional[Dict]
     error: Optional[Exception]

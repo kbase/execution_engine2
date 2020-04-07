@@ -1287,7 +1287,7 @@ class execution_engine2:
         mr = SDKMethodRunner(
             self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
         )
-        returnVal = mr.hanndle_h
+        returnVal = mr.handle_held_job(cluster_id=cluster_id)
         #END handle_held_job
 
         # At some point might do deeper type checking...

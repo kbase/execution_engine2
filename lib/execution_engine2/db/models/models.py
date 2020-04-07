@@ -312,6 +312,7 @@ class Job(Document):
     scheduler_estimator_id = StringField()
     job_input = EmbeddedDocumentField(JobInput, required=True)
     job_output = DynamicField()
+    condor_job_ads = DynamicField()
 
     # meta = {"db_alias": "ee2"}
     meta = {"collection": "ee2_jobs"}
@@ -321,6 +322,7 @@ class Job(Document):
         return super(Job, self).save(*args, **kwargs)
 
 
+# Unused for now
 class HeldJob(Document):
     job_id = ReferenceField(Job)
     used_cpu = IntField(required=True)

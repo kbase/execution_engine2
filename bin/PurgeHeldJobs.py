@@ -12,24 +12,29 @@ import htcondor
 try:
     from lib.execution_engine2.utils.SlackUtils import SlackClient
     from lib.installed_clients.execution_engine2Client import execution_engine2
-except Exception as e:
+    from lib.execution_engine2.utils.Condor import Condor
+except Exception:
     from SlackUtils import SlackClient
     from execution_engine2Client import execution_engine2
+    from Condor import Condor
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-cfg = {}
 config = ConfigParser()
-config.read(os.environ['KB_DEPLOYMENT_CONFIG'])
-for nameval in config.items("execution_engine2"):
-    cfg[nameval[0]] = nameval[1]
+config_filepath = os.environ["KB_DEPLOYMENT_CONFIG"]
 
-ee2_endpoint = cfg['ee2-url']
-
-ee2 = execution_engine2(url=ee2_endpoint, token=os.environ['EE2_ADMIN_SERVICE_TOKEN'])
-slack_token = cfg['slack-token']
-slack_client = SlackClient(cfg.get("slack-token"), debug=True)
+# Condor
+condor = Condor(config_filepath=config_filepath)
+# EE2
+cfg = condor.config["ee2-url"]
+ee2_endpoint = cfg["ee2-url"]
+ee2 = execution_engine2(url=ee2_endpoint, token=os.environ["EE2_ADMIN_SERVICE_TOKEN"])
+# Slack
+slack_token = cfg["slack-token"]
+slack_client = SlackClient(
+    cfg.get("slack-token"), channel="#ee_notifications", debug=True
+)
 
 
 def read_events(path):
@@ -86,12 +91,6 @@ def get_base_json(event):
     }
 
 
-def handle_submit_event(event):
-    j = get_base_json(event)
-
-    print(f"JSON for submit event: {j}")
-
-
 def handle_hold_event(event):
     j = get_base_json(event)
 
@@ -100,35 +99,34 @@ def handle_hold_event(event):
     # j["hold_reason"] = event.get("HoldReason", "UNKNOWN").strip()
 
     # time.+(1)
-    job_id = j['cluster']
+    job_id = j["cluster"]
     if int(event["HoldReasonCode"]) != 16:
-        #slack_client.held_job_message(held_job=job_id)
-        print(f"JSON for job id hold event: {j}")
+        print(f"JSON for job id hold event: {j} {event}")
         try:
-            print("OK")
-           # calculated_hold_reason = ee2.handle_held_job({'job_id': job_id})
-           # slack_client.ee2_reaper_success(job_id=job_id,
-           #                                 calculated_hold_reason=calculated_hold_reason)
+            new_job_record = ee2.handle_held_job(cluster_id=job_id)
+            print(f"This job was held because of {new_job_record}")
+        # slack_client.ee2_reaper_success(job_id=job_id,
+        #                                 calculated_hold_reason=calculated_hold_reason)
         except Exception as e:
+            print(e)
             pass
-           # slack_client.ee2_reaper_failure(endpoint=ee2_endpoint, job_id=job_id)
-           # sys.exit(f"{e}")
+        # failure info         job_info = condor.get_job_info(cluster_id=job_id)
+        # slack_client.ee2_reaper_failure(endpoint=ee2_endpoint, job_id=job_id)
+        # sys.exit(f"{e}")
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     event_log_fp = Path("/usr/local/condor/log/condor/event_log")
     last_timestamp = None
-    while (True):
+    while True:
         try:
             last_timestamp = process_events(
                 events=read_events((event_log_fp)),
-                callbacks={
-                    # htcondor.JobEventType.SUBMIT: handle_submit_event,
-                    htcondor.JobEventType.JOB_HELD: handle_hold_event,
-                },
-                skip_through=last_timestamp
+                callbacks={htcondor.JobEventType.JOB_HELD: handle_hold_event},
+                skip_through=last_timestamp,
             )
             time.sleep(5)
         except Exception as e:
-            slack_client.ee2_reaper_failure(endpoint=cfg.get('ee2-url'))
+            slack_client.ee2_reaper_failure(endpoint=cfg.get("ee2-url"))
             sys.exit(f"{e}")
