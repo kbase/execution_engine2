@@ -33,6 +33,7 @@ def get_example_job(
     j.job_input = job_input
     j.status = "queued"
     j.authstrat = authstrat
+    j.scheduler_id = "123"
 
     return j
 

@@ -51,7 +51,7 @@ class MongoUtilTest(unittest.TestCase):
     def tearDownClass(cls):
         print("Finished testing MongoUtil")
 
-    def getMongoUtil(self):
+    def getMongoUtil(self) -> MongoUtil:
         return self.__class__.mongo_util
 
     def test_init_ok(self):
@@ -66,6 +66,14 @@ class MongoUtilTest(unittest.TestCase):
         ]
         mongo_util = self.getMongoUtil()
         self.assertTrue(set(class_attri) <= set(mongo_util.__dict__.keys()))
+
+    def test_get_by_cluster(self):
+        mongo_util = self.getMongoUtil()
+        with mongo_util.mongo_engine_connection():
+            job = get_example_job()
+            job_id = job.save().id
+            batch = mongo_util.get_job_batch_name("123")
+            self.assertEqual(str(job_id), batch)
 
     def test_get_job_ok(self):
 

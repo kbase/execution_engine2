@@ -26,9 +26,15 @@ class JobPermissions(Enum):
     NONE = "n"
 
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
+
+
 class RunJob:
     def __init__(self, sdkmr):
-        self.sdkmr = sdkmr
+        self.sdkmr = sdkmr  # type: SDKMethodRunner
 
     def _init_job_rec(
         self,

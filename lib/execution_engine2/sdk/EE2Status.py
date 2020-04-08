@@ -1,9 +1,10 @@
 import time
 from collections import OrderedDict
+
+import json
+from bson import ObjectId
 from enum import Enum
 from typing import Dict
-
-from bson import ObjectId
 
 from lib.execution_engine2.authorization.authstrategy import can_read_jobs
 from lib.execution_engine2.db.models.models import (
@@ -43,19 +44,17 @@ class JobsStatus:
         batch_name = self.sdkmr.get_mongo_util().get_job_batch_name(
             cluster_id=cluster_id
         )
-        self.sdkmr.finish_job(job_id=batch_name, error_message="Job was held")
 
         self.finish_job(
             job_id=batch_name,
             error_message="Job was held",
-            error_code=ErrorCode.job_terminated_by_automation,
+            error_code=ErrorCode.job_terminated_by_automation.value,
             as_admin=as_admin,
         )
-        j = self.sdkmr.get_job_with_permission(
-            job_id=batch_name, requested_job_perm=JobPermissions.READ, as_admin=as_admin
-        )  # type: Job
+        j = self.sdkmr.get_mongo_util().get_job(job_id=batch_name)  # type: Job
         # to mongo to dict?
-        return dict(j.to_json())
+        # There's probably a better way and a return type, but not really sure what I need yet
+        return json.loads(json.dumps(j.to_mongo().to_dict(), default=str))
 
     def cancel_job(self, job_id, terminated_code=None, as_admin=False):
         """

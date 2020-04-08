@@ -321,6 +321,9 @@ class Job(Document):
         self.updated = time.time()
         return super(Job, self).save(*args, **kwargs)
 
+    def __repr__(self):
+        return self.to_json()
+
 
 # Unused for now
 class HeldJob(Document):

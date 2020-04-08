@@ -533,7 +533,7 @@
         /*
             Handle a held CONDOR job. You probably never want to run this, only the reaper should run it.
         */
-        funcdef handle_held_job(float cluster_id) returns (HeldJob) authentication required;
+        funcdef handle_held_job(string cluster_id) returns (HeldJob) authentication required;
 
         /*
             Check if current user has ee2 admin rights.

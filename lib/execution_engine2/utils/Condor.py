@@ -2,13 +2,12 @@
 Authors @bsadkhin
 Functions to call condor to manage jobs and extract resource requirements
 """
-import enum
 import logging
 import os
 import pathlib
 import pwd
 from configparser import ConfigParser
-from typing import Dict, Optional, Any, Tuple
+from typing import TYPE_CHECKING
 
 import htcondor
 
@@ -24,29 +23,7 @@ from lib.execution_engine2.utils.CondorTuples import (
     JobInfo,
 )
 from lib.execution_engine2.utils.Scheduler import Scheduler
-
-
-class JobStatusCodes(enum.Enum):
-    UNEXPANDED = 0
-    IDLE = 1
-    RUNNING = 2
-    REMOVED = 3
-    COMPLETED = 4
-    HELD = 5
-    SUBMISSION_ERROR = 6
-    NOT_FOUND = -1
-
-
-jsc = {
-    "0": "Unexepanded",
-    1: "Idle",
-    2: "Running",
-    3: "Removed",
-    4: "Completed",
-    5: "Held",
-    6: "Submission_err",
-    -1: "Not found in condor",
-}
+from typing import Dict, Optional, Any, Tuple
 
 
 class Condor(Scheduler):
@@ -335,7 +312,7 @@ class Condor(Scheduler):
         params: Dict[str, str],
         submit_file: Dict[str, str] = None,
         concierge_params: Dict[str, str] = None,
-    ):
+    ) -> SubmissionInfo:
         """
         TODO: Add a retry
         TODO: Add list of required params

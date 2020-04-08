@@ -23,7 +23,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "822aced5c71af56467417f3d59c06465239d3569"
+    GIT_COMMIT_HASH = "3e45b78c80b89a6c08391e62ba63b86c300714a2"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -1277,7 +1277,7 @@ class execution_engine2:
     def handle_held_job(self, ctx, cluster_id):
         """
         Handle a held CONDOR job. You probably never want to run this, only the reaper should run it.
-        :param cluster_id: instance of Double
+        :param cluster_id: instance of String
         :returns: instance of type "HeldJob" -> structure: parameter
            "held_job" of unspecified object
         """
