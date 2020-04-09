@@ -4,8 +4,8 @@ import os
 import sys
 import time
 from configparser import ConfigParser
-from pathlib import Path
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import htcondor
 
@@ -159,6 +159,9 @@ if __name__ == "__main__":
     N = 1
     last_timestamp = (datetime.now() - timedelta(days=N)).timestamp()
     while True:
+        # Maybe the job gets put on hold,
+        # but still has time to run a bit and cancel itself so lets give it a chance
+        time.sleep(15)
         try:
             last_timestamp = process_events(
                 events=read_events((event_log_fp)),
