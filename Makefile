@@ -61,7 +61,8 @@ build-test-script:
 
 TEST_FILES = test/ee2_scheduler_test.py test/ee2_SDKMethodRunner_test.py test/ee2_MongoUtil_test.py
 TEST_FILES+= test/ee2_model_test.py test/ee2_server_test.py test/ee2_authutil_test.py test/ee2_workspaceauth_test.py
-TEST_FILES+= test/ee2_authstrategy_test.py test/ee2_SDKMethodRunner_ee2_logs.py test/ee2_test_admin_mode.py test/ee2_load_test.py
+TEST_FILES+= test/ee2_SDKMethodRunner_ee2_logs.py test/ee2_SDKMethodRunner_test_ee2_status.py
+TEST_FILES+= test/ee2_authstrategy_test.py  test/ee2_test_admin_mode.py test/ee2_load_test.py
 
 setup-database:
 	# Set up travis user in mongo

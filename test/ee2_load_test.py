@@ -57,7 +57,7 @@ class ee2_server_load_test(unittest.TestCase):
             db=cls.cfg["mongo-database"], col=cls.cfg["mongo-jobs-collection"]
         )
 
-        cls.thread_count = 50
+        cls.thread_count = 5
 
     def getRunner(self) -> SDKMethodRunner:
         # Initialize these clients from None

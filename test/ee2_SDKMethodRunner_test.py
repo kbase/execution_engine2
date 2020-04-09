@@ -31,82 +31,17 @@ from lib.execution_engine2.exceptions import InvalidStatusTransitionException
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
 from test.mongo_test_helper import MongoTestHelper
-from test.utils.test_utils import bootstrap, get_example_job, validate_job_state
+from test.utils.test_utils import (
+    bootstrap,
+    get_example_job,
+    validate_job_state,
+    run_job_adapter,
+)
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
 
 from lib.execution_engine2.sdk.EE2Runjob import RunJob
-
-
-def _run_job_adapter(
-    ws_perms_info: Dict = None,
-    ws_perms_global: List = [],
-    client_groups_info: Dict = None,
-    module_versions: Dict = None,
-    user_roles: List = None,
-):
-    """
-    Mocks POST calls to:
-        Workspace.get_permissions_mass,
-        Catalog.list_client_group_configs,
-        Catalog.get_module_version
-    Mocks GET calls to:
-        Auth (/api/V2/me)
-        Auth (/api/V2/token)
-
-    Returns an Adapter for requests_mock that deals with mocking workspace permissions.
-    :param ws_perms_info: dict - keys user_id, and ws_perms
-            user_id: str - the user id
-            ws_perms: dict of permissions, keys are ws ids, values are permission. Example:
-                {123: "a", 456: "w"} means workspace id 123 has admin permissions, and 456 has
-                write permission
-    :param ws_perms_global: list - list of global workspaces - gives those workspaces a global (user "*") permission of "r"
-    :param client_groups_info: dict - keys client_groups (list), function_name, module_name
-    :param module_versions: dict - key git_commit_hash (str), others aren't used
-    :return: an adapter function to be passed to request_mock
-    """
-
-    def perm_adapter(request):
-        response = requests.Response()
-        response.status_code = 200
-        rq_method = request.method.upper()
-        if rq_method == "POST":
-            params = request.json().get("params")
-            method = request.json().get("method")
-
-            result = []
-            if method == "Workspace.get_permissions_mass":
-                perms_req = params[0].get("workspaces")
-                ret_perms = []
-                user_id = ws_perms_info.get("user_id")
-                ws_perms = ws_perms_info.get("ws_perms", {})
-                for ws in perms_req:
-                    perms = {user_id: ws_perms.get(ws["id"], "n")}
-                    if ws["id"] in ws_perms_global:
-                        perms["*"] = "r"
-                    ret_perms.append(perms)
-                result = [{"perms": ret_perms}]
-                print(result)
-            elif method == "Catalog.list_client_group_configs":
-                result = []
-                if client_groups_info is not None:
-                    result = [client_groups_info]
-            elif method == "Catalog.get_module_version":
-                result = [{"git_commit_hash": "some_commit_hash"}]
-                if module_versions is not None:
-                    result = [module_versions]
-            response._content = bytes(
-                json.dumps({"result": result, "version": "1.1"}), "UTF-8"
-            )
-        elif rq_method == "GET":
-            if request.url.endswith("/api/V2/me"):
-                response._content = bytes(
-                    json.dumps({"customroles": user_roles}), "UTF-8"
-                )
-        return response
-
-    return perm_adapter
 
 
 class ee2_SDKMethodRunner_test(unittest.TestCase):
@@ -352,7 +287,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_cancel_job2(self, rq_mock, condor_mock):
         rq_mock.add_matcher(
-            _run_job_adapter(
+            run_job_adapter(
                 ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
             )
         )
@@ -506,7 +441,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_run_job(self, rq_mock, condor_mock):
         rq_mock.add_matcher(
-            _run_job_adapter(
+            run_job_adapter(
                 ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
             )
         )
@@ -535,7 +470,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         """
         runner = self.getRunner()
         rq_mock.add_matcher(
-            _run_job_adapter(
+            run_job_adapter(
                 ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
             )
         )
@@ -849,6 +784,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         runner = self.getRunner()
         condor.get_job_info = MagicMock(return_value={})
+        condor.get_job_resource_info = MagicMock(return_value={})
         runner.condor = condor
         runner._send_exec_stats_to_catalog = MagicMock(return_value=True)
         runner.catalog_utils = MagicMock(return_value=True)
@@ -946,7 +882,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     @requests_mock.Mocker()
     def test_check_job_global_perm(self, rq_mock):
         rq_mock.add_matcher(
-            _run_job_adapter(
+            run_job_adapter(
                 ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "n"}},
                 ws_perms_global=[self.ws_id],
                 user_roles=[],
@@ -993,7 +929,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     @requests_mock.Mocker()
     def test_check_job_ok(self, rq_mock):
         rq_mock.add_matcher(
-            _run_job_adapter(
+            run_job_adapter(
                 ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}},
                 user_roles=[],
             )
