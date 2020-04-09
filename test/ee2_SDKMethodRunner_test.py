@@ -294,7 +294,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(ori_job_count, Job.objects.count())
 
     # @patch("execution_engine2.SDKMethodRunner.SDKMethodRunner", autospec=True)
-    def test_cancel_job(self,):
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    def test_cancel_job(self, condor):
         logging.info("\n\n  Test cancel job")
         sdk = copy.deepcopy(self.getRunner())
 
