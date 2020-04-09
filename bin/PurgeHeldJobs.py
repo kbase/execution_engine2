@@ -157,7 +157,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     event_log_fp = Path("/usr/local/condor/log/condor/event_log")
     N = 1
-    last_timestamp = datetime.now() - timedelta(days=N)
+    last_timestamp = (datetime.now() - timedelta(days=N)).timestamp()
     while True:
         try:
             last_timestamp = process_events(

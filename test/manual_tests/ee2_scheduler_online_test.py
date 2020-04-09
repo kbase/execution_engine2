@@ -12,6 +12,7 @@ import sys
 import time
 
 from dotenv import load_dotenv
+from pprint import pprint
 
 load_dotenv("env/test.env", verbose=True)
 
@@ -61,9 +62,16 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
             print(item, conf[item])
 
     def test_check_jobs_date_range_for_all(self):
-        self.ee2.check_jobs_date_range_for_all(
-            params={"start_time": 0, "creation_end_date": time.time()}
+        filters = {"status__in": ["queued", "running"]}
+        records = self.ee2.check_jobs_date_range_for_all(
+            params={"start_time": 0, "end_time": time.time(), "filter": filters}
         )
+
+        pprint(records["jobs"])
+
+    def test_held_job(self):
+        returnVal = self.ee2.handle_held_job(cluster_id="14574")
+        pprint(returnVal)
 
     # def test_jobs_range(self):
     #     check_jobs_date_range_params = {}
@@ -109,6 +117,15 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
             except Exception as e:
                 print("Not yet", e)
 
+    def test_start_started_job(self):
+        self.ee2.start_job(params={"job_id": "5e882237456076432a5c2baa"})
+
+    def test_job_status(self):
+        status = self.ee2.check_job(params={"job_id": "5e882237456076432a5c2baa"}).get(
+            "status"
+        )
+        print("status is", status)
+
     def test_run_job(self):
         """
         Test a simple job based on runjob params from the spec file
@@ -151,6 +168,14 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
                     break
             except Exception as e:
                 print("Not yet", e)
+
+    def test_admin_log(self):
+
+        pprint(
+            self.ee2.get_job_logs(
+                {"job_id": "5d59bd96aa5a4d298c5dc8bc", "as_admin": True}
+            )
+        )
 
 
 #         import datetime
