@@ -69,7 +69,8 @@ setup-database:
 
 test-coverage:
 	# Assumes setup-database run in previous step
-	PYTHONPATH=lib pytest --profile  --profile-svg --cov-report=xml --cov lib/execution_engine2/ --verbose $(TEST_FILES)
+	# TODO add --profile  --profile-svg
+	PYTHONPATH=lib pytest  --cov-report=xml --cov lib/execution_engine2/ --verbose $(TEST_FILES)
 
 # test:
 # 	# Requires htcondor python bindings
