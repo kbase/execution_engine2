@@ -13,6 +13,7 @@ workers=${WORKERS:-$calc_workers}
 
 export PYTHONPATH=$lib_dir:$wsgi_dir:$PYTHONPATH
 
+bash /kb/module/scripts/purge_held_jobs.sh >> purge.log 2>&1 &
 gunicorn \
   --user kbase \
   --worker-class gevent \

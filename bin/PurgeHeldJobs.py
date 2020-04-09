@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
-
 import logging
 import os
 import sys
 import time
 from configparser import ConfigParser
 from pathlib import Path
+from datetime import datetime, timedelta
 
 import htcondor
 
-try:
-    from lib.execution_engine2.utils.SlackUtils import SlackClient
-    from lib.installed_clients.execution_engine2Client import execution_engine2
-    from lib.execution_engine2.utils.Condor import Condor
-except Exception:
-    from SlackUtils import SlackClient
-    from execution_engine2Client import execution_engine2
-    from Condor import Condor
+# I wish a knew a better way to do this
+sys.path.append(".")
+
+from lib.execution_engine2.utils.SlackUtils import SlackClient
+from lib.installed_clients.execution_engine2Client import execution_engine2
+from lib.execution_engine2.utils.Condor import Condor
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -27,14 +25,15 @@ config_filepath = os.environ["KB_DEPLOYMENT_CONFIG"]
 # Condor
 condor = Condor(config_filepath=config_filepath)
 # EE2
-cfg = condor.config["ee2-url"]
-ee2_endpoint = cfg["ee2-url"]
+
+cfg = condor.config
+ee2_endpoint = cfg.get(section="execution_engine2", option="ee2-url")
+
 ee2 = execution_engine2(url=ee2_endpoint, token=os.environ["EE2_ADMIN_SERVICE_TOKEN"])
 # Slack
-slack_token = cfg["slack-token"]
-slack_client = SlackClient(
-    cfg.get("slack-token"), channel="#ee_notifications", debug=True
-)
+slack_token = cfg.get(section="execution_engine2", option="slack-token")
+# TODO change this channel
+slack_client = SlackClient(slack_token, channel="#ee_notifications", debug=True)
 
 
 def read_events(path):
@@ -91,34 +90,74 @@ def get_base_json(event):
     }
 
 
+def calculate_hold_reason(job_record):
+    job_input = job_record.get("job_input")
+    condor_job_ads = job_input.get("condor_job_ads")
+    if job_input is None or condor_job_ads is None:
+        return None
+
+    requested_cpu = None
+    requested_disk = None
+    requested_memory = None
+
+    requirements = job_input.get("requirements")
+    if requirements:
+        requested_cpu = requirements.get("cpu")
+        requested_disk = requirements.get("disk")
+        requested_memory = requirements.get("memory")
+
+    cpu_usage = None
+    disk_usage = None
+    mem_usage = None
+
+    if condor_job_ads:
+        cpu_usage = condor_job_ads.get("CpusUsage")
+        disk_usage = condor_job_ads.get("DiskUsage_RAW")
+        mem_usage = condor_job_ads.get("ResidentSetSize_RAW")
+
+    hold_reason_message = {}
+
+    if requested_cpu and cpu_usage:
+        # todo something here
+        pass
+    if requested_disk and disk_usage:
+        if int(disk_usage) / 1000 >= int(requested_disk):
+            hold_reason_message[
+                "over_disk"
+            ] = f"disk_used ({disk_usage}) >= disk_requested ({requested_disk})"
+    if requested_memory and mem_usage:
+        if int(mem_usage) / 1000 >= int(requested_memory):
+            hold_reason_message[
+                "over_memory"
+            ] = f"memory_used ({mem_usage}) >= memory_requested ({requested_memory})"
+
+    return hold_reason_message
+
+
 def handle_hold_event(event):
     j = get_base_json(event)
 
-    # stuff some extra information into the JSON
-    # j["hold_reason_code"] = int(event["HoldReasonCode"])
-    # j["hold_reason"] = event.get("HoldReason", "UNKNOWN").strip()
-
-    # time.+(1)
-    job_id = j["cluster"]
+    cluster_id = j["cluster"]
     if int(event["HoldReasonCode"]) != 16:
         print(f"JSON for job id hold event: {j} {event}")
         try:
-            new_job_record = ee2.handle_held_job(cluster_id=job_id)
-            print(f"This job was held because of {new_job_record}")
-        # slack_client.ee2_reaper_success(job_id=job_id,
-        #                                 calculated_hold_reason=calculated_hold_reason)
-        except Exception as e:
-            print(e)
-            pass
-        # failure info         job_info = condor.get_job_info(cluster_id=job_id)
-        # slack_client.ee2_reaper_failure(endpoint=ee2_endpoint, job_id=job_id)
-        # sys.exit(f"{e}")
+            job_record = ee2.handle_held_job(cluster_id=str(cluster_id))
+            calculated_hold_reason = calculate_hold_reason(job_record)
+            slack_client.ee2_reaper_success(
+                job_id=cluster_id,
+                calculated_hold_reason=calculated_hold_reason,
+                hold_reason_code=event["HoldReasonCode"],
+                hold_reason=event["HoldReason"],
+            )
+        except Exception:
+            slack_client.ee2_reaper_failure(endpoint=ee2_endpoint, job_id=cluster_id)
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     event_log_fp = Path("/usr/local/condor/log/condor/event_log")
-    last_timestamp = None
+    N = 1
+    last_timestamp = datetime.now() - timedelta(days=N)
     while True:
         try:
             last_timestamp = process_events(

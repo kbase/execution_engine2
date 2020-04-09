@@ -229,6 +229,8 @@ class EE2TestAdminMode(unittest.TestCase):
         params = runner.get_job_params(job_id=job_id, as_admin=True)
         self.assertEquals(params["method"], job_params_1["method"])
 
+        runner.handle_held_job(cluster_id=check_job.get("scheduler_id"))
+
     # These tests should throw the most errors
 
     def test_no_user(self):

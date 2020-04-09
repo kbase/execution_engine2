@@ -317,6 +317,7 @@ class MongoUtil:
             return str(j[0].id)
 
     def update_job_resources(self, job_id, resources):
+        self.logger.debug(f"About to add {resources} to {job_id}")
         with self.mongo_engine_connection():
             j = Job.objects.with_id(job_id)  # type: Job
             j.condor_job_ads = resources

@@ -1,19 +1,25 @@
 #!/usr/bin/env bash
 set -x
 
-export HOME=$(pwd)
-${PYTHON_EXECUTABLE} -V >pyversion
+HOME=$(pwd)
+export HOME
 
-env >envf
-echo "export CLIENTGROUP=$CLIENTGROUP " >>env_file
-echo "export PYTHON_EXECUTABLE=$PYTHON_EXECUTABLE " >>env_file
-echo "export KB_ADMIN_AUTH_TOKEN=$KB_ADMIN_AUTH_TOKEN " >>env_file
-echo "export KB_AUTH_TOKEN=$KB_AUTH_TOKEN " >>env_file
-echo "export DOCKER_JOB_TIMEOUT=$DOCKER_JOB_TIMEOUT " >>env_file
-echo "export CONDOR_ID=$CONDOR_ID " >>env_file
-echo "export JOB_ID=$JOB_ID " >>env_file
-echo "export DELETE_ABANDONED_CONTAINERS=$DELETE_ABANDONED_CONTAINERS " >>env_file
-echo "export DEBUG_MODE=$DEBUG_MODE " >>env_file
+debug_dir="debug"
+mkdir ${debug_dir}
+env >${debug_dir}/envf
+{
+  echo "export CLIENTGROUP=$CLIENTGROUP "
+  echo "export PYTHON_EXECUTABLE=$PYTHON_EXECUTABLE "
+  echo "export KB_ADMIN_AUTH_TOKEN=$KB_ADMIN_AUTH_TOKEN "
+  echo "export KB_AUTH_TOKEN=$KB_AUTH_TOKEN "
+  echo "export DOCKER_JOB_TIMEOUT=$DOCKER_JOB_TIMEOUT "
+  echo "export CONDOR_ID=$CONDOR_ID "
+  echo "export JOB_ID=$JOB_ID "
+  echo "export DELETE_ABANDONED_CONTAINERS=$DELETE_ABANDONED_CONTAINERS "
+  echo "export DEBUG_MODE=$DEBUG_MODE "
+} >>${debug_dir}/env_file
+
+${PYTHON_EXECUTABLE} -V ${debug_dir}/pyversion
 
 JOB_ID=$1
 EE2_ENDPOINT=$2

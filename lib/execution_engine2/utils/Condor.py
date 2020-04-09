@@ -348,6 +348,7 @@ class Condor(Scheduler):
             raise Exception("Use only batch name (job_id) or cluster_id, not both")
 
         condor_stats = self.get_job_info(job_id=job_id, cluster_id=cluster_id)
+        self.logger.debug(f"Got the following condor job info {condor_stats}")
         job_info = condor_stats.info
         if job_info is None:
             return {}
@@ -378,17 +379,22 @@ class Condor(Scheduler):
 
         constraint = None
         if job_id:
-            constraint = f"JobBatchName=?={job_id}"
+            constraint = f'JobBatchName=?="{job_id}"'
         if cluster_id:
             constraint = f"ClusterID=?={cluster_id}"
+        self.logger.debug(
+            f"About to get job info for {job_id} {cluster_id} {constraint}"
+        )
 
         try:
             job = htcondor.Schedd().query(constraint=constraint, limit=1)
             if len(job) == 0:
-                raise CondorJobNotFoundException(f"Couldn't find job via {constraint}")
+                job = [{}]
             return JobInfo(info=job[0], error=None)
         except Exception as e:
-            return JobInfo(info=None, error=e)
+            self.logger.debug({"constraint": constraint, "limit": 1})
+            raise e
+            # return JobInfo(info=None, error=e)
 
     def get_user_info(self, user_id, projection=None):
         pass
