@@ -766,65 +766,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.mongo_util.get_job(job_id=job_id).delete()
             self.assertEqual(ori_job_count, Job.objects.count())
 
-    def test_update_job_status(self):
-
-        with self.mongo_util.mongo_engine_connection():
-            ori_job_count = Job.objects.count()
-            job_id = self.create_job_rec()
-            self.assertEqual(ori_job_count, Job.objects.count() - 1)
-
-            runner = self.getRunner()
-            runner._test_job_permissions = MagicMock(return_value=True)
-
-            # test missing status
-            with self.assertRaises(ValueError) as context:
-                runner.update_job_status(None, "invalid_status")
-            self.assertEqual(
-                "Please provide both job_id and status", str(context.exception)
-            )
-
-            # test invalid status
-            with self.assertRaises(ValidationError) as context:
-                runner.update_job_status(job_id, "invalid_status")
-            self.assertIn("is not a valid status", str(context.exception))
-
-            ori_job = Job.objects(id=job_id)[0]
-            ori_updated_time = ori_job.updated
-
-            # test update job status
-            job_id = runner.update_job_status(job_id, "estimating")
-            updated_job = Job.objects(id=job_id)[0]
-            self.assertEqual(updated_job.status, "estimating")
-            updated_time = updated_job.updated
-
-            self.assertTrue(ori_updated_time < updated_time)
-
-            self.mongo_util.get_job(job_id=job_id).delete()
-            self.assertEqual(ori_job_count, Job.objects.count())
-
-    def test_get_job_status(self):
-
-        with self.mongo_util.mongo_engine_connection():
-            ori_job_count = Job.objects.count()
-            job_id = self.create_job_rec()
-            self.assertEqual(ori_job_count, Job.objects.count() - 1)
-
-            runner = self.getRunner()
-            runner._test_job_permissions = MagicMock(return_value=True)
-
-            # test missing job_id input
-            with self.assertRaises(ValueError) as context:
-                runner.get_job_status_field(None)
-            self.assertEqual("Please provide valid job_id", str(context.exception))
-
-            returnVal = runner.get_job_status_field(job_id)
-
-            self.assertTrue("status" in returnVal)
-            self.assertEqual(returnVal["status"], "created")
-
-            self.mongo_util.get_job(job_id=job_id).delete()
-            self.assertEqual(ori_job_count, Job.objects.count())
-
     def test_finish_job(self):
 
         with self.mongo_util.mongo_engine_connection():

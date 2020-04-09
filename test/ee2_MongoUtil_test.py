@@ -96,6 +96,7 @@ class MongoUtilTest(unittest.TestCase):
                 "status",
                 "updated",
                 "job_input",
+                "scheduler_id",
             ]
             self.assertCountEqual(job.keys(), expected_keys)
 
@@ -106,7 +107,15 @@ class MongoUtilTest(unittest.TestCase):
                 .to_dict()
             )
 
-            expected_keys = ["_id", "user", "authstrat", "wsid", "status", "updated"]
+            expected_keys = [
+                "_id",
+                "user",
+                "authstrat",
+                "wsid",
+                "status",
+                "updated",
+                "scheduler_id",
+            ]
             self.assertCountEqual(job.keys(), expected_keys)
 
             # get job with multiple exclude_fields
@@ -116,7 +125,14 @@ class MongoUtilTest(unittest.TestCase):
                 .to_dict()
             )
 
-            expected_keys = ["_id", "authstrat", "status", "updated", "job_input"]
+            expected_keys = [
+                "_id",
+                "authstrat",
+                "status",
+                "updated",
+                "job_input",
+                "scheduler_id",
+            ]
             self.assertCountEqual(job.keys(), expected_keys)
 
             mongo_util.get_job(job_id=job_id).delete()
@@ -145,6 +161,7 @@ class MongoUtilTest(unittest.TestCase):
                 "status",
                 "updated",
                 "job_input",
+                "scheduler_id",
             ]
 
             for job in jobs:
@@ -155,7 +172,14 @@ class MongoUtilTest(unittest.TestCase):
                 job_ids=[job_id_1, job_id_2], exclude_fields=["user", "wsid"]
             )
 
-            expected_keys = ["_id", "authstrat", "status", "updated", "job_input"]
+            expected_keys = [
+                "_id",
+                "authstrat",
+                "status",
+                "updated",
+                "job_input",
+                "scheduler_id",
+            ]
             for job in jobs:
                 self.assertCountEqual(job.to_mongo().to_dict().keys(), expected_keys)
 
@@ -183,6 +207,7 @@ class MongoUtilTest(unittest.TestCase):
                 "status",
                 "updated",
                 "job_input",
+                "scheduler_id",
             ]
 
             self.assertCountEqual(job.keys(), expected_keys)

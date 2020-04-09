@@ -137,7 +137,7 @@ class EE2TestAdminMode(unittest.TestCase):
 
         # Check Admin Status
         admin_type = runner.get_admin_permission()
-        self.assertEquals(admin_type, {"permission": "n"})
+        self.assertEqual(admin_type, {"permission": "n"})
 
         # RUNJOB
         job_id = runner.run_job(params=job_params_1, as_admin=False)
@@ -151,7 +151,7 @@ class EE2TestAdminMode(unittest.TestCase):
 
         # get_job_params
         params = runner.get_job_params(job_id=job_id)
-        self.assertEquals(params["method"], job_params_1["method"])
+        self.assertEqual(params["method"], job_params_1["method"])
 
         # get_job_params BUT ATTEMPT TO BE AN ADMIN
         with self.assertRaisesRegexp(
@@ -183,15 +183,15 @@ class EE2TestAdminMode(unittest.TestCase):
         # Start the job and get it's status
         runner.start_job(job_id=job_id)
         status_field = runner.get_job_status_field(job_id=job_id)
-        self.assertEquals(status_field["status"], Status.running.value)
+        self.assertEqual(status_field["status"], Status.running.value)
         runner.finish_job(job_id=job_id, error_message="Fail")
         check_job = runner.check_job(job_id=job_id)
-        self.assertEquals(check_job["status"], Status.error.value)
+        self.assertEqual(check_job["status"], Status.error.value)
         job_id2 = runner.run_job(params=job_params_1, as_admin=False)
         self.assertTrue(bson.objectid.ObjectId.is_valid(job_id2))
         runner.cancel_job(job_id=job_id2)
         check_job2 = runner.check_job(job_id=job_id2)
-        self.assertEquals(check_job2["status"], Status.terminated.value)
+        self.assertEqual(check_job2["status"], Status.terminated.value)
 
         # TODO do the above with as_admin=True and assert failure each time
 
@@ -215,7 +215,7 @@ class EE2TestAdminMode(unittest.TestCase):
 
         # Check Admin Status
         admin_type = runner.get_admin_permission()
-        self.assertEquals(admin_type, {"permission": "w"})
+        self.assertEqual(admin_type, {"permission": "w"})
 
         # RUNJOB
         job_id = runner.run_job(params=job_params_1, as_admin=True)
@@ -223,11 +223,11 @@ class EE2TestAdminMode(unittest.TestCase):
 
         # CHECKJOB
         check_job = runner.check_job(job_id=job_id, as_admin=True)
-        self.assertEquals(check_job.get("status"), Status.queued.value)
+        self.assertEqual(check_job.get("status"), Status.queued.value)
 
         # get_job_params
         params = runner.get_job_params(job_id=job_id, as_admin=True)
-        self.assertEquals(params["method"], job_params_1["method"])
+        self.assertEqual(params["method"], job_params_1["method"])
 
         runner.handle_held_job(cluster_id=check_job.get("scheduler_id"))
 
@@ -261,7 +261,7 @@ class EE2TestAdminMode(unittest.TestCase):
 
         # Check Admin Status
         admin_type = runner.get_admin_permission()
-        self.assertEquals(admin_type, {"permission": "r"})
+        self.assertEqual(admin_type, {"permission": "r"})
 
         # RUNJOB
         with self.assertRaisesRegexp(
@@ -271,4 +271,4 @@ class EE2TestAdminMode(unittest.TestCase):
         #
         # good_job_id = 1
         # check_job = runner.check_job(job_id=good_job_id)
-        # self.assertEquals(check_job.get("status"),Status.queued.value)
+        # self.assertEqual(check_job.get("status"),Status.queued.value)

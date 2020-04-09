@@ -329,6 +329,7 @@ class JobsStatus:
             )
         condor = self.sdkmr.get_condor()
         resources = condor.get_job_resource_info(job_id=job_id)
+        self.sdkmr.logger.debug(f"Extracted the following condor job ads {resources}")
         self.sdkmr.get_mongo_util().update_job_resources(
             job_id=job_id, resources=resources
         )
