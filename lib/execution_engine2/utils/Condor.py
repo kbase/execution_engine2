@@ -348,6 +348,8 @@ class Condor(Scheduler):
             raise Exception("Use only batch name (job_id) or cluster_id, not both")
 
         condor_stats = self.get_job_info(job_id=job_id, cluster_id=cluster_id)
+        # Prevent token from leaking out into logs
+        del condor_stats.info["environment"]
         self.logger.debug(f"Got the following condor job info {condor_stats}")
         job_info = condor_stats.info
         if job_info is None:
