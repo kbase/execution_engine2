@@ -7,14 +7,13 @@ import os
 import pathlib
 import pwd
 from configparser import ConfigParser
-from typing import TYPE_CHECKING
+from typing import Dict, Optional, Any, Tuple
 
 import htcondor
 
 from lib.execution_engine2.exceptions import (
     MissingCondorRequirementsException,
     MissingRunJobParamsException,
-    CondorJobNotFoundException,
 )
 from lib.execution_engine2.sdk.EE2Runjob import ConciergeParams
 from lib.execution_engine2.utils.CondorTuples import (
@@ -23,7 +22,6 @@ from lib.execution_engine2.utils.CondorTuples import (
     JobInfo,
 )
 from lib.execution_engine2.utils.Scheduler import Scheduler
-from typing import Dict, Optional, Any, Tuple
 
 
 class Condor(Scheduler):

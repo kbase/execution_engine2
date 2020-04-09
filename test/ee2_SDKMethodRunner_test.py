@@ -7,9 +7,9 @@ import time
 import unittest
 from configparser import ConfigParser
 from datetime import datetime, timedelta
+from pprint import pprint
 from typing import Dict, List
 from unittest.mock import patch
-from pprint import pprint
 
 import bson
 import dateutil
@@ -17,7 +17,6 @@ import requests
 import requests_mock
 from bson import ObjectId
 from mock import MagicMock
-from mongoengine import ValidationError
 
 from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.db.models.models import (
@@ -29,10 +28,8 @@ from lib.execution_engine2.db.models.models import (
 )
 from lib.execution_engine2.exceptions import AuthError
 from lib.execution_engine2.exceptions import InvalidStatusTransitionException
-
-
-from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
+from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
 from test.mongo_test_helper import MongoTestHelper
 from test.utils.test_utils import bootstrap, get_example_job, validate_job_state
 
