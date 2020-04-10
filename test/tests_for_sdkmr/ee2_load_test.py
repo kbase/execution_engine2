@@ -9,15 +9,16 @@ import unittest
 from configparser import ConfigParser
 from unittest.mock import patch
 
-from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.db.models.models import Job, Status
 from lib.execution_engine2.execution_engine2Impl import execution_engine2
+from lib.execution_engine2.sdk.EE2Status import JobsStatus
+from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.Condor import Condor
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
+from test.utils_shared.test_utils import bootstrap, get_sample_job_params
 from tests_for_db.mongo_test_helper import MongoTestHelper
-from test.utils_shared.test_utils import bootstrap
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
@@ -62,10 +63,15 @@ class ee2_server_load_test(unittest.TestCase):
     def getRunner(self) -> SDKMethodRunner:
         # Initialize these clients from None
         runner = copy.deepcopy(self.__class__.method_runner)  # type : SDKMethodRunner
-        runner.get_jobs_status()
+        runner._ee2_status = runner.get_jobs_status()  # type: JobsStatus
         runner._ee2_status._send_exec_stats_to_catalog = MagicMock(return_val=True)
+        runner._ee2_status.update_finished_job_with_usage = MagicMock(return_val=True)
         runner.get_runjob()
         runner.get_job_logs()
+        runner.get_condor()
+        runner.condor = MagicMock(autospec=True)
+        # runner.get_job_resource_info = MagicMock(return_val={})
+
         return runner
 
     def test_init_job_stress(self):
@@ -82,8 +88,8 @@ class ee2_server_load_test(unittest.TestCase):
             # set job method differently to distinguish
             method_1 = "app_1.a_method"
             method_2 = "app_1.b_method"
-            job_params_1 = self.get_sample_job_params(method=method_1)
-            job_params_2 = self.get_sample_job_params(method=method_2)
+            job_params_1 = get_sample_job_params(method=method_1)
+            job_params_2 = get_sample_job_params(method=method_2)
 
             threads = list()
             job_ids = list()
@@ -139,7 +145,7 @@ class ee2_server_load_test(unittest.TestCase):
             ori_job_count = Job.objects.count()
             runner = self.getRunner()
 
-            job_params = self.get_sample_job_params()
+            job_params = get_sample_job_params()
 
             thread_count = self.thread_count  # threads to test
 
@@ -260,9 +266,9 @@ class ee2_server_load_test(unittest.TestCase):
             method_2 = "app2.b_method"
             method_3 = "app3.c_method"
 
-            job_params_1 = self.get_sample_job_params(method=method_1)
-            job_params_2 = self.get_sample_job_params(method=method_2)
-            job_params_3 = self.get_sample_job_params(method=method_3)
+            job_params_1 = get_sample_job_params(method=method_1)
+            job_params_2 = get_sample_job_params(method=method_2)
+            job_params_3 = get_sample_job_params(method=method_3)
 
             threads = list()
             job_ids = list()
@@ -327,7 +333,7 @@ class ee2_server_load_test(unittest.TestCase):
             ori_job_count = Job.objects.count()
             runner = self.getRunner()
 
-            job_params = self.get_sample_job_params()
+            job_params = get_sample_job_params()
 
             thread_count = self.thread_count  # threads to test
 
@@ -420,8 +426,8 @@ class ee2_server_load_test(unittest.TestCase):
             # set job method differently to distinguish
             method_1 = "a_method"
             method_2 = "b_method"
-            job_params_1 = self.get_sample_job_params(method=method_1)
-            job_params_2 = self.get_sample_job_params(method=method_2)
+            job_params_1 = get_sample_job_params(method=method_1)
+            job_params_2 = get_sample_job_params(method=method_2)
 
             # create jobs
             job_id_1 = runner.get_runjob()._init_job_rec(self.user_id, job_params_1)
@@ -472,7 +478,7 @@ class ee2_server_load_test(unittest.TestCase):
             ori_job_count = Job.objects.count()
             runner = self.getRunner()
 
-            job_params = self.get_sample_job_params()
+            job_params = get_sample_job_params()
 
             # create jobs
             job_id_running = runner.get_runjob()._init_job_rec(self.user_id, job_params)
@@ -582,7 +588,7 @@ class ee2_server_load_test(unittest.TestCase):
 
             # create job
             job_id = runner.get_runjob()._init_job_rec(
-                self.user_id, self.get_sample_job_params()
+                self.user_id, get_sample_job_params()
             )
 
             # add one line to job
@@ -643,7 +649,7 @@ class ee2_server_load_test(unittest.TestCase):
 
             # create job
             job_id = runner.get_runjob()._init_job_rec(
-                self.user_id, self.get_sample_job_params()
+                self.user_id, get_sample_job_params()
             )
 
             # job line to be added
