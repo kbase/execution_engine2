@@ -68,11 +68,12 @@ class MongoUtilTest(unittest.TestCase):
         self.assertTrue(set(class_attri) <= set(mongo_util.__dict__.keys()))
 
     def test_get_by_cluster(self):
+        """ Get a job by its condor scheduler_id"""
         mongo_util = self.getMongoUtil()
         with mongo_util.mongo_engine_connection():
             job = get_example_job()
             job_id = job.save().id
-            batch = mongo_util.get_job_batch_name("123")
+            batch = mongo_util.get_job_batch_name(job.scheduler_id)
             self.assertEqual(str(job_id), batch)
 
     def test_get_job_ok(self):

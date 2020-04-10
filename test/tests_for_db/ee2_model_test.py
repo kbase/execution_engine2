@@ -20,7 +20,7 @@ bootstrap()
 class EE2ModelTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        deploy = os.environ.get["KB_DEPLOYMENT_CONFIG"]
+        deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
         config = read_config_into_dict(deploy)
         # Should this just be added into read_config_into_dict function?
         mongo_in_docker = config.get("mongo-in-docker-compose", None)
