@@ -1,7 +1,9 @@
-import unittest
 import os
-import requests_mock
+import unittest
 from configparser import ConfigParser
+
+import requests_mock
+
 from execution_engine2.authorization.authstrategy import (
     can_read_job,
     can_read_jobs,

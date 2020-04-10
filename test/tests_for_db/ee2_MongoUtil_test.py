@@ -6,10 +6,10 @@ from configparser import ConfigParser
 
 from bson.objectid import ObjectId
 
-from execution_engine2.db.models.models import Job, JobLog
 from execution_engine2.db.MongoUtil import MongoUtil
-from tests_for_db.mongo_test_helper import MongoTestHelper
+from execution_engine2.db.models.models import Job, JobLog
 from test.utils_shared.test_utils import bootstrap, get_example_job
+from tests_for_db.mongo_test_helper import MongoTestHelper
 
 logging.basicConfig(level=logging.INFO)
 

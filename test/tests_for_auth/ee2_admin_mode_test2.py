@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import unittest
-import requests_mock
-from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-from test.utils_shared.test_utils import bootstrap
+
 from mock import MagicMock
+
+from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import CondorResources
+from test.utils_shared.test_utils import bootstrap
 
 bootstrap()
 import os
@@ -13,12 +14,7 @@ import copy
 from mock import patch
 from lib.execution_engine2.utils.Condor import Condor
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
-from installed_clients.CatalogClient import Catalog
-from lib.execution_engine2.authorization.roles import AdminAuthUtil
-from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
-import bson
-from lib.execution_engine2.db.models.models import Status
-from test.utils_shared.test_utils import run_job_adapter, get_sample_job_params
+from test.utils_shared.test_utils import get_sample_job_params
 from inspect import getmembers, isfunction, getfullargspec
 
 bootstrap()

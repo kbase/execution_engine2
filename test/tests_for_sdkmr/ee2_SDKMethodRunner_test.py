@@ -17,18 +17,12 @@ from bson import ObjectId
 from mock import MagicMock
 
 from lib.execution_engine2.db.MongoUtil import MongoUtil
-from lib.execution_engine2.db.models.models import (
-    Job,
-    JobInput,
-    Meta,
-    Status,
-    TerminatedCode,
-    JobLog,
-)
+from lib.execution_engine2.db.models.models import Job, Status, TerminatedCode
 from lib.execution_engine2.exceptions import AuthError
 from lib.execution_engine2.exceptions import InvalidStatusTransitionException
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
+from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 from test.utils_shared.test_utils import (
     bootstrap,
     get_example_job,
@@ -36,7 +30,6 @@ from test.utils_shared.test_utils import (
     run_job_adapter,
 )
 from tests_for_db.mongo_test_helper import MongoTestHelper
-from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()

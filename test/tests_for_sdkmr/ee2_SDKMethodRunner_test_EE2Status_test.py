@@ -10,11 +10,11 @@ import requests_mock
 from mock import MagicMock
 from mongoengine import ValidationError
 
-from lib.execution_engine2.db.models.models import Job, JobInput, Meta
+from lib.execution_engine2.db.models.models import Job
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
-from test.utils_shared.test_utils import bootstrap
 from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
+from test.utils_shared.test_utils import bootstrap
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
