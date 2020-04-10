@@ -309,6 +309,11 @@ class MongoUtil:
             j.save()
 
     def get_job_batch_name(self, cluster_id):
+        """
+        Convert Condor ID into Job ID
+        :param cluster_id: The condor ID
+        :return:  The JobBatchName / EE2 Record ID
+        """
         # TODO Create an index on this field?
         with self.mongo_engine_connection():
             j = Job.objects(scheduler_id=cluster_id)
@@ -317,6 +322,12 @@ class MongoUtil:
             return str(j[0].id)
 
     def update_job_resources(self, job_id, resources):
+        """
+        Save resources used by job, as reported by condor
+        :param job_id: The job id to save resources for
+        :param resources: The resources used by the job, as reported by condor
+        :return:
+        """
         self.logger.debug(f"About to add {resources} to {job_id}")
         with self.mongo_engine_connection():
             j = Job.objects.with_id(job_id)  # type: Job
