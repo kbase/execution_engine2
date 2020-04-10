@@ -70,7 +70,7 @@ setup-database:
 	PYTHONPATH=lib pytest --verbose /home/travis/virtualenv/ test/tests_for_db/ee2_check_configure_mongo_docker.py
 
 setup-database-local:
-    PYTHONPATH=. pytest tests_for_db/ee2_check_configure_mongo_docker.py
+    PYTHONPATH=.:lib:test pytest tests_for_db/ee2_check_configure_mongo_docker.py
 
 test-coverage:
 	# Set up travis user in mongo
