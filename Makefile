@@ -67,10 +67,8 @@ TESTS := $(shell find . | grep test.py$ | grep tests_for | xargs)
 
 setup-database:
 	# Set up travis user in mongo
-	PYTHONPATH=lib pytest --verbose /home/travis/virtualenv/ test/tests_for_db/ee2_check_configure_mongo_docker.py
-
-setup-database-local:
-    PYTHONPATH=.:lib:test pytest tests_for_db/ee2_check_configure_mongo_docker.py
+	PYTHONPATH=.:lib:test pytest --verbose /home/travis/virtualenv/ test/tests_for_db/ee2_check_configure_mongo_docker.py
+    
 
 test-coverage:
 	# Set up travis user in mongo
