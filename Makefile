@@ -72,28 +72,10 @@ setup-database:
 setup-database-local:
     PYTHONPATH=. pytest tests_for_db/ee2_check_configure_mongo_docker.py
 
-# test-coverage:
-#     @echo "hello"
-# # 	PYTHONPATH=. pytest  --cov-report=xml --cov lib/execution_engine2/ --verbose $(TESTS)
-
 test-coverage:
 	# Set up travis user in mongo
 	@echo "Run tests for $(TESTS)"
-	PYTHONPATH=.:lib:test pytest  --cov-report=xml --cov lib/execution_engine2/ --verbose $(TESTS)
-
-
-# test:
-# 	# Requires htcondor python bindings
-# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_scheduler_test.py
-# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_SDKMethodRunner_test.py
-# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_MongoUtil_test.py
-# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_server_test.py
-# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_load_test.py
-# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_kafka_test.py
-
-# test-models:
-# 	# Requires travis user to be set up
-# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_model_test.py
+	PYTHONPATH=.:lib:test pytest --cov-report=xml --cov lib/execution_engine2/ --verbose $(TESTS)
 
 
 
