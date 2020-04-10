@@ -49,7 +49,7 @@ class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
             db=cls.cfg["mongo-database"], col=cls.cfg["mongo-jobs-collection"]
         )
 
-        cls.test_helper = ee2_sdkmr_test_helper(cfg)
+        cls.test_helper = ee2_sdkmr_test_helper(cls.method_runner)
 
     def getRunner(self) -> SDKMethodRunner:
         return copy.deepcopy(self.__class__.method_runner)

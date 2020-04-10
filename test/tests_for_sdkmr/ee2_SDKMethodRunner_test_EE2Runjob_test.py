@@ -40,6 +40,7 @@ logging.basicConfig(level=logging.INFO)
 bootstrap()
 
 from lib.execution_engine2.sdk.EE2Runjob import RunJob
+from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 
 
 class ee2_SDKMethodRunner_test(unittest.TestCase):
@@ -67,6 +68,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         cls.method_runner = SDKMethodRunner(
             cls.cfg, user_id=cls.user_id, token=cls.token
         )
+
         cls.mongo_util = MongoUtil(cls.cfg)
         cls.mongo_helper = MongoTestHelper(cls.cfg)
 
@@ -80,6 +82,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             request_memory="100M",
             client_group="njs",
         )
+        cls.sdkmr_test_helper = ee2_sdkmr_test_helper(mr=cls.method_runner)
 
     def getRunner(self) -> SDKMethodRunner:
         # Initialize these clients from None
@@ -90,51 +93,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         return runner
 
     def create_job_rec(self):
-        job = Job()
-
-        inputs = JobInput()
-
-        job.user = self.user_id
-        job.authstrat = "kbaseworkspace"
-        job.wsid = self.ws_id
-        job.status = "created"
-
-        job_params = {
-            "wsid": self.ws_id,
-            "method": "MEGAHIT.run_megahit",
-            "app_id": "MEGAHIT/run_megahit",
-            "service_ver": "2.2.1",
-            "params": [
-                {
-                    "k_list": [],
-                    "k_max": None,
-                    "output_contigset_name": "MEGAHIT.contigs",
-                }
-            ],
-            "source_ws_objects": ["a/b/c", "e/d"],
-            "parent_job_id": "9998",
-        }
-
-        inputs.wsid = job.wsid
-        inputs.method = job_params.get("method")
-        inputs.params = job_params.get("params")
-        inputs.service_ver = job_params.get("service_ver")
-        inputs.app_id = job_params.get("app_id")
-        inputs.source_ws_objects = job_params.get("source_ws_objects")
-        inputs.parent_job_id = job_params.get("parent_job_id")
-
-        inputs.narrative_cell_info = Meta()
-
-        job.job_input = inputs
-        job.job_output = None
-        job.scheduler_id = "123"
-
-        with self.mongo_util.mongo_engine_connection():
-            job.save()
-            job.scheduler_id = str(job.id)
-            job.save()
-
-        return str(job.id)
+        return self.sdkmr_test_helper.create_job_rec()
 
     def test_init_ok(self):
         class_attri = ["config", "catalog_utils", "workspace", "mongo_util", "condor"]
