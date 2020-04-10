@@ -14,11 +14,13 @@ from test.utils_shared.test_utils import (
     bootstrap,
 )
 
+bootstrap()
+
 
 class AuthStrategyTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        bootstrap()
+
         cls.user = "some_user"
         cls.other_user = "some_other_user"
         config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
