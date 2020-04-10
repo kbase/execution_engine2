@@ -66,7 +66,10 @@ TEST_FILES+= test/ee2_authstrategy_test.py  test/ee2_test_admin_mode.py test/ee2
 
 setup-database:
 	# Set up travis user in mongo
-	PYTHONPATH=lib pytest --verbose /home/travis/virtualenv/ test/ee2_check_configure_mongo_docker.py
+	PYTHONPATH=lib pytest --verbose /home/travis/virtualenv/ test/tests_for_db/ee2_check_configure_mongo_docker.py
+
+setup-database-local:
+    PYTHONPATH=lib pytest tests_for_db/ee2_check_configure_mongo_docker.py
 
 test-coverage:
 	# Assumes setup-database run in previous step
