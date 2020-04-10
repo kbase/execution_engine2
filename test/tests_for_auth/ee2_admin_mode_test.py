@@ -17,7 +17,12 @@ from lib.execution_engine2.authorization.roles import AdminAuthUtil
 from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
 import bson
 from lib.execution_engine2.db.models.models import Status
-from test.utils_shared.test_utils import run_job_adapter, get_sample_job_params
+from test.utils_shared.test_utils import (
+    run_job_adapter,
+    get_sample_job_params,
+    get_sample_condor_resources,
+    get_sample_condor_info,
+)
 
 
 class EE2TestAdminMode(unittest.TestCase):
@@ -55,9 +60,18 @@ class EE2TestAdminMode(unittest.TestCase):
         self.catalog = self.catalog_patch.start()
         self.catalog.return_value = {"git_commit_hash": "moduleversiongoeshere"}
 
-        si = SubmissionInfo(clusterid="test", submit="job", error=None)
-        self.condor_patch = patch.object(Condor, "run_job", return_value=si)
-        self.condor = self.condor_patch.start()
+        si = SubmissionInfo(clusterid="123", submit={}, error=None)
+        self.condor_patch = patch.object(
+            target=Condor, attribute="run_job", return_value=si
+        )
+        self.condor_patch2 = patch.object(
+            target=Condor,
+            attribute="get_job_info",
+            return_value=get_sample_condor_info(),
+        )
+
+        self.mock_condor = self.condor_patch.start()
+        self.mock_condor2 = self.condor_patch2.start()
 
         self.setup_runner = self.getRunner()
         self.method_1 = "module_name.function_name"
@@ -71,6 +85,7 @@ class EE2TestAdminMode(unittest.TestCase):
     def tearDown(self) -> None:
         self.catalog_patch.stop()
         self.condor_patch.stop()
+        self.condor_patch2.start()
 
     def getRunner(self) -> SDKMethodRunner:
         # Initialize these clients from None
@@ -87,14 +102,14 @@ class EE2TestAdminMode(unittest.TestCase):
         condor.get_job_info = MagicMock(return_value="")
         condor.get_job_resource_info = MagicMock(return_value="njs")
         runner.condor = condor
-        runner.catalog_utils.catalog.get_client_groups = MagicMock(return_value="njs")
+
         return runner
 
     # TODO How do you test ADMIN_MODE without increasing too much coverage
 
-    @patch.object(AdminAuthUtil, "_fetch_user_roles")
-    @patch.object(WorkspaceAuth, "can_write", return_value=True)
     @patch.object(Catalog, "get_module_version", return_value="module.version")
+    @patch.object(WorkspaceAuth, "can_write", return_value=True)
+    @patch.object(AdminAuthUtil, "_fetch_user_roles")
     def test_regular_user(self, aau, workspace, catalog):
         # Regular User
         lowly_user = "Access Denied: You are not an administrator"
@@ -102,7 +117,6 @@ class EE2TestAdminMode(unittest.TestCase):
         aau.return_value = ["RegularJoe"]
         method_1 = "module_name.function_name"
         job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
-        runner = self.getRunner()
 
         # Check Admin Status
         is_admin = runner.check_is_admin()
@@ -113,6 +127,7 @@ class EE2TestAdminMode(unittest.TestCase):
         self.assertEqual(admin_type, {"permission": "n"})
 
         # RUNJOB
+
         job_id = runner.run_job(params=job_params_1, as_admin=False)
         self.assertTrue(bson.objectid.ObjectId.is_valid(job_id))
 
@@ -171,19 +186,28 @@ class EE2TestAdminMode(unittest.TestCase):
         # Start the job and get it's status as an admin
 
     @patch.object(Catalog, "get_module_version", return_value="module.version")
-    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    @patch.object(WorkspaceAuth, "can_write", return_value=True)
     @patch.object(AdminAuthUtil, "_fetch_user_roles")
-    def test_admin_writer(self, aau, condor, catalog):
+    def test_admin_writer(self, aau, workspace, catalog):
+        # Admin User with WRITE
+
+        runner = self.getRunner()
+        aau.return_value = [runner.ADMIN_READ_ROLE]
+        method_1 = "module_name.function_name"
+        job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
+
+        # Check Admin Status
+        is_admin = runner.check_is_admin()
+        self.assertTrue(is_admin)
 
         # Admin User with WRITE
 
-        runner = self.get_runner_with_condor()
+        runner = self.getRunner()
         # SET YOUR ADMIN STATUS HERE
         aau.return_value = [runner.ADMIN_WRITE_ROLE]
 
         method_1 = "module_name.function_name"
         job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
-        runner = self.get_runner_with_condor()
 
         # Check Admin Status
         is_admin = runner.check_is_admin()
@@ -229,7 +253,6 @@ class EE2TestAdminMode(unittest.TestCase):
         aau.return_value = [runner.ADMIN_READ_ROLE]
         method_1 = "module_name.function_name"
         job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
-        runner = self.getRunner()
 
         # Check Admin Status
         is_admin = runner.check_is_admin()

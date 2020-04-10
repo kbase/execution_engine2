@@ -6,7 +6,7 @@ import uuid
 
 import requests
 from dotenv import load_dotenv
-
+from lib.execution_engine2.utils.CondorTuples import CondorResources, JobInfo
 from lib.execution_engine2.db.models.models import Job, JobInput, Meta
 from lib.execution_engine2.db.models.models import Status
 from lib.execution_engine2.exceptions import MalformedTimestampException
@@ -317,6 +317,19 @@ def run_job_adapter(
     return perm_adapter
 
 
+def get_sample_condor_resources():
+    cr = CondorResources(
+        request_cpus="1", request_disk="1GB", request_memory="100M", client_group="njs"
+    )
+    return cr
+
+
+def get_sample_condor_info(job=None, error=None):
+    if job is None:
+        job = dict()
+    return JobInfo(info=job, error=error)
+
+
 def get_sample_job_params(method=None, wsid="123"):
 
     if not method:
@@ -338,6 +351,7 @@ def get_sample_job_params(method=None, wsid="123"):
                 "min_contig_len": None,
             }
         ],
+        "job_input": {},
         "parent_job_id": "9998",
         "meta": {"tag": "dev", "token_id": "12345"},
     }

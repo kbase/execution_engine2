@@ -167,13 +167,14 @@ class RunJob:
             )
             condor_job_id = submission_info.clusterid
             self.sdkmr.logger.debug(f"Submitted job id and got '{condor_job_id}'")
-            self.sdkmr.logger.debug(f"Submitted job id and got '{condor_job_id}'")
         except Exception as e:
             ## delete job from database? Or mark it to a state it will never run?
             self.sdkmr.logger.error(e)
             raise e
 
-        if submission_info.error is not None:
+        if submission_info.error is not None and isinstance(
+            submission_info.error, Exception
+        ):
             raise submission_info.error
         if condor_job_id is None:
             raise RuntimeError(
