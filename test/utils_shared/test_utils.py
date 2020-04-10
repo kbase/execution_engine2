@@ -2,7 +2,7 @@ import json
 from configparser import ConfigParser
 from datetime import datetime
 from typing import List, Dict
-from uuid import UUID
+import uuid
 
 import requests
 from dotenv import load_dotenv
@@ -11,21 +11,26 @@ from lib.execution_engine2.db.models.models import Job, JobInput, Meta
 from lib.execution_engine2.db.models.models import Status
 from lib.execution_engine2.exceptions import MalformedTimestampException
 
+import os.path
+
 
 def bootstrap():
+    test_env_0 = "../test.env"
     test_env_1 = "test.env"
     test_env_2 = "test/test.env"
-    try:
-        load_dotenv(test_env_1, verbose=True)
-    except Exception:
-        load_dotenv(test_env_2, verbose=True)
+
+    for item in [test_env_0, test_env_1, test_env_2]:
+        try:
+            load_dotenv(item, verbose=True)
+        except Exception:
+            pass
 
 
 def get_example_job(
     user: str = "boris",
     wsid: int = 123,
     authstrat: str = "kbaseworkspace",
-    scheduler_id: str = "123",
+    scheduler_id: str = None,
 ) -> Job:
     j = Job()
     j.user = user
@@ -47,7 +52,7 @@ def get_example_job(
     j.authstrat = authstrat
 
     if scheduler_id is None:
-        scheduler_id = str(UUID)
+        scheduler_id = str(uuid.uuid4())
 
     j.scheduler_id = scheduler_id
 
@@ -78,9 +83,13 @@ def _create_sample_params(self):
 
 
 def read_config_into_dict(config="deploy.cfg", section="execution_engine2"):
+
+    if not os.path.isfile(config):
+        raise FileNotFoundError(config + " pwd=" + os.getcwd())
     config_parser = ConfigParser()
     config_parser.read(config)
     config = dict()
+    print(config_parser.sections())
     for key, val in config_parser[section].items():
         config[key] = val
     return config
@@ -306,3 +315,31 @@ def run_job_adapter(
         return response
 
     return perm_adapter
+
+
+def get_sample_job_params(method=None, wsid="123"):
+
+    if not method:
+        method = "default_method"
+
+    job_params = {
+        "wsid": wsid,
+        "method": method,
+        "app_id": "MEGAHIT/run_megahit",
+        "service_ver": "2.2.1",
+        "params": [
+            {
+                "workspace_name": "wjriehl:1475006266615",
+                "read_library_refs": ["18836/5/1"],
+                "output_contigset_name": "rhodo_contigs",
+                "recipe": "auto",
+                "assembler": None,
+                "pipeline": None,
+                "min_contig_len": None,
+            }
+        ],
+        "parent_job_id": "9998",
+        "meta": {"tag": "dev", "token_id": "12345"},
+    }
+
+    return job_params

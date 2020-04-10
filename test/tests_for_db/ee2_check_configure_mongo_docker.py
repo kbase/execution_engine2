@@ -5,7 +5,7 @@ import unittest
 logging.basicConfig(level=logging.INFO)
 
 from pymongo import MongoClient
-from test.utils.test_utils import read_config_into_dict, bootstrap
+from test.utils_shared.test_utils import read_config_into_dict, bootstrap
 from pymongo.errors import OperationFailure
 
 bootstrap()

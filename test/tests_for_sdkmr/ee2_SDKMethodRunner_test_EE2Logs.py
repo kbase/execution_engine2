@@ -11,41 +11,12 @@ import requests_mock
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.db.models.models import Job, JobLog
-from test.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
-from test.mongo_test_helper import MongoTestHelper
-from test.utils.test_utils import bootstrap
+from tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
+from tests_for_db.mongo_test_helper import MongoTestHelper
+from test.utils_shared.test_utils import bootstrap, run_job_adapter
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
-
-
-def _run_job_adapter(
-    ws_perms_info: Dict = None,
-    ws_perms_global: List = [],
-    client_groups_info: Dict = None,
-    module_versions: Dict = None,
-    user_roles: List = None,
-):
-    """
-    Mocks POST calls to:
-        Workspace.get_permissions_mass,
-        Catalog.list_client_group_configs,
-        Catalog.get_module_version
-    Mocks GET calls to:
-        Auth (/api/V2/me)
-        Auth (/api/V2/token)
-
-    Returns an Adapter for requests_mock that deals with mocking workspace permissions.
-    :param ws_perms_info: dict - keys user_id, and ws_perms
-            user_id: str - the user id
-            ws_perms: dict of permissions, keys are ws ids, values are permission. Example:
-                {123: "a", 456: "w"} means workspace id 123 has admin permissions, and 456 has
-                write permission
-    :param ws_perms_global: list - list of global workspaces - gives those workspaces a global (user "*") permission of "r"
-    :param client_groups_info: dict - keys client_groups (list), function_name, module_name
-    :param module_versions: dict - key git_commit_hash (str), others aren't used
-    :return: an adapter function to be passed to request_mock
-    """
 
 
 class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
@@ -86,7 +57,7 @@ class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
     @requests_mock.Mocker()
     def test_add_job_logs_ok(self, rq_mock):
         rq_mock.add_matcher(
-            _run_job_adapter(
+            run_job_adapter(
                 ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}},
                 user_roles=[],
             )
@@ -95,7 +66,8 @@ class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
             ori_job_log_count = JobLog.objects.count()
             ori_job_count = Job.objects.count()
             job_id = self.test_helper.create_job_rec()
-            self.assertEqual(ori_job_count, Job.objects.count() - 1)
+            new_count = Job.objects.count()
+            self.assertEqual(ori_job_count, new_count - 1)
 
             runner = self.getRunner()
 

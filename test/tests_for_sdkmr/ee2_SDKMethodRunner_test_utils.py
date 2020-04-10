@@ -2,6 +2,7 @@
 
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.db.models.models import Job, JobInput, Meta
+from test.utils_shared.test_utils import get_sample_job_params
 
 
 class ee2_sdkmr_test_helper:

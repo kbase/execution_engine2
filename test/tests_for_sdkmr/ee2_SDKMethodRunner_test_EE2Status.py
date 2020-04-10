@@ -13,12 +13,15 @@ from mongoengine import ValidationError
 from lib.execution_engine2.db.models.models import Job, JobInput, Meta
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
-from test.utils.test_utils import bootstrap
+from test.utils_shared.test_utils import bootstrap
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
 
-from test.utils.test_utils import get_example_job_as_dict_for_runjob, run_job_adapter
+from test.utils_shared.test_utils import (
+    get_example_job_as_dict_for_runjob,
+    run_job_adapter,
+)
 
 
 class ee2_SDKMethodRunner_test_status(unittest.TestCase):

@@ -25,9 +25,10 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         TravisCI doesn't need to run this test.
         :return:
         """
-        os.environ["KB_AUTH_TOKEN"] = "XXXX"
-        os.environ["EE2_ENDPOINT"] = "https://ci.kbase.us/services/ee2"
-        os.environ["WS_ENDPOINT"] = "https://ci.kbase.us/services/ws"
+        next_token = ""
+        os.environ["KB_AUTH_TOKEN"] = next_token
+        os.environ["EE2_ENDPOINT"] = "https://next.kbase.us/services/ee2"
+        os.environ["WS_ENDPOINT"] = "https://next.kbase.us/services/ws"
 
         if "KB_AUTH_TOKEN" not in os.environ or "EE2_ENDPOINT" not in os.environ:
             logging.error(
@@ -146,11 +147,13 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         :return:
         """
         params = {"base_number": "105"}
+        # ci_wsid = "42896"
+        next_wsid = "1139"
         runjob_params = {
             "method": "simpleapp.simple_add",
             "params": [params],
             "service_ver": "dev",
-            "wsid": "42896",
+            "wsid": next_wsid,
             "app_id": "simpleapp",
         }
 
@@ -161,9 +164,9 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         while True:
             time.sleep(5)
             try:
-                print(self.ee2.get_job_status(job_id=job_id))
+                print(self.ee2.get_job_status(job_log_params))
                 print(self.ee2.get_job_logs(job_log_params))
-                status = self.ee2.get_job_status(job_id=job_id)
+                status = self.ee2.get_job_status(job_log_params)
                 if status == {"status": "finished"}:
                     break
             except Exception as e:

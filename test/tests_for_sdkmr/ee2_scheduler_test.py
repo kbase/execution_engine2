@@ -6,7 +6,7 @@ import unittest
 from lib.execution_engine2.sdk.EE2Runjob import ConciergeParams
 from lib.execution_engine2.utils.CatalogUtils import CatalogUtils
 from lib.execution_engine2.utils.Condor import Condor
-from test.utils.test_utils import bootstrap
+from test.utils_shared.test_utils import bootstrap
 
 logging.basicConfig(level=logging.INFO)
 

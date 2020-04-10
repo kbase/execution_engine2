@@ -7,7 +7,11 @@ from bson import ObjectId
 
 from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.db.models.models import LogLines, JobLog
-from test.utils.test_utils import read_config_into_dict, bootstrap, get_example_job
+from test.utils_shared.test_utils import (
+    read_config_into_dict,
+    bootstrap,
+    get_example_job,
+)
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
@@ -16,7 +20,7 @@ bootstrap()
 class EE2ModelTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
+        deploy = os.environ.get["KB_DEPLOYMENT_CONFIG"]
         config = read_config_into_dict(deploy)
         # Should this just be added into read_config_into_dict function?
         mongo_in_docker = config.get("mongo-in-docker-compose", None)

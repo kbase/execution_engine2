@@ -16,8 +16,8 @@ from lib.execution_engine2.db.models.models import Job, Status
 from lib.execution_engine2.execution_engine2Impl import execution_engine2
 from lib.execution_engine2.utils.Condor import Condor
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
-from test.mongo_test_helper import MongoTestHelper
-from test.utils.test_utils import bootstrap
+from tests_for_db.mongo_test_helper import MongoTestHelper
+from test.utils_shared.test_utils import bootstrap
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
@@ -67,33 +67,6 @@ class ee2_server_load_test(unittest.TestCase):
         runner.get_runjob()
         runner.get_job_logs()
         return runner
-
-    def get_sample_job_params(self, method=None):
-
-        if not method:
-            method = "default_method"
-
-        job_params = {
-            "wsid": self.ws_id,
-            "method": method,
-            "app_id": "MEGAHIT/run_megahit",
-            "service_ver": "2.2.1",
-            "params": [
-                {
-                    "workspace_name": "wjriehl:1475006266615",
-                    "read_library_refs": ["18836/5/1"],
-                    "output_contigset_name": "rhodo_contigs",
-                    "recipe": "auto",
-                    "assembler": None,
-                    "pipeline": None,
-                    "min_contig_len": None,
-                }
-            ],
-            "parent_job_id": "9998",
-            "meta": {"tag": "dev", "token_id": "12345"},
-        }
-
-        return job_params
 
     def test_init_job_stress(self):
         """

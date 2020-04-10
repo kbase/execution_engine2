@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import unittest
-
+import requests_mock
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-from test.utils.test_utils import bootstrap
+from test.utils_shared.test_utils import bootstrap
+from mock import MagicMock
 
 bootstrap()
 import os
@@ -16,6 +17,7 @@ from lib.execution_engine2.authorization.roles import AdminAuthUtil
 from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
 import bson
 from lib.execution_engine2.db.models.models import Status
+from test.utils_shared.test_utils import run_job_adapter, get_sample_job_params
 
 
 class EE2TestAdminMode(unittest.TestCase):
@@ -59,7 +61,7 @@ class EE2TestAdminMode(unittest.TestCase):
 
         self.setup_runner = self.getRunner()
         self.method_1 = "module_name.function_name"
-        self.job_params_1 = self.get_sample_job_params(method=self.method_1)
+        self.job_params_1 = get_sample_job_params(method=self.method_1, wsid=self.ws_id)
 
         # TODO
         # PATCH OUT LOGIN/WORKSPACE HERE
@@ -79,45 +81,16 @@ class EE2TestAdminMode(unittest.TestCase):
 
         return runner
 
-    def get_sample_job_params(self, method=None):
-
-        if not method:
-            method = "default_method"
-
-        job_params = {
-            "wsid": self.ws_id,
-            "method": method,
-            "app_id": "MEGAHIT/run_megahit",
-            "service_ver": "2.2.1",
-            "params": [
-                {
-                    "workspace_name": "wjriehl:1475006266615",
-                    "read_library_refs": ["18836/5/1"],
-                    "output_contigset_name": "rhodo_contigs",
-                    "recipe": "auto",
-                    "assembler": None,
-                    "pipeline": None,
-                    "min_contig_len": None,
-                }
-            ],
-            "parent_job_id": "9998",
-            "meta": {"tag": "dev", "token_id": "12345"},
-        }
-
-        return job_params
+    def get_runner_with_condor(self) -> SDKMethodRunner:
+        runner = self.getRunner()
+        condor = MagicMock(return_value={})
+        condor.get_job_info = MagicMock(return_value="")
+        condor.get_job_resource_info = MagicMock(return_value="njs")
+        runner.condor = condor
+        runner.catalog_utils.catalog.get_client_groups = MagicMock(return_value="njs")
+        return runner
 
     # TODO How do you test ADMIN_MODE without increasing too much coverage
-
-    # def test_all_functions(self):
-    #     import inspect
-    #     runner  = self.getRunner()
-    #     members = inspect.getmembers(runner)
-    #     for member in members:
-    #         if hasattr(member, '__getitem__') and len(member) > 0:
-    #             print(member.__getitem__)
-    #             print(member)
-    #             if 'method' in str(member[1]):
-    #                 print(inspect.signature(member))
 
     @patch.object(AdminAuthUtil, "_fetch_user_roles")
     @patch.object(WorkspaceAuth, "can_write", return_value=True)
@@ -128,7 +101,7 @@ class EE2TestAdminMode(unittest.TestCase):
         runner = self.getRunner()
         aau.return_value = ["RegularJoe"]
         method_1 = "module_name.function_name"
-        job_params_1 = self.get_sample_job_params(method=method_1)
+        job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
         runner = self.getRunner()
 
         # Check Admin Status
@@ -197,17 +170,20 @@ class EE2TestAdminMode(unittest.TestCase):
 
         # Start the job and get it's status as an admin
 
+    @patch.object(Catalog, "get_module_version", return_value="module.version")
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     @patch.object(AdminAuthUtil, "_fetch_user_roles")
-    def test_admin_writer(self, aau):
+    def test_admin_writer(self, aau, condor, catalog):
+
         # Admin User with WRITE
 
-        runner = self.getRunner()
+        runner = self.get_runner_with_condor()
         # SET YOUR ADMIN STATUS HERE
         aau.return_value = [runner.ADMIN_WRITE_ROLE]
 
         method_1 = "module_name.function_name"
-        job_params_1 = self.get_sample_job_params(method=method_1)
-        runner = self.getRunner()
+        job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
+        runner = self.get_runner_with_condor()
 
         # Check Admin Status
         is_admin = runner.check_is_admin()
@@ -229,7 +205,7 @@ class EE2TestAdminMode(unittest.TestCase):
         params = runner.get_job_params(job_id=job_id, as_admin=True)
         self.assertEqual(params["method"], job_params_1["method"])
 
-        runner.handle_held_job(cluster_id=check_job.get("scheduler_id"))
+        # runner.handle_held_job(cluster_id=check_job.get("scheduler_id"))
 
     # These tests should throw the most errors
 
@@ -237,7 +213,7 @@ class EE2TestAdminMode(unittest.TestCase):
         # No Token
         runner = self.getRunner()
         method_1 = "module_name.function_name"
-        job_params_1 = self.get_sample_job_params(method=method_1)
+        job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
 
         with self.assertRaisesRegexp(
             expected_exception=RuntimeError,
@@ -252,7 +228,7 @@ class EE2TestAdminMode(unittest.TestCase):
         runner = self.getRunner()
         aau.return_value = [runner.ADMIN_READ_ROLE]
         method_1 = "module_name.function_name"
-        job_params_1 = self.get_sample_job_params(method=method_1)
+        job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
         runner = self.getRunner()
 
         # Check Admin Status
