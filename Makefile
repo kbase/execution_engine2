@@ -59,10 +59,6 @@ build-test-script:
 	echo 'python -m nose --with-coverage --cover-package=$(SERVICE_CAPS) --cover-html --cover-html-dir=/kb/module/work/test_coverage --nocapture --nologcapture .' >> $(TEST_DIR)/$(TEST_SCRIPT_NAME)
 	chmod +x $(TEST_DIR)/$(TEST_SCRIPT_NAME)
 
-TEST_FILES = test/tests_for_sdkmr/ee2_scheduler_test.py test/tests_for_sdkmr/ee2_SDKMethodRunner_test.py test/tests_for_sdkmr/ee2_MongoUtil_test.py
-TEST_FILES+= test/tests_for_sdkmr/ee2_model_test.py test/ee2_server_test.py test/ee2_authutil_test.py test/ee2_workspaceauth_test.py
-TEST_FILES+= test/tests_for_sdkmr/ee2_SDKMethodRunner_ee2_logs.py test/tests_for_sdkmr/ee2_SDKMethodRunner_test_ee2_status.py
-TEST_FILES+= test/tests_for_sdkmr/ee2_authstrategy_test.py  test/tests_for_sdkmr/ee2_test_admin_mode.py test/tests_for_sdkmr/ee2_load_test.py
 TESTS := $(shell find . | grep test.py$ | grep tests_for | xargs)
 
 setup-database:
