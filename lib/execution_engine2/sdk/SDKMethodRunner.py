@@ -102,7 +102,7 @@ class SDKMethodRunner:
         self._ee2_auth = None
         self.kafka_client = KafkaClient(config.get("kafka-host"))
         self.slack_client = SlackClient(
-            config.get("slack-token"), debug=self.debug, endpoint=config.get("auth-url")
+            config.get("slack-token"), debug=self.debug, endpoint=config.get("ee2-url")
         )
 
     # Various Clients: TODO: Think about sending in just required clients, not entire SDKMR
