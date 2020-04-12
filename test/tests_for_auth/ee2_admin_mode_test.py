@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 import unittest
-
+import requests_mock
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-from test.utils.test_utils import bootstrap
+from test.utils_shared.test_utils import bootstrap
+from mock import MagicMock
 
 bootstrap()
 import os
@@ -16,6 +17,12 @@ from lib.execution_engine2.authorization.roles import AdminAuthUtil
 from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
 import bson
 from lib.execution_engine2.db.models.models import Status
+from test.utils_shared.test_utils import (
+    run_job_adapter,
+    get_sample_job_params,
+    get_sample_condor_resources,
+    get_sample_condor_info,
+)
 
 
 class EE2TestAdminMode(unittest.TestCase):
@@ -53,13 +60,22 @@ class EE2TestAdminMode(unittest.TestCase):
         self.catalog = self.catalog_patch.start()
         self.catalog.return_value = {"git_commit_hash": "moduleversiongoeshere"}
 
-        si = SubmissionInfo(clusterid="test", submit="job", error=None)
-        self.condor_patch = patch.object(Condor, "run_job", return_value=si)
-        self.condor = self.condor_patch.start()
+        si = SubmissionInfo(clusterid="123", submit={}, error=None)
+        self.condor_patch = patch.object(
+            target=Condor, attribute="run_job", return_value=si
+        )
+        self.condor_patch2 = patch.object(
+            target=Condor,
+            attribute="get_job_info",
+            return_value=get_sample_condor_info(),
+        )
+
+        self.mock_condor = self.condor_patch.start()
+        self.mock_condor2 = self.condor_patch2.start()
 
         self.setup_runner = self.getRunner()
         self.method_1 = "module_name.function_name"
-        self.job_params_1 = self.get_sample_job_params(method=self.method_1)
+        self.job_params_1 = get_sample_job_params(method=self.method_1, wsid=self.ws_id)
 
         # TODO
         # PATCH OUT LOGIN/WORKSPACE HERE
@@ -69,6 +85,7 @@ class EE2TestAdminMode(unittest.TestCase):
     def tearDown(self) -> None:
         self.catalog_patch.stop()
         self.condor_patch.stop()
+        self.condor_patch2.start()
 
     def getRunner(self) -> SDKMethodRunner:
         # Initialize these clients from None
@@ -79,57 +96,27 @@ class EE2TestAdminMode(unittest.TestCase):
 
         return runner
 
-    def get_sample_job_params(self, method=None):
+    def get_runner_with_condor(self) -> SDKMethodRunner:
+        runner = self.getRunner()
+        condor = MagicMock(return_value={})
+        condor.get_job_info = MagicMock(return_value="")
+        condor.get_job_resource_info = MagicMock(return_value="njs")
+        runner.condor = condor
 
-        if not method:
-            method = "default_method"
-
-        job_params = {
-            "wsid": self.ws_id,
-            "method": method,
-            "app_id": "MEGAHIT/run_megahit",
-            "service_ver": "2.2.1",
-            "params": [
-                {
-                    "workspace_name": "wjriehl:1475006266615",
-                    "read_library_refs": ["18836/5/1"],
-                    "output_contigset_name": "rhodo_contigs",
-                    "recipe": "auto",
-                    "assembler": None,
-                    "pipeline": None,
-                    "min_contig_len": None,
-                }
-            ],
-            "parent_job_id": "9998",
-            "meta": {"tag": "dev", "token_id": "12345"},
-        }
-
-        return job_params
+        return runner
 
     # TODO How do you test ADMIN_MODE without increasing too much coverage
 
-    # def test_all_functions(self):
-    #     import inspect
-    #     runner  = self.getRunner()
-    #     members = inspect.getmembers(runner)
-    #     for member in members:
-    #         if hasattr(member, '__getitem__') and len(member) > 0:
-    #             print(member.__getitem__)
-    #             print(member)
-    #             if 'method' in str(member[1]):
-    #                 print(inspect.signature(member))
-
-    @patch.object(AdminAuthUtil, "_fetch_user_roles")
-    @patch.object(WorkspaceAuth, "can_write", return_value=True)
     @patch.object(Catalog, "get_module_version", return_value="module.version")
+    @patch.object(WorkspaceAuth, "can_write", return_value=True)
+    @patch.object(AdminAuthUtil, "_fetch_user_roles")
     def test_regular_user(self, aau, workspace, catalog):
         # Regular User
         lowly_user = "Access Denied: You are not an administrator"
         runner = self.getRunner()
         aau.return_value = ["RegularJoe"]
         method_1 = "module_name.function_name"
-        job_params_1 = self.get_sample_job_params(method=method_1)
-        runner = self.getRunner()
+        job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
 
         # Check Admin Status
         is_admin = runner.check_is_admin()
@@ -137,9 +124,10 @@ class EE2TestAdminMode(unittest.TestCase):
 
         # Check Admin Status
         admin_type = runner.get_admin_permission()
-        self.assertEquals(admin_type, {"permission": "n"})
+        self.assertEqual(admin_type, {"permission": "n"})
 
         # RUNJOB
+
         job_id = runner.run_job(params=job_params_1, as_admin=False)
         self.assertTrue(bson.objectid.ObjectId.is_valid(job_id))
 
@@ -151,7 +139,7 @@ class EE2TestAdminMode(unittest.TestCase):
 
         # get_job_params
         params = runner.get_job_params(job_id=job_id)
-        self.assertEquals(params["method"], job_params_1["method"])
+        self.assertEqual(params["method"], job_params_1["method"])
 
         # get_job_params BUT ATTEMPT TO BE AN ADMIN
         with self.assertRaisesRegexp(
@@ -183,22 +171,35 @@ class EE2TestAdminMode(unittest.TestCase):
         # Start the job and get it's status
         runner.start_job(job_id=job_id)
         status_field = runner.get_job_status_field(job_id=job_id)
-        self.assertEquals(status_field["status"], Status.running.value)
+        self.assertEqual(status_field["status"], Status.running.value)
         runner.finish_job(job_id=job_id, error_message="Fail")
         check_job = runner.check_job(job_id=job_id)
-        self.assertEquals(check_job["status"], Status.error.value)
+        self.assertEqual(check_job["status"], Status.error.value)
         job_id2 = runner.run_job(params=job_params_1, as_admin=False)
         self.assertTrue(bson.objectid.ObjectId.is_valid(job_id2))
         runner.cancel_job(job_id=job_id2)
         check_job2 = runner.check_job(job_id=job_id2)
-        self.assertEquals(check_job2["status"], Status.terminated.value)
+        self.assertEqual(check_job2["status"], Status.terminated.value)
 
         # TODO do the above with as_admin=True and assert failure each time
 
         # Start the job and get it's status as an admin
 
+    @patch.object(Catalog, "get_module_version", return_value="module.version")
+    @patch.object(WorkspaceAuth, "can_write", return_value=True)
     @patch.object(AdminAuthUtil, "_fetch_user_roles")
-    def test_admin_writer(self, aau):
+    def test_admin_writer(self, aau, workspace, catalog):
+        # Admin User with WRITE
+
+        runner = self.getRunner()
+        aau.return_value = [runner.ADMIN_READ_ROLE]
+        method_1 = "module_name.function_name"
+        job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
+
+        # Check Admin Status
+        is_admin = runner.check_is_admin()
+        self.assertTrue(is_admin)
+
         # Admin User with WRITE
 
         runner = self.getRunner()
@@ -206,8 +207,7 @@ class EE2TestAdminMode(unittest.TestCase):
         aau.return_value = [runner.ADMIN_WRITE_ROLE]
 
         method_1 = "module_name.function_name"
-        job_params_1 = self.get_sample_job_params(method=method_1)
-        runner = self.getRunner()
+        job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
 
         # Check Admin Status
         is_admin = runner.check_is_admin()
@@ -215,7 +215,7 @@ class EE2TestAdminMode(unittest.TestCase):
 
         # Check Admin Status
         admin_type = runner.get_admin_permission()
-        self.assertEquals(admin_type, {"permission": "w"})
+        self.assertEqual(admin_type, {"permission": "w"})
 
         # RUNJOB
         job_id = runner.run_job(params=job_params_1, as_admin=True)
@@ -223,11 +223,13 @@ class EE2TestAdminMode(unittest.TestCase):
 
         # CHECKJOB
         check_job = runner.check_job(job_id=job_id, as_admin=True)
-        self.assertEquals(check_job.get("status"), Status.queued.value)
+        self.assertEqual(check_job.get("status"), Status.queued.value)
 
         # get_job_params
         params = runner.get_job_params(job_id=job_id, as_admin=True)
-        self.assertEquals(params["method"], job_params_1["method"])
+        self.assertEqual(params["method"], job_params_1["method"])
+
+        # runner.handle_held_job(cluster_id=check_job.get("scheduler_id"))
 
     # These tests should throw the most errors
 
@@ -235,7 +237,7 @@ class EE2TestAdminMode(unittest.TestCase):
         # No Token
         runner = self.getRunner()
         method_1 = "module_name.function_name"
-        job_params_1 = self.get_sample_job_params(method=method_1)
+        job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
 
         with self.assertRaisesRegexp(
             expected_exception=RuntimeError,
@@ -250,8 +252,7 @@ class EE2TestAdminMode(unittest.TestCase):
         runner = self.getRunner()
         aau.return_value = [runner.ADMIN_READ_ROLE]
         method_1 = "module_name.function_name"
-        job_params_1 = self.get_sample_job_params(method=method_1)
-        runner = self.getRunner()
+        job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
 
         # Check Admin Status
         is_admin = runner.check_is_admin()
@@ -259,7 +260,7 @@ class EE2TestAdminMode(unittest.TestCase):
 
         # Check Admin Status
         admin_type = runner.get_admin_permission()
-        self.assertEquals(admin_type, {"permission": "r"})
+        self.assertEqual(admin_type, {"permission": "r"})
 
         # RUNJOB
         with self.assertRaisesRegexp(
@@ -269,4 +270,4 @@ class EE2TestAdminMode(unittest.TestCase):
         #
         # good_job_id = 1
         # check_job = runner.check_job(job_id=good_job_id)
-        # self.assertEquals(check_job.get("status"),Status.queued.value)
+        # self.assertEqual(check_job.get("status"),Status.queued.value)

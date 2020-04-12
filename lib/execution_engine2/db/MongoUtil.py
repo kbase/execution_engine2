@@ -193,6 +193,12 @@ class MongoUtil:
         return job_log
 
     def get_job(self, job_id=None, exclude_fields=None) -> Job:
+        """
+        TODO Do we really need to call get jobs here? Or should we make own function to make it faster
+        :param job_id:
+        :param exclude_fields:
+        :return:
+        """
 
         if job_id is None:
             raise ValueError("Please provide a valid job id")
@@ -300,6 +306,32 @@ class MongoUtil:
             j.job_output = job_output
             j.status = Status.completed.value
             j.finished = time.time()
+            j.save()
+
+    def get_job_batch_name(self, cluster_id):
+        """
+        Convert Condor ID into Job ID
+        :param cluster_id: The condor ID
+        :return:  The JobBatchName / EE2 Record ID
+        """
+        # TODO Create an index on this field?
+        with self.mongo_engine_connection():
+            j = Job.objects(scheduler_id=cluster_id)
+            if len(j) == 0:
+                raise RecordNotFoundException(f"Cluster id of {cluster_id}")
+            return str(j[0].id)
+
+    def update_job_resources(self, job_id, resources):
+        """
+        Save resources used by job, as reported by condor
+        :param job_id: The job id to save resources for
+        :param resources: The resources used by the job, as reported by condor
+        :return:
+        """
+        self.logger.debug(f"About to add {resources} to {job_id}")
+        with self.mongo_engine_connection():
+            j = Job.objects.with_id(job_id)  # type: Job
+            j.condor_job_ads = resources
             j.save()
 
     def update_job_status(self, job_id, status, msg=None, error_message=None):

@@ -1,19 +1,25 @@
 #!/usr/bin/env bash
 set -x
 
-export HOME=$(pwd)
-${PYTHON_EXECUTABLE} -V >pyversion
+HOME=$(pwd)
+export HOME
 
-env >envf
-echo "export CLIENTGROUP=$CLIENTGROUP " >>env_file
-echo "export PYTHON_EXECUTABLE=$PYTHON_EXECUTABLE " >>env_file
-echo "export KB_ADMIN_AUTH_TOKEN=$KB_ADMIN_AUTH_TOKEN " >>env_file
-echo "export KB_AUTH_TOKEN=$KB_AUTH_TOKEN " >>env_file
-echo "export DOCKER_JOB_TIMEOUT=$DOCKER_JOB_TIMEOUT " >>env_file
-echo "export CONDOR_ID=$CONDOR_ID " >>env_file
-echo "export JOB_ID=$JOB_ID " >>env_file
-echo "export DELETE_ABANDONED_CONTAINERS=$DELETE_ABANDONED_CONTAINERS " >>env_file
-echo "export DEBUG_MODE=$DEBUG_MODE " >>env_file
+debug_dir="debug"
+mkdir ${debug_dir}
+env >${debug_dir}/envf
+{
+  echo "export CLIENTGROUP=$CLIENTGROUP "
+  echo "export PYTHON_EXECUTABLE=$PYTHON_EXECUTABLE "
+  echo "export KB_ADMIN_AUTH_TOKEN=$KB_ADMIN_AUTH_TOKEN "
+  echo "export KB_AUTH_TOKEN=$KB_AUTH_TOKEN "
+  echo "export DOCKER_JOB_TIMEOUT=$DOCKER_JOB_TIMEOUT "
+  echo "export CONDOR_ID=$CONDOR_ID "
+  echo "export JOB_ID=$JOB_ID "
+  echo "export DELETE_ABANDONED_CONTAINERS=$DELETE_ABANDONED_CONTAINERS "
+  echo "export DEBUG_MODE=$DEBUG_MODE "
+} >>${debug_dir}/env_file
+
+${PYTHON_EXECUTABLE} -V ${debug_dir}/pyversion
 
 JOB_ID=$1
 EE2_ENDPOINT=$2
@@ -23,12 +29,12 @@ export KBASE_ENDPOINT
 tar -xvf JobRunner.tgz && cd JobRunner && cp scripts/jobrunner.py . && chmod +x jobrunner.py
 
 cp scripts/monitor_jobrunner_logs.py . && chmod +x monitor_jobrunner_logs.py
-echo "$PYTHON_EXECUTABLE ./jobrunner.py ${JOB_ID} ${EE2_ENDPOINT}" >cmd
+echo "$PYTHON_EXECUTABLE ./jobrunner.py ${JOB_ID} ${EE2_ENDPOINT}"  >${debug_dir}/cmd
 
 ${PYTHON_EXECUTABLE} ./jobrunner.py "${JOB_ID}" "${EE2_ENDPOINT}" >jobrunner.out 2>jobrunner.err &
 pid=$!
 
-echo "$PYTHON_EXECUTABLE ./monitor_jobrunner_logs.py ${JOB_ID} ${EE2_ENDPOINT} ${pid}" >cmd_log
+echo "$PYTHON_EXECUTABLE ./monitor_jobrunner_logs.py ${JOB_ID} ${EE2_ENDPOINT} ${pid}" >${debug_dir}/cmd_log
 #$PYTHON_EXECUTABLE ./monitor_jobrunner_logs.py ${JOB_ID} ${EE2_ENDPOINT} ${pid}
 
 trap '{ kill $pid }' SIGTERM
@@ -37,7 +43,7 @@ EXIT_CODE=$?
 
 LOG_DIR=../../../logs/${JOB_ID}
 mkdir -p "${LOG_DIR}"
-cp jobrunner.out "${LOG_DIR}/jobrunner.out"
-cp jobrunner.err "${LOG_DIR}/jobrunner.err"
+mv jobrunner.out "${LOG_DIR}/jobrunner.out"
+mv jobrunner.err "${LOG_DIR}/jobrunner.err"
 
 exit ${EXIT_CODE}

@@ -14,6 +14,7 @@ from mongoengine import (
     EmbeddedDocumentListField,
     DynamicField,
     ObjectIdField,
+    ReferenceField,
 )
 from mongoengine import ValidationError
 
@@ -311,6 +312,7 @@ class Job(Document):
     scheduler_estimator_id = StringField()
     job_input = EmbeddedDocumentField(JobInput, required=True)
     job_output = DynamicField()
+    condor_job_ads = DynamicField()
 
     # meta = {"db_alias": "ee2"}
     meta = {"collection": "ee2_jobs"}
@@ -318,6 +320,30 @@ class Job(Document):
     def save(self, *args, **kwargs):
         self.updated = time.time()
         return super(Job, self).save(*args, **kwargs)
+
+    def __repr__(self):
+        return self.to_json()
+
+
+# Unused for now
+class HeldJob(Document):
+    job_id = ReferenceField(Job)
+    used_cpu = IntField(required=True)
+    used_memory = FloatField(required=True)
+    used_memory_raw = FloatField(required=True)
+    used_disk_raw = FloatField(required=True)
+    over_memory = BooleanField(required=True)
+    over_cpu = BooleanField(required=True)
+    check_time = FloatField(required=True)
+    node_jobs = IntField(required=True)
+    node_cpu = FloatField(required=True)
+    node_memory = FloatField(required=True)
+    node_disk = FloatField(required=True)
+    node_name = StringField(required=True)
+
+    def save(self, *args, **kwargs):
+        self.updated = time.time()
+        return super(HeldJob, self).save(*args, **kwargs)
 
 
 ###

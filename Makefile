@@ -59,30 +59,17 @@ build-test-script:
 	echo 'python -m nose --with-coverage --cover-package=$(SERVICE_CAPS) --cover-html --cover-html-dir=/kb/module/work/test_coverage --nocapture --nologcapture .' >> $(TEST_DIR)/$(TEST_SCRIPT_NAME)
 	chmod +x $(TEST_DIR)/$(TEST_SCRIPT_NAME)
 
-TEST_FILES = test/ee2_scheduler_test.py test/ee2_SDKMethodRunner_test.py test/ee2_MongoUtil_test.py
-TEST_FILES+= test/ee2_model_test.py test/ee2_server_test.py test/ee2_authutil_test.py test/ee2_workspaceauth_test.py
-TEST_FILES+= test/ee2_authstrategy_test.py test/ee2_SDKMethodRunner_ee2_logs.py test/ee2_test_admin_mode.py test/ee2_load_test.py
+TESTS := $(shell find . | grep test.py$ | grep tests_for | xargs)
 
 setup-database:
 	# Set up travis user in mongo
-	PYTHONPATH=lib pytest --verbose /home/travis/virtualenv/ test/ee2_check_configure_mongo_docker.py
+	PYTHONPATH=.:lib:test pytest --verbose /home/travis/virtualenv/ test/tests_for_db/ee2_check_configure_mongo_docker.py
+
 
 test-coverage:
-	# Assumes setup-database run in previous step
-	PYTHONPATH=lib pytest --cov-report=xml --cov lib/execution_engine2/ --verbose $(TEST_FILES)
-
-# test:
-# 	# Requires htcondor python bindings
-# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_scheduler_test.py
-# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_SDKMethodRunner_test.py
-# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_MongoUtil_test.py
-# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_server_test.py
-# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_load_test.py
-# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_kafka_test.py
-
-# test-models:
-# 	# Requires travis user to be set up
-# 	PYTHONPATH=lib pytest --verbose --cov --cov-config=test/.coveragerc test/ee2_model_test.py
+	# Set up travis user in mongo
+	@echo "Run tests for $(TESTS)"
+	PYTHONPATH=.:lib:test pytest --cov-report=xml --cov lib/execution_engine2/ --verbose $(TESTS)
 
 
 

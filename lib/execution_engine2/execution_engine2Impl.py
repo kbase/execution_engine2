@@ -23,7 +23,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "d7abff90abdaab1d62db92f0c51fa01769aafb99"
+    GIT_COMMIT_HASH = "3e45b78c80b89a6c08391e62ba63b86c300714a2"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -1270,6 +1270,29 @@ class execution_engine2:
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
             raise ValueError('Method check_jobs_date_range_for_all return value ' +
+                             'returnVal is not type dict as required.')
+        # return the results
+        return [returnVal]
+
+    def handle_held_job(self, ctx, cluster_id):
+        """
+        Handle a held CONDOR job. You probably never want to run this, only the reaper should run it.
+        :param cluster_id: instance of String
+        :returns: instance of type "HeldJob" -> structure: parameter
+           "held_job" of unspecified object
+        """
+        # ctx is the context object
+        # return variables are: returnVal
+        #BEGIN handle_held_job
+        mr = SDKMethodRunner(
+            self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
+        )
+        returnVal = mr.handle_held_job(cluster_id=cluster_id)
+        #END handle_held_job
+
+        # At some point might do deeper type checking...
+        if not isinstance(returnVal, dict):
+            raise ValueError('Method handle_held_job return value ' +
                              'returnVal is not type dict as required.')
         # return the results
         return [returnVal]

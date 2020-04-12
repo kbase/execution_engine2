@@ -120,8 +120,8 @@ class execution_engine2(object):
            associate with the job. wsid - an optional workspace id to
            associate with the job. This is passed to the workspace service,
            which will share the job based on the permissions of the workspace
-           rather than owner of the job parent_job_id - UJS id of the parent
-           of a batch job. Sub jobs will add this id to the NJS database
+           rather than owner of the job parent_job_id - EE2 id of the parent
+           of a batch job. Batch jobs will add this id to the EE2 database
            under the field "parent_job_id") -> structure: parameter "method"
            of String, parameter "params" of list of unspecified object,
            parameter "service_ver" of String, parameter "rpc_context" of type
@@ -173,8 +173,8 @@ class execution_engine2(object):
            associate with the job. wsid - an optional workspace id to
            associate with the job. This is passed to the workspace service,
            which will share the job based on the permissions of the workspace
-           rather than owner of the job parent_job_id - UJS id of the parent
-           of a batch job. Sub jobs will add this id to the NJS database
+           rather than owner of the job parent_job_id - EE2 id of the parent
+           of a batch job. Batch jobs will add this id to the EE2 database
            under the field "parent_job_id") -> structure: parameter "method"
            of String, parameter "params" of list of unspecified object,
            parameter "service_ver" of String, parameter "rpc_context" of type
@@ -246,8 +246,8 @@ class execution_engine2(object):
            associate with the job. wsid - an optional workspace id to
            associate with the job. This is passed to the workspace service,
            which will share the job based on the permissions of the workspace
-           rather than owner of the job parent_job_id - UJS id of the parent
-           of a batch job. Sub jobs will add this id to the NJS database
+           rather than owner of the job parent_job_id - EE2 id of the parent
+           of a batch job. Batch jobs will add this id to the EE2 database
            under the field "parent_job_id") -> structure: parameter "method"
            of String, parameter "params" of list of unspecified object,
            parameter "service_ver" of String, parameter "rpc_context" of type
@@ -313,12 +313,15 @@ class execution_engine2(object):
 
     def get_job_logs(self, params, context=None):
         """
-        :param params: instance of type "GetJobLogsParams" (skip_lines or
-           offset - optional parameter, number of lines to skip (in case they
-           were already loaded before). limit - optional parameter, maximum
-           number of lines returned) -> structure: parameter "job_id" of type
-           "job_id" (A job id.), parameter "skip_lines" of Long, parameter
-           "offset" of Long, parameter "limit" of Long
+        :param params: instance of type "GetJobLogsParams" (job id - the job
+           id optional skip_lines Legacy Parameter for Offset optional offset
+           Number of lines to skip (in case they were already loaded before).
+           optional limit  optional parameter, maximum number of lines
+           returned optional as_admin  request read access to record normally
+           not allowed..) -> structure: parameter "job_id" of type "job_id"
+           (A job id.), parameter "skip_lines" of Long, parameter "offset" of
+           Long, parameter "limit" of Long, parameter "as_admin" of type
+           "boolean" (@range [0,1])
         :returns: instance of type "GetJobLogsResults" (last_line_number -
            common number of lines (including those in skip_lines parameter),
            this number can be used as next skip_lines value to skip already
@@ -329,8 +332,7 @@ class execution_engine2(object):
            milliseconds for the log line (optional) @optional ts) ->
            structure: parameter "line" of String, parameter "is_error" of
            type "boolean" (@range [0,1]), parameter "ts" of Long, parameter
-           "last_line_number" of Long, parameter "as_admin" of type "boolean"
-           (@range [0,1])
+           "last_line_number" of Long, parameter "count" of Long
         """
         return self._client.call_method(
             "execution_engine2.get_job_logs", [params], self._service_ver, context
@@ -429,8 +431,8 @@ class execution_engine2(object):
            associate with the job. wsid - an optional workspace id to
            associate with the job. This is passed to the workspace service,
            which will share the job based on the permissions of the workspace
-           rather than owner of the job parent_job_id - UJS id of the parent
-           of a batch job. Sub jobs will add this id to the NJS database
+           rather than owner of the job parent_job_id - EE2 id of the parent
+           of a batch job. Batch jobs will add this id to the EE2 database
            under the field "parent_job_id") -> structure: parameter "method"
            of String, parameter "params" of list of unspecified object,
            parameter "service_ver" of String, parameter "rpc_context" of type
@@ -531,8 +533,8 @@ class execution_engine2(object):
            associate with the job. wsid - an optional workspace id to
            associate with the job. This is passed to the workspace service,
            which will share the job based on the permissions of the workspace
-           rather than owner of the job parent_job_id - UJS id of the parent
-           of a batch job. Sub jobs will add this id to the NJS database
+           rather than owner of the job parent_job_id - EE2 id of the parent
+           of a batch job. Batch jobs will add this id to the EE2 database
            under the field "parent_job_id") -> structure: parameter "method"
            of String, parameter "params" of list of unspecified object,
            parameter "service_ver" of String, parameter "rpc_context" of type
@@ -634,8 +636,8 @@ class execution_engine2(object):
            associate with the job. wsid - an optional workspace id to
            associate with the job. This is passed to the workspace service,
            which will share the job based on the permissions of the workspace
-           rather than owner of the job parent_job_id - UJS id of the parent
-           of a batch job. Sub jobs will add this id to the NJS database
+           rather than owner of the job parent_job_id - EE2 id of the parent
+           of a batch job. Batch jobs will add this id to the EE2 database
            under the field "parent_job_id") -> structure: parameter "method"
            of String, parameter "params" of list of unspecified object,
            parameter "service_ver" of String, parameter "rpc_context" of type
@@ -803,8 +805,8 @@ class execution_engine2(object):
            associate with the job. wsid - an optional workspace id to
            associate with the job. This is passed to the workspace service,
            which will share the job based on the permissions of the workspace
-           rather than owner of the job parent_job_id - UJS id of the parent
-           of a batch job. Sub jobs will add this id to the NJS database
+           rather than owner of the job parent_job_id - EE2 id of the parent
+           of a batch job. Batch jobs will add this id to the EE2 database
            under the field "parent_job_id") -> structure: parameter "method"
            of String, parameter "params" of list of unspecified object,
            parameter "service_ver" of String, parameter "rpc_context" of type
@@ -918,8 +920,8 @@ class execution_engine2(object):
            associate with the job. wsid - an optional workspace id to
            associate with the job. This is passed to the workspace service,
            which will share the job based on the permissions of the workspace
-           rather than owner of the job parent_job_id - UJS id of the parent
-           of a batch job. Sub jobs will add this id to the NJS database
+           rather than owner of the job parent_job_id - EE2 id of the parent
+           of a batch job. Batch jobs will add this id to the EE2 database
            under the field "parent_job_id") -> structure: parameter "method"
            of String, parameter "params" of list of unspecified object,
            parameter "service_ver" of String, parameter "rpc_context" of type
@@ -957,6 +959,20 @@ class execution_engine2(object):
         return self._client.call_method(
             "execution_engine2.check_jobs_date_range_for_all",
             [params],
+            self._service_ver,
+            context,
+        )
+
+    def handle_held_job(self, cluster_id, context=None):
+        """
+        Handle a held CONDOR job. You probably never want to run this, only the reaper should run it.
+        :param cluster_id: instance of Double
+        :returns: instance of type "HeldJob" -> structure: parameter
+           "held_job" of unspecified object
+        """
+        return self._client.call_method(
+            "execution_engine2.handle_held_job",
+            [cluster_id],
             self._service_ver,
             context,
         )

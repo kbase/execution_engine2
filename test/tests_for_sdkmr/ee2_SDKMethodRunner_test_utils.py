@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 
-from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.db.models.models import Job, JobInput, Meta
+from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 
 
 class ee2_sdkmr_test_helper:
-    def __init__(self, cfg):
-        self.user_id = "wsadmin"
-        self.ws_id = 9999
-        self.token = "token"
-        self.cfg = cfg
-        self.method_runner = SDKMethodRunner(
-            self.cfg, user_id=self.user_id, token=self.token
-        )
+    def __init__(self, mr: SDKMethodRunner, wsid: str = 9999):
+        self.user_id = mr.user_id
+        self.ws_id = wsid
+        self.token = mr.token
+        self.method_runner = mr
 
     def create_job_rec(self):
+        """ Save a job, forgoing runjob.run"""
 
         job = Job()
 

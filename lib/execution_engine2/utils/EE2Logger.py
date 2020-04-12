@@ -13,6 +13,9 @@ def get_logger() -> Logger:
     """
 
     logger = logging.getLogger("ee2")
+    if logger.handlers:
+        return logger
+
     logger.propagate = False
     logger.setLevel(0)
     ch = logging.StreamHandler()

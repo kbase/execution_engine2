@@ -7,109 +7,34 @@ import time
 import unittest
 from configparser import ConfigParser
 from datetime import datetime, timedelta
-from typing import Dict, List
-from unittest.mock import patch
 from pprint import pprint
+from unittest.mock import patch
 
 import bson
 import dateutil
-import requests
 import requests_mock
 from bson import ObjectId
 from mock import MagicMock
-from mongoengine import ValidationError
 
 from lib.execution_engine2.db.MongoUtil import MongoUtil
-from lib.execution_engine2.db.models.models import (
-    Job,
-    JobInput,
-    Meta,
-    Status,
-    TerminatedCode,
-)
+from lib.execution_engine2.db.models.models import Job, Status, TerminatedCode
 from lib.execution_engine2.exceptions import AuthError
 from lib.execution_engine2.exceptions import InvalidStatusTransitionException
-
-
-from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-from test.mongo_test_helper import MongoTestHelper
-from test.utils.test_utils import bootstrap, get_example_job, validate_job_state
+from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
+from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
+from test.utils_shared.test_utils import (
+    bootstrap,
+    get_example_job,
+    validate_job_state,
+    run_job_adapter,
+)
+from tests_for_db.mongo_test_helper import MongoTestHelper
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
 
 from lib.execution_engine2.sdk.EE2Runjob import RunJob
-
-
-def _run_job_adapter(
-    ws_perms_info: Dict = None,
-    ws_perms_global: List = [],
-    client_groups_info: Dict = None,
-    module_versions: Dict = None,
-    user_roles: List = None,
-):
-    """
-    Mocks POST calls to:
-        Workspace.get_permissions_mass,
-        Catalog.list_client_group_configs,
-        Catalog.get_module_version
-    Mocks GET calls to:
-        Auth (/api/V2/me)
-        Auth (/api/V2/token)
-
-    Returns an Adapter for requests_mock that deals with mocking workspace permissions.
-    :param ws_perms_info: dict - keys user_id, and ws_perms
-            user_id: str - the user id
-            ws_perms: dict of permissions, keys are ws ids, values are permission. Example:
-                {123: "a", 456: "w"} means workspace id 123 has admin permissions, and 456 has
-                write permission
-    :param ws_perms_global: list - list of global workspaces - gives those workspaces a global (user "*") permission of "r"
-    :param client_groups_info: dict - keys client_groups (list), function_name, module_name
-    :param module_versions: dict - key git_commit_hash (str), others aren't used
-    :return: an adapter function to be passed to request_mock
-    """
-
-    def perm_adapter(request):
-        response = requests.Response()
-        response.status_code = 200
-        rq_method = request.method.upper()
-        if rq_method == "POST":
-            params = request.json().get("params")
-            method = request.json().get("method")
-
-            result = []
-            if method == "Workspace.get_permissions_mass":
-                perms_req = params[0].get("workspaces")
-                ret_perms = []
-                user_id = ws_perms_info.get("user_id")
-                ws_perms = ws_perms_info.get("ws_perms", {})
-                for ws in perms_req:
-                    perms = {user_id: ws_perms.get(ws["id"], "n")}
-                    if ws["id"] in ws_perms_global:
-                        perms["*"] = "r"
-                    ret_perms.append(perms)
-                result = [{"perms": ret_perms}]
-                print(result)
-            elif method == "Catalog.list_client_group_configs":
-                result = []
-                if client_groups_info is not None:
-                    result = [client_groups_info]
-            elif method == "Catalog.get_module_version":
-                result = [{"git_commit_hash": "some_commit_hash"}]
-                if module_versions is not None:
-                    result = [module_versions]
-            response._content = bytes(
-                json.dumps({"result": result, "version": "1.1"}), "UTF-8"
-            )
-        elif rq_method == "GET":
-            if request.url.endswith("/api/V2/me"):
-                response._content = bytes(
-                    json.dumps({"customroles": user_roles}), "UTF-8"
-                )
-        return response
-
-    return perm_adapter
 
 
 class ee2_SDKMethodRunner_test(unittest.TestCase):
@@ -150,9 +75,11 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             request_memory="100M",
             client_group="njs",
         )
+        cls.sdkmr_test_helper = ee2_sdkmr_test_helper(mr=cls.method_runner)
 
     def getRunner(self) -> SDKMethodRunner:
         # Initialize these clients from None
+        os.environ["LOGLEVEL"] = "DEBUG"
         runner = copy.deepcopy(self.__class__.method_runner)  # type : SDKMethodRunner
         runner.get_jobs_status()
         runner.get_runjob()
@@ -160,54 +87,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         return runner
 
     def create_job_rec(self):
-        job = Job()
-
-        inputs = JobInput()
-
-        job.user = self.user_id
-        job.authstrat = "kbaseworkspace"
-        job.wsid = self.ws_id
-        job.status = "created"
-
-        job_params = {
-            "wsid": self.ws_id,
-            "method": "MEGAHIT.run_megahit",
-            "app_id": "MEGAHIT/run_megahit",
-            "service_ver": "2.2.1",
-            "params": [
-                {
-                    "k_list": [],
-                    "k_max": None,
-                    "output_contigset_name": "MEGAHIT.contigs",
-                }
-            ],
-            "source_ws_objects": ["a/b/c", "e/d"],
-            "parent_job_id": "9998",
-        }
-
-        inputs.wsid = job.wsid
-        inputs.method = job_params.get("method")
-        inputs.params = job_params.get("params")
-        inputs.service_ver = job_params.get("service_ver")
-        inputs.app_id = job_params.get("app_id")
-        inputs.source_ws_objects = job_params.get("source_ws_objects")
-        inputs.parent_job_id = job_params.get("parent_job_id")
-
-        inputs.narrative_cell_info = Meta()
-
-        job.job_input = inputs
-        job.job_output = None
-        job.scheduler_id = "123"
-
-        with self.mongo_util.mongo_engine_connection():
-            job.save()
-
-        return str(job.id)
-
-    def test_init_ok(self):
-        class_attri = ["config", "catalog_utils", "workspace", "mongo_util", "condor"]
-        runner = self.getRunner()
-        self.assertTrue(set(class_attri) <= set(runner.__dict__.keys()))
+        return self.sdkmr_test_helper.create_job_rec()
 
     # TODO Think about what we want to do here, as this is an integration test and not a unit test
     # def test_get_client_groups(self):
@@ -241,76 +121,24 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     #     self.assertEqual(len(git_commit_1), len(git_commit_2))
     #    self.assertNotEqual(git_commit_1, git_commit_2)
 
-    def test_init_job_rec(self):
-        with self.mongo_util.mongo_engine_connection():
-            ori_job_count = Job.objects.count()
-            runner = self.getRunner()
-
-            job_params = {
-                "wsid": self.ws_id,
-                "method": "MEGAHIT.run_megahit",
-                "app_id": "MEGAHIT/run_megahit",
-                "service_ver": "2.2.1",
-                "params": [
-                    {
-                        "workspace_name": "wjriehl:1475006266615",
-                        "read_library_refs": ["18836/5/1"],
-                        "output_contigset_name": "rhodo_contigs",
-                        "recipe": "auto",
-                        "assembler": None,
-                        "pipeline": None,
-                        "min_contig_len": None,
-                    }
-                ],
-                "source_ws_objects": ["a/b/c", "e/d"],
-                "parent_job_id": "9998",
-                "meta": {"tag": "dev", "token_id": "12345"},
-            }
-
-            job_id = runner.get_runjob()._init_job_rec(self.user_id, job_params)
-
-            self.assertEqual(ori_job_count, Job.objects.count() - 1)
-
-            job = Job.objects.get(id=job_id)
-
-            self.assertEqual(job.user, self.user_id)
-            self.assertEqual(job.authstrat, "kbaseworkspace")
-            self.assertEqual(job.wsid, self.ws_id)
-
-            job_input = job.job_input
-
-            self.assertEqual(job_input.wsid, self.ws_id)
-            self.assertEqual(job_input.method, "MEGAHIT.run_megahit")
-            self.assertEqual(job_input.app_id, "MEGAHIT/run_megahit")
-            self.assertEqual(job_input.service_ver, "2.2.1")
-            self.assertCountEqual(job_input.source_ws_objects, ["a/b/c", "e/d"])
-            self.assertEqual(job_input.parent_job_id, "9998")
-
-            narrative_cell_info = job_input.narrative_cell_info
-            self.assertEqual(narrative_cell_info.tag, "dev")
-            self.assertEqual(narrative_cell_info.token_id, "12345")
-            self.assertFalse(narrative_cell_info.status)
-
-            self.assertFalse(job.job_output)
-
-            self.mongo_util.get_job(job_id=job_id).delete()
-            self.assertEqual(ori_job_count, Job.objects.count())
-
-    # @patch("execution_engine2.SDKMethodRunner.SDKMethodRunner", autospec=True)
-    def test_cancel_job(self,):
+    # Status
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    def test_cancel_job(self, condor):
         logging.info("\n\n  Test cancel job")
-        sdk = copy.deepcopy(self.getRunner())
+        sdk = self.getRunner()
+        sdk.condor = condor
 
         with sdk.get_mongo_util().mongo_engine_connection():
             job = get_example_job()
             job.user = self.user_id
             job.wsid = self.ws_id
-            job_id = job.save().id
+            job.save()
+            job_id = job.id
 
         logging.info(
-            f"Created job {job_id} in {job.wsid} status {job.status}. About to cancel"
+            f"Created job in wsid={job.wsid} status={job.status} scheduler={job.scheduler_id}. About to cancel {job_id}"
         )
-
+        print("About to cancel job,", job_id)
         sdk.cancel_job(job_id=job_id)
 
         self.assertEqual(
@@ -345,14 +173,13 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             TerminatedCode.terminated_by_automation,
         )
 
-    # from lib.execution_engine2.ee2_runjob import _get_module_git_commit
-
+    # Status
     # flake8: noqa: C901
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_cancel_job2(self, rq_mock, condor_mock):
         rq_mock.add_matcher(
-            _run_job_adapter(
+            run_job_adapter(
                 ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
             )
         )
@@ -397,17 +224,20 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job_id2 = runner.run_job(params=job)
         job_id3 = runner.run_job(params=job)
         job_id4 = runner.run_job(params=job)
-
+        print(f"About to cancel job_id1 {job_id1}")
         runner.cancel_job(
             job_id=job_id1,
             terminated_code=TerminatedCode.terminated_by_automation.value,
         )
+        print(f"About to cancel job_id2 {job_id2}")
         runner.cancel_job(
             job_id=job_id2, terminated_code=TerminatedCode.terminated_by_admin.value
         )
+        print(f"About to cancel job_id3 {job_id3}")
         runner.cancel_job(
             job_id=job_id3, terminated_code=TerminatedCode.terminated_by_user.value
         )
+        print(f"About to cancel job_id4 {job_id4}")
         runner.cancel_job(
             job_id=job_id4, terminated_code=TerminatedCode.terminated_by_user.value
         )
@@ -443,6 +273,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             status4["terminated_code"], TerminatedCode.terminated_by_user.value
         )
 
+    # status
     @patch("execution_engine2.db.MongoUtil.MongoUtil", autospec=True)
     def test_check_job_canceled(self, mongo_util):
         # def generateJob(job_id):
@@ -457,7 +288,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         #
         runner = self.getRunner()
         with self.mongo_util.mongo_engine_connection():
-
             job_id = self.create_job_rec()
 
             call_count = 0
@@ -504,28 +334,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
-    def test_run_job(self, rq_mock, condor_mock):
-        rq_mock.add_matcher(
-            _run_job_adapter(
-                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
-            )
-        )
-        runner = self.getRunner()
-        runner.get_condor = MagicMock(return_value=condor_mock)
-        job = get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
-        job["method"] = job["job_input"]["app_id"]
-        job["app_id"] = job["job_input"]["app_id"]
-        job["service_ver"] = job["job_input"]["service_ver"]
-
-        si = SubmissionInfo(clusterid="test", submit=job, error=None)
-        condor_mock.run_job = MagicMock(return_value=si)
-        condor_mock.extract_resources = MagicMock(return_value=self.cr)
-
-        job_id = runner.run_job(params=job)
-        print(f"Job id is {job_id} ")
-
-    @requests_mock.Mocker()
-    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_run_job_and_add_log(self, rq_mock, condor_mock):
         """
         This test runs a job and then adds logs
@@ -535,7 +343,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         """
         runner = self.getRunner()
         rq_mock.add_matcher(
-            _run_job_adapter(
+            run_job_adapter(
                 ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
             )
         )
@@ -656,176 +464,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         self.assertEqual(log["lines"], [])
         self.assertEqual(log["last_line_number"], 8)
 
-    # @requests_mock.Mocker()
-    # def test_add_job_logs_ok(self, rq_mock):
-    #     rq_mock.add_matcher(
-    #         _run_job_adapter(
-    #             ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}},
-    #             user_roles=[],
-    #         )
-    #     )
-    #     with self.mongo_util.mongo_engine_connection():
-    #         ori_job_log_count = JobLog.objects.count()
-    #         ori_job_count = Job.objects.count()
-    #         job_id = self.create_job_rec()
-    #         self.assertEqual(ori_job_count, Job.objects.count() - 1)
-    #
-    #         runner = self.getRunner()
-    #
-    #         # create new log
-    #         lines = [{"line": "Hello world"}]
-    #         runner.add_job_logs(job_id=job_id, log_lines=lines)
-    #
-    #         updated_job_log_count = JobLog.objects.count()
-    #         self.assertEqual(ori_job_log_count, updated_job_log_count - 1)
-    #
-    #         log = self.mongo_util.get_job_log(job_id=job_id)
-    #         ori_updated_time = log.updated
-    #         self.assertTrue(ori_updated_time)
-    #         self.assertEqual(log.original_line_count, 1)
-    #         self.assertEqual(log.stored_line_count, 1)
-    #         ori_lines = log.lines
-    #         self.assertEqual(len(ori_lines), 1)
-    #
-    #         test_line = ori_lines[0]
-    #
-    #         self.assertEqual(test_line["line"], "Hello world")
-    #         self.assertEqual(test_line["linepos"], 1)
-    #         self.assertFalse(test_line["error"])
-    #
-    #         # add job log
-    #         lines = [
-    #             {"error": True, "line": "Hello Kbase"},
-    #             {"line": "Hello Wrold Kbase"},
-    #         ]
-    #
-    #         runner.add_job_logs(job_id=job_id, log_lines=lines)
-    #
-    #         log = self.mongo_util.get_job_log(job_id=job_id)
-    #         self.assertTrue(log.updated)
-    #         self.assertTrue(ori_updated_time < log.updated)
-    #         self.assertEqual(log.original_line_count, 3)
-    #         self.assertEqual(log.stored_line_count, 3)
-    #         ori_lines = log.lines
-    #         self.assertEqual(len(ori_lines), 3)
-    #
-    #         # original line
-    #         test_line = ori_lines[0]
-    #
-    #         self.assertEqual(test_line["line"], "Hello world")
-    #         self.assertEqual(test_line["linepos"], 1)
-    #         self.assertFalse(test_line["error"])
-    #
-    #         # new line
-    #         test_line = ori_lines[1]
-    #
-    #         self.assertEqual(test_line["line"], "Hello Kbase")
-    #         self.assertEqual(test_line["linepos"], 2)
-    #         self.assertTrue(test_line["error"])
-    #
-    #         test_line = ori_lines[2]
-    #
-    #         self.assertEqual(test_line["line"], "Hello Wrold Kbase")
-    #         self.assertEqual(test_line["linepos"], 3)
-    #         self.assertFalse(test_line["error"])
-    #
-    #         self.mongo_util.get_job(job_id=job_id).delete()
-    #         self.assertEqual(ori_job_count, Job.objects.count())
-    #
-    #         self.mongo_util.get_job_log(job_id=job_id).delete()
-    #         self.assertEqual(ori_job_log_count, JobLog.objects.count())
-
-    def test_get_job_params(self):
-
-        with self.mongo_util.mongo_engine_connection():
-            ori_job_count = Job.objects.count()
-            job_id = self.create_job_rec()
-            self.assertEqual(ori_job_count, Job.objects.count() - 1)
-
-            runner = self.getRunner()
-            runner._test_job_permissions = MagicMock(return_value=True)
-            params = runner.get_job_params(job_id)
-
-            expected_params_keys = [
-                "wsid",
-                "method",
-                "params",
-                "service_ver",
-                "app_id",
-                "source_ws_objects",
-                "parent_job_id",
-            ]
-            self.assertCountEqual(params.keys(), expected_params_keys)
-            self.assertEqual(params["wsid"], self.ws_id)
-            self.assertEqual(params["method"], "MEGAHIT.run_megahit")
-            self.assertEqual(params["app_id"], "MEGAHIT/run_megahit")
-            self.assertEqual(params["service_ver"], "2.2.1")
-            self.assertCountEqual(params["source_ws_objects"], ["a/b/c", "e/d"])
-            self.assertEqual(params["parent_job_id"], "9998")
-
-            self.mongo_util.get_job(job_id=job_id).delete()
-            self.assertEqual(ori_job_count, Job.objects.count())
-
-    def test_update_job_status(self):
-
-        with self.mongo_util.mongo_engine_connection():
-            ori_job_count = Job.objects.count()
-            job_id = self.create_job_rec()
-            self.assertEqual(ori_job_count, Job.objects.count() - 1)
-
-            runner = self.getRunner()
-            runner._test_job_permissions = MagicMock(return_value=True)
-
-            # test missing status
-            with self.assertRaises(ValueError) as context:
-                runner.update_job_status(None, "invalid_status")
-            self.assertEqual(
-                "Please provide both job_id and status", str(context.exception)
-            )
-
-            # test invalid status
-            with self.assertRaises(ValidationError) as context:
-                runner.update_job_status(job_id, "invalid_status")
-            self.assertIn("is not a valid status", str(context.exception))
-
-            ori_job = Job.objects(id=job_id)[0]
-            ori_updated_time = ori_job.updated
-
-            # test update job status
-            job_id = runner.update_job_status(job_id, "estimating")
-            updated_job = Job.objects(id=job_id)[0]
-            self.assertEqual(updated_job.status, "estimating")
-            updated_time = updated_job.updated
-
-            self.assertTrue(ori_updated_time < updated_time)
-
-            self.mongo_util.get_job(job_id=job_id).delete()
-            self.assertEqual(ori_job_count, Job.objects.count())
-
-    def test_get_job_status(self):
-
-        with self.mongo_util.mongo_engine_connection():
-            ori_job_count = Job.objects.count()
-            job_id = self.create_job_rec()
-            self.assertEqual(ori_job_count, Job.objects.count() - 1)
-
-            runner = self.getRunner()
-            runner._test_job_permissions = MagicMock(return_value=True)
-
-            # test missing job_id input
-            with self.assertRaises(ValueError) as context:
-                runner.get_job_status_field(None)
-            self.assertEqual("Please provide valid job_id", str(context.exception))
-
-            returnVal = runner.get_job_status_field(job_id)
-
-            self.assertTrue("status" in returnVal)
-            self.assertEqual(returnVal["status"], "created")
-
-            self.mongo_util.get_job(job_id=job_id).delete()
-            self.assertEqual(ori_job_count, Job.objects.count())
-
-    def test_finish_job(self):
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    def test_finish_job(self, condor):
 
         with self.mongo_util.mongo_engine_connection():
             ori_job_count = Job.objects.count()
@@ -869,9 +509,15 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             print(f"About to finish job {job_id}. The job status is currently")
             print(runner.get_job_status_field(job_id))
-            runner.finish_job(job_id=job_id, job_output=job_output)
+            try:
+                runner.finish_job(job_id=job_id, job_output=job_output)
+            except:
+                pass
             print("Job is now finished, status is")
             print(runner.get_job_status_field(job_id))
+            self.assertEqual(
+                {"status": "completed"}, runner.get_job_status_field(job_id)
+            )
 
             job = self.mongo_util.get_job(job_id=job_id)
             self.assertEqual(job.status, Status.completed.value)
@@ -889,14 +535,20 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                     job_id=job_id, status=Status.running.value
                 )
 
-    def test_finish_job_with_error_message(self):
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    def test_finish_job_with_error_message(self, condor):
+
         with self.mongo_util.mongo_engine_connection():
             ori_job_count = Job.objects.count()
             job_id = self.create_job_rec()
             job = self.mongo_util.get_job(job_id=job_id)
-            self.assertEqual(ori_job_count, Job.objects.count() - 1)
+            new_count = Job.objects.count()
+            self.assertEqual(ori_job_count, new_count - 1)
 
         runner = self.getRunner()
+        condor.get_job_info = MagicMock(return_value={})
+        condor.get_job_resource_info = MagicMock(return_value={})
+        runner.condor = condor
         runner._send_exec_stats_to_catalog = MagicMock(return_value=True)
         runner.catalog_utils = MagicMock(return_value=True)
         runner._test_job_permissions = MagicMock(return_value=True)
@@ -905,8 +557,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         #     runner.finish_job(job_id=job_id, error_message="error message")
 
         runner.start_job(job_id=job_id, skip_estimation=True)
+        time.sleep(2)
+        job = self.mongo_util.get_job(job_id=job_id)
+        print("Job is", job.to_mongo().to_dict())
         runner.finish_job(job_id=job_id, error_message="error message")
-
+        job2 = self.mongo_util.get_job(job_id=job_id)
+        print("Job2 is", job2.to_mongo().to_dict())
         job = self.mongo_util.get_job(job_id=job_id)
 
         self.assertEqual(job.status, "error")
@@ -941,55 +597,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         self.mongo_util.get_job(job_id=job_id).delete()
         self.assertEqual(ori_job_count, Job.objects.count())
 
-    def test_start_job(self):
-
-        with self.mongo_util.mongo_engine_connection():
-            ori_job_count = Job.objects.count()
-            job_id = self.create_job_rec()
-            self.assertEqual(ori_job_count, Job.objects.count() - 1)
-
-            job = self.mongo_util.get_job(job_id=job_id)
-            self.assertEqual(job.status, "created")
-            self.assertFalse(job.finished)
-            self.assertFalse(job.running)
-            self.assertFalse(job.estimating)
-
-            runner = self.getRunner()
-            runner._test_job_permissions = MagicMock(return_value=True)
-
-            # test missing job_id input
-            with self.assertRaises(ValueError) as context:
-                runner.start_job(None)
-                self.assertEqual("Please provide valid job_id", str(context.exception))
-
-            # start a created job, set job to estimation status
-            runner.start_job(job_id, skip_estimation=False)
-
-            job = self.mongo_util.get_job(job_id=job_id)
-            self.assertEqual(job.status, "estimating")
-            self.assertFalse(job.running)
-            self.assertTrue(job.estimating)
-
-            # start a estimating job, set job to running status
-            runner.start_job(job_id, skip_estimation=False)
-
-            job = self.mongo_util.get_job(job_id=job_id)
-            self.assertEqual(job.status, "running")
-            self.assertTrue(job.running)
-            self.assertTrue(job.estimating)
-
-            # test start a job with invalid status
-            with self.assertRaises(ValueError) as context:
-                runner.start_job(job_id)
-            self.assertIn("Unexpected job status", str(context.exception))
-
-            self.mongo_util.get_job(job_id=job_id).delete()
-            self.assertEqual(ori_job_count, Job.objects.count())
-
     @requests_mock.Mocker()
     def test_check_job_global_perm(self, rq_mock):
         rq_mock.add_matcher(
-            _run_job_adapter(
+            run_job_adapter(
                 ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "n"}},
                 ws_perms_global=[self.ws_id],
                 user_roles=[],
@@ -1036,7 +647,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     @requests_mock.Mocker()
     def test_check_job_ok(self, rq_mock):
         rq_mock.add_matcher(
-            _run_job_adapter(
+            run_job_adapter(
                 ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}},
                 user_roles=[],
             )
@@ -1047,8 +658,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             job_id = self.create_job_rec()
             job_id_1 = self.create_job_rec()
             job_id_fake = str(bson.objectid.ObjectId())
+            print(f"Saved job_id {job_id}")
+            print(f"Saved job_id_1 {job_id_1}")
+            print(f"Created fake {job_id_fake}")
 
-            self.assertEqual(ori_job_count, Job.objects.count() - 2)
+            new_count = Job.objects.count()
+            self.assertEqual(ori_job_count, new_count - 2)
 
             job = self.mongo_util.get_job(job_id=job_id)
             self.assertEqual(job.status, "created")
@@ -1064,87 +679,128 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 runner.check_job(None)
                 self.assertEqual("Please provide valid job_id", str(context.exception))
 
-            # test check_job
+            # test check_job in a regular way
             job_state = runner.check_job(job_id)
             json.dumps(job_state)  # make sure it's JSON serializable
             self.assertTrue(validate_job_state(job_state))
             self.assertEqual(job_state["status"], "created")
             self.assertEqual(job_state["wsid"], self.ws_id)
+            # Test both
+            job_state1 = runner.check_job(job_id_1)
+            self.assertEqual(job_state1["status"], "created")
+
+            print(f'Job status of {job_id}={job_state["status"]}')
+            print(f'Job status of {job_id_1}={job_state1["status"]}')
 
             # test check_job with exclude_fields
-            job_state = runner.check_job(job_id, exclude_fields=["status"])
-            self.assertFalse("status" in job_state.keys())
-            self.assertEqual(job_state["wsid"], self.ws_id)
+            job_state_exclude = runner.check_job(job_id, exclude_fields=["status"])
+            self.assertFalse("status" in job_state_exclude.keys())
+            self.assertEqual(job_state_exclude["wsid"], self.ws_id)
+
+            # test check_job with exclude_fields
+            job_state_exclude2 = runner.check_job(job_id, exclude_fields=["status"])
+            self.assertFalse("status" in job_state_exclude2.keys())
+            self.assertEqual(job_state_exclude2["wsid"], self.ws_id)
 
             # test check_jobs
-            job_states = runner.check_jobs(
+            job_states_rl_0 = runner.check_jobs(
                 [job_id, job_id_1, job_id_fake], return_list=0
             )
-            logging.info(json.dumps(job_states))  # make sure it's JSON serializable
-            self.assertEqual(len(job_states.keys()), 3)
-            self.assertEqual(list(job_states.keys())[0], job_id)
-            self.assertEqual(list(job_states.keys())[1], job_id_1)
-            self.assertEqual(list(job_states.keys())[2], job_id_fake)
-            self.assertTrue(validate_job_state(job_states[job_id]))
-            self.assertTrue(job_id in job_states)
-            self.assertEqual(job_states[job_id]["status"], "created")
-            self.assertEqual(job_states[job_id]["wsid"], self.ws_id)
+            logging.info(
+                json.dumps(job_states_rl_0)
+            )  # make sure it's JSON serializable
+            self.assertEqual(len(job_states_rl_0.keys()), 3)
+            self.assertEqual(list(job_states_rl_0.keys())[0], job_id)
+            self.assertEqual(list(job_states_rl_0.keys())[1], job_id_1)
+            self.assertEqual(list(job_states_rl_0.keys())[2], job_id_fake)
+            self.assertTrue(validate_job_state(job_states_rl_0[job_id]))
+            self.assertTrue(job_id in job_states_rl_0)
+            self.assertEqual(job_states_rl_0[job_id]["status"], "created")
+            self.assertEqual(job_states_rl_0[job_id]["wsid"], self.ws_id)
 
             # test check_jobs return list
-            job_states_list = runner.check_jobs(
+            job_states_rl_1 = runner.check_jobs(
                 [job_id, job_id_1, job_id_fake], return_list=1
             )["job_states"]
-            json.dumps(job_states_list)  # make sure it's JSON serializable
-            self.assertEqual(len(job_states_list), 3)
-            self.assertEqual(job_states_list[0]["job_id"], job_id)
-            self.assertEqual(job_states_list[1]["job_id"], job_id_1)
-            self.assertEqual(job_states_list[2], [])
-            self.assertTrue(isinstance(job_states_list, list))
-            self.assertCountEqual(job_states_list, list(job_states.values()))
+            json.dumps(job_states_rl_1)  # make sure it's JSON serializable
+            self.assertEqual(len(job_states_rl_1), 3)
+            self.assertEqual(job_states_rl_1[0]["job_id"], job_id)
+            self.assertEqual(job_states_rl_1[1]["job_id"], job_id_1)
+            self.assertEqual(job_states_rl_1[2], [])
+            self.assertTrue(isinstance(job_states_rl_1, list))
+            print(type(job_states_rl_1))
+            self.assertCountEqual(job_states_rl_1, list(job_states_rl_0.values()))
 
-            job_states_list = runner.check_jobs([job_id, job_id_1], return_list="True")[
-                "job_states"
-            ]
-            json.dumps(job_states_list)  # make sure it's JSON serializable
-            self.assertEqual(job_states_list[0]["job_id"], job_id)
-            self.assertEqual(job_states_list[1]["job_id"], job_id_1)
-            self.assertTrue(isinstance(job_states_list, list))
-            self.assertCountEqual(job_states_list, list(job_states.values())[:2])
+            job_states_list_rl_t = runner.check_jobs(
+                [job_id, job_id_1], return_list="True"
+            )["job_states"]
+            json.dumps(job_states_list_rl_t)  # make sure it's JSON serializable
+            self.assertEqual(job_states_list_rl_t[0]["job_id"], job_id)
+            self.assertEqual(job_states_list_rl_t[1]["job_id"], job_id_1)
+            self.assertTrue(isinstance(job_states_list_rl_t, list))
+            self.assertCountEqual(
+                job_states_list_rl_t, list(job_states_rl_0.values())[:2]
+            )
 
             # test check_jobs with exclude_fields
-            job_states = runner.check_jobs(
+            job_states_rl0_exclude_wsid = runner.check_jobs(
                 [job_id], exclude_fields=["wsid"], return_list=0
             )
-            self.assertTrue(job_id in job_states)
-            self.assertFalse("wsid" in job_states[job_id].keys())
-            self.assertEqual(job_states[job_id]["status"], "created")
+            self.assertTrue(job_id in job_states_rl0_exclude_wsid)
+            self.assertFalse("wsid" in job_states_rl0_exclude_wsid[job_id].keys())
+            self.assertEqual(job_states_rl0_exclude_wsid[job_id]["status"], "created")
 
             # test check_workspace_jobs
-            job_states = runner.get_jobs_status().check_workspace_jobs(
+            job_states_from_workspace_check = runner.get_jobs_status().check_workspace_jobs(
                 self.ws_id, return_list="False"
             )
-            for job_id in job_states:
-                self.assertTrue(job_states[job_id])
-            json.dumps(job_states)  # make sure it's JSON serializable
-            self.assertTrue(job_id in job_states)
-            self.assertEqual(job_states[job_id]["status"], "created")
-            self.assertEqual(job_states[job_id]["wsid"], self.ws_id)
-            self.assertTrue(job_id_1 in job_states)
-            self.assertEqual(job_states[job_id_1]["status"], "created")
-            self.assertEqual(job_states[job_id_1]["wsid"], self.ws_id)
+            for job_id_from_wsid in job_states_from_workspace_check:
+                self.assertTrue(job_states_from_workspace_check[job_id_from_wsid])
+            print("Job States are")
+            for job_key in job_states_from_workspace_check:
+                if job_key in job_states_rl_1:
+                    print(
+                        job_key,
+                        job_states_from_workspace_check[job_key]["status"],
+                        runner.check_job(job_id=job_key)["status"],
+                        job_states_rl_0[job],
+                    )
+
+            json.dumps(
+                job_states_from_workspace_check
+            )  # make sure it's JSON serializable
+            self.assertTrue(job_id in job_states_from_workspace_check)
+            self.assertEqual(
+                job_states_from_workspace_check[job_id]["status"], "created"
+            )
+            self.assertEqual(
+                job_states_from_workspace_check[job_id]["wsid"], self.ws_id
+            )
+
+            self.assertTrue(job_id_1 in job_states_from_workspace_check)
+            self.assertEqual(
+                job_states_from_workspace_check[job_id_1]["status"], "created"
+            )
+            self.assertEqual(
+                job_states_from_workspace_check[job_id_1]["wsid"], self.ws_id
+            )
 
             # test check_workspace_jobs with exclude_fields
-            job_states = runner.get_jobs_status().check_workspace_jobs(
+            job_states_with_exclude_wsid = runner.get_jobs_status().check_workspace_jobs(
                 self.ws_id, exclude_fields=["wsid"], return_list=False
             )
 
-            json.dumps(job_states)  # make sure it's JSON serializable
-            self.assertTrue(job_id in job_states)
-            self.assertFalse("wsid" in job_states[job_id].keys())
-            self.assertEqual(job_states[job_id]["status"], "created")
-            self.assertTrue(job_id_1 in job_states)
-            self.assertFalse("wsid" in job_states[job_id_1].keys())
-            self.assertEqual(job_states[job_id_1]["status"], "created")
+            logging.info(
+                json.dumps(job_states_with_exclude_wsid)
+            )  # make sure it's JSON serializable
+            self.assertTrue(job_id in job_states_with_exclude_wsid)
+            self.assertFalse("wsid" in job_states_with_exclude_wsid[job_id].keys())
+            self.assertEqual(job_states_with_exclude_wsid[job_id]["status"], "created")
+            self.assertTrue(job_id_1 in job_states_with_exclude_wsid)
+            self.assertFalse("wsid" in job_states_with_exclude_wsid[job_id_1].keys())
+            self.assertEqual(
+                job_states_with_exclude_wsid[job_id_1]["status"], "created"
+            )
 
             with self.assertRaises(PermissionError) as e:
                 runner.get_jobs_status().check_workspace_jobs(1234)

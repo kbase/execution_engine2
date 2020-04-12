@@ -1,3 +1,4 @@
+import json
 import time
 from collections import OrderedDict
 from enum import Enum
@@ -31,6 +32,35 @@ class JobPermissions(Enum):
 class JobsStatus:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr
+
+    def handle_held_job(self, cluster_id, as_admin):
+        """
+        #TODO Let normal users use this? Only automation should...
+        #TODO Reduce number of db calls?
+        #TODO Make error code a param?
+        :param cluster_id:
+        :return:
+        """
+        batch_name = self.sdkmr.get_mongo_util().get_job_batch_name(
+            cluster_id=cluster_id
+        )
+
+        self.finish_job(
+            job_id=batch_name,
+            error_message="Job was held",
+            error_code=ErrorCode.job_terminated_by_automation.value,
+            as_admin=as_admin,
+        )
+
+        j = self.sdkmr.get_mongo_util().get_job(job_id=batch_name)  # type: Job
+        log_line = {
+            "line": "Job was terminated due to an error. Please resubmit.",
+            "is_error": True,
+        }
+        self.sdkmr.get_job_logs().add_job_logs(job_id=batch_name, log_lines=[log_line])
+        # to mongo to dict?
+        # There's probably a better way and a return type, but not really sure what I need yet
+        return json.loads(json.dumps(j.to_mongo().to_dict(), default=str))
 
     def cancel_job(self, job_id, terminated_code=None, as_admin=False):
         """
@@ -222,9 +252,11 @@ class JobsStatus:
         )
 
         if error_message:
+            self.sdkmr.logger.debug("Finishing job with an error")
             if error_code is None:
                 error_code = ErrorCode.job_crashed.value
-            db_update = self._finish_job_with_error(
+
+            self._finish_job_with_error(
                 job_id=job_id,
                 error_message=error_message,
                 error_code=error_code,
@@ -241,13 +273,13 @@ class JobsStatus:
                     scheduler_id=job.scheduler_id,
                 )
             )
-            return db_update
-
-        if job_output is None:
+        elif job_output is None:
+            self.sdkmr.logger.debug("Finishing job with an error and missing output")
             if error_code is None:
                 error_code = ErrorCode.job_missing_output.value
             msg = "Missing job output required in order to successfully finish job. Something went wrong"
-            db_update = self._finish_job_with_error(
+
+            self._finish_job_with_error(
                 job_id=job_id, error_message=msg, error_code=error_code
             )
 
@@ -261,21 +293,46 @@ class JobsStatus:
                     scheduler_id=job.scheduler_id,
                 )
             )
-            return db_update
-
-        self._finish_job_with_success(job_id=job_id, job_output=job_output)
-        self.sdkmr.kafka_client.send_kafka_message(
-            message=KafkaFinishJob(
-                job_id=str(job_id),
-                new_status=Status.completed.value,
-                previous_status=job.status,
-                scheduler_id=job.scheduler_id,
-                error_code=None,
-                error_message=None,
+        else:
+            self.sdkmr.logger.debug("Finishing job with a success")
+            self._finish_job_with_success(job_id=job_id, job_output=job_output)
+            self.sdkmr.kafka_client.send_kafka_message(
+                message=KafkaFinishJob(
+                    job_id=str(job_id),
+                    new_status=Status.completed.value,
+                    previous_status=job.status,
+                    scheduler_id=job.scheduler_id,
+                    error_code=None,
+                    error_message=None,
+                )
             )
+            self._send_exec_stats_to_catalog(job_id=job_id)
+        self.update_finished_job_with_usage(job_id, as_admin=as_admin)
+
+    def update_finished_job_with_usage(self, job_id, as_admin=None):
+        """
+        # TODO Does this need a kafka message?
+        :param job_id:
+        :param as_admin:
+        :return:
+        """
+        job = self.sdkmr.get_job_with_permission(
+            job_id=job_id, requested_job_perm=JobPermissions.WRITE, as_admin=as_admin
         )
-        # TODO Use this?
-        self._send_exec_stats_to_catalog(job_id=job_id)
+        if job.status not in [
+            Status.completed.value,
+            Status.terminated.value,
+            Status.error.value,
+        ]:
+            raise Exception(
+                f"Cannot update job {job_id} because it was not yet finished. {job.status}"
+            )
+        condor = self.sdkmr.get_condor()
+        resources = condor.get_job_resource_info(job_id=job_id)
+        self.sdkmr.logger.debug(f"Extracted the following condor job ads {resources}")
+        self.sdkmr.get_mongo_util().update_job_resources(
+            job_id=job_id, resources=resources
+        )
 
     def check_job(
         self, job_id, check_permission=True, exclude_fields=None, as_admin=False

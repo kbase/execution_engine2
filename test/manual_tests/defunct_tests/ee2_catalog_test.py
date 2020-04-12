@@ -4,7 +4,7 @@ from configparser import ConfigParser
 
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.Condor import Condor
-from test.utils.test_utils import bootstrap
+from test.utils_shared.test_utils import bootstrap
 
 bootstrap()
 import os

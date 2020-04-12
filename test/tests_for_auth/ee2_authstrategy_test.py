@@ -1,20 +1,28 @@
-import unittest
 import os
-import requests_mock
+import unittest
 from configparser import ConfigParser
+
+import requests_mock
+
 from execution_engine2.authorization.authstrategy import (
     can_read_job,
     can_read_jobs,
     can_write_job,
     can_write_jobs,
 )
-from test.utils.test_utils import get_example_job, custom_ws_perm_maker, bootstrap
+from test.utils_shared.test_utils import (
+    get_example_job,
+    custom_ws_perm_maker,
+    bootstrap,
+)
+
+bootstrap()
 
 
 class AuthStrategyTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        bootstrap()
+
         cls.user = "some_user"
         cls.other_user = "some_other_user"
         config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")

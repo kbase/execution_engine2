@@ -1,9 +1,8 @@
-import logging
 import json
+import logging
 
 from confluent_kafka import Producer
 
-logging.basicConfig(level=logging.INFO)
 DEFAULT_TOPIC = "ee2"
 
 
@@ -16,6 +15,7 @@ def _delivery_report(err, msg):
 class KafkaClient:
     def __init__(self, server_address):
         self.server_address = server_address
+        self.logger = logging.getLogger("ee2")
 
     def send_kafka_message(self, message, topic=DEFAULT_TOPIC):
         try:

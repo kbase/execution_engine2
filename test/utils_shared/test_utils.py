@@ -1,19 +1,36 @@
 import json
-import os
-from shutil import copyfile
-
-import requests
 from configparser import ConfigParser
 from datetime import datetime
-from dotenv import load_dotenv
+from typing import List, Dict
+import uuid
 
+import requests
+from dotenv import load_dotenv
+from lib.execution_engine2.utils.CondorTuples import CondorResources, JobInfo
 from lib.execution_engine2.db.models.models import Job, JobInput, Meta
 from lib.execution_engine2.db.models.models import Status
 from lib.execution_engine2.exceptions import MalformedTimestampException
 
+import os.path
+
+
+def bootstrap():
+    test_env_0 = "../test.env"
+    test_env_1 = "test.env"
+    test_env_2 = "test/test.env"
+
+    for item in [test_env_0, test_env_1, test_env_2]:
+        try:
+            load_dotenv(item, verbose=True)
+        except Exception:
+            pass
+
 
 def get_example_job(
-    user: str = "boris", wsid: int = 123, authstrat: str = "kbaseworkspace"
+    user: str = "boris",
+    wsid: int = 123,
+    authstrat: str = "kbaseworkspace",
+    scheduler_id: str = None,
 ) -> Job:
     j = Job()
     j.user = user
@@ -34,7 +51,26 @@ def get_example_job(
     j.status = "queued"
     j.authstrat = authstrat
 
+    if scheduler_id is None:
+        scheduler_id = str(uuid.uuid4())
+
+    j.scheduler_id = scheduler_id
+
     return j
+
+
+def get_example_job_as_dict_for_runjob(
+    user=None, wsid=None, authstrat=None, scheduler_id=None
+):
+
+    job = get_example_job(
+        user=user, wsid=wsid, authstrat=authstrat, scheduler_id=scheduler_id
+    )
+    job_dict = job.to_mongo().to_dict()
+    job_dict["method"] = job["job_input"]["app_id"]
+    job_dict["app_id"] = job["job_input"]["app_id"]
+    job_dict["service_ver"] = job["job_input"]["service_ver"]
+    return job_dict
 
 
 def _create_sample_params(self):
@@ -47,21 +83,16 @@ def _create_sample_params(self):
 
 
 def read_config_into_dict(config="deploy.cfg", section="execution_engine2"):
+
+    if not os.path.isfile(config):
+        raise FileNotFoundError(config + " pwd=" + os.getcwd())
     config_parser = ConfigParser()
     config_parser.read(config)
     config = dict()
+    print(config_parser.sections())
     for key, val in config_parser[section].items():
         config[key] = val
     return config
-
-
-def bootstrap():
-    test_env_1 = "test.env"
-    test_env_2 = "test/test.env"
-    try:
-        load_dotenv(test_env_1, verbose=True)
-    except Exception:
-        load_dotenv(test_env_2, verbose=True)
 
 
 # flake8: noqa: C901
@@ -202,7 +233,7 @@ def custom_ws_perm_maker(user_id: str, ws_perms: dict):
     """
 
     def perm_adapter(request):
-        perms_req = request.json().get("params")[0].get("workspaces")
+        perms_req = request.json().get("params")[0].get("workspaces", [])
         ret_perms = []
         for ws in perms_req:
             ret_perms.append({user_id: ws_perms.get(ws["id"], "n")})
@@ -214,3 +245,115 @@ def custom_ws_perm_maker(user_id: str, ws_perms: dict):
         return response
 
     return perm_adapter
+
+
+def run_job_adapter(
+    ws_perms_info: Dict = None,
+    ws_perms_global: List = [],
+    client_groups_info: Dict = None,
+    module_versions: Dict = None,
+    user_roles: List = None,
+):
+    """
+    Mocks POST calls to:
+        Workspace.get_permissions_mass,
+        Catalog.list_client_group_configs,
+        Catalog.get_module_version
+    Mocks GET calls to:
+        Auth (/api/V2/me)
+        Auth (/api/V2/token)
+
+    Returns an Adapter for requests_mock that deals with mocking workspace permissions.
+    :param ws_perms_info: dict - keys user_id, and ws_perms
+            user_id: str - the user id
+            ws_perms: dict of permissions, keys are ws ids, values are permission. Example:
+                {123: "a", 456: "w"} means workspace id 123 has admin permissions, and 456 has
+                write permission
+    :param ws_perms_global: list - list of global workspaces - gives those workspaces a global (user "*") permission of "r"
+    :param client_groups_info: dict - keys client_groups (list), function_name, module_name
+    :param module_versions: dict - key git_commit_hash (str), others aren't used
+    :return: an adapter function to be passed to request_mock
+    """
+
+    def perm_adapter(request):
+        response = requests.Response()
+        response.status_code = 200
+        rq_method = request.method.upper()
+        if rq_method == "POST":
+            params = request.json().get("params")
+            method = request.json().get("method")
+
+            result = []
+            if method == "Workspace.get_permissions_mass":
+                perms_req = params[0].get("workspaces")
+                ret_perms = []
+                user_id = ws_perms_info.get("user_id")
+                ws_perms = ws_perms_info.get("ws_perms", {})
+                for ws in perms_req:
+                    perms = {user_id: ws_perms.get(ws["id"], "n")}
+                    if ws["id"] in ws_perms_global:
+                        perms["*"] = "r"
+                    ret_perms.append(perms)
+                result = [{"perms": ret_perms}]
+                print(result)
+            elif method == "Catalog.list_client_group_configs":
+                result = []
+                if client_groups_info is not None:
+                    result = [client_groups_info]
+            elif method == "Catalog.get_module_version":
+                result = [{"git_commit_hash": "some_commit_hash"}]
+                if module_versions is not None:
+                    result = [module_versions]
+            response._content = bytes(
+                json.dumps({"result": result, "version": "1.1"}), "UTF-8"
+            )
+        elif rq_method == "GET":
+            if request.url.endswith("/api/V2/me"):
+                response._content = bytes(
+                    json.dumps({"customroles": user_roles}), "UTF-8"
+                )
+        return response
+
+    return perm_adapter
+
+
+def get_sample_condor_resources():
+    cr = CondorResources(
+        request_cpus="1", request_disk="1GB", request_memory="100M", client_group="njs"
+    )
+    return cr
+
+
+def get_sample_condor_info(job=None, error=None):
+    if job is None:
+        job = dict()
+    return JobInfo(info=job, error=error)
+
+
+def get_sample_job_params(method=None, wsid="123"):
+
+    if not method:
+        method = "default_method"
+
+    job_params = {
+        "wsid": wsid,
+        "method": method,
+        "app_id": "MEGAHIT/run_megahit",
+        "service_ver": "2.2.1",
+        "params": [
+            {
+                "workspace_name": "wjriehl:1475006266615",
+                "read_library_refs": ["18836/5/1"],
+                "output_contigset_name": "rhodo_contigs",
+                "recipe": "auto",
+                "assembler": None,
+                "pipeline": None,
+                "min_contig_len": None,
+            }
+        ],
+        "job_input": {},
+        "parent_job_id": "9998",
+        "meta": {"tag": "dev", "token_id": "12345"},
+    }
+
+    return job_params

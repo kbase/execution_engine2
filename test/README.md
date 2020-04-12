@@ -16,3 +16,5 @@ Step 4)
 * Go to /Users/YourName/execution_engine2 or wherever you put it and run the commands you see in the .travis.yml
 * make setup-database
 * make test
+
+NOTES: --no-cov is required for pycharm debugger

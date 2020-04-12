@@ -498,6 +498,14 @@ class Application(object):
             "execution_engine2.check_jobs_date_range_for_all"
         ] = "required"  # noqa
         self.rpc_service.add(
+            impl_execution_engine2.handle_held_job,
+            name="execution_engine2.handle_held_job",
+            types=[str],
+        )
+        self.method_authentication[
+            "execution_engine2.handle_held_job"
+        ] = "required"  # noqa
+        self.rpc_service.add(
             impl_execution_engine2.is_admin, name="execution_engine2.is_admin", types=[]
         )
         self.method_authentication["execution_engine2.is_admin"] = "required"  # noqa

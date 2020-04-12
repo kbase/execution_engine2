@@ -1,8 +1,11 @@
-import unittest
 import os
+import unittest
 from configparser import ConfigParser
+
 from execution_engine2.execution_engine2Impl import execution_engine2
-from test.utils.test_utils import is_timestamp
+from test.utils_shared.test_utils import is_timestamp, bootstrap
+
+bootstrap()
 
 
 class EE2ServerTest(unittest.TestCase):
@@ -33,5 +36,7 @@ class EE2ServerTest(unittest.TestCase):
     def test_get_job_logs_fail(self):
         with self.assertRaises(ValueError) as context:
             self.impl.get_job_logs(ctx=self.ctx, params={"skip_lines": 2, "offset": 2})
-            self.assertEqual("Please provide only one of skip_lines or offset",
-                             str(context.exception.args))
+            self.assertEqual(
+                "Please provide only one of skip_lines or offset",
+                str(context.exception.args),
+            )

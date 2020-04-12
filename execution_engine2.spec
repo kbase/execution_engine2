@@ -527,6 +527,13 @@
         funcdef check_jobs_date_range_for_user(CheckJobsDateRangeParams params) returns (CheckJobsResults) authentication required;
         funcdef check_jobs_date_range_for_all(CheckJobsDateRangeParams params) returns (CheckJobsResults) authentication required;
 
+        typedef structure {
+            UnspecifiedObject held_job;
+        } HeldJob;
+        /*
+            Handle a held CONDOR job. You probably never want to run this, only the reaper should run it.
+        */
+        funcdef handle_held_job(string cluster_id) returns (HeldJob) authentication required;
 
         /*
             Check if current user has ee2 admin rights.

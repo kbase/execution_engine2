@@ -34,6 +34,7 @@ from lib.execution_engine2.utils.Condor import Condor
 from lib.execution_engine2.utils.EE2Logger import get_logger
 from lib.execution_engine2.utils.KafkaUtils import KafkaClient
 from lib.execution_engine2.utils.SlackUtils import SlackClient
+from lib.execution_engine2.db.models.models import Job
 
 
 class JobPermissions(Enum):
@@ -100,7 +101,9 @@ class SDKMethodRunner:
         self._ee2_status_range = None
         self._ee2_auth = None
         self.kafka_client = KafkaClient(config.get("kafka-host"))
-        self.slack_client = SlackClient(config.get("slack-token"), debug=self.debug)
+        self.slack_client = SlackClient(
+            config.get("slack-token"), debug=self.debug, endpoint=config.get("ee2-url")
+        )
 
     # Various Clients: TODO: Think about sending in just required clients, not entire SDKMR
 
@@ -248,6 +251,13 @@ class SDKMethodRunner:
             job_id=job_id, terminated_code=terminated_code, as_admin=as_admin
         )
 
+    def handle_held_job(self, cluster_id):
+        """ Authorization Required Read/Write """
+        if self.check_as_admin(requested_perm=JobPermissions.WRITE):
+            return self.get_jobs_status().handle_held_job(
+                cluster_id=cluster_id, as_admin=True
+            )
+
     def finish_job(
         self,
         job_id,
@@ -343,7 +353,7 @@ class SDKMethodRunner:
 
     def get_job_with_permission(
         self, job_id, requested_job_perm: JobPermissions, as_admin=False
-    ):
+    ) -> Job:
         """
         Get the job.
         When as_admin, check if you have the required admin_perm or raise a Permissions Exception.
