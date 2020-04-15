@@ -116,8 +116,6 @@ class JobsStatus:
         :param as_admin: Check whether the job is terminated for a different user
         :return: job_id, whether or not job is canceled, and whether or not job is finished
         """
-        print(job_id)
-        print(self.sdkmr.user_id)
         job = self.sdkmr.get_job_with_permission(
             job_id, JobPermissions.READ, as_admin=as_admin
         )
