@@ -45,6 +45,7 @@ class Condor(Scheduler):
 
     def __init__(self, config_filepath):
         self.config = ConfigParser()
+        self.override_clientgroup = os.environ.get("OVERRIDE_CLIENT_GROUP", None)
         self.config.read(config_filepath)
         self.ee_endpoint = self.config.get(section=self.EE2, option=self.EXTERNAL_URL)
         self.python_executable = self.config.get(
@@ -137,6 +138,9 @@ class Condor(Scheduler):
         for key in [self.REQUEST_DISK, self.REQUEST_CPUS, self.REQUEST_MEMORY]:
             if key not in cgrr or cgrr[key] in ["", None]:
                 cgrr[key] = self.config.get(section=client_group, option=key)
+
+        if self.override_clientgroup:
+            client_group = self.override_clientgroup
 
         cr = CondorResources(
             str(cgrr.get(self.REQUEST_CPUS)),

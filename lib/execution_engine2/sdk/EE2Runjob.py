@@ -7,6 +7,7 @@ the logic to retrieve info needed by the runnner to start the job
 import time
 from enum import Enum
 from typing import Optional, Dict
+import os
 
 from lib.execution_engine2.db.models.models import (
     Job,
@@ -35,6 +36,7 @@ if TYPE_CHECKING:
 class RunJob:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr  # type: SDKMethodRunner
+        self.override_clientgroup = os.environ.get("OVERRIDE_CLIENT_GROUP", None)
 
     def _init_job_rec(
         self,
@@ -76,6 +78,8 @@ class RunJob:
                 jr.clientgroup = concierge_params.client_group
             else:
                 jr.clientgroup = resources.client_group
+                if self.override_clientgroup:
+                    jr.clientgroup = self.override_clientgroup
                 jr.cpu = resources.request_cpus
                 jr.memory = resources.request_memory[:-1]  # Memory always in mb
                 jr.disk = resources.request_disk[:-2]  # Space always in gb
