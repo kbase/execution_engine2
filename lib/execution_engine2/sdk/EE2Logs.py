@@ -81,8 +81,11 @@ class JobLog:
         log["original_line_count"] = olc
         log["stored_line_count"] = olc
 
-        with mongo_util.pymongo_client(self.sdkmr.config["mongo-logs-collection"]):
-            mongo_util.update_one(log, str(log.get("_id")))
+        try:
+            with mongo_util.pymongo_client(self.sdkmr.config["mongo-logs-collection"]):
+                mongo_util.update_one(log, str(log.get("_id")))
+        except Exception as e:
+            self.sdkmr.logger.error(e)
 
         return log["stored_line_count"]
 
