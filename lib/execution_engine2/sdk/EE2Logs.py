@@ -60,12 +60,13 @@ class JobLog:
             log = self._create_new_log(pk=job_id).to_mongo().to_dict()
 
         olc = log.get("original_line_count")
+        olc_temp = olc
 
         for input_line in log_lines:
-            olc += 1
+            olc_temp += 1
             ll = LogLines()
             ll.error = int(input_line.get("is_error", 0)) == 1
-            ll.linepos = olc
+            ll.linepos = olc_temp
             ts = input_line.get("ts")
             # TODO Maybe use strpos for efficiency?
             if ts is not None:
@@ -78,14 +79,15 @@ class JobLog:
             log["lines"].append(ll.to_mongo().to_dict())
 
         log["updated"] = time.time()
-        log["original_line_count"] = olc
-        log["stored_line_count"] = olc
+        log["original_line_count"] = olc_temp
+        log["stored_line_count"] = olc_temp
 
         try:
             with mongo_util.pymongo_client(self.sdkmr.config["mongo-logs-collection"]):
                 mongo_util.update_one(log, str(log.get("_id")))
         except Exception as e:
             self.sdkmr.logger.error(e)
+            return olc
 
         return log["stored_line_count"]
 
