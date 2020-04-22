@@ -2,7 +2,7 @@ import time
 from enum import Enum
 from typing import Dict
 
-from lib.execution_engine2.db.models.models import JobLog as JL, LogLines, JobLog
+from lib.execution_engine2.db.models.models import JobLog as JLModel, LogLines
 from lib.execution_engine2.exceptions import RecordNotFoundException
 
 
@@ -18,14 +18,14 @@ class JobLog:
 
     @staticmethod
     def _create_new_log(pk):
-        jl = JL()
+        jl = JLModel()
         jl.primary_key = pk
         jl.original_line_count = 0
         jl.stored_line_count = 0
         jl.lines = []
         return jl
 
-    def _add_job_logs_helper(self, ee2_log: JobLog, log_lines: list):
+    def _add_job_logs_helper(self, ee2_log: JLModel, log_lines: list):
         """
         :param ee2_log: The mongo ee2_log to operate on
         :param log_lines: The lines to add to this log
@@ -98,7 +98,8 @@ class JobLog:
                 mongo_util.update_one(log, str(log.get("_id")))
         except Exception as e:
             self.sdkmr.logger.error(e)
-            log = self._add_job_logs_helper({"line": f"{e}", "is_error": 1})
+            ll = [{"line": f"{e}", "is_error": 1}]
+            log = self._add_job_logs_helper(ee2_log=log, log_lines=ll)
             olc = mongo_util.update_one(log, str(log.get("_id")))
             return olc
 
