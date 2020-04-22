@@ -12,7 +12,7 @@ class JobPermissions(Enum):
     NONE = "n"
 
 
-class JobLog:
+class EE2Logs:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr
 
