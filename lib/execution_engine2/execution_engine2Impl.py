@@ -95,7 +95,7 @@ class execution_engine2:
             "executable",
             "docker_timeout",
             "initialdir",
-            "transfer_input_files",
+            "ref_data_base"
         ]
 
         returnVal = {key: self.config.get(key) for key in public_keys}

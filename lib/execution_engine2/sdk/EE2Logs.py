@@ -2,7 +2,7 @@ import time
 from enum import Enum
 from typing import Dict
 
-from lib.execution_engine2.db.models.models import JobLog as JL, LogLines
+from lib.execution_engine2.db.models.models import JobLog as JL, LogLines, JobLog
 from lib.execution_engine2.exceptions import RecordNotFoundException
 
 
@@ -25,7 +25,35 @@ class JobLog:
         jl.lines = []
         return jl
 
-    # @allow_job_write
+    def _add_job_logs_helper(self, ee2_log: JobLog, log_lines: list):
+        """
+        :param ee2_log: The mongo ee2_log to operate on
+        :param log_lines: The lines to add to this log
+        :return:
+        """
+        original_line_count = ee2_log.get("original_line_count")
+
+        for input_line in log_lines:
+            original_line_count += 1
+            ll = LogLines()
+            ll.error = int(input_line.get("is_error", 0)) == 1
+            ll.linepos = original_line_count
+
+            ts = input_line.get("ts")
+            if ts is not None:
+                ts = self.sdkmr.check_and_convert_time(ts, assign_default_time=True)
+            ll.ts = ts
+
+            ll.line = input_line.get("line")
+            ll.validate()
+            ee2_log["lines"].append(ll.to_mongo().to_dict())
+
+        ee2_log["updated"] = time.time()
+        ee2_log["original_line_count"] = original_line_count
+        ee2_log["stored_line_count"] = original_line_count
+
+        return ee2_log
+
     def add_job_logs(self, job_id, log_lines, as_admin=False):
         """
         #Authorization Required : Ability to read and write to the workspace
@@ -57,36 +85,21 @@ class JobLog:
         try:
             log = mongo_util.get_job_log_pymongo(job_id)
         except RecordNotFoundException:
+            # What really should happen is the log is created and then SAVED, and then
+            # Retrieved again, and then we should use native log line append to the record
+            # INstead of updating the entire record.. And then update the line positions and line counts
+            # upon successfull appending of ALL logs
             log = self._create_new_log(pk=job_id).to_mongo().to_dict()
 
-        olc = log.get("original_line_count")
-        olc_temp = olc
-
-        for input_line in log_lines:
-            olc_temp += 1
-            ll = LogLines()
-            ll.error = int(input_line.get("is_error", 0)) == 1
-            ll.linepos = olc_temp
-            ts = input_line.get("ts")
-            # TODO Maybe use strpos for efficiency?
-            if ts is not None:
-                ts = self.sdkmr.check_and_convert_time(ts, assign_default_time=True)
-
-            ll.ts = ts
-
-            ll.line = input_line.get("line")
-            ll.validate()
-            log["lines"].append(ll.to_mongo().to_dict())
-
-        log["updated"] = time.time()
-        log["original_line_count"] = olc_temp
-        log["stored_line_count"] = olc_temp
+        log = self._add_job_logs_helper(ee2_log=log, log_lines=log_lines)
 
         try:
             with mongo_util.pymongo_client(self.sdkmr.config["mongo-logs-collection"]):
                 mongo_util.update_one(log, str(log.get("_id")))
         except Exception as e:
             self.sdkmr.logger.error(e)
+            log = self._add_job_logs_helper({"line": f"{e}", "is_error": 1})
+            olc = mongo_util.update_one(log, str(log.get("_id")))
             return olc
 
         return log["stored_line_count"]
