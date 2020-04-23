@@ -98,6 +98,7 @@ class Condor(Scheduler):
             "CONDOR_ID": "$(Cluster).$(Process)",
             "PYTHON_EXECUTABLE": self.python_executable,
             "DEBUG_MODE": str(dm),
+            "PARENT_JOB_ID": params.get("parent_job_id", ""),
         }
 
         environment = ""
