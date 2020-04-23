@@ -25,11 +25,17 @@ class SlackClient:
         self.client.chat_postMessage(channel=self.channel, text=message)
 
     def ee2_reaper_success(
-        self, job_id, calculated_hold_reason, hold_reason_code, hold_reason
+        self,
+        job_id,
+        batch_name,
+        calculated_hold_reason,
+        status,
+        hold_reason_code,
+        hold_reason,
     ):
         if not calculated_hold_reason:
             calculated_hold_reason = "Unknown"
-        message = f"Job {job_id} was successfully marked as error. It probably died because of {calculated_hold_reason} ({hold_reason} {hold_reason_code}"
+        message = f"Job {job_id} {batch_name } was successfully marked as error (status == {status}). It probably died because of {calculated_hold_reason} ({hold_reason} {hold_reason_code}"
         self.client.chat_postMessage(channel=self.channel, text=message)
 
     def run_job_message(self, job_id, scheduler_id, username):
