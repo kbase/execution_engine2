@@ -34,7 +34,7 @@ from tests_for_db.mongo_test_helper import MongoTestHelper
 logging.basicConfig(level=logging.INFO)
 bootstrap()
 
-from lib.execution_engine2.sdk.EE2Runjob import RunJob
+from lib.execution_engine2.sdk.EE2Runjob import EE2RunJob
 
 
 class ee2_SDKMethodRunner_test(unittest.TestCase):
@@ -199,7 +199,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         # runner.get_runjob = MagicMock(return_value="git_commit_goes_here")
 
         runner.get_condor = MagicMock(return_value=condor_mock)
-        fixed_rj = RunJob(runner)
+        fixed_rj = EE2RunJob(runner)
         fixed_rj._get_module_git_commit = MagicMock(return_value="hash_goes_here")
         fixed_rj.sdkmr.catalog_utils.list_client_group_configs = MagicMock(
             return_value="cg goes her"

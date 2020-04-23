@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 
 
-class RunJob:
+class EE2RunJob:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr  # type: SDKMethodRunner
         self.override_clientgroup = os.environ.get("OVERRIDE_CLIENT_GROUP", None)

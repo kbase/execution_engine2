@@ -117,14 +117,14 @@ class SDKMethodRunner:
             self._ee2_status_range = EE2StatusRange.JobStatusRange(self)
         return self._ee2_status_range
 
-    def get_job_logs(self) -> EE2Logs.JobLog:
+    def get_job_logs(self) -> EE2Logs.EE2Logs:
         if self._ee2_logs is None:
-            self._ee2_logs = EE2Logs.JobLog(self)
+            self._ee2_logs = EE2Logs.EE2Logs(self)
         return self._ee2_logs
 
-    def get_runjob(self) -> EE2Runjob.RunJob:
+    def get_runjob(self) -> EE2Runjob.EE2RunJob:
         if self._ee2_runjob is None:
-            self._ee2_runjob = EE2Runjob.RunJob(self)
+            self._ee2_runjob = EE2Runjob.EE2RunJob(self)
         return self._ee2_runjob
 
     def get_jobs_status(self) -> EE2Status.JobsStatus:
