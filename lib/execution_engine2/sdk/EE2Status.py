@@ -54,10 +54,12 @@ class JobsStatus:
 
         j = self.sdkmr.get_mongo_util().get_job(job_id=batch_name)  # type: Job
         log_line = {
-            "line": "Job was terminated due to an error. Please resubmit.",
+            "line": "Job was terminated by automation due to an unexpected error. Please resubmit.",
             "is_error": True,
         }
-        self.sdkmr.get_job_logs().add_job_logs(job_id=batch_name, log_lines=[log_line])
+        self.sdkmr.get_job_logs().add_job_logs(
+            job_id=batch_name, log_lines=[log_line], as_admin=True
+        )
         # to mongo to dict?
         # There's probably a better way and a return type, but not really sure what I need yet
         return json.loads(json.dumps(j.to_mongo().to_dict(), default=str))
