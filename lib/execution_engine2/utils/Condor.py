@@ -248,6 +248,7 @@ class Condor(Scheduler):
                 key, value = item.split("=")
                 requirements.append(f'({key} == "{value}")')
         sub["requirements"] += " && ".join(requirements)
+
         return sub
 
     def _add_resources_and_special_attributes(
@@ -267,6 +268,7 @@ class Condor(Scheduler):
         if concierge_params:
             sub = self._modify_with_concierge(sub, concierge_params)
             client_group = concierge_params.client_group
+        sub["+AccountingGroup"] = f'"{sub["+AccountingGroup"]}"'
 
         sub["environment"] = self.setup_environment_vars(
             params, client_group=client_group
@@ -359,8 +361,12 @@ class Condor(Scheduler):
         disk_keys = ["RemoteUserCpu", "DiskUsage_RAW", "DiskUsage"]
         cpu_keys = ["CpusUsage", "CumulativeRemoteSysCpu", "CumulativeRemoteUserCpu"]
         memory_keys = ["ResidentSetSize_RAW", "ResidentSetSize"]
+
         resource_keys = disk_keys + cpu_keys + memory_keys
         held_job_keys = ["HoldReason", "HoldReasonCode"]
+
+        # Add lastRemote host, remoteHOst
+        # Add timestamps
 
         extracted_resources = dict()
         for key in resource_keys:
