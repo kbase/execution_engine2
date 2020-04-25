@@ -28,18 +28,19 @@ class JobStatusRange:
         :return:
         """
         stats = {}
-        keys = ["client_group", "user", "app_id", "method", "wsid", "status"]
+        keys = ["clientgroup", "user", "app_id", "method", "wsid", "status"]
         for key in keys:
             stats[key] = Counter()
 
         for job in job_states:
             for key in keys:
                 attribute = job.get(key)
+                job_input = job.get("job_input", {})
+                requirements = job_input.get("requirements", {})
                 if attribute is None:
-                    attribute = job.get("job_input", {}).get(key)
+                    attribute = job_input.get(key)
                 if attribute is None:
-                    attribute = job.get("requirements", {}).get(key)
-
+                    attribute = requirements.get(key)
                 stats[key][attribute] += 1
         for key in keys:
             stats[key] = dict(stats[key])

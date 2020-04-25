@@ -483,6 +483,7 @@
 
         /*
             Results of check_jobs_date_range
+            TODO : DOCUMENT THE RETURN OF STATS mapping
         */
         typedef structure {
             mapping<job_id, JobState> jobs;

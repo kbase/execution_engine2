@@ -5,7 +5,10 @@ HOME=$(pwd)
 export HOME
 
 debug_dir="debug"
+runner_logs_dir="runner_logs"
 mkdir ${debug_dir}
+mkdir ${runner_logs_dir}
+
 env >${debug_dir}/envf
 {
   echo "export CLIENTGROUP=$CLIENTGROUP "
@@ -29,9 +32,9 @@ export KBASE_ENDPOINT
 tar -xvf JobRunner.tgz && cd JobRunner && cp scripts/jobrunner.py . && chmod +x jobrunner.py
 
 cp scripts/monitor_jobrunner_logs.py . && chmod +x monitor_jobrunner_logs.py
-echo "$PYTHON_EXECUTABLE ./jobrunner.py ${JOB_ID} ${EE2_ENDPOINT}"  >${debug_dir}/cmd
+echo "$PYTHON_EXECUTABLE ./jobrunner.py ${JOB_ID} ${EE2_ENDPOINT}" >${debug_dir}/cmd
 
-${PYTHON_EXECUTABLE} ./jobrunner.py "${JOB_ID}" "${EE2_ENDPOINT}" >jobrunner.out 2>jobrunner.err &
+${PYTHON_EXECUTABLE} ./jobrunner.py "${JOB_ID}" "${EE2_ENDPOINT}" >"${runner_logs_dir}/${JOB_ID}".out 2>"${runner_logs_dir}/${JOB_ID}".err &
 pid=$!
 
 echo "$PYTHON_EXECUTABLE ./monitor_jobrunner_logs.py ${JOB_ID} ${EE2_ENDPOINT} ${pid}" >${debug_dir}/cmd_log
@@ -41,9 +44,8 @@ trap '{ kill $pid }' SIGTERM
 wait ${pid}
 EXIT_CODE=$?
 
-LOG_DIR=../../../logs/${JOB_ID}
+LOG_DIR="../../../logs/${JOB_ID}"
 mkdir -p "${LOG_DIR}"
-mv jobrunner.out "${LOG_DIR}/jobrunner.out"
-mv jobrunner.err "${LOG_DIR}/jobrunner.err"
+mv "${runner_logs_dir}/*" "${LOG_DIR}/"
 
 exit ${EXIT_CODE}

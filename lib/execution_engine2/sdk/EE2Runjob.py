@@ -4,10 +4,10 @@ All functions related to running a job, and starting a job, including the initia
 the logic to retrieve info needed by the runnner to start the job
 
 """
+import os
 import time
 from enum import Enum
-from typing import Optional, Dict
-import os
+from typing import Optional, Dict, NamedTuple
 
 from lib.execution_engine2.db.models.models import (
     Job,
@@ -15,6 +15,7 @@ from lib.execution_engine2.db.models.models import (
     Meta,
     JobRequirements,
     Status,
+    ErrorCode,
 )
 from lib.execution_engine2.sdk.EE2Constants import ConciergeParams
 from lib.execution_engine2.utils.CondorTuples import CondorResources
@@ -25,6 +26,11 @@ class JobPermissions(Enum):
     READ = "r"
     WRITE = "w"
     NONE = "n"
+
+
+class PreparedJobParams(NamedTuple):
+    params: dict
+    job_id: str
 
 
 from typing import TYPE_CHECKING
@@ -137,18 +143,39 @@ class EE2RunJob:
                     f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
                 )
 
-    def _run(self, params, concierge_params):
+    def _finish_created_job(
+        self, job_id, exception, error_code=None, error_message=None
+    ):
+        """
+        :param job_id:
+        :param exception:
+        :param error_code:
+        :param error_message:
+        :return:
+        """
+        if error_message is None:
+            error_message = f"Cannot submit to condor {exception}"
+        if error_code is None:
+            error_code = ErrorCode.job_crashed.value
+
+        # TODO Better Error Parameter? A Dictionary?
+        self.sdkmr.finish_job(
+            job_id=job_id,
+            error_message=error_message,
+            error_code=error_code,
+            error=f"{exception}",
+        )
+
+    def _prepare_to_run(self, params, concierge_params) -> PreparedJobParams:
         # perform sanity checks before creating job
         self._check_ws_objects(source_objects=params.get("source_ws_objects"))
         method = params.get("method")
         # Normalize multiple formats into one format (csv vs json)
         normalized_resources = self.sdkmr.catalog_utils.get_normalized_resources(method)
         # These are for saving into job inputs. Maybe its best to pass this into condor as well?
-        # TODO Validate MB/GB from both config and catalog.
         extracted_resources = self.sdkmr.get_condor().extract_resources(
             cgrr=normalized_resources
         )  # type: CondorResources
-
         # insert initial job document into db
         job_id = self._init_job_rec(
             self.sdkmr.user_id, params, extracted_resources, concierge_params
@@ -165,6 +192,15 @@ class EE2RunJob:
             f"User {self.sdkmr.user_id} attempting to run job {method} {params}"
         )
 
+        return PreparedJobParams(params=params, job_id=job_id)
+
+    def _run(self, params, concierge_params):
+        prepared = self._prepare_to_run(
+            params=params, concierge_params=concierge_params
+        )
+        params = prepared.params
+        job_id = prepared.job_id
+
         try:
             submission_info = self.sdkmr.get_condor().run_job(
                 params=params, concierge_params=concierge_params
@@ -172,18 +208,19 @@ class EE2RunJob:
             condor_job_id = submission_info.clusterid
             self.sdkmr.logger.debug(f"Submitted job id and got '{condor_job_id}'")
         except Exception as e:
-            ## delete job from database? Or mark it to a state it will never run?
             self.sdkmr.logger.error(e)
+            self._finish_created_job(job_id=job_id, exception=e)
             raise e
 
         if submission_info.error is not None and isinstance(
             submission_info.error, Exception
         ):
+            self._finish_created_job(exception=submission_info.error, job_id=job_id)
             raise submission_info.error
         if condor_job_id is None:
-            raise RuntimeError(
-                "Condor job not ran, and error not found. Something went wrong"
-            )
+            error_msg = "Condor job not ran, and error not found. Something went wrong"
+            self._finish_created_job(job_id=job_id, exception=RuntimeError(error_msg))
+            raise RuntimeError(error_msg)
 
         self.sdkmr.logger.debug(
             f"Attempting to update job to queued  {job_id} {condor_job_id} {submission_info}"

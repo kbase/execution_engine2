@@ -119,6 +119,7 @@ class Condor(Scheduler):
 
     def extract_resources(self, cgrr: Dict[str, str]) -> CondorResources:
         """
+        # TODO Validate MB/GB from both config and catalog.
         Checks to see if request_cpus/memory/disk is available
         If not, it sets them based on defaults from the config
         :param cgrr:
@@ -201,6 +202,9 @@ class Condor(Scheduler):
         sub["MaxJobRetirementTime"] = "43200"
         # Remove jobs running longer than 7 days
         sub["Periodic_Remove"] = "( RemoteWallClockTime > 604800 )"
+        sub["log"] = "$(Cluster).$(Process).log"
+        sub["transfer_output_files"] = "runner_logs"
+
         sub["When_To_Transfer_Output"] = "ON_EXIT"
         sub["getenv"] = "false"
         return sub

@@ -186,6 +186,7 @@ class ErrorCode(Enum):
     job_over_timelimit = 3
     job_missing_output = 4
     token_expired = 5
+    condor_submit_issue = 6
 
 
 class Error(EmbeddedDocument):

@@ -6,6 +6,7 @@ from typing import Dict
 
 from bson import ObjectId
 
+from execution_engine2.exceptions import InvalidStatusTransitionException
 from lib.execution_engine2.authorization.authstrategy import can_read_jobs
 from lib.execution_engine2.db.models.models import (
     Job,
@@ -35,32 +36,35 @@ class JobsStatus:
 
     def handle_held_job(self, cluster_id, as_admin):
         """
-        #TODO Let normal users use this? Only automation should...
+        If the job is held, attempt to mark it as an error
+        However, if the job finished OK, but then something bad happened with the scheduler,
+        leave the job alone
+        #TODO Only Admin Users can call this, but only automation really should
         #TODO Reduce number of db calls?
         #TODO Make error code a param?
         :param cluster_id:
         :return:
         """
-        batch_name = self.sdkmr.get_mongo_util().get_job_batch_name(
-            cluster_id=cluster_id
-        )
+        job_id = self.sdkmr.get_mongo_util().get_job_batch_name(cluster_id=cluster_id)
+        j = self.sdkmr.get_mongo_util().get_job(job_id=job_id)  # type: Job
 
-        self.finish_job(
-            job_id=batch_name,
-            error_message="Job was held",
-            error_code=ErrorCode.job_terminated_by_automation.value,
-            as_admin=as_admin,
-        )
-
-        j = self.sdkmr.get_mongo_util().get_job(job_id=batch_name)  # type: Job
-        log_line = {
-            "line": "Job was terminated by automation due to an unexpected error. Please resubmit.",
-            "is_error": True,
-        }
-        self.sdkmr.get_job_logs().add_job_logs(
-            job_id=batch_name, log_lines=[log_line], as_admin=True
-        )
-        # to mongo to dict?
+        try:
+            self.finish_job(
+                job_id=job_id,
+                error_message="Job was held",
+                error_code=ErrorCode.job_terminated_by_automation.value,
+                as_admin=as_admin,
+            )
+            log_line = {
+                "line": "Job was terminated by automation due to an unexpected error. Please resubmit.",
+                "is_error": True,
+            }
+            self.sdkmr.get_job_logs().add_job_logs(
+                job_id=job_id, log_lines=[log_line], as_admin=True
+            )
+        except InvalidStatusTransitionException:
+            # Just return the record but don't update it
+            pass
         # There's probably a better way and a return type, but not really sure what I need yet
         return json.loads(json.dumps(j.to_mongo().to_dict(), default=str))
 
@@ -250,6 +254,14 @@ class JobsStatus:
         job = self.sdkmr.get_job_with_permission(
             job_id=job_id, requested_job_perm=JobPermissions.WRITE, as_admin=as_admin
         )
+        if job.status in [
+            Status.error.value,
+            Status.completed.value,
+            Status.terminated.value,
+        ]:
+            raise InvalidStatusTransitionException(
+                f"Cannot finish job with a status of {job.status}"
+            )
 
         if error_message:
             self.sdkmr.logger.debug("Finishing job with an error")

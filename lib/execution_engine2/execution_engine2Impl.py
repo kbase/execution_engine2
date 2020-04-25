@@ -23,7 +23,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "3e45b78c80b89a6c08391e62ba63b86c300714a2"
+    GIT_COMMIT_HASH = "10e36ed46efcd1e1199e7b6023810f5d14a2ffcc"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
