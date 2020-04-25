@@ -364,19 +364,27 @@ class Condor(Scheduler):
 
         disk_keys = ["RemoteUserCpu", "DiskUsage_RAW", "DiskUsage"]
         cpu_keys = ["CpusUsage", "CumulativeRemoteSysCpu", "CumulativeRemoteUserCpu"]
-        memory_keys = ["ResidentSetSize_RAW", "ResidentSetSize"]
+        memory_keys = ["ResidentSetSize_RAW", "ResidentSetSize", "ImageSize_RAW"]
 
         resource_keys = disk_keys + cpu_keys + memory_keys
         held_job_keys = ["HoldReason", "HoldReasonCode"]
-
-        # Add lastRemote host, remoteHOst
-        # Add timestamps
+        machine_keys = ["RemoteHost", "LastRemoteHost"]
+        time_keys = [
+            "CommittedTime",
+            "CommittedSuspensionTime",
+            "CompletionDate",
+            "CumulativeSuspensionTime",
+            "CumulativeTransferTime",
+            "JobCurrentFinishTransferInputDate",
+            "JobCurrentFinishTransferOutputDate",
+            "JobCurrentStartDate",
+            "JobCurrentStartExecutingDate",
+            "JobCurrentStartTransferInputDate",
+            "JobCurrentStartTransferOutputDate",
+        ]
 
         extracted_resources = dict()
-        for key in resource_keys:
-            extracted_resources[key] = job_info.get(key)
-
-        for key in held_job_keys:
+        for key in resource_keys + held_job_keys + machine_keys + time_keys:
             extracted_resources[key] = job_info.get(key)
 
         return extracted_resources
