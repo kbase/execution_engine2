@@ -5,9 +5,10 @@ HOME=$(pwd)
 export HOME
 
 debug_dir="debug"
-runner_logs_dir="runner_logs"
+runner_logs="runner_logs"
 mkdir ${debug_dir}
-mkdir ${runner_logs_dir}
+mkdir ${runner_logs}
+runner_logs=$(readlink -f runner_logs)
 
 env >${debug_dir}/envf
 {
@@ -29,23 +30,22 @@ EE2_ENDPOINT=$2
 KBASE_ENDPOINT=$(EE2_ENDPOINT)
 export KBASE_ENDPOINT
 
-tar -xvf JobRunner.tgz && cd JobRunner && cp scripts/jobrunner.py . && chmod +x jobrunner.py
+tar -xf JobRunner.tgz && cd JobRunner && cp scripts/jobrunner.py . && chmod +x jobrunner.py
 
-cp scripts/monitor_jobrunner_logs.py . && chmod +x monitor_jobrunner_logs.py
-echo "$PYTHON_EXECUTABLE ./jobrunner.py ${JOB_ID} ${EE2_ENDPOINT}" >${debug_dir}/cmd
-
-${PYTHON_EXECUTABLE} ./jobrunner.py "${JOB_ID}" "${EE2_ENDPOINT}" >"${runner_logs_dir}/${JOB_ID}".out 2>"${runner_logs_dir}/${JOB_ID}".err &
+${PYTHON_EXECUTABLE} ./jobrunner.py "${JOB_ID}" "${EE2_ENDPOINT}" &
 pid=$!
 
-echo "$PYTHON_EXECUTABLE ./monitor_jobrunner_logs.py ${JOB_ID} ${EE2_ENDPOINT} ${pid}" >${debug_dir}/cmd_log
+#echo "$PYTHON_EXECUTABLE ./jobrunner.py ${JOB_ID} ${EE2_ENDPOINT}" >${debug_dir}/cmd
+#echo "$PYTHON_EXECUTABLE ./monitor_jobrunner_logs.py ${JOB_ID} ${EE2_ENDPOINT} ${pid}" >${debug_dir}/cmd_log
 #$PYTHON_EXECUTABLE ./monitor_jobrunner_logs.py ${JOB_ID} ${EE2_ENDPOINT} ${pid}
 
 trap '{ kill $pid }' SIGTERM
 wait ${pid}
 EXIT_CODE=$?
 
-LOG_DIR="../../../logs/${JOB_ID}"
-mkdir -p "${LOG_DIR}"
-mv "${runner_logs_dir}/*" "${LOG_DIR}/"
-
+# Deprecated these in favor of moving them back to ee2 container.
+#LOG_DIR="../../../logs/${JOB_ID}"
+#mkdir -p "${LOG_DIR}"
+#cp "${runner_logs}/${JOB_ID}".out "${LOG_DIR}/".
+#cp "${runner_logs}/${JOB_ID}".err "${LOG_DIR}/"
 exit ${EXIT_CODE}

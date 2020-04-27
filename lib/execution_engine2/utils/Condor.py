@@ -191,7 +191,7 @@ class Condor(Scheduler):
         return requirements_statement
 
     @staticmethod
-    def _add_hardcoded_attributes(sub):
+    def _add_hardcoded_attributes(sub, job_id):
         sub["universe"] = "vanilla"
         sub["ShouldTransferFiles"] = "YES"
         # If a job exits incorrectly put it on hold
@@ -202,9 +202,17 @@ class Condor(Scheduler):
         sub["MaxJobRetirementTime"] = "43200"
         # Remove jobs running longer than 7 days
         sub["Periodic_Remove"] = "( RemoteWallClockTime > 604800 )"
-        sub["log"] = "$(Cluster).$(Process).log"
-        sub["transfer_output_files"] = "runner_logs"
-
+        sub["log"] = "runner_logs/$(Cluster).$(Process).log"
+        err_file = f"{job_id}.err"
+        out_file = f"{job_id}.out"
+        err_path = f"runner_logs/{err_file}"
+        out_path = f"runner_logs/{out_file}"
+        err_path_remap = f"cluster_logs/{err_file}"
+        out_path_remap = f"cluster_logs/{out_file}"
+        sub["error"] = err_path
+        sub["output"] = out_path
+        remap = f'"{err_path}={err_path_remap};{out_path}={out_path_remap}"'
+        sub["transfer_output_remaps"] = remap
         sub["When_To_Transfer_Output"] = "ON_EXIT"
         sub["getenv"] = "false"
         return sub
@@ -287,7 +295,7 @@ class Condor(Scheduler):
         self._check_for_missing_runjob_params(params)
 
         sub = self._add_resources_and_special_attributes(params, concierge_params)
-        sub = self._add_hardcoded_attributes(sub)
+        sub = self._add_hardcoded_attributes(sub=sub, job_id=params["job_id"])
         sub = self._add_configurable_attributes(sub)
         # Ensure all values are a string
         for item in sub.keys():
