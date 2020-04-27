@@ -62,6 +62,8 @@ class JobsStatus:
             self.sdkmr.get_job_logs().add_job_logs(
                 job_id=job_id, log_lines=[log_line], as_admin=True
             )
+            j.reload()
+
         except InvalidStatusTransitionException:
             # Just return the record but don't update it
             pass
@@ -321,7 +323,7 @@ class JobsStatus:
             self._send_exec_stats_to_catalog(job_id=job_id)
         self.update_finished_job_with_usage(job_id, as_admin=as_admin)
 
-    def update_finished_job_with_usage(self, job_id, as_admin=None):
+    def update_finished_job_with_usage(self, job_id, as_admin=None) -> Dict:
         """
         # TODO Does this need a kafka message?
         :param job_id:
@@ -345,6 +347,7 @@ class JobsStatus:
         self.sdkmr.get_mongo_util().update_job_resources(
             job_id=job_id, resources=resources
         )
+        return resources
 
     def check_job(
         self, job_id, check_permission=True, exclude_fields=None, as_admin=False

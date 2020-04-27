@@ -63,7 +63,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         self.assertEqual(sub["executable"], c.initial_dir + "/" + c.executable)
         self.assertEqual(sub["arguments"], f"{params['job_id']} {c.ee_endpoint}")
         self.assertEqual(sub["universe"], "vanilla")
-        self.assertEqual(sub["+AccountingGroup"], params["user_id"])
+        self.assertEqual(sub["+AccountingGroup"], '"' + params["user_id"] + '"')
         self.assertEqual(sub["Concurrency_Limits"], params["user_id"])
         self.assertEqual(sub["+Owner"], '"condor_pool"')
         self.assertEqual(sub["ShouldTransferFiles"], "YES")
@@ -198,7 +198,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         sub = c.create_submit(params=params, concierge_params=cp)
         # Concurrency limits removed
         self.assertNotIn("Concurrency_Limits", sub)
-        self.assertEqual(sub["+AccountingGroup"], params["user_id"])
+        self.assertEqual(sub["+AccountingGroup"], '"' + params["user_id"] + '"')
         self.assertEqual(sub[Condor.REQUEST_CPUS], str(cp.request_cpus))
         self.assertEqual(sub[Condor.REQUEST_MEMORY], str(cp.request_memory))
         self.assertEqual(sub[Condor.REQUEST_DISK], str(cp.request_disk))

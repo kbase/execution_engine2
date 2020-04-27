@@ -104,7 +104,8 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         )
 
         job_record = runner.handle_held_job(cluster_id=check_job.get("scheduler_id"))
-        self.assertEqual(job_record.get("condor_job_ads"), self.fake_used_resources)
+        print("Records are", job_record.get("condor_job_ads"))
+        self.assertEqual(self.fake_used_resources, job_record.get("condor_job_ads"))
 
     def test_update_job_status(self):
         runner = self.getRunner()
