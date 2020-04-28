@@ -8,7 +8,7 @@ DEFAULT_TOPIC = "ee2"
 
 def _delivery_report(err, msg):
     if err is not None:
-        msg = "Message delivery failed:", err
+        msg = f"Message delivery failed: {err} ({msg})"
         print(msg)
 
 
