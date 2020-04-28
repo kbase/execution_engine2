@@ -6,8 +6,9 @@ RUN apt-get update
 # to run your App.  For instance, you could place an apt-get update or
 # install line here, a git checkout to download code, or run any other
 # installation scripts.
-RUN apt-get install -y gcc wget vim tmpreaper
+RUN apt-get install -y gcc wget vim 
 RUN mkdir -p /etc/apt/sources.list.d
+RUN apt-get update -y && apt-get install -y tmpreaper
 
 RUN DEBIAN_FRONTEND=noninteractive wget -qO - https://research.cs.wisc.edu/htcondor/debian/HTCondor-Release.gpg.key | apt-key add - \
     && echo "deb http://research.cs.wisc.edu/htcondor/debian/8.8/stretch stretch contrib" >> /etc/apt/sources.list \
