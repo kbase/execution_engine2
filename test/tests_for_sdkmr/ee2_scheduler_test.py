@@ -208,7 +208,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         cp.account_group = "LeCat"
         sub2 = c.create_submit(params=params, concierge_params=cp)
         self.assertEqual(sub2["+KB_CLIENTGROUP"], f'"{str(cp.client_group)}"')
-        self.assertEqual(sub2["+AccountingGroup"], cp.account_group)
+        self.assertEqual(sub2["+AccountingGroup"], '"' + cp.account_group + '"')
         self.assertNotIn("Concurrency_Limits", sub2)
 
         # submission_info = c.run_submit(sub2)
