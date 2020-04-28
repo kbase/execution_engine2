@@ -17,6 +17,7 @@ export PYTHONPATH=$lib_dir:$wsgi_dir:$PYTHONPATH
 bash /kb/module/scripts/purge_held_jobs.sh >> purge.log 2>&1 &
 
 # Config the tmp reaper
+sed -i "s|SHOWWARNING=true|SHOWWARNING=false|" /etc/tmpreaper.conf
 sed -i "s|TMPREAPER_DIRS='/tmp/.'|TMPREAPER_DIRS='/condor_shared/runner_logs /condor_shared/cluster_logs'|" /etc/tmpreaper.conf
 
 
