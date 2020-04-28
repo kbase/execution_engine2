@@ -7,6 +7,7 @@ RUN apt-get update
 # install line here, a git checkout to download code, or run any other
 # installation scripts.
 RUN apt-get install -y gcc wget vim tmpreaper
+RUN mkdir -p /etc/apt/sources.list.d
 
 RUN DEBIAN_FRONTEND=noninteractive wget -qO - https://research.cs.wisc.edu/htcondor/debian/HTCondor-Release.gpg.key | apt-key add - \
     && echo "deb http://research.cs.wisc.edu/htcondor/debian/8.8/stretch stretch contrib" >> /etc/apt/sources.list \
@@ -51,7 +52,6 @@ RUN make all
 
 WORKDIR /kb/module/scripts
 RUN chmod +x download_runner.sh && ./download_runner.sh
-# RUN chmod +x download_condorflask.sh && ./download_condorflask.sh
 
 WORKDIR /kb/module/
 ENV KB_DEPLOYMENT_CONFIG=/kb/module/deploy.cfg
