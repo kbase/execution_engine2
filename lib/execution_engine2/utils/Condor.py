@@ -98,6 +98,7 @@ class Condor(Scheduler):
             "CONDOR_ID": "$(Cluster).$(Process)",
             "PYTHON_EXECUTABLE": self.python_executable,
             "DEBUG_MODE": str(dm),
+            "PARENT_JOB_ID": params.get("parent_job_id", ""),
         }
 
         environment = ""
@@ -118,6 +119,7 @@ class Condor(Scheduler):
 
     def extract_resources(self, cgrr: Dict[str, str]) -> CondorResources:
         """
+        # TODO Validate MB/GB from both config and catalog.
         Checks to see if request_cpus/memory/disk is available
         If not, it sets them based on defaults from the config
         :param cgrr:
@@ -189,7 +191,7 @@ class Condor(Scheduler):
         return requirements_statement
 
     @staticmethod
-    def _add_hardcoded_attributes(sub):
+    def _add_hardcoded_attributes(sub, job_id):
         sub["universe"] = "vanilla"
         sub["ShouldTransferFiles"] = "YES"
         # If a job exits incorrectly put it on hold
@@ -200,6 +202,17 @@ class Condor(Scheduler):
         sub["MaxJobRetirementTime"] = "43200"
         # Remove jobs running longer than 7 days
         sub["Periodic_Remove"] = "( RemoteWallClockTime > 604800 )"
+        sub["log"] = "runner_logs/$(Cluster).$(Process).log"
+        err_file = f"{job_id}.err"
+        out_file = f"{job_id}.out"
+        err_path = f"runner_logs/{err_file}"
+        out_path = f"runner_logs/{out_file}"
+        err_path_remap = f"cluster_logs/{err_file}"
+        out_path_remap = f"cluster_logs/{out_file}"
+        sub["error"] = err_path
+        sub["output"] = out_path
+        remap = f'"{err_path}={err_path_remap};{out_path}={out_path_remap}"'
+        sub["transfer_output_remaps"] = remap
         sub["When_To_Transfer_Output"] = "ON_EXIT"
         sub["getenv"] = "false"
         return sub
@@ -247,6 +260,7 @@ class Condor(Scheduler):
                 key, value = item.split("=")
                 requirements.append(f'({key} == "{value}")')
         sub["requirements"] += " && ".join(requirements)
+
         return sub
 
     def _add_resources_and_special_attributes(
@@ -266,6 +280,7 @@ class Condor(Scheduler):
         if concierge_params:
             sub = self._modify_with_concierge(sub, concierge_params)
             client_group = concierge_params.client_group
+        sub["+AccountingGroup"] = f'"{sub["+AccountingGroup"]}"'
 
         sub["environment"] = self.setup_environment_vars(
             params, client_group=client_group
@@ -280,7 +295,7 @@ class Condor(Scheduler):
         self._check_for_missing_runjob_params(params)
 
         sub = self._add_resources_and_special_attributes(params, concierge_params)
-        sub = self._add_hardcoded_attributes(sub)
+        sub = self._add_hardcoded_attributes(sub=sub, job_id=params["job_id"])
         sub = self._add_configurable_attributes(sub)
         # Ensure all values are a string
         for item in sub.keys():
@@ -357,15 +372,27 @@ class Condor(Scheduler):
 
         disk_keys = ["RemoteUserCpu", "DiskUsage_RAW", "DiskUsage"]
         cpu_keys = ["CpusUsage", "CumulativeRemoteSysCpu", "CumulativeRemoteUserCpu"]
-        memory_keys = ["ResidentSetSize_RAW", "ResidentSetSize"]
+        memory_keys = ["ResidentSetSize_RAW", "ResidentSetSize", "ImageSize_RAW"]
+
         resource_keys = disk_keys + cpu_keys + memory_keys
         held_job_keys = ["HoldReason", "HoldReasonCode"]
+        machine_keys = ["RemoteHost", "LastRemoteHost"]
+        time_keys = [
+            "CommittedTime",
+            "CommittedSuspensionTime",
+            "CompletionDate",
+            "CumulativeSuspensionTime",
+            "CumulativeTransferTime",
+            "JobCurrentFinishTransferInputDate",
+            "JobCurrentFinishTransferOutputDate",
+            "JobCurrentStartDate",
+            "JobCurrentStartExecutingDate",
+            "JobCurrentStartTransferInputDate",
+            "JobCurrentStartTransferOutputDate",
+        ]
 
         extracted_resources = dict()
-        for key in resource_keys:
-            extracted_resources[key] = job_info.get(key)
-
-        for key in held_job_keys:
+        for key in resource_keys + held_job_keys + machine_keys + time_keys:
             extracted_resources[key] = job_info.get(key)
 
         return extracted_resources

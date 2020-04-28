@@ -1,6 +1,8 @@
+from collections import Counter
 from collections import namedtuple
 from datetime import datetime
 from enum import Enum
+from typing import Dict
 
 from bson import ObjectId
 
@@ -17,6 +19,32 @@ class JobPermissions(Enum):
 class JobStatusRange:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr
+
+    @staticmethod
+    def _create_stats(job_states: Dict) -> Dict:
+        """
+        Create a mapping of various stats to uniqify them and get counts of them
+        :param job_states: Processed Job States
+        :return:
+        """
+        stats = {}
+        keys = ["clientgroup", "user", "app_id", "method", "wsid", "status"]
+        for key in keys:
+            stats[key] = Counter()
+
+        for job in job_states:
+            for key in keys:
+                attribute = job.get(key)
+                job_input = job.get("job_input", {})
+                requirements = job_input.get("requirements", {})
+                if attribute is None:
+                    attribute = job_input.get(key)
+                if attribute is None:
+                    attribute = requirements.get(key)
+                stats[key][attribute] += 1
+        for key in keys:
+            stats[key] = dict(stats[key])
+        return stats
 
     def check_jobs_date_range_for_user(
         self,
@@ -113,6 +141,8 @@ class JobStatusRange:
         for item in job_filter_temp:
             job_filter_temp[item] = str(job_filter_temp[item])
 
+        stats = self._create_stats(job_states)
+
         return {
             "jobs": job_states,
             "count": len(job_states),
@@ -122,6 +152,7 @@ class JobStatusRange:
             "projection": job_projection,
             "limit": limit,
             "sort_order": sort_order,
+            "stats": stats,
         }
 
         # TODO Move to MongoUtils?

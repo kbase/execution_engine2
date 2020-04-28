@@ -51,7 +51,7 @@ RUN make all
 
 WORKDIR /kb/module/scripts
 RUN chmod +x download_runner.sh && ./download_runner.sh
-RUN chmod +x download_condorflask.sh && ./download_condorflask.sh
+# RUN chmod +x download_condorflask.sh && ./download_condorflask.sh
 
 WORKDIR /kb/module/
 ENV KB_DEPLOYMENT_CONFIG=/kb/module/deploy.cfg

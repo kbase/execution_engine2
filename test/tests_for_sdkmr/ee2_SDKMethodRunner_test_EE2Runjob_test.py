@@ -231,3 +231,25 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         job_id = runner.run_job(params=job)
         print(f"Job id is {job_id} ")
+
+    @requests_mock.Mocker()
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    def test_run_job_fail(self, rq_mock, condor_mock):
+        rq_mock.add_matcher(
+            run_job_adapter(
+                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
+            )
+        )
+        runner = self.getRunner()
+
+        job = get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
+        job["method"] = job["job_input"]["app_id"]
+        job["app_id"] = job["job_input"]["app_id"]
+        job["service_ver"] = job["job_input"]["service_ver"]
+
+        si = SubmissionInfo(clusterid="test", submit=job, error=None)
+        condor_mock.run_job = MagicMock(return_value=si)
+        condor_mock.extract_resources = MagicMock(return_value=self.cr)
+
+        with self.assertRaises(expected_exception=RuntimeError):
+            runner.run_job(params=job)

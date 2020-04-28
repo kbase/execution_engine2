@@ -145,6 +145,8 @@ def handle_hold_event(event):
             calculated_hold_reason = calculate_hold_reason(job_record)
             slack_client.ee2_reaper_success(
                 job_id=cluster_id,
+                batch_name=job_record.get("_id"),
+                status=job_record.get("status"),
                 calculated_hold_reason=calculated_hold_reason,
                 hold_reason_code=event["HoldReasonCode"],
                 hold_reason=event["HoldReason"],
@@ -156,7 +158,7 @@ def handle_hold_event(event):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
     event_log_fp = Path("/usr/local/condor/log/condor/event_log")
-    N = 1
+    N = 5
     last_timestamp = (datetime.now() - timedelta(days=N)).timestamp()
     while True:
         # Maybe the job gets put on hold,
