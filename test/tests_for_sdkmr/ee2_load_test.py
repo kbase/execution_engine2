@@ -64,9 +64,12 @@ class ee2_server_load_test(unittest.TestCase):
         # Initialize these clients from None
         runner = copy.deepcopy(self.__class__.method_runner)  # type : SDKMethodRunner
         runner._ee2_status = runner.get_jobs_status()  # type: JobsStatus
-        runner._ee2_status._send_exec_stats_to_catalog = MagicMock(return_val=True)
-        runner._ee2_status.update_finished_job_with_usage = MagicMock(return_val=True)
+        runner._ee2_status._send_exec_stats_to_catalog = MagicMock(return_value=True)
+        runner._ee2_status.update_finished_job_with_usage = MagicMock(return_value=True)
         runner.get_runjob()
+        runner._ee2_runjob._get_module_git_commit = MagicMock(
+            return_value="GitCommithash"
+        )
         runner.get_job_logs()
         runner.get_condor()
         runner.condor = MagicMock(autospec=True)

@@ -101,6 +101,7 @@ class EE2RunJob:
         self.sdkmr.logger.debug(job.job_input.to_mongo().to_dict())
 
         with self.sdkmr.get_mongo_util().mongo_engine_connection():
+            self.sdkmr.logger.debug(job.to_mongo().to_dict())
             job.save()
 
         self.sdkmr.kafka_client.send_kafka_message(
@@ -115,6 +116,7 @@ class EE2RunJob:
         if not service_ver:
             service_ver = "release"
 
+        self.sdkmr.logger.debug(f"Getting commit for {module_name} {service_ver}")
         module_version = self.sdkmr.catalog_utils.catalog.get_module_version(
             {"module_name": module_name, "version": service_ver}
         )
