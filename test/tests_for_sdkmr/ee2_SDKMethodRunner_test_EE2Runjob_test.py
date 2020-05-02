@@ -120,7 +120,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_input.wsid, self.ws_id)
             self.assertEqual(job_input.method, "MEGAHIT.run_megahit")
             self.assertEqual(job_input.app_id, "MEGAHIT/run_megahit")
-            self.assertEqual(job_input.service_ver, "2.2.1")
+            # TODO this is an integration test
+            # self.assertEqual(job_input.service_ver, "2.2.1")
+            self.assertEqual(
+                job_input.service_ver, "048baf3c2b76cb923b3b4c52008ed77dbe20292d"
+            )
+
             self.assertCountEqual(job_input.source_ws_objects, ["a/b/c", "e/d"])
             self.assertEqual(job_input.parent_job_id, "9998")
 

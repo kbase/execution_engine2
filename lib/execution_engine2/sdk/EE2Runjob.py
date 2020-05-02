@@ -61,7 +61,12 @@ class EE2RunJob:
         inputs.wsid = job.wsid
         inputs.method = params.get("method")
         inputs.params = params.get("params")
+
+        params["service_ver"] = self._get_module_git_commit(
+            params.get("method"), params.get("service_ver")
+        )
         inputs.service_ver = params.get("service_ver")
+
         inputs.app_id = params.get("app_id")
         inputs.source_ws_objects = params.get("source_ws_objects")
         inputs.parent_job_id = str(params.get("parent_job_id"))
@@ -96,6 +101,7 @@ class EE2RunJob:
         self.sdkmr.logger.debug(job.job_input.to_mongo().to_dict())
 
         with self.sdkmr.get_mongo_util().mongo_engine_connection():
+            self.sdkmr.logger.debug(job.to_mongo().to_dict())
             job.save()
 
         self.sdkmr.kafka_client.send_kafka_message(
@@ -110,6 +116,7 @@ class EE2RunJob:
         if not service_ver:
             service_ver = "release"
 
+        self.sdkmr.logger.debug(f"Getting commit for {module_name} {service_ver}")
         module_version = self.sdkmr.catalog_utils.catalog.get_module_version(
             {"module_name": module_name, "version": service_ver}
         )
@@ -177,12 +184,11 @@ class EE2RunJob:
             cgrr=normalized_resources
         )  # type: CondorResources
         # insert initial job document into db
+
         job_id = self._init_job_rec(
             self.sdkmr.user_id, params, extracted_resources, concierge_params
         )
-        params["service_ver"] = self._get_module_git_commit(
-            method, params.get("service_ver")
-        )
+
         params["job_id"] = job_id
         params["user_id"] = self.sdkmr.user_id
         params["token"] = self.sdkmr.token

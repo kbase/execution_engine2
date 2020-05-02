@@ -966,7 +966,7 @@ class execution_engine2(object):
     def handle_held_job(self, cluster_id, context=None):
         """
         Handle a held CONDOR job. You probably never want to run this, only the reaper should run it.
-        :param cluster_id: instance of Double
+        :param cluster_id: instance of String
         :returns: instance of type "HeldJob" -> structure: parameter
            "held_job" of unspecified object
         """

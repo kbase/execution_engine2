@@ -133,11 +133,10 @@ class MigrateDatabases:
         return job_input
 
     def save_job(self, job):
-        self.jobs.append(job.to_mongo())
-        if len(self.jobs) > self.threshold:
-            print("INSERTING 1000 ELEMENTS")
-            self.ee2_jobs.insert_many(self.jobs)
-            self.jobs = []
+        try:
+            self.ee2_jobs.insert_one(document=job.to_mongo())
+        except Exception as e:
+            print(e)
 
     def save_remnants(self):
         self.ee2_jobs.insert_many(self.jobs)
@@ -314,7 +313,7 @@ class MigrateDatabases:
 
             self.save_job(job)
             # Save leftover jobs
-        self.save_remnants()
+        # self.save_remnants()
 
         # TODO SAVE up to 5000 in memory and do a bulk insert
         # a = []
