@@ -59,7 +59,7 @@ class FixEE2JobsDatabase:
             running_stamp = True
             finished_stamp = True
             statuses[job.status] += 1
-            if job.status in [Status.error.value, Status.completed]:
+            if job.status in [Status.error.value, Status.completed.value]:
 
                 if job.running is None:
                     # Job is error or complete, should have a running
