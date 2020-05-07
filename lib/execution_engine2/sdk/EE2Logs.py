@@ -13,8 +13,8 @@ class JobPermissions(Enum):
 
 
 class AddLogResult(NamedTuple):
-    success = bool
-    stored_line_count = int
+    success: bool
+    stored_line_count: int
 
 
 class EE2Logs:
@@ -59,7 +59,7 @@ class EE2Logs:
 
         return ee2_log
 
-    def add_job_logs(self, job_id, log_lines, as_admin=False):
+    def add_job_logs(self, job_id, log_lines, as_admin=False) -> AddLogResult:
         """
         #Authorization Required : Ability to read and write to the workspace
         #Admin Authorization Required : Ability to Write to the workspace
