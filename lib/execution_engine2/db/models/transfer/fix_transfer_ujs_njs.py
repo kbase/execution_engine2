@@ -19,11 +19,10 @@ except Exception:
 class FixEE2JobsDatabase:
     """
     Iterate over each record and set
-    * Running to created
     * If status is completed/error, set Finished to Updated
+    * Running to created
     * Terminated jobs are allowed to not have a running timestamp
     * Estimating jobs are allowed to not have a running timestamp
-
     """
 
     def _get_ee2_connection(self):
@@ -63,6 +62,7 @@ class FixEE2JobsDatabase:
             if job.status in [Status.error.value, Status.completed]:
 
                 if job.running is None:
+                    # Job is error or complete, should have a running
                     no_running += 1
                     running_stamp = False
                     new_running = job.id.generation_time.timestamp()
@@ -72,6 +72,7 @@ class FixEE2JobsDatabase:
                     job.running = new_running
 
                 if job.finished is None:
+                    # Job is error or complete, should have had a finished
                     no_finished += 1
                     finished_stamp = False
                     new_finished = job.updated
