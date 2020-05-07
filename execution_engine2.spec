@@ -205,11 +205,20 @@
             int ts;
         } LogLine;
 
+        /*
+            @success Whether or not the add operation was successful
+            @line_number the line number of the last added log
+        */
+        typedef structure {
+            boolean success;
+            int line_number;
+        } AddJobLogsResults;
+
         typedef structure {
             job_id job_id;
             boolean as_admin;
         } AddJobLogsParams;
-        funcdef add_job_logs(AddJobLogsParams params, list<LogLine> lines) returns (int line_number) authentication required;
+        funcdef add_job_logs(AddJobLogsParams params, list<LogLine> lines) returns (AddJobLogsResults results) authentication required;
 
 
 

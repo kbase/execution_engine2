@@ -10,6 +10,7 @@ mkdir ${debug_dir}
 mkdir ${runner_logs}
 runner_logs=$(readlink -f runner_logs)
 
+
 env >${debug_dir}/envf
 {
   echo "export CLIENTGROUP=$CLIENTGROUP "
@@ -35,9 +36,9 @@ tar -xf JobRunner.tgz && cd JobRunner && cp scripts/jobrunner.py . && chmod +x j
 ${PYTHON_EXECUTABLE} ./jobrunner.py "${JOB_ID}" "${EE2_ENDPOINT}" &
 pid=$!
 
-#echo "$PYTHON_EXECUTABLE ./jobrunner.py ${JOB_ID} ${EE2_ENDPOINT}" >${debug_dir}/cmd
-#echo "$PYTHON_EXECUTABLE ./monitor_jobrunner_logs.py ${JOB_ID} ${EE2_ENDPOINT} ${pid}" >${debug_dir}/cmd_log
-#$PYTHON_EXECUTABLE ./monitor_jobrunner_logs.py ${JOB_ID} ${EE2_ENDPOINT} ${pid}
+
+echo "$PYTHON_EXECUTABLE ./monitor_jobrunner_logs.py ${JOB_ID} ${EE2_ENDPOINT} ${pid}" >${debug_dir}/cmd_log
+$PYTHON_EXECUTABLE ./monitor_jobrunner_logs.py ${JOB_ID} ${EE2_ENDPOINT} ${pid}
 
 trap '{ kill $pid }' SIGTERM
 wait ${pid}

@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 #BEGIN_HEADER
 import time
+
 from cachetools import TTLCache
+
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
+
+
 #END_HEADER
 
 
@@ -23,7 +27,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "10e36ed46efcd1e1199e7b6023810f5d14a2ffcc"
+    GIT_COMMIT_HASH = "8131db02cced8767a0fe9072b28580fb53540b02"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -45,7 +49,7 @@ class execution_engine2:
         self.config = config
         self.config["mongo-collection"] = self.MONGO_COLLECTION
         self.config.setdefault("mongo-authmechanism", self.MONGO_AUTHMECHANISM)
-        
+
         self.job_permission_cache = TTLCache(
             maxsize=self.JOB_PERMISSION_CACHE_SIZE,
             ttl=self.JOB_PERMISSION_CACHE_EXPIRE_TIME,
@@ -423,10 +427,13 @@ class execution_engine2:
            timestamp since epoch in milliseconds for the log line (optional)
            @optional ts) -> structure: parameter "line" of String, parameter
            "is_error" of type "boolean" (@range [0,1]), parameter "ts" of Long
-        :returns: instance of Long
+        :returns: instance of type "AddJobLogsResults" (@success Whether or
+           not the add operation was successful @line_number the line number
+           of the last added log) -> structure: parameter "success" of type
+           "boolean" (@range [0,1]), parameter "line_number" of Long
         """
         # ctx is the context object
-        # return variables are: line_number
+        # return variables are: results
         #BEGIN add_job_logs
         mr = SDKMethodRunner(
             self.config,
@@ -435,16 +442,20 @@ class execution_engine2:
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
         )
-        line_number = mr.add_job_logs(job_id=params['job_id'], log_lines=lines,
-                                      as_admin=params.get('as_admin'))
+        add_job_logs = mr.add_job_logs(job_id=params['job_id'], log_lines=lines,
+                                       as_admin=params.get('as_admin'))
+
+        results = {'success': add_job_logs.success,
+                   'line_number': add_job_logs.stored_line_count}
+
         #END add_job_logs
 
         # At some point might do deeper type checking...
-        if not isinstance(line_number, int):
+        if not isinstance(results, dict):
             raise ValueError('Method add_job_logs return value ' +
-                             'line_number is not type int as required.')
+                             'results is not type dict as required.')
         # return the results
-        return [line_number]
+        return [results]
 
     def get_job_logs(self, ctx, params):
         """
