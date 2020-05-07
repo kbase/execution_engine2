@@ -82,11 +82,11 @@ class EE2Logs:
         """
         log = {"stored_line_count": -1}
 
-        try:
-            self.sdkmr.get_job_with_permission(
-                job_id, JobPermissions.WRITE, as_admin=as_admin
-            )
+        self.sdkmr.get_job_with_permission(
+            job_id, JobPermissions.WRITE, as_admin=as_admin
+        )
 
+        try:
             self.sdkmr.logger.debug(f"About to add logs for {job_id}")
             mongo_util = self.sdkmr.get_mongo_util()
             try:
@@ -115,8 +115,6 @@ class EE2Logs:
             return AddLogResult(
                 success=False, stored_line_count=log["stored_line_count"]
             )
-        except PermissionError:
-            raise
         except Exception:
             return AddLogResult(
                 success=False, stored_line_count=log["stored_line_count"]
