@@ -115,6 +115,8 @@ class EE2Logs:
             return AddLogResult(
                 success=False, stored_line_count=log["stored_line_count"]
             )
+        except PermissionError:
+            raise
         except Exception:
             return AddLogResult(
                 success=False, stored_line_count=log["stored_line_count"]
