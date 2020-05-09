@@ -213,7 +213,7 @@ class Condor(Scheduler):
         sub["output"] = out_path
         remap = f'"{err_path}={err_path_remap};{out_path}={out_path_remap}"'
         sub["transfer_output_remaps"] = remap
-        sub["When_To_Transfer_Output"] = "ON_EXIT"
+        sub["When_To_Transfer_Output"] = "ON_EXIT_OR_EVICT"
         sub["getenv"] = "false"
         return sub
 

@@ -28,7 +28,7 @@ ${PYTHON_EXECUTABLE} -V ${debug_dir}/pyversion
 
 JOB_ID=$1
 EE2_ENDPOINT=$2
-KBASE_ENDPOINT=$(EE2_ENDPOINT)
+KBASE_ENDPOINT=$EE2_ENDPOINT
 export KBASE_ENDPOINT
 
 tar -xf JobRunner.tgz && cd JobRunner && cp scripts/jobrunner.py . && chmod +x jobrunner.py
