@@ -1,8 +1,15 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, NamedTuple
 
 KBASE_CONCIERGE_USERNAME = "kbaseconcierge"
 CONCIERGE_CLIENTGROUP = "kbase_concierge"
+
+
+class JobError(NamedTuple):
+    name: str
+    message: str
+    code: int
+    error: str
 
 
 @dataclass()
