@@ -43,6 +43,7 @@ class EE2RunJob:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr  # type: SDKMethodRunner
         self.override_clientgroup = os.environ.get("OVERRIDE_CLIENT_GROUP", None)
+        self.logger = self.sdkmr.logger
 
     def _init_job_rec(
         self,
@@ -98,10 +99,10 @@ class EE2RunJob:
             inputs.requirements = jr
 
         job.job_input = inputs
-        self.sdkmr.logger.debug(job.job_input.to_mongo().to_dict())
+        self.logger.debug(job.job_input.to_mongo().to_dict())
 
         with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            self.sdkmr.logger.debug(job.to_mongo().to_dict())
+            self.logger.debug(job.to_mongo().to_dict())
             job.save()
 
         self.sdkmr.kafka_client.send_kafka_message(
@@ -116,7 +117,8 @@ class EE2RunJob:
         if not service_ver:
             service_ver = "release"
 
-        self.sdkmr.logger.debug(f"Getting commit for {module_name} {service_ver}")
+        self.logger.debug(f"Getting commit for {module_name} {service_ver}")
+
         module_version = self.sdkmr.catalog_utils.catalog.get_module_version(
             {"module_name": module_name, "version": service_ver}
         )
@@ -143,7 +145,7 @@ class EE2RunJob:
     def _check_workspace_permissions(self, wsid):
         if wsid:
             if not self.sdkmr.get_workspace_auth().can_write(wsid):
-                self.sdkmr.logger.debug(
+                self.logger.debug(
                     f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
                 )
                 raise PermissionError(
@@ -194,7 +196,7 @@ class EE2RunJob:
         params["token"] = self.sdkmr.token
         params["cg_resources_requirements"] = normalized_resources
 
-        self.sdkmr.logger.debug(
+        self.logger.debug(
             f"User {self.sdkmr.user_id} attempting to run job {method} {params}"
         )
 
@@ -212,9 +214,9 @@ class EE2RunJob:
                 params=params, concierge_params=concierge_params
             )
             condor_job_id = submission_info.clusterid
-            self.sdkmr.logger.debug(f"Submitted job id and got '{condor_job_id}'")
+            self.logger.debug(f"Submitted job id and got '{condor_job_id}'")
         except Exception as e:
-            self.sdkmr.logger.error(e)
+            self.logger.error(e)
             self._finish_created_job(job_id=job_id, exception=e)
             raise e
 
@@ -228,7 +230,7 @@ class EE2RunJob:
             self._finish_created_job(job_id=job_id, exception=RuntimeError(error_msg))
             raise RuntimeError(error_msg)
 
-        self.sdkmr.logger.debug(
+        self.logger.debug(
             f"Attempting to update job to queued  {job_id} {condor_job_id} {submission_info}"
         )
 
