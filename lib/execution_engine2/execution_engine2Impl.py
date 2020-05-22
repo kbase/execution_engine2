@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# BEGIN_HEADER
+#BEGIN_HEADER
 import time
 
 from cachetools import TTLCache
@@ -7,7 +7,7 @@ from cachetools import TTLCache
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 
 
-# END_HEADER
+#END_HEADER
 
 
 class execution_engine2:
@@ -27,9 +27,9 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "c78cd12b154ff2d842a2a8ba603c5526274e46a7"
+    GIT_COMMIT_HASH = "b0fb20c31742d2a2b49555635b42f750ed7db51e"
 
-    # BEGIN_CLASS_HEADER
+    #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
     MONGO_AUTHMECHANISM = "DEFAULT"
 
@@ -40,13 +40,12 @@ class execution_engine2:
 
     ADMIN_ROLES_CACHE_SIZE = 500
     ADMIN_ROLES_CACHE_EXPIRE_TIME = 300  # seconds
-
-    # END_CLASS_HEADER
+    #END_CLASS_HEADER
 
     # config contains contents of config file in a hash or None if it couldn't
     # be found
     def __init__(self, config):
-        # BEGIN_CONSTRUCTOR
+        #BEGIN_CONSTRUCTOR
         self.config = config
         self.config["mongo-collection"] = self.MONGO_COLLECTION
         self.config.setdefault("mongo-authmechanism", self.MONGO_AUTHMECHANISM)
@@ -58,8 +57,9 @@ class execution_engine2:
         self.admin_permissions_cache = TTLCache(
             maxsize=self.ADMIN_ROLES_CACHE_SIZE, ttl=self.ADMIN_ROLES_CACHE_EXPIRE_TIME
         )
-        # END_CONSTRUCTOR
+        #END_CONSTRUCTOR
         pass
+
 
     def list_config(self, ctx):
         """
@@ -83,7 +83,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        # BEGIN list_config
+        #BEGIN list_config
         public_keys = [
             "external-url",
             "kbase-endpoint",
@@ -104,7 +104,7 @@ class execution_engine2:
 
         returnVal = {key: self.config.get(key) for key in public_keys}
 
-        # END list_config
+        #END list_config
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
@@ -120,9 +120,9 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        # BEGIN ver
+        #BEGIN ver
         returnVal = self.VERSION
-        # END ver
+        #END ver
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, str):
@@ -150,7 +150,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        # BEGIN status
+        #BEGIN status
         returnVal = {
             "server_time": time.time(),
             "git_commit": self.GIT_COMMIT_HASH,
@@ -158,7 +158,7 @@ class execution_engine2:
             "service": self.SERVICE_NAME,
         }
 
-        # END status
+        #END status
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
@@ -220,14 +220,14 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: job_id
-        # BEGIN run_job
+        #BEGIN run_job
         mr = SDKMethodRunner(
             self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
         )
         job_id = mr.run_job(params)
-        # END run_job
+        #END run_job
 
         # At some point might do deeper type checking...
         if not isinstance(job_id, str):
@@ -300,12 +300,12 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: job_id
-        # BEGIN run_job_concierge
+        #BEGIN run_job_concierge
         mr = SDKMethodRunner(
             self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
         )
-        job_id = mr.run_job_concierge(params=params, concierge_params=concierge_params)
-        # END run_job_concierge
+        job_id = mr.run_job_concierge(params=params,concierge_params=concierge_params)
+        #END run_job_concierge
 
         # At some point might do deeper type checking...
         if not isinstance(job_id, str):
@@ -368,7 +368,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: params
-        # BEGIN get_job_params
+        #BEGIN get_job_params
         mr = SDKMethodRunner(
             self.config,
             user_id=ctx.get("user_id"),
@@ -377,7 +377,7 @@ class execution_engine2:
             admin_permissions_cache=self.admin_permissions_cache,
         )
         params = mr.get_job_params(job_id=params['job_id'], as_admin=params.get('as_admin'))
-        # END get_job_params
+        #END get_job_params
 
         # At some point might do deeper type checking...
         if not isinstance(params, dict):
@@ -397,7 +397,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: job_id
-        # BEGIN update_job_status
+        #BEGIN update_job_status
         mr = SDKMethodRunner(
             self.config,
             user_id=ctx.get("user_id"),
@@ -407,7 +407,7 @@ class execution_engine2:
         )
         job_id = mr.update_job_status(job_id=params['job_id'], status=params['status'],
                                       as_admin=params.get('as_admin'))
-        # END update_job_status
+        #END update_job_status
 
         # At some point might do deeper type checking...
         if not isinstance(job_id, str):
@@ -434,7 +434,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: results
-        # BEGIN add_job_logs
+        #BEGIN add_job_logs
         mr = SDKMethodRunner(
             self.config,
             user_id=ctx.get("user_id"),
@@ -448,7 +448,7 @@ class execution_engine2:
         results = {'success': add_job_logs.success,
                    'line_number': add_job_logs.stored_line_count}
 
-        # END add_job_logs
+        #END add_job_logs
 
         # At some point might do deeper type checking...
         if not isinstance(results, dict):
@@ -482,7 +482,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        # BEGIN get_job_logs
+        #BEGIN get_job_logs
         if params.get("skip_lines") and params.get("offset"):
             raise ValueError("Please provide only one of skip_lines or offset")
 
@@ -499,7 +499,7 @@ class execution_engine2:
             limit=params.get("limit", None),
             as_admin=params.get('as_admin')
         )
-        # END get_job_logs
+        #END get_job_logs
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
@@ -526,7 +526,7 @@ class execution_engine2:
            parameter "as_admin" of type "boolean" (@range [0,1])
         """
         # ctx is the context object
-        # BEGIN finish_job
+        #BEGIN finish_job
         mr = SDKMethodRunner(
             self.config,
             user_id=ctx.get("user_id"),
@@ -543,7 +543,7 @@ class execution_engine2:
             as_admin=params.get('as_admin')
         )
 
-        # END finish_job
+        #END finish_job
         pass
 
     def start_job(self, ctx, params):
@@ -555,7 +555,7 @@ class execution_engine2:
            [0,1]), parameter "as_admin" of type "boolean" (@range [0,1])
         """
         # ctx is the context object
-        # BEGIN start_job
+        #BEGIN start_job
         mr = SDKMethodRunner(
             self.config,
             user_id=ctx.get("user_id"),
@@ -567,7 +567,7 @@ class execution_engine2:
             params["job_id"], skip_estimation=params.get("skip_estimation", True),
             as_admin=params.get('as_admin')
         )
-        # END start_job
+        #END start_job
         pass
 
     def check_job(self, ctx, params):
@@ -668,7 +668,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: job_state
-        # BEGIN check_job
+        #BEGIN check_job
         mr = SDKMethodRunner(
             self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
         )
@@ -676,7 +676,7 @@ class execution_engine2:
             params["job_id"], exclude_fields=params.get("exclude_fields", None),
             as_admin=params.get('as_admin')
         )
-        # END check_job
+        #END check_job
 
         # At some point might do deeper type checking...
         if not isinstance(job_state, dict):
@@ -785,7 +785,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        # BEGIN check_jobs
+        #BEGIN check_jobs
         mr = SDKMethodRunner(
             self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
         )
@@ -795,7 +795,7 @@ class execution_engine2:
             return_list=params.get("return_list", 1),
             as_admin=params.get('as_admin')
         )
-        # END check_jobs
+        #END check_jobs
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
@@ -905,7 +905,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        # BEGIN check_workspace_jobs
+        #BEGIN check_workspace_jobs
         mr = SDKMethodRunner(self.config, user_id=ctx["user_id"], token=ctx["token"])
         returnVal = mr.check_workspace_jobs(
             params.get("workspace_id"),
@@ -913,7 +913,7 @@ class execution_engine2:
             return_list=params.get("return_list", 1),
             as_admin=params.get('as_admin')
         )
-        # END check_workspace_jobs
+        #END check_workspace_jobs
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
@@ -935,7 +935,7 @@ class execution_engine2:
            "as_admin" of type "boolean" (@range [0,1])
         """
         # ctx is the context object
-        # BEGIN cancel_job
+        #BEGIN cancel_job
         mr = SDKMethodRunner(
             self.config,
             user_id=ctx.get("user_id"),
@@ -948,7 +948,7 @@ class execution_engine2:
             job_id=params["job_id"], terminated_code=params.get("terminated_code"),
             as_admin=params.get('as_admin')
         )
-        # END cancel_job
+        #END cancel_job
         pass
 
     def check_job_canceled(self, ctx, params):
@@ -974,12 +974,12 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: result
-        # BEGIN check_job_canceled
+        #BEGIN check_job_canceled
         mr = SDKMethodRunner(
             self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
         )
-        result = mr.check_job_canceled(job_id=params["job_id"], as_admin=params.get('as_admin'))
-        # END check_job_canceled
+        result = mr.check_job_canceled(job_id=params["job_id"],       as_admin=params.get('as_admin'))
+        #END check_job_canceled
 
         # At some point might do deeper type checking...
         if not isinstance(result, dict):
@@ -999,7 +999,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: result
-        # BEGIN get_job_status
+        #BEGIN get_job_status
         mr = SDKMethodRunner(
             self.config,
             user_id=ctx.get("user_id"),
@@ -1007,8 +1007,8 @@ class execution_engine2:
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
         )
-        result = mr.get_job_status_field(job_id=params['job_id'], as_admin=params.get('as_admin'))
-        # END get_job_status
+        result = mr.get_job_status_field(job_id=params['job_id'],       as_admin=params.get('as_admin'))
+        #END get_job_status
 
         # At some point might do deeper type checking...
         if not isinstance(result, dict):
@@ -1127,7 +1127,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        # BEGIN check_jobs_date_range_for_user
+        #BEGIN check_jobs_date_range_for_user
         mr = SDKMethodRunner(
             self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
         )
@@ -1142,7 +1142,7 @@ class execution_engine2:
             ascending=params.get("ascending"),
             as_admin=params.get('as_admin')
         )
-        # END check_jobs_date_range_for_user
+        #END check_jobs_date_range_for_user
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
@@ -1261,7 +1261,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        # BEGIN check_jobs_date_range_for_all
+        #BEGIN check_jobs_date_range_for_all
         mr = SDKMethodRunner(
             self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
         )
@@ -1276,7 +1276,7 @@ class execution_engine2:
             as_admin=params.get('as_admin'),
             user="ALL",
         )
-        # END check_jobs_date_range_for_all
+        #END check_jobs_date_range_for_all
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
@@ -1294,12 +1294,12 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        # BEGIN handle_held_job
+        #BEGIN handle_held_job
         mr = SDKMethodRunner(
             self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
         )
         returnVal = mr.handle_held_job(cluster_id=cluster_id)
-        # END handle_held_job
+        #END handle_held_job
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
@@ -1315,12 +1315,12 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        # BEGIN is_admin
+        #BEGIN is_admin
         mr = SDKMethodRunner(
             self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
         )
         returnVal = mr.check_is_admin()
-        # END is_admin
+        #END is_admin
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, int):
@@ -1339,12 +1339,12 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        # BEGIN get_admin_permission
+        #BEGIN get_admin_permission
         mr = SDKMethodRunner(
             self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
         )
         returnVal = mr.get_admin_permission()
-        # END get_admin_permission
+        #END get_admin_permission
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
@@ -1359,10 +1359,9 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: client_groups
-        # BEGIN get_client_groups
-        client_groups = ['njs', 'bigmem', 'bigmemlong', 'extreme', 'concierge', 'hpc', 'kb_upload',
-                         'terabyte', 'multi_tb', 'kb_upload_bulk']
-        # END get_client_groups
+        #BEGIN get_client_groups
+        client_groups = ['njs','bigmem','bigmemlong','extreme','concierge','hpc','kb_upload','terabyte','multi_tb','kb_upload_bulk']
+        #END get_client_groups
 
         # At some point might do deeper type checking...
         if not isinstance(client_groups, list):
