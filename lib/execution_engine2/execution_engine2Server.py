@@ -517,6 +517,14 @@ class Application(object):
         self.method_authentication[
             "execution_engine2.get_admin_permission"
         ] = "required"  # noqa
+        self.rpc_service.add(
+            impl_execution_engine2.get_client_groups,
+            name="execution_engine2.get_client_groups",
+            types=[],
+        )
+        self.method_authentication[
+            "execution_engine2.get_client_groups"
+        ] = "required"  # noqa
         authurl = config.get(AUTH) if config else None
         self.auth_client = _KBaseAuth(authurl)
 
@@ -540,7 +548,11 @@ class Application(object):
                 req = json.loads(request_body)
             except ValueError as ve:
                 err = {
-                    "error": {"code": -32700, "name": "Parse error", "message": str(ve)}
+                    "error": {
+                        "code": -32700,
+                        "name": "Parse error",
+                        "message": str(ve),
+                    }
                 }
                 rpc_result = self.process_error(err, ctx, {"version": "1.1"})
             else:

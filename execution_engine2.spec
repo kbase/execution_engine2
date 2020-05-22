@@ -564,4 +564,7 @@
         */
         funcdef get_admin_permission()  returns (AdminRolesResults) authentication required;
 
+        funcdef get_client_groups() returns (list<string> client_groups) authentication required;
+
+
     };
