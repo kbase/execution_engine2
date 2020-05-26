@@ -67,7 +67,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         self.assertEqual(sub["Concurrency_Limits"], params["user_id"])
         self.assertEqual(sub["+Owner"], '"condor_pool"')
         self.assertEqual(sub["ShouldTransferFiles"], "YES")
-        self.assertEqual(sub["When_To_Transfer_Output"], "ON_EXIT")
+        self.assertEqual(sub["When_To_Transfer_Output"], "ON_EXIT_OR_EVICT")
 
         self.assertEqual(sub[Condor.REQUEST_CPUS], c.config["njs"][Condor.REQUEST_CPUS])
         self.assertEqual(

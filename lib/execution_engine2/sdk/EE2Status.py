@@ -3,6 +3,7 @@ import time
 from collections import OrderedDict
 from enum import Enum
 from typing import Dict
+from execution_engine2.sdk.EE2Constants import JobError
 
 from bson import ObjectId
 
@@ -49,14 +50,25 @@ class JobsStatus:
         j = self.sdkmr.get_mongo_util().get_job(job_id=job_id)  # type: Job
 
         try:
+            error_message_long = "Job was terminated by automation due to an unexpected error. Please resubmit."
+            error_message_short = "Job was held"
+
+            error = JobError(
+                code=ErrorCode.job_terminated_by_automation.value,
+                name="Job was held",
+                message=error_message_long,
+                error=error_message_long,
+            )._asdict()
+
             self.finish_job(
                 job_id=job_id,
-                error_message="Job was held",
+                error_message=error_message_short,
                 error_code=ErrorCode.job_terminated_by_automation.value,
+                error=dict(error),
                 as_admin=as_admin,
             )
             log_line = {
-                "line": "Job was terminated by automation due to an unexpected error. Please resubmit.",
+                "line": error_message_long,
                 "is_error": True,
             }
             self.sdkmr.get_job_logs().add_job_logs(
@@ -401,7 +413,7 @@ class JobsStatus:
                 )
             except RuntimeError as e:
                 self.sdkmr.logger.error(
-                    f"An error occurred while checking read permissions for jobs"
+                    f"An error occurred while checking read permissions for jobs {jobs}"
                 )
                 raise e
         else:

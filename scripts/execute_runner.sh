@@ -9,8 +9,9 @@ runner_logs="runner_logs"
 mkdir ${debug_dir}
 mkdir ${runner_logs}
 runner_logs=$(readlink -f runner_logs)
+debug_dir=$(readlink -f debug_dir)
 
-env >${debug_dir}/envf
+env >"${debug_dir}/envf"
 {
   echo "export CLIENTGROUP=$CLIENTGROUP "
   echo "export PYTHON_EXECUTABLE=$PYTHON_EXECUTABLE "
@@ -21,23 +22,22 @@ env >${debug_dir}/envf
   echo "export JOB_ID=$JOB_ID "
   echo "export DELETE_ABANDONED_CONTAINERS=$DELETE_ABANDONED_CONTAINERS "
   echo "export DEBUG_MODE=$DEBUG_MODE "
-} >>${debug_dir}/env_file
+} >>"${debug_dir}/env_file"
 
-${PYTHON_EXECUTABLE} -V ${debug_dir}/pyversion
+${PYTHON_EXECUTABLE} -V "${debug_dir}/pyversion"
 
 JOB_ID=$1
 EE2_ENDPOINT=$2
-KBASE_ENDPOINT=$(EE2_ENDPOINT)
+KBASE_ENDPOINT=$EE2_ENDPOINT
 export KBASE_ENDPOINT
 
-tar -xf JobRunner.tgz && cd JobRunner && cp scripts/jobrunner.py . && chmod +x jobrunner.py
+tar -xf JobRunner.tgz && cd JobRunner && cp scripts/*.py . && chmod +x ./*.py
 
 ${PYTHON_EXECUTABLE} ./jobrunner.py "${JOB_ID}" "${EE2_ENDPOINT}" &
 pid=$!
 
-#echo "$PYTHON_EXECUTABLE ./jobrunner.py ${JOB_ID} ${EE2_ENDPOINT}" >${debug_dir}/cmd
-#echo "$PYTHON_EXECUTABLE ./monitor_jobrunner_logs.py ${JOB_ID} ${EE2_ENDPOINT} ${pid}" >${debug_dir}/cmd_log
-#$PYTHON_EXECUTABLE ./monitor_jobrunner_logs.py ${JOB_ID} ${EE2_ENDPOINT} ${pid}
+${PYTHON_EXECUTABLE} ./monitor_jobrunner_logs.py "${JOB_ID}" "${EE2_ENDPOINT}" "${pid}" &
+pid2=$!
 
 trap '{ kill $pid }' SIGTERM
 wait ${pid}
@@ -48,4 +48,5 @@ EXIT_CODE=$?
 #mkdir -p "${LOG_DIR}"
 #cp "${runner_logs}/${JOB_ID}".out "${LOG_DIR}/".
 #cp "${runner_logs}/${JOB_ID}".err "${LOG_DIR}/"
+kill -9 $pid2
 exit ${EXIT_CODE}
