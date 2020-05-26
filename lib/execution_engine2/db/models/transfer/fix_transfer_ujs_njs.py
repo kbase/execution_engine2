@@ -10,10 +10,10 @@ from mongoengine import connect
 from datetime import datetime
 
 try:
-    from lib.execution_engine2.db.models.models import Job, Status
+    from lib.execution_engine2.db.models.models import Job, Status, JobInput
 
 except Exception:
-    from models import Status, Job
+    from models import Status, Job, JobInput
 
 
 class FixEE2JobsDatabase:
@@ -46,7 +46,8 @@ class FixEE2JobsDatabase:
     def __init__(self):
         self.ee2 = self._get_ee2_connection()
 
-    def fix(self, dry_run=True):
+    @staticmethod
+    def fix(dry_run=True):
         statuses = Counter()
         no_running = 0
         no_finished = 0
@@ -88,7 +89,7 @@ class FixEE2JobsDatabase:
                     broken += 1
 
                 if dry_run is False:
-                    job.save()
+                    job.save(validate=False)
 
         print("No finished ", no_finished)
         print("No running", no_running)
@@ -98,4 +99,4 @@ class FixEE2JobsDatabase:
 
 if __name__ == "__main__":
     c = FixEE2JobsDatabase()
-    c.fix(dry_run=True)
+    c.fix(dry_run=False)

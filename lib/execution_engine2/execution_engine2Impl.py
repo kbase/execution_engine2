@@ -1353,16 +1353,17 @@ class execution_engine2:
         # return the results
         return [returnVal]
 
-    def get_client_groups(self, ctx):
+    @staticmethod
+    def get_client_groups(ctx):
         """
         :returns: instance of list of String
         """
         # ctx is the context object
         # return variables are: client_groups
         #BEGIN get_client_groups
-        client_groups = ['njs','bigmem','bigmemlong','extreme','concierge','hpc','kb_upload','terabyte','multi_tb','kb_upload_bulk']
+        client_groups = ['njs', 'bigmem', 'bigmemlong', 'extreme', 'concierge', 'hpc', 'kb_upload',
+                         'terabyte', 'multi_tb', 'kb_upload_bulk']
         #END get_client_groups
-
         # At some point might do deeper type checking...
         if not isinstance(client_groups, list):
             raise ValueError('Method get_client_groups return value ' +
