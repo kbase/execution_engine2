@@ -88,6 +88,10 @@ class FixEE2JobsDatabase:
                     )
                     broken += 1
 
+                if job.queued is None:
+                    broken += 1
+                    job.queued = job.id.generation_time.timestamp()
+
                 if dry_run is False:
                     job.save(validate=False)
 
