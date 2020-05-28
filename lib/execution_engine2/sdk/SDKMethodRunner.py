@@ -63,10 +63,11 @@ class SDKMethodRunner:
         token=None,
         job_permission_cache=None,
         admin_permissions_cache=None,
+        mongo_util=None,
     ):
         self.deployment_config_fp = os.environ["KB_DEPLOYMENT_CONFIG"]
         self.config = config
-        self.mongo_util = None
+        self.mongo_util = mongo_util
         self.condor = None
         self.workspace = None
         self.workspace_auth = None
