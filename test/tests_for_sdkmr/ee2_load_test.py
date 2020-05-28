@@ -62,7 +62,7 @@ class ee2_server_load_test(unittest.TestCase):
 
     def getRunner(self) -> SDKMethodRunner:
         # Initialize these clients from None
-        runner = copy.deepcopy(self.__class__.method_runner)  # type : SDKMethodRunner
+        runner = copy.copy(self.__class__.method_runner)  # type : SDKMethodRunner
         runner._ee2_status = runner.get_jobs_status()  # type: JobsStatus
         runner._ee2_status._send_exec_stats_to_catalog = MagicMock(return_value=True)
         runner._ee2_status.update_finished_job_with_usage = MagicMock(return_value=True)

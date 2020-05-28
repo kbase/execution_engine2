@@ -89,13 +89,13 @@ class MongoUtil:
 
     @classmethod
     def _get_collection(
-            self,
-            mongo_host: str,
-            mongo_port: int,
-            mongo_database: str,
-            mongo_user: str = None,
-            mongo_password: str = None,
-            mongo_authmechanism: str = "DEFAULT",
+        self,
+        mongo_host: str,
+        mongo_port: int,
+        mongo_database: str,
+        mongo_user: str = None,
+        mongo_password: str = None,
+        mongo_authmechanism: str = "DEFAULT",
     ):
         """
         Connect to Mongo server and return a tuple with the MongoClient and MongoClient?
@@ -232,8 +232,8 @@ class MongoUtil:
                         raise ValueError("Please input a list type exclude_fields")
                     jobs = (
                         Job.objects(id__in=job_ids)
-                            .exclude(*exclude_fields)
-                            .order_by("{}_id".format(sort_id_indicator))
+                        .exclude(*exclude_fields)
+                        .order_by("{}_id".format(sort_id_indicator))
                     )
 
                 else:
