@@ -242,7 +242,7 @@ class SDKMethodRunner:
     def update_job_status(self, job_id, status, as_admin=False):
         # TODO: Make this an ADMIN ONLY function? Why would anyone need to call this who is not an admin?
         """ Authorization Required: Read/Write """
-        return self.get_jobs_status().update_job_status(
+        return self.get_jobs_status().force_update_job_status(
             job_id=job_id, status=status, as_admin=as_admin
         )
 

@@ -89,13 +89,13 @@ class MongoUtil:
 
     @classmethod
     def _get_collection(
-        self,
-        mongo_host: str,
-        mongo_port: int,
-        mongo_database: str,
-        mongo_user: str = None,
-        mongo_password: str = None,
-        mongo_authmechanism: str = "DEFAULT",
+            self,
+            mongo_host: str,
+            mongo_port: int,
+            mongo_database: str,
+            mongo_user: str = None,
+            mongo_password: str = None,
+            mongo_authmechanism: str = "DEFAULT",
     ):
         """
         Connect to Mongo server and return a tuple with the MongoClient and MongoClient?
@@ -232,8 +232,8 @@ class MongoUtil:
                         raise ValueError("Please input a list type exclude_fields")
                     jobs = (
                         Job.objects(id__in=job_ids)
-                        .exclude(*exclude_fields)
-                        .order_by("{}_id".format(sort_id_indicator))
+                            .exclude(*exclude_fields)
+                            .order_by("{}_id".format(sort_id_indicator))
                     )
 
                 else:
@@ -345,6 +345,8 @@ class MongoUtil:
 
     def update_job_status(self, job_id, status, msg=None, error_message=None):
         """
+        #TODO Deprecate this function, and create a StartJob or StartEstimating Function
+
         A job in status created can be estimating/running/error/terminated
         A job in status created cannot be created
 
@@ -357,6 +359,7 @@ class MongoUtil:
         A job in status finished/terminated/error cannot be changed
 
         """
+
         with self.mongo_engine_connection():
             j = Job.objects.with_id(job_id)  # type: Job
             #  A job in status finished/terminated/error cannot be changed
@@ -406,6 +409,12 @@ class MongoUtil:
                 j.msg = msg
 
             j.status = status
+
+            if status == Status.running.value:
+                j.running = time.time()
+            elif status == Status.estimating.value:
+                j.estimating = time.time()
+
             j.save()
 
     def get_empty_job_log(self):

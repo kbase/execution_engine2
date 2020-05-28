@@ -1,13 +1,12 @@
 import json
-import time
 from collections import OrderedDict
 from enum import Enum
 from typing import Dict
-from execution_engine2.sdk.EE2Constants import JobError
 
 from bson import ObjectId
 
 from execution_engine2.exceptions import InvalidStatusTransitionException
+from execution_engine2.sdk.EE2Constants import JobError
 from lib.execution_engine2.authorization.authstrategy import can_read_jobs
 from lib.execution_engine2.db.models.models import (
     Job,
@@ -148,7 +147,9 @@ class JobsStatus:
             rv["finished"] = True
         return rv
 
-    def update_job_status(self, job_id, status, as_admin=False) -> str:
+    def force_update_job_status(
+        self, job_id, status, as_admin=False, running_stamp=None, estimating_stamp=None
+    ) -> str:
         """
         #TODO Deprecate this in favor of specific methods with specific checks?
         * update_job_status: update status of a job runner record.
@@ -165,11 +166,20 @@ class JobsStatus:
         if not (job_id and status):
             raise ValueError("Please provide both job_id and status")
 
+        if running_stamp and estimating_stamp:
+            raise ValueError("Cannot provide both running and estimating stamp!")
+
         job = self.sdkmr.get_job_with_permission(
             job_id, JobPermissions.WRITE, as_admin=as_admin
         )
         previous_status = job.status
         job.status = status
+
+        if running_stamp:
+            job.running = running_stamp
+        if estimating_stamp:
+            job.estimating = estimating_stamp
+
         with self.sdkmr.get_mongo_util().mongo_engine_connection():
             job.save()
 
@@ -540,21 +550,16 @@ class JobsStatus:
         with self.sdkmr.get_mongo_util().mongo_engine_connection():
             if job_status == Status.estimating.value or skip_estimation:
                 # set job to running status
-
-                job.running = time.time()
                 self.sdkmr.get_mongo_util().update_job_status(
                     job_id=job_id, status=Status.running.value
                 )
             else:
                 # set job to estimating status
-
-                job.estimating = time.time()
                 self.sdkmr.get_mongo_util().update_job_status(
                     job_id=job_id, status=Status.estimating.value
                 )
             job.save()
-
-        job.reload("status")
+            job.reload("status")
 
         self.sdkmr.kafka_client.send_kafka_message(
             message=KafkaStartJob(
