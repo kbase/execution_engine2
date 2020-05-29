@@ -63,10 +63,11 @@ class SDKMethodRunner:
         token=None,
         job_permission_cache=None,
         admin_permissions_cache=None,
+        mongo_util=None,
     ):
         self.deployment_config_fp = os.environ["KB_DEPLOYMENT_CONFIG"]
         self.config = config
-        self.mongo_util = None
+        self.mongo_util = mongo_util
         self.condor = None
         self.workspace = None
         self.workspace_auth = None
@@ -241,7 +242,7 @@ class SDKMethodRunner:
     def update_job_status(self, job_id, status, as_admin=False):
         # TODO: Make this an ADMIN ONLY function? Why would anyone need to call this who is not an admin?
         """ Authorization Required: Read/Write """
-        return self.get_jobs_status().update_job_status(
+        return self.get_jobs_status().force_update_job_status(
             job_id=job_id, status=status, as_admin=as_admin
         )
 
@@ -280,11 +281,11 @@ class SDKMethodRunner:
 
     # Endpoints: Checking a job's status
 
-    def check_job(
-        self, job_id, check_permission=True, exclude_fields=None, as_admin=False
-    ):
+    def check_job(self, job_id, exclude_fields=None, as_admin=False):
         """ Authorization Required: Read """
-        if as_admin:
+        check_permission = True
+
+        if as_admin is True:
             self.check_as_admin(requested_perm=JobPermissions.READ)
             check_permission = False
 
@@ -307,7 +308,7 @@ class SDKMethodRunner:
     def check_jobs(
         self,
         job_ids,
-        check_permission=None,
+        check_permission=True,
         exclude_fields=None,
         return_list=1,
         as_admin=False,

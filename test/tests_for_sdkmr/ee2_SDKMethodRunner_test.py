@@ -80,7 +80,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     def getRunner(self) -> SDKMethodRunner:
         # Initialize these clients from None
         os.environ["LOGLEVEL"] = "DEBUG"
-        runner = copy.deepcopy(self.__class__.method_runner)  # type : SDKMethodRunner
+        runner = copy.copy(self.__class__.method_runner)  # type : SDKMethodRunner
         runner.get_jobs_status()
         runner.get_runjob()
         runner.get_job_logs()

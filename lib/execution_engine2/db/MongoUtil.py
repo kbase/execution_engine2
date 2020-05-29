@@ -25,11 +25,32 @@ class MongoUtil:
         self.mongo_user = config["mongo-user"]
         self.mongo_pass = config["mongo-password"]
         self.mongo_authmechanism = config["mongo-authmechanism"]
-
         self.mongo_collection = None
-
         self._start_local_service()
         self.logger = logging.getLogger("ee2")
+        self.pymongoc = self._get_pymongo_client()
+        self.me_connection = self._get_mongoengine_client()
+
+    def _get_pymongo_client(self):
+        return MongoClient(
+            self.mongo_host,
+            self.mongo_port,
+            username=self.mongo_user,
+            password=self.mongo_pass,
+            authSource=self.mongo_database,
+            authMechanism=self.mongo_authmechanism,
+        )
+
+    def _get_mongoengine_client(self):
+        return connect(
+            db=self.mongo_database,
+            host=self.mongo_host,
+            port=self.mongo_port,
+            username=self.mongo_user,
+            password=self.mongo_pass,
+            authentication_source=self.mongo_database,
+            authentication_mechanism=self.mongo_authmechanism,
+        )  # type: connection
 
     def _start_local_service(self):
         try:
@@ -68,13 +89,13 @@ class MongoUtil:
 
     @classmethod
     def _get_collection(
-        self,
-        mongo_host: str,
-        mongo_port: int,
-        mongo_database: str,
-        mongo_user: str = None,
-        mongo_password: str = None,
-        mongo_authmechanism: str = "DEFAULT",
+            self,
+            mongo_host: str,
+            mongo_port: int,
+            mongo_database: str,
+            mongo_user: str = None,
+            mongo_password: str = None,
+            mongo_authmechanism: str = "DEFAULT",
     ):
         """
         Connect to Mongo server and return a tuple with the MongoClient and MongoClient?
@@ -131,20 +152,7 @@ class MongoUtil:
         :return:
         """
         self.mongo_collection = mongo_collection
-
-        mc = MongoClient(
-            self.mongo_host,
-            self.mongo_port,
-            username=self.mongo_user,
-            password=self.mongo_pass,
-            authSource=self.mongo_database,
-            authMechanism=self.mongo_authmechanism,
-        )
-
-        try:
-            yield mc
-        finally:
-            mc.close()
+        yield self.pymongoc
 
     def get_workspace_jobs(self, workspace_id):
         with self.mongo_engine_connection():
@@ -224,8 +232,8 @@ class MongoUtil:
                         raise ValueError("Please input a list type exclude_fields")
                     jobs = (
                         Job.objects(id__in=job_ids)
-                        .exclude(*exclude_fields)
-                        .order_by("{}_id".format(sort_id_indicator))
+                            .exclude(*exclude_fields)
+                            .order_by("{}_id".format(sort_id_indicator))
                     )
 
                 else:
@@ -279,6 +287,7 @@ class MongoUtil:
     def finish_job_with_error(self, job_id, error_message, error_code, error):
         """
         #TODO Should we check for a valid state transition here also?
+        :param error:
         :param job_id:
         :param error_message:
         :param error_code:
@@ -336,6 +345,8 @@ class MongoUtil:
 
     def update_job_status(self, job_id, status, msg=None, error_message=None):
         """
+        #TODO Deprecate this function, and create a StartJob or StartEstimating Function
+
         A job in status created can be estimating/running/error/terminated
         A job in status created cannot be created
 
@@ -348,6 +359,7 @@ class MongoUtil:
         A job in status finished/terminated/error cannot be changed
 
         """
+
         with self.mongo_engine_connection():
             j = Job.objects.with_id(job_id)  # type: Job
             #  A job in status finished/terminated/error cannot be changed
@@ -397,6 +409,12 @@ class MongoUtil:
                 j.msg = msg
 
             j.status = status
+
+            if status == Status.running.value:
+                j.running = time.time()
+            elif status == Status.estimating.value:
+                j.estimating = time.time()
+
             j.save()
 
     def get_empty_job_log(self):
@@ -407,36 +425,7 @@ class MongoUtil:
 
     @contextmanager
     def mongo_engine_connection(self):
-        mongoengine_client = connect(
-            db=self.mongo_database,
-            host=self.mongo_host,
-            port=self.mongo_port,
-            username=self.mongo_user,
-            password=self.mongo_pass,
-            authentication_source=self.mongo_database,
-            authentication_mechanism=self.mongo_authmechanism,
-        )  # type: connection
-        try:
-            yield mongoengine_client
-        finally:
-            mongoengine_client.close()
-
-    @contextmanager
-    def me_collection(self, mongo_collection):
-        self.mongo_collection = mongo_collection
-        try:
-            pymongo_client, mongoengine_client = self._get_collection(
-                self.mongo_host,
-                self.mongo_port,
-                self.mongo_database,
-                self.mongo_user,
-                self.mongo_pass,
-                self.mongo_authmechanism,
-            )
-            yield pymongo_client, mongoengine_client
-        finally:
-            pymongo_client.close()
-            mongoengine_client.close()
+        yield self.me_connection
 
     def insert_one(self, doc):
         """

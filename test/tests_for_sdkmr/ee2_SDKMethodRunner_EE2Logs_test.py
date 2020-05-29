@@ -51,7 +51,7 @@ class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
         cls.test_helper = ee2_sdkmr_test_helper(cls.method_runner)
 
     def getRunner(self) -> SDKMethodRunner:
-        return copy.deepcopy(self.__class__.method_runner)
+        return copy.copy(self.__class__.method_runner)
 
     @requests_mock.Mocker()
     def test_add_job_logs_ok(self, rq_mock):

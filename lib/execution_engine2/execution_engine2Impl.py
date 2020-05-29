@@ -4,6 +4,7 @@ import time
 
 from cachetools import TTLCache
 
+from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 
 
@@ -57,6 +58,10 @@ class execution_engine2:
         self.admin_permissions_cache = TTLCache(
             maxsize=self.ADMIN_ROLES_CACHE_SIZE, ttl=self.ADMIN_ROLES_CACHE_EXPIRE_TIME
         )
+        self.mongo_util = MongoUtil(config)
+
+
+
         #END_CONSTRUCTOR
         pass
 
@@ -224,7 +229,7 @@ class execution_engine2:
         mr = SDKMethodRunner(
             self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
             job_permission_cache=self.job_permission_cache,
-            admin_permissions_cache=self.admin_permissions_cache,
+            admin_permissions_cache=self.admin_permissions_cache, mongo_util=self.mongo_util
         )
         job_id = mr.run_job(params)
         #END run_job
@@ -302,7 +307,8 @@ class execution_engine2:
         # return variables are: job_id
         #BEGIN run_job_concierge
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
+            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            mongo_util=self.mongo_util
         )
         job_id = mr.run_job_concierge(params=params,concierge_params=concierge_params)
         #END run_job_concierge
@@ -375,6 +381,7 @@ class execution_engine2:
             token=ctx.get("token"),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
+            mongo_util=self.mongo_util
         )
         params = mr.get_job_params(job_id=params['job_id'], as_admin=params.get('as_admin'))
         #END get_job_params
@@ -404,6 +411,8 @@ class execution_engine2:
             token=ctx.get("token"),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
+            mongo_util=self.mongo_util
+
         )
         job_id = mr.update_job_status(job_id=params['job_id'], status=params['status'],
                                       as_admin=params.get('as_admin'))
@@ -441,6 +450,7 @@ class execution_engine2:
             token=ctx.get("token"),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
+            mongo_util=self.mongo_util
         )
         add_job_logs = mr.add_job_logs(job_id=params['job_id'], log_lines=lines,
                                        as_admin=params.get('as_admin'))
@@ -492,6 +502,7 @@ class execution_engine2:
             token=ctx.get("token"),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
+            mongo_util=self.mongo_util
         )
         returnVal = mr.view_job_logs(
             job_id=params["job_id"],
@@ -533,6 +544,7 @@ class execution_engine2:
             token=ctx.get("token"),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
+            mongo_util=self.mongo_util
         )
         mr.finish_job(
             job_id=params["job_id"],
@@ -562,6 +574,7 @@ class execution_engine2:
             token=ctx.get("token"),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
+            mongo_util=self.mongo_util
         )
         mr.start_job(
             params["job_id"], skip_estimation=params.get("skip_estimation", True),
@@ -670,7 +683,8 @@ class execution_engine2:
         # return variables are: job_state
         #BEGIN check_job
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
+            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            mongo_util=self.mongo_util
         )
         job_state = mr.check_job(
             params["job_id"], exclude_fields=params.get("exclude_fields", None),
@@ -787,7 +801,8 @@ class execution_engine2:
         # return variables are: returnVal
         #BEGIN check_jobs
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
+            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            mongo_util=self.mongo_util
         )
         returnVal = mr.check_jobs(
             params.get("job_ids"),
@@ -906,7 +921,8 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: returnVal
         #BEGIN check_workspace_jobs
-        mr = SDKMethodRunner(self.config, user_id=ctx["user_id"], token=ctx["token"])
+        mr = SDKMethodRunner(self.config, user_id=ctx["user_id"], token=ctx["token"],
+                             mongo_util=self.mongo_util)
         returnVal = mr.check_workspace_jobs(
             params.get("workspace_id"),
             exclude_fields=params.get("exclude_fields", None),
@@ -942,6 +958,7 @@ class execution_engine2:
             token=ctx.get("token"),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
+            mongo_util=self.mongo_util
         )
 
         mr.cancel_job(
@@ -976,7 +993,8 @@ class execution_engine2:
         # return variables are: result
         #BEGIN check_job_canceled
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
+            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            mongo_util=self.mongo_util
         )
         result = mr.check_job_canceled(job_id=params["job_id"],       as_admin=params.get('as_admin'))
         #END check_job_canceled
@@ -1006,6 +1024,7 @@ class execution_engine2:
             token=ctx.get("token"),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
+            mongo_util=self.mongo_util
         )
         result = mr.get_job_status_field(job_id=params['job_id'],       as_admin=params.get('as_admin'))
         #END get_job_status
@@ -1129,7 +1148,8 @@ class execution_engine2:
         # return variables are: returnVal
         #BEGIN check_jobs_date_range_for_user
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
+            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            mongo_util=self.mongo_util
         )
         returnVal = mr.check_jobs_date_range_for_user(
             creation_start_time=params.get("start_time"),
@@ -1263,7 +1283,8 @@ class execution_engine2:
         # return variables are: returnVal
         #BEGIN check_jobs_date_range_for_all
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
+            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            mongo_util=self.mongo_util
         )
         returnVal = mr.check_jobs_date_range_for_user(
             creation_start_time=params.get("start_time"),
@@ -1296,7 +1317,8 @@ class execution_engine2:
         # return variables are: returnVal
         #BEGIN handle_held_job
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
+            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            mongo_util=self.mongo_util
         )
         returnVal = mr.handle_held_job(cluster_id=cluster_id)
         #END handle_held_job
@@ -1317,7 +1339,8 @@ class execution_engine2:
         # return variables are: returnVal
         #BEGIN is_admin
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
+            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            mongo_util=self.mongo_util
         )
         returnVal = mr.check_is_admin()
         #END is_admin
@@ -1341,7 +1364,8 @@ class execution_engine2:
         # return variables are: returnVal
         #BEGIN get_admin_permission
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token")
+            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            mongo_util=self.mongo_util
         )
         returnVal = mr.get_admin_permission()
         #END get_admin_permission
