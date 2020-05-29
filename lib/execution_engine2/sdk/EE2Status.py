@@ -371,9 +371,7 @@ class JobsStatus:
         )
         return resources
 
-    def check_job(
-        self, job_id, check_permission=True, exclude_fields=None, as_admin=False
-    ):
+    def check_job(self, job_id, check_permission, exclude_fields=None):
 
         """
         check_job: check and return job status for a given job_id
@@ -400,13 +398,11 @@ class JobsStatus:
         return job_state
 
     def check_jobs(
-        self, job_ids, check_permission=True, exclude_fields=None, return_list=None
+        self, job_ids, check_permission: bool, exclude_fields=None, return_list=None
     ):
         """
         check_jobs: check and return job status for a given of list job_ids
         """
-
-        self.sdkmr.logger.debug("Start fetching status for jobs: {}".format(job_ids))
 
         if exclude_fields is None:
             exclude_fields = []
@@ -418,6 +414,9 @@ class JobsStatus:
 
         if check_permission:
             try:
+                self.sdkmr.logger.debug(
+                    "Checking for read permission to: {}".format(job_ids)
+                )
                 perms = can_read_jobs(
                     jobs, self.sdkmr.user_id, self.sdkmr.token, self.sdkmr.config
                 )
@@ -427,27 +426,31 @@ class JobsStatus:
                 )
                 raise e
         else:
+            self.sdkmr.logger.debug(
+                "Start fetching status for jobs: {}".format(job_ids)
+            )
             perms = [True] * len(jobs)
 
         job_states = dict()
         for idx, job in enumerate(jobs):
             if not perms[idx]:
                 job_states[str(job.id)] = {"error": "Cannot read this job"}
-            mongo_rec = job.to_mongo().to_dict()
-            del mongo_rec["_id"]
-            mongo_rec["job_id"] = str(job.id)
-            mongo_rec["created"] = int(job.id.generation_time.timestamp() * 1000)
-            mongo_rec["updated"] = int(job.updated * 1000)
-            if job.estimating:
-                mongo_rec["estimating"] = int(job.estimating * 1000)
-            if job.running:
-                mongo_rec["running"] = int(job.running * 1000)
-            if job.finished:
-                mongo_rec["finished"] = int(job.finished * 1000)
-            if job.queued:
-                mongo_rec["queued"] = int(job.queued * 1000)
+            else:
+                mongo_rec = job.to_mongo().to_dict()
+                del mongo_rec["_id"]
+                mongo_rec["job_id"] = str(job.id)
+                mongo_rec["created"] = int(job.id.generation_time.timestamp() * 1000)
+                mongo_rec["updated"] = int(job.updated * 1000)
+                if job.estimating:
+                    mongo_rec["estimating"] = int(job.estimating * 1000)
+                if job.running:
+                    mongo_rec["running"] = int(job.running * 1000)
+                if job.finished:
+                    mongo_rec["finished"] = int(job.finished * 1000)
+                if job.queued:
+                    mongo_rec["queued"] = int(job.queued * 1000)
 
-            job_states[str(job.id)] = mongo_rec
+                job_states[str(job.id)] = mongo_rec
 
         job_states = OrderedDict(
             {job_id: job_states.get(job_id, []) for job_id in job_ids}

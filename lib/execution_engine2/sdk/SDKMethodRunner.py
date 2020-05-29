@@ -281,11 +281,11 @@ class SDKMethodRunner:
 
     # Endpoints: Checking a job's status
 
-    def check_job(
-        self, job_id, check_permission=True, exclude_fields=None, as_admin=False
-    ):
+    def check_job(self, job_id, exclude_fields=None, as_admin=False):
         """ Authorization Required: Read """
-        if as_admin:
+        check_permission = True
+
+        if as_admin is True:
             self.check_as_admin(requested_perm=JobPermissions.READ)
             check_permission = False
 
@@ -308,7 +308,7 @@ class SDKMethodRunner:
     def check_jobs(
         self,
         job_ids,
-        check_permission=None,
+        check_permission=True,
         exclude_fields=None,
         return_list=1,
         as_admin=False,
