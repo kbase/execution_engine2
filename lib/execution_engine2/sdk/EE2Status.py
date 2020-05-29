@@ -395,6 +395,9 @@ class JobsStatus:
             return_list=0,
         ).get(job_id)
 
+        if "error" in job_state:
+            raise PermissionError(job_state["error"])
+
         return job_state
 
     def check_jobs(
@@ -434,7 +437,7 @@ class JobsStatus:
         job_states = dict()
         for idx, job in enumerate(jobs):
             if not perms[idx]:
-                job_states[str(job.id)] = {"error": "Cannot read this job"}
+                job_states[str(job.id)] = {"error": f"No read permissions for {job.id}"}
             else:
                 mongo_rec = job.to_mongo().to_dict()
                 del mongo_rec["_id"]
