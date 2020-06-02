@@ -222,30 +222,38 @@ class JobsStatus:
         )
 
     def _finish_job_with_success(self, job_id, job_output):
+        """
+        Allow either blank job outputs or outputs in a specific format (version/id/result)
+
+        :param job_id: The job to finish
+        :param job_output: Either the job output or {}, else something is not right
+        """
         output = JobOutput()
         output.version = job_output.get("version")
         output.id = ObjectId(job_output.get("id"))
         output.result = job_output.get("result")
-        try:
-            output.validate()
-        except Exception as e:
-            self.sdkmr.logger.debug(e)
-            error_message = "Something was wrong with the output object"
-            error_code = ErrorCode.job_missing_output.value
-            error = {
-                "code": -1,
-                "name": "Output object is invalid",
-                "message": str(e),
-                "error": str(e),
-            }
 
-            self.sdkmr.get_mongo_util().finish_job_with_error(
-                job_id=job_id,
-                error_message=error_message,
-                error_code=error_code,
-                error=error,
-            )
-            raise Exception(str(e) + str(error_message))
+        if job_output != {}:
+            try:
+                output.validate()
+            except Exception as e:
+                self.sdkmr.logger.debug(e)
+                error_message = "Something was wrong with the output object"
+                error_code = ErrorCode.job_missing_output.value
+                error = {
+                    "code": -1,
+                    "name": "Output object is invalid",
+                    "message": str(e),
+                    "error": str(e),
+                }
+
+                self.sdkmr.get_mongo_util().finish_job_with_error(
+                    job_id=job_id,
+                    error_message=error_message,
+                    error_code=error_code,
+                    error=error,
+                )
+                raise Exception(str(e) + str(error_message))
 
         self.sdkmr.get_mongo_util().finish_job_with_success(
             job_id=job_id, job_output=job_output
