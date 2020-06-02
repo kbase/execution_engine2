@@ -222,12 +222,18 @@ class JobsStatus:
         )
 
     def _finish_job_with_success(self, job_id, job_output):
+        """
+        Allow either blank job outputs or outputs in a specific format (version/id/result)
+
+        :param job_id: The job to finish
+        :param job_output: Either the job output or {}, else something is not right
+        """
         output = JobOutput()
         output.version = job_output.get("version")
         output.id = ObjectId(job_output.get("id"))
         output.result = job_output.get("result")
 
-        if output != {}:
+        if job_output != {}:
             try:
                 output.validate()
             except Exception as e:
