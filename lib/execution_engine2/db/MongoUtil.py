@@ -445,14 +445,14 @@ class MongoUtil:
         """ append a list of job logs, and update the record count  """
 
         update_filter = {"_id": ObjectId(job_id)}
-        push_op = {"lines": log_lines}
+        push_op = {"lines": {"$each": log_lines}}
 
         set_op = {
             "original_line_count": record_count,
             "stored_line_count": record_count,
             "updated": time.time(),
         }
-        update = {"$pushAll": push_op, "$set": set_op}
+        update = {"$push": push_op, "$set": set_op}
         with self.pymongo_client(self.mongo_collection) as pymongo_client:
             job_col = pymongo_client[self.mongo_database][self.mongo_collection]
             try:

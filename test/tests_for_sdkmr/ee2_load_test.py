@@ -629,7 +629,7 @@ class ee2_server_load_test(unittest.TestCase):
             for job_line in job_lines:
                 job_line = job_line[0]["lines"][0]
                 self.assertEqual(job_line["line"], "hello ee2")
-                self.assertEqual(job_line["linepos"], 1)
+                self.assertEqual(job_line["linepos"], 0)
                 self.assertEqual(job_line["is_error"], 1)
                 self.assertEqual(job_line["ts"], int(ts * 1000))
 
@@ -682,7 +682,7 @@ class ee2_server_load_test(unittest.TestCase):
             ]
 
             self.assertEqual(
-                job_lines["last_line_number"], thread_count
+                job_lines["last_line_number"], thread_count - 1
             )  # exam total number of job lines created by add_job_logs
 
             # exam each line created by add_job_logs
@@ -694,7 +694,7 @@ class ee2_server_load_test(unittest.TestCase):
                 self.assertEqual(line["is_error"], 1)
                 self.assertEqual(line["ts"], int(ts * 1000))
                 line_pos.append(line["linepos"])
-            self.assertCountEqual(line_pos, list(range(1, thread_count + 1)))
+            self.assertCountEqual(line_pos, list(range(0, thread_count)))
 
             jobs = self.mongo_util.get_jobs(job_ids=[job_id])
 
