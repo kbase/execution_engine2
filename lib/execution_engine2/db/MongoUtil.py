@@ -417,11 +417,7 @@ class MongoUtil:
 
             j.save()
 
-    def get_empty_job_log(self):
-        jl = JobLog()
-        jl.stored_line_count = 0
-        jl.original_line_count = 0
-        return jl
+
 
     @contextmanager
     def mongo_engine_connection(self):
@@ -439,7 +435,7 @@ class MongoUtil:
                     self.mongo_collection
                 ].insert_one(doc)
             except Exception as e:
-                error_msg = "Connot insert doc\n"
+                error_msg = "Cannot insert doc\n"
                 error_msg += "ERROR -- {}:\n{}".format(
                     e, "".join(traceback.format_exception(None, e, e.__traceback__))
                 )
@@ -447,9 +443,48 @@ class MongoUtil:
 
         return rec.inserted_id
 
+    def _add_job_logs(self, log_lines, job_id):
+        """
+
+        :param log_lines:
+        :param job_id:
+        :return:
+        """
+
+        update_filter = {"_id": ObjectId(job_id)}
+        push_op = {'lines': log_lines['lines']}
+
+
+        set_op = {'original_line_count':  log_lines['original_line_count'],
+                           'stored_line_count': log_lines['original_line_count'],
+                           'updated': time.time()}
+
+        print("set_op op is", set_op)
+
+        update = {"$pushAll": push_op, "$set": set_op}
+
+        print("Update is", update)
+
+        print(f"About to do the subsequent log record 22")
+        with self.pymongo_client(self.mongo_collection) as pymongo_client:
+            print(f"About to do the subsequent log record 23")
+
+            job_col = pymongo_client[self.mongo_database][self.mongo_collection]
+            # try:
+            print(f"About to return update", update_filter, update)
+            job_col.update_one(update_filter, update, upsert=False)
+            # except Exception as e:
+            #     error_msg = "Cannot update doc\n ERROR -- {}:\n{}".format(
+            #         e, "".join(traceback.format_exception(None, e, e.__traceback__))
+            #     )
+            #     raise ValueError(error_msg)
+
+            slc =  job_col.find_one({"_id": ObjectId(job_id)}).get("stored_line_count")
+            print(f"About to return slc {slc}" )
+            return slc
     def update_one(self, doc, job_id):
         """
-        update existing records
+        update existing records or create if they do not exist
         https://docs.mongodb.com/manual/reference/operator/update/set/
         """
         with self.pymongo_client(self.mongo_collection) as pymongo_client:
