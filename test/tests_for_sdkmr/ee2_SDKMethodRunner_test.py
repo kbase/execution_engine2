@@ -461,20 +461,24 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         # Test limit
         log = runner.view_job_logs(job_id=job_id, limit=2)
         self.assertEqual(len(log["lines"]), 2)
-        self.assertEqual(log["lines"][0]["linepos"], 1)
-        self.assertEqual(log["lines"][-1]["linepos"], 2)
+        self.assertEqual(log["lines"][0]["linepos"], 0)
+        self.assertEqual(log["lines"][-1]["linepos"], 1)
+        self.assertEqual(log["last_line_number"], 1)
+
+        log = runner.view_job_logs(job_id=job_id, limit=3, skip_lines=0)
+        self.assertEqual(
+            3, len(log["lines"]),
+        )
+        self.assertEqual(0, log["lines"][0]["linepos"])
+        self.assertEqual(2, log["lines"][-1]["linepos"])
         self.assertEqual(log["last_line_number"], 2)
 
-        log = runner.view_job_logs(job_id=job_id, limit=3, skip_lines=2)
-        self.assertEqual(len(log["lines"]), 3)
-        self.assertEqual(log["lines"][0]["linepos"], 3)
-        self.assertEqual(log["lines"][-1]["linepos"], 5)
-        self.assertEqual(log["last_line_number"], 5)
-
-        log = runner.view_job_logs(job_id=job_id, limit=3, skip_lines=7)
-        self.assertEqual(len(log["lines"]), 1)
-        self.assertEqual(log["lines"][0]["linepos"], 8)
-        self.assertEqual(log["last_line_number"], 8)
+        log = runner.view_job_logs(job_id=job_id, limit=3, skip_lines=5)
+        self.assertEqual(
+            2, len(log["lines"]),
+        )
+        self.assertEqual(6, log["lines"][0]["linepos"])
+        self.assertEqual(7, log["last_line_number"])
 
         log = runner.view_job_logs(job_id=job_id, limit=3, skip_lines=8)
         self.assertEqual(log["lines"], [])
