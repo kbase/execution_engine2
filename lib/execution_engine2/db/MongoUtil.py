@@ -89,13 +89,13 @@ class MongoUtil:
 
     @classmethod
     def _get_collection(
-            self,
-            mongo_host: str,
-            mongo_port: int,
-            mongo_database: str,
-            mongo_user: str = None,
-            mongo_password: str = None,
-            mongo_authmechanism: str = "DEFAULT",
+        self,
+        mongo_host: str,
+        mongo_port: int,
+        mongo_database: str,
+        mongo_user: str = None,
+        mongo_password: str = None,
+        mongo_authmechanism: str = "DEFAULT",
     ):
         """
         Connect to Mongo server and return a tuple with the MongoClient and MongoClient?
@@ -232,8 +232,8 @@ class MongoUtil:
                         raise ValueError("Please input a list type exclude_fields")
                     jobs = (
                         Job.objects(id__in=job_ids)
-                            .exclude(*exclude_fields)
-                            .order_by("{}_id".format(sort_id_indicator))
+                        .exclude(*exclude_fields)
+                        .order_by("{}_id".format(sort_id_indicator))
                     )
 
                 else:
@@ -417,12 +417,6 @@ class MongoUtil:
 
             j.save()
 
-    def get_empty_job_log(self):
-        jl = JobLog()
-        jl.stored_line_count = 0
-        jl.original_line_count = 0
-        return jl
-
     @contextmanager
     def mongo_engine_connection(self):
         yield self.me_connection
@@ -439,7 +433,7 @@ class MongoUtil:
                     self.mongo_collection
                 ].insert_one(doc)
             except Exception as e:
-                error_msg = "Connot insert doc\n"
+                error_msg = "Cannot insert doc\n"
                 error_msg += "ERROR -- {}:\n{}".format(
                     e, "".join(traceback.format_exception(None, e, e.__traceback__))
                 )
@@ -447,9 +441,35 @@ class MongoUtil:
 
         return rec.inserted_id
 
+    def _push_job_logs(self, log_lines: JobLog, job_id: str, record_count: int):
+        """ append a list of job logs, and update the record count  """
+
+        update_filter = {"_id": ObjectId(job_id)}
+        push_op = {"lines": {"$each": log_lines}}
+
+        set_op = {
+            "original_line_count": record_count,
+            "stored_line_count": record_count,
+            "updated": time.time(),
+        }
+        update = {"$push": push_op, "$set": set_op}
+        with self.pymongo_client(self.mongo_collection) as pymongo_client:
+            job_col = pymongo_client[self.mongo_database][self.mongo_collection]
+            try:
+                job_col.update_one(update_filter, update, upsert=False)
+            except Exception as e:
+                error_msg = "Cannot update doc\n ERROR -- {}:\n{}".format(
+                    e, "".join(traceback.format_exception(None, e, e.__traceback__))
+                )
+                raise ValueError(error_msg)
+
+            slc = job_col.find_one({"_id": ObjectId(job_id)}).get("stored_line_count")
+
+            return slc
+
     def update_one(self, doc, job_id):
         """
-        update existing records
+        update existing records or create if they do not exist
         https://docs.mongodb.com/manual/reference/operator/update/set/
         """
         with self.pymongo_client(self.mongo_collection) as pymongo_client:

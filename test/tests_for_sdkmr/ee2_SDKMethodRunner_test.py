@@ -374,6 +374,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         log_lines = log["lines"]
         for i, inserted_line in enumerate(log_lines):
             self.assertEqual(inserted_line["line"], lines[i]["line"])
+            self.assertEqual(inserted_line["linepos"], i)
 
         line1 = {
             "error": False,
@@ -395,6 +396,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             "line": "This is the read deal4",
             "ts": str(datetime.now().timestamp()),
         }
+
         input_lines2 = [line1, line2, line3, line4]
 
         for line in input_lines2:
@@ -406,19 +408,24 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         logging.info(
             f"After inserting timestamped logs,  log position is now {log_pos2}"
         )
+        print("Comparing ", log_pos_1, log_pos2, log_pos2 - len(lines))
+        self.assertEqual(log_pos_1, log_pos2 - len(lines))
 
         log = runner.view_job_logs(job_id=job_id, skip_lines=None)
         log_lines = log["lines"]
 
-        print("About to dump log")
-        print(json.dumps(log))
+        print("Before SkipLines Test")
         for i, inserted_line in enumerate(log_lines):
             if i < log_pos_1:
                 continue
-
+            print("Checking", i)
+            print("Checking to see if", inserted_line["line"])
+            print(input_lines2[i - log_pos_1]["line"])
             self.assertEqual(inserted_line["line"], input_lines2[i - log_pos_1]["line"])
+            print("SUCCESS")
 
             time_input = input_lines2[i - log_pos_1]["ts"]
+            print("Time input is", time_input)
             if isinstance(time_input, str):
                 if time_input.replace(".", "", 1).isdigit():
                     time_input = (
@@ -431,13 +438,18 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             elif isinstance(time_input, int):
                 time_input = time_input / 1000.0
 
+            print("Time 2 is", time_input)
             self.assertEqual(inserted_line["ts"], int(time_input * 1000))
 
             error1 = line["error"]
+
             error2 = input_lines2[i - log_pos_1]["error"]
+
+            print(line)
+            print(input_lines2[i - log_pos_1])
             self.assertEqual(error1, error2)
 
-        # TODO IMPLEMENT SKIPLINES AND TEST
+        print("SkipLines Test")
 
         log = runner.view_job_logs(job_id=job_id, skip_lines=1)
         self.assertEqual(log["lines"][0]["linepos"], 2)
@@ -449,20 +461,24 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         # Test limit
         log = runner.view_job_logs(job_id=job_id, limit=2)
         self.assertEqual(len(log["lines"]), 2)
-        self.assertEqual(log["lines"][0]["linepos"], 1)
-        self.assertEqual(log["lines"][-1]["linepos"], 2)
+        self.assertEqual(log["lines"][0]["linepos"], 0)
+        self.assertEqual(log["lines"][-1]["linepos"], 1)
+        self.assertEqual(log["last_line_number"], 1)
+
+        log = runner.view_job_logs(job_id=job_id, limit=3, skip_lines=0)
+        self.assertEqual(
+            3, len(log["lines"]),
+        )
+        self.assertEqual(0, log["lines"][0]["linepos"])
+        self.assertEqual(2, log["lines"][-1]["linepos"])
         self.assertEqual(log["last_line_number"], 2)
 
-        log = runner.view_job_logs(job_id=job_id, limit=3, skip_lines=2)
-        self.assertEqual(len(log["lines"]), 3)
-        self.assertEqual(log["lines"][0]["linepos"], 3)
-        self.assertEqual(log["lines"][-1]["linepos"], 5)
-        self.assertEqual(log["last_line_number"], 5)
-
-        log = runner.view_job_logs(job_id=job_id, limit=3, skip_lines=7)
-        self.assertEqual(len(log["lines"]), 1)
-        self.assertEqual(log["lines"][0]["linepos"], 8)
-        self.assertEqual(log["last_line_number"], 8)
+        log = runner.view_job_logs(job_id=job_id, limit=3, skip_lines=5)
+        self.assertEqual(
+            2, len(log["lines"]),
+        )
+        self.assertEqual(6, log["lines"][0]["linepos"])
+        self.assertEqual(7, log["last_line_number"])
 
         log = runner.view_job_logs(job_id=job_id, limit=3, skip_lines=8)
         self.assertEqual(log["lines"], [])
