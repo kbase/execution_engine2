@@ -89,13 +89,13 @@ class MongoUtil:
 
     @classmethod
     def _get_collection(
-            self,
-            mongo_host: str,
-            mongo_port: int,
-            mongo_database: str,
-            mongo_user: str = None,
-            mongo_password: str = None,
-            mongo_authmechanism: str = "DEFAULT",
+        self,
+        mongo_host: str,
+        mongo_port: int,
+        mongo_database: str,
+        mongo_user: str = None,
+        mongo_password: str = None,
+        mongo_authmechanism: str = "DEFAULT",
     ):
         """
         Connect to Mongo server and return a tuple with the MongoClient and MongoClient?
@@ -232,8 +232,8 @@ class MongoUtil:
                         raise ValueError("Please input a list type exclude_fields")
                     jobs = (
                         Job.objects(id__in=job_ids)
-                            .exclude(*exclude_fields)
-                            .order_by("{}_id".format(sort_id_indicator))
+                        .exclude(*exclude_fields)
+                        .order_by("{}_id".format(sort_id_indicator))
                     )
 
                 else:
@@ -417,8 +417,6 @@ class MongoUtil:
 
             j.save()
 
-
-
     @contextmanager
     def mongo_engine_connection(self):
         yield self.me_connection
@@ -443,7 +441,7 @@ class MongoUtil:
 
         return rec.inserted_id
 
-    def _add_job_logs(self, log_lines, job_id):
+    def _add_job_logs(self, log_lines: JobLog, job_id: str, record_count: int):
         """
 
         :param log_lines:
@@ -452,36 +450,28 @@ class MongoUtil:
         """
 
         update_filter = {"_id": ObjectId(job_id)}
-        push_op = {'lines': log_lines['lines']}
+        push_op = {"lines": log_lines}
 
-
-        set_op = {'original_line_count':  log_lines['original_line_count'],
-                           'stored_line_count': log_lines['original_line_count'],
-                           'updated': time.time()}
-
-        print("set_op op is", set_op)
-
+        set_op = {
+            "original_line_count": record_count,
+            "stored_line_count": record_count,
+            "updated": time.time(),
+        }
         update = {"$pushAll": push_op, "$set": set_op}
-
-        print("Update is", update)
-
-        print(f"About to do the subsequent log record 22")
         with self.pymongo_client(self.mongo_collection) as pymongo_client:
-            print(f"About to do the subsequent log record 23")
-
             job_col = pymongo_client[self.mongo_database][self.mongo_collection]
-            # try:
-            print(f"About to return update", update_filter, update)
-            job_col.update_one(update_filter, update, upsert=False)
-            # except Exception as e:
-            #     error_msg = "Cannot update doc\n ERROR -- {}:\n{}".format(
-            #         e, "".join(traceback.format_exception(None, e, e.__traceback__))
-            #     )
-            #     raise ValueError(error_msg)
+            try:
+                job_col.update_one(update_filter, update, upsert=False)
+            except Exception as e:
+                error_msg = "Cannot update doc\n ERROR -- {}:\n{}".format(
+                    e, "".join(traceback.format_exception(None, e, e.__traceback__))
+                )
+                raise ValueError(error_msg)
 
-            slc =  job_col.find_one({"_id": ObjectId(job_id)}).get("stored_line_count")
-            print(f"About to return slc {slc}" )
+            slc = job_col.find_one({"_id": ObjectId(job_id)}).get("stored_line_count")
+            print(f"About to return slc {slc}")
             return slc
+
     def update_one(self, doc, job_id):
         """
         update existing records or create if they do not exist
