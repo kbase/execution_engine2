@@ -1,5 +1,9 @@
 # execution_engine2 (ee2) release notes
 =========================================
+## 0.0.3.3
+  * Change log appends from update to $push
+  * Change first log linepos to position 0 instead of 1
+
 ## 0.0.3.2
   * Change 2 db state updates for startjob into 1
   * Rework Perms Model 
