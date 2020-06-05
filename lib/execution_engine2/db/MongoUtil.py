@@ -464,7 +464,7 @@ class MongoUtil:
                 raise ValueError(error_msg)
 
             slc = job_col.find_one({"_id": ObjectId(job_id)}).get("stored_line_count")
-            print(f"About to return slc {slc}")
+
             return slc
 
     def update_one(self, doc, job_id):
