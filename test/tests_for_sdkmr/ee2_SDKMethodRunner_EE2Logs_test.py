@@ -87,8 +87,8 @@ class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
 
             test_line = ori_lines[0]
 
-            self.assertEqual(test_line["line"], "Hello world")
-            self.assertEqual(test_line["linepos"], 1)
+            self.assertEquals(test_line["line"], "Hello world")
+            self.assertEqual(test_line["linepos"], 0)
             self.assertEqual(test_line["error"], False)
 
             # add job log
@@ -98,7 +98,7 @@ class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
             ]
 
             runner.add_job_logs(job_id=job_id, log_lines=lines)
-
+            #
             log = self.mongo_util.get_job_log(job_id=job_id)
             self.assertTrue(log.updated)
             self.assertTrue(ori_updated_time < log.updated)
@@ -106,26 +106,26 @@ class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
             self.assertEqual(log.stored_line_count, 3)
             ori_lines = log.lines
             self.assertEqual(len(ori_lines), 3)
-
+            #
             # original line
 
             test_line = ori_lines[0]
-            print(test_line)
-            self.assertEqual(test_line["line"], "Hello world")
-            self.assertEqual(test_line["linepos"], 1)
-            self.assertEqual(test_line["error"], 0)
+            print(ori_lines)
+            self.assertEqual("Hello world", test_line["line"])
+            self.assertEqual(0, test_line["linepos"])
+            self.assertEqual(0, test_line["error"])
 
             # new line
             test_line = ori_lines[1]
 
             self.assertEqual(test_line["line"], "Hello Kbase")
-            self.assertEqual(test_line["linepos"], 2)
+            self.assertEqual(test_line["linepos"], 1)
             self.assertEqual(test_line["error"], 1)
 
             test_line = ori_lines[2]
 
             self.assertEqual(test_line["line"], "Hello Wrold Kbase")
-            self.assertEqual(test_line["linepos"], 3)
+            self.assertEqual(test_line["linepos"], 2)
             self.assertEqual(test_line["error"], 0)
 
             self.mongo_util.get_job(job_id=job_id).delete()
@@ -133,3 +133,6 @@ class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
 
             self.mongo_util.get_job_log(job_id=job_id).delete()
             self.assertEqual(ori_job_log_count, JobLog.objects.count())
+
+
+#

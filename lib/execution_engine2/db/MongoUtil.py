@@ -441,13 +441,8 @@ class MongoUtil:
 
         return rec.inserted_id
 
-    def _add_job_logs(self, log_lines: JobLog, job_id: str, record_count: int):
-        """
-
-        :param log_lines:
-        :param job_id:
-        :return:
-        """
+    def _push_job_logs(self, log_lines: JobLog, job_id: str, record_count: int):
+        """ append a list of job logs, and update the record count  """
 
         update_filter = {"_id": ObjectId(job_id)}
         push_op = {"lines": log_lines}

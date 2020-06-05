@@ -76,7 +76,7 @@ class EE2Logs:
             record_position=job_log["stored_line_count"] - 1, log_lines=log_lines
         )
         record_count = int(job_log["stored_line_count"]) + len(formatted_logs)
-        slc = self.mongo_util._add_job_logs(
+        slc = self.mongo_util._push_job_logs(
             formatted_logs, job_id=job_log["_id"], record_count=record_count
         )
         return AddLogResult(success=True, stored_line_count=slc)
