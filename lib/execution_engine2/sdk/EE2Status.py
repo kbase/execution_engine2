@@ -324,7 +324,7 @@ class JobsStatus:
             msg = "Missing job output required in order to successfully finish job. Something went wrong"
 
             self._finish_job_with_error(
-                job_id=job_id, error_message=msg, error_code=error_code
+                job_id=job_id, error_message=msg, error_code=error_code, error=error
             )
 
             self.sdkmr.kafka_client.send_kafka_message(
