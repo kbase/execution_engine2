@@ -322,6 +322,8 @@ class JobsStatus:
             if error_code is None:
                 error_code = ErrorCode.job_missing_output.value
             msg = "Missing job output required in order to successfully finish job. Something went wrong"
+            if error is None:
+                error = {"code": error_code, "name": msg, "error": msg, "message": msg}
 
             self._finish_job_with_error(
                 job_id=job_id, error_message=msg, error_code=error_code, error=error
@@ -403,7 +405,7 @@ class JobsStatus:
             return_list=0,
         ).get(job_id)
 
-        if "error" in job_state:
+        if "checkjob_error" in job_state:
             raise PermissionError(job_state["error"])
 
         return job_state
@@ -445,7 +447,10 @@ class JobsStatus:
         job_states = dict()
         for idx, job in enumerate(jobs):
             if not perms[idx]:
-                job_states[str(job.id)] = {"error": f"No read permissions for {job.id}"}
+                job_states[str(job.id)] = {
+                    "failure": f"No read permissions for {job.id}",
+                    "check_job_error": True,
+                }
             else:
                 mongo_rec = job.to_mongo().to_dict()
                 del mongo_rec["_id"]
