@@ -322,6 +322,8 @@ class JobsStatus:
             if error_code is None:
                 error_code = ErrorCode.job_missing_output.value
             msg = "Missing job output required in order to successfully finish job. Something went wrong"
+            if error is None:
+                error = {"code": error_code, "name": msg, "error": msg, "message": msg}
 
             self._finish_job_with_error(
                 job_id=job_id, error_message=msg, error_code=error_code, error=error
