@@ -3,6 +3,12 @@ set -x
 
 HOME=$(pwd)
 export HOME
+# Detect if we are running at NERSC and load some customization
+# Probably better ways to deal with this but this is good enough.
+if [ -e /global/homes/k/kbaserun/.local_settings ] ; then
+   HOME=/global/homes/k/kbaserun
+   . $HOME/.local_settings $1 $2
+fi
 
 debug_dir="debug"
 runner_logs="runner_logs"
