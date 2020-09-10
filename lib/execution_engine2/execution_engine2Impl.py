@@ -27,8 +27,8 @@ class execution_engine2:
     # the latter method is running.
     ######################################### noqa
     VERSION = "0.0.1"
-    GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "b0fb20c31742d2a2b49555635b42f750ed7db51e"
+    GIT_URL = "git@github.com:kbase/execution_engine2.git"
+    GIT_COMMIT_HASH = "8156e22a387b26b8f304c2a6f1e7f161b78067ff"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -1377,9 +1377,9 @@ class execution_engine2:
         # return the results
         return [returnVal]
 
-    @staticmethod
-    def get_client_groups(ctx):
+    def get_client_groups(self, ctx):
         """
+        Get a list of clientgroups manually extracted from the config file
         :returns: instance of list of String
         """
         # ctx is the context object
@@ -1388,6 +1388,7 @@ class execution_engine2:
         client_groups = ['njs', 'bigmem', 'bigmemlong', 'extreme', 'concierge', 'hpc', 'kb_upload',
                          'terabyte', 'multi_tb', 'kb_upload_bulk']
         #END get_client_groups
+
         # At some point might do deeper type checking...
         if not isinstance(client_groups, list):
             raise ValueError('Method get_client_groups return value ' +
