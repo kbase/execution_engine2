@@ -221,12 +221,8 @@ class Status(Enum):
     running = "running"
     # finished = "finished"  # Successful termination legacy code
     completed = "completed"  # Successful termination
-    error = (
-        "error"
-    )  # Something went wrong and job failed # Possible Reasons are (ErrorCodes)
-    terminated = (
-        "terminated"
-    )  # Canceled by user, admin, or script # Possible Reasons are (TerminatedCodes)
+    error = "error"  # Something went wrong and job failed # Possible Reasons are (ErrorCodes)
+    terminated = "terminated"  # Canceled by user, admin, or script # Possible Reasons are (TerminatedCodes)
 
 
 class AuthStrat(Enum):
