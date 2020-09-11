@@ -378,8 +378,10 @@ class SDKMethodRunner:
             )
             job = self.get_mongo_util().get_job(job_id=job_id)
         else:
-            permission_found_in_cache = self.get_ee2_auth().get_job_permission_from_cache(
-                job_id=job_id, level=requested_job_perm
+            permission_found_in_cache = (
+                self.get_ee2_auth().get_job_permission_from_cache(
+                    job_id=job_id, level=requested_job_perm
+                )
             )
             job = self.get_mongo_util().get_job(job_id=job_id)
             if not permission_found_in_cache:
