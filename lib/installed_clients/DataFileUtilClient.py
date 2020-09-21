@@ -182,8 +182,8 @@ class DataFileUtil(object):
         """
         Using the same logic as unpacking a Shock file, this method will cause
         any bzip or gzip files to be uncompressed, and then unpack tar and zip
-        archive files (uncompressing gzipped or bzipped archive files if 
-        necessary). If the file is an archive, it will be unbundled into the 
+        archive files (uncompressing gzipped or bzipped archive files if
+        necessary). If the file is an archive, it will be unbundled into the
         directory containing the original output file.
         :param params: instance of type "UnpackFileParams" -> structure:
            parameter "file_path" of String

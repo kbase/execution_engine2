@@ -3,7 +3,7 @@
 try:
     from .transfer_ujs_njs import MigrateDatabases
     from lib.execution_engine2.db.models.models import Status, valid_status
-except:
+except Exception:
     from transfer_ujs_njs import MigrateDatabases
     from models import *
 from bson import ObjectId

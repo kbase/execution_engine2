@@ -19,8 +19,10 @@ before_install:
 
 install:
   - pip install -r requirements.txt
+  - pip install black flake8
+  - flake8 ./lib ./test
+  - black --check ./lib ./test
   - make setup-database
-
 
 script:
   - make test-coverage
