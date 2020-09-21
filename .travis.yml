@@ -21,8 +21,7 @@ install:
   - pip install -r requirements.txt
   - pip install black flake8
   - flake8 ./lib
-  # - black --check --exclude lib/execution_engine2/execution_engine2Impl.py --exclude /lib/installed_clients/ lib  
-  - black --check --exclude /home/travis/build/kbase/execution_engine2/lib/execution_engine2/execution_engine2Impl.py --exclude /lib/installed_clients/ lib
+  - black --check --force-exclude ./lib/execution_engine2/execution_engine2Impl.py --exclude ./lib/installed_clients/ lib
   - make setup-database
 
 
