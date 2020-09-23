@@ -173,4 +173,4 @@ if __name__ == "__main__":
             time.sleep(5)
         except Exception as e:
             slack_client.ee2_reaper_failure(endpoint=ee2_endpoint)
-            sys.exit(f"{e}")
+
