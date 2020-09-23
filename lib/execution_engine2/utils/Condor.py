@@ -201,7 +201,7 @@ class Condor(Scheduler):
         #  Allow up to 12 hours for condor drain
         sub["MaxJobRetirementTime"] = "43200"
         # Remove jobs running longer than 7 days
-        sub["Periodic_Remove"] = "( RemoteWallClockTime > 604800 )"
+        sub["Periodic_Hold"] = "( RemoteWallClockTime > 604800 )"
         sub["log"] = "runner_logs/$(Cluster).$(Process).log"
         err_file = f"{job_id}.err"
         out_file = f"{job_id}.out"
