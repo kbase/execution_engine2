@@ -13,7 +13,7 @@ The current implemetnation of Batch Analysis at KBase has the following issues:
 
 ## Author(s)
 
-@leia
+@leia-sefkin
 
 ## Status
 
@@ -37,6 +37,10 @@ We will have to implement a new narrative UI, however this was work that would h
 As far as we have discussed, this decision only seems to have positive consequences. We will be able to streamline the code structure at KBase, make batch analysis easier to test and improve usability and job management. 
 
 Initial architecture sketches for what this could look like have been started [here](https://miro.com/app/board/o9J_kmb4y4Q=/?moveToWidget=3074457350208108487&cot=12)
+
+Still to be determined (not in scope of this ADR): 
+* What other endpoints we may need such as cancel batch
+* Other implementation details such as will the Narrative poll EE2 for updates on jobs or subscribe to Kafka. 
 
 ## Pros and Cons of the Alternatives
 
