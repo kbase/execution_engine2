@@ -1,5 +1,9 @@
 # execution_engine2 (ee2) release notes
 =========================================
+## 0.0.3.4
+  * Change 7 day periodic_remove to 7 day hold
+  * Prevent reaper from prematurely exiting
+  
 ## 0.0.3.3
   * Change log appends from update to $push
   * Change first log linepos to position 0 instead of 1
