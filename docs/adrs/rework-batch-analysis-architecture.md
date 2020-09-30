@@ -2,10 +2,10 @@
 
 Date: 2020-09-28
 
-The current implemetnation of Batch Analysis at KBase has the following issues:
+The current implementation of Batch Analysis in [kb_BatchApp](https://github.com/kbaseapps/kb_BatchApp) at KBase has the following issues:
 
 * Current UI is not adequate: Users shouldn’t have to code in order to run batch analysis. Also it’s difficult to do so, even for those familiar with KBase code (have to find object names)
-* Dependency on KB Parallel: any changes to KB parallel could affect KB Batch and subsequently all other apps. 
+* Dependency on [KBParallel](https://github.com/kbaseapps/KBParallel): any changes to KBParallel could affect KB Batch and subsequently all other apps. 
 * Queue deadlocking: users have a max of 10 slots in the queue, with the current implementation one is taken up just to manage the jobs. Could lead to deadlock scenarios
 * Missing the ability to be able to run, manage and track jobs and their subjobs 
 * No good way to test and hard to benchmark or measure performance 
@@ -40,7 +40,10 @@ Initial architecture sketches for what this could look like have been started [h
 
 Still to be determined (not in scope of this ADR): 
 * What other endpoints we may need such as cancel batch
-* Other implementation details such as will the Narrative poll EE2 for updates on jobs or subscribe to Kafka. 
+* Other implementation details that are TBD:
+  * Will the Narrative poll EE2 for updates on jobs or subscribe to Kafka? 
+  * Creating sets of objects and what to do at the end of a batch run
+  * What to do about a set if a child task fails during processing 
 
 ## Pros and Cons of the Alternatives
 
@@ -62,7 +65,7 @@ Still to be determined (not in scope of this ADR):
 * `-` Hard to test (secret variables, dynamic services in app-dev and prod have same catalog, so hard to tell which service is where; service wizard can cause problems) 
 * `-` Takes microservices approach to the extreme - if we have a service for this it makes more sense for it to live within EE2 rather than be further separated
 * `-` Locked into KB-SDK
-* `-` Coupled with other dynamic services
+* `-` Coupled with other dynamic services and Rancher1. DevOps can't easily modify the deployment of these without changes to the service wizard. 
 
 ### Implementing a standalone Narrative Widget
 * `+` No longer uses an app
@@ -80,3 +83,4 @@ Still to be determined (not in scope of this ADR):
 * `+` Possible to control job priority in queue
   * Batch jobs could have lower priority, so individual jobs could also run concurrently. E.g. A user could start a batch of 1000 imports, and still run some analysis task that would be able to start and finish first.
   * There’s a possibility for users (and/or admins) to control job priority in queue after submission
+* [Code cohesion](https://en.wikipedia.org/wiki/Cohesion_(computer_science))
