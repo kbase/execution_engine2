@@ -51,7 +51,7 @@ Still to be determined (not in scope of this ADR):
 
 * `+` We have a potential first pass at implementation [here](https://github.com/bio-boris/simplebatch)
 * `+` Removes dependency on KB Parallel
-* `+` No longer uses up a slot in the queue
+* `+` In current implementation, no longer uses up a slot in the queue (however this could easily morph into a con depending on how we manage set creation. If we need a reduce step this could require us to use multiple slots.)
 * `+` Offers some improvement upon job management
 * `-` Code is still split between locations
 * `-` No good way to test and hard to benchmark or measure performance 
