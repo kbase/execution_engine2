@@ -21,6 +21,12 @@ sed -i "s|SHOWWARNING=true|SHOWWARNING=false|" /etc/tmpreaper.conf
 sed -i "s|TMPREAPER_DIRS='/tmp/.'|TMPREAPER_DIRS='/condor_shared/runner_logs /condor_shared/cluster_logs'|" /etc/tmpreaper.conf
 
 
+if [ "$LOCAL_DEV" = 1 ]; then
+   bash /kb/module/scripts/start_ssh.sh &
+fi
+
+
+
 gunicorn \
   --user kbase \
   --worker-class gevent \
