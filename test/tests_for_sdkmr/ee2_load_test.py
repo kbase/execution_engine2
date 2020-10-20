@@ -17,7 +17,11 @@ from lib.execution_engine2.sdk.EE2Status import JobsStatus
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.Condor import Condor
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
-from test.utils_shared.test_utils import bootstrap, get_sample_job_params
+from test.utils_shared.test_utils import (
+    bootstrap,
+    get_sample_job_params,
+    read_config_into_dict,
+)
 from tests_for_db.mongo_test_helper import MongoTestHelper
 
 logging.basicConfig(level=logging.INFO)
@@ -28,20 +32,10 @@ from mock import MagicMock
 class ee2_server_load_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-
-        config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
-        config_parser = ConfigParser()
-        config_parser.read(config_file)
-
-        cls.cfg = {}
-
-        for nameval in config_parser.items("execution_engine2"):
-            cls.cfg[nameval[0]] = nameval[1]
-
-        mongo_in_docker = cls.cfg.get("mongo-in-docker-compose", None)
-        if mongo_in_docker is not None:
-            cls.cfg["mongo-host"] = cls.cfg["mongo-in-docker-compose"]
-
+        deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
+        print("Deploy is", deploy)
+        config = read_config_into_dict(deploy)
+        cls.cfg = config
         cls.user_id = "wsadmin"
         cls.ws_id = 9999
         cls.token = "token"

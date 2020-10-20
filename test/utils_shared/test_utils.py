@@ -85,13 +85,19 @@ def _create_sample_params(self):
 def read_config_into_dict(config="deploy.cfg", section="execution_engine2"):
 
     if not os.path.isfile(config):
-        raise FileNotFoundError(config + " pwd=" + os.getcwd())
+        raise FileNotFoundError(config, "Did you set your test.env?")
+
     config_parser = ConfigParser()
     config_parser.read(config)
     config = dict()
     print(config_parser.sections())
     for key, val in config_parser[section].items():
         config[key] = val
+
+    # Should this just be added into read_config_into_dict function?
+    if config.get("mongo-in-docker-compose", None) is not None:
+        config["mongo-host"] = config["mongo-in-docker-compose"]
+
     return config
 
 

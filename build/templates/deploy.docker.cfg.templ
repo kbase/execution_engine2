@@ -17,21 +17,17 @@ shock-url = "https://ci.kbase.us/services/shock-api"
 slack-token = ""
 slack-channel = "#execution_engine_notifications"
 
-kafka-host = ci-kafka:9096
+kafka-host = kafka:9096
 kafka-topic = ee2
 
 #---------------------------------------------------------------------------------------#
 mongo-port = 27017
-mongo-host = localhost
-# mongo-host = mini_kb_ci-mongo_1
+mongo-host = mongodb
 mongo-database = ee2
 mongo-user = travis
 mongo-password = travis
 mongo-authmechanism = DEFAULT
 
-# mongo-in-docker-compose = mini_kb_ci-mongo_1
-# mongo-in-docker-compose = condor_mongo_1
-# start-local-mongo should be 0 for travis
 start-local-mongo = 0
 
 mongo-collection = legacy

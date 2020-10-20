@@ -10,7 +10,11 @@ import requests_mock
 from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.db.models.models import Job, JobLog
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-from test.utils_shared.test_utils import bootstrap, run_job_adapter
+from test.utils_shared.test_utils import (
+    bootstrap,
+    run_job_adapter,
+    read_config_into_dict,
+)
 from tests_for_db.mongo_test_helper import MongoTestHelper
 from tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 
@@ -21,18 +25,10 @@ bootstrap()
 class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
-        config_parser = ConfigParser()
-        config_parser.read(config_file)
+        deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
+        config = read_config_into_dict(deploy)
+        cls.cfg = config
 
-        cfg = {}
-
-        for nameval in config_parser.items("execution_engine2"):
-            cfg[nameval[0]] = nameval[1]
-        cls.cfg = cfg
-        mongo_in_docker = cls.cfg.get("mongo-in-docker-compose", None)
-        if mongo_in_docker is not None:
-            cls.cfg["mongo-host"] = cls.cfg["mongo-in-docker-compose"]
         logging.info(f"Mongo host is {cls.cfg['mongo-host']}")
         cls.user_id = "wsadmin"
         cls.ws_id = 9999
