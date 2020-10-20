@@ -8,7 +8,11 @@ from bson.objectid import ObjectId
 
 from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job, JobLog
-from test.utils_shared.test_utils import bootstrap, get_example_job
+from test.utils_shared.test_utils import (
+    bootstrap,
+    get_example_job,
+    read_config_into_dict,
+)
 from tests_for_db.mongo_test_helper import MongoTestHelper
 
 logging.basicConfig(level=logging.INFO)
@@ -19,21 +23,9 @@ bootstrap()
 class MongoUtilTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        config_file = os.environ.get(
-            "KB_DEPLOYMENT_CONFIG", os.path.join("test", "deploy.cfg")
-        )
-
-        logging.info("Reading from " + config_file)
-        config_parser = ConfigParser()
-        config_parser.read(config_file)
-
-        cls.config = {}
-        for nameval in config_parser.items("execution_engine2"):
-            cls.config[nameval[0]] = nameval[1]
-
-        mongo_in_docker = cls.config.get("mongo-in-docker-compose", None)
-        if mongo_in_docker is not None:
-            cls.config["mongo-host"] = cls.config["mongo-in-docker-compose"]
+        deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
+        config = read_config_into_dict(deploy)
+        cls.config = config
 
         logging.info("Setting up mongo test helper")
         cls.mongo_helper = MongoTestHelper(cls.config)
@@ -41,9 +33,7 @@ class MongoUtilTest(unittest.TestCase):
             f" mongo create test db={cls.config['mongo-database']}, col={cls.config['mongo-jobs-collection']}"
         )
 
-        cls.test_collection = cls.mongo_helper.create_test_db(
-            db=cls.config["mongo-database"], col=cls.config["mongo-jobs-collection"]
-        )
+        cls.test_collection = cls.mongo_helper.create_test_db(db="ee2", col="ee2_jobs")
         logging.info("Setting up mongo util")
         cls.mongo_util = MongoUtil(cls.config)
 

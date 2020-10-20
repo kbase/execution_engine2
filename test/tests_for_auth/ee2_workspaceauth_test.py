@@ -1,8 +1,10 @@
-import unittest
-import requests_mock
 import os
-from configparser import ConfigParser
+import unittest
+
+import requests_mock
+
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
+from test.utils_shared.test_utils import read_config_into_dict
 
 
 class WorkspaceAuthTestCase(unittest.TestCase):
@@ -10,11 +12,7 @@ class WorkspaceAuthTestCase(unittest.TestCase):
     def setUpClass(cls):
         cls.user = "some_user"
         config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
-        cls.cfg = dict()
-        config = ConfigParser()
-        config.read(config_file)
-        for nameval in config.items("execution_engine2"):
-            cls.cfg[nameval[0]] = nameval[1]
+        cls.cfg = read_config_into_dict(config_file)
         cls.ws_url = cls.cfg["workspace-url"]
 
     def _mock_ok_ws_perms(self, rq_mock, user_id, ws_id_map):

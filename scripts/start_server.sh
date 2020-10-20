@@ -22,7 +22,7 @@ sed -i "s|TMPREAPER_DIRS='/tmp/.'|TMPREAPER_DIRS='/condor_shared/runner_logs /co
 
 
 if [ "$LOCAL_DEV" = 1 ]; then
-   bash /kb/module/scripts/start_ssh.sh &
+   exec bash /kb/module/scripts/start_ssh.sh &
 fi
 
 

@@ -11,16 +11,16 @@ services:
       - "-template"
       - "/kb/module/build/templates/condor_config.templ:/etc/condor/condor_config"
       - "-template"
-      - "/kb/module/build/templates/minikb.templ:/kb/module/deploy.cfg"
+      - "/kb/module/test/deploy.cfg:/kb/module/deploy.cfg"
       - "-timeout"
       - "120s"
       - "-wait"
-      - "tcp://mongo:27017"
+      - "tcp://mongodb:27017"
       - "-stdout"
       - "/kb/deployment/jettybase/logs/request.log"
       - "./scripts/entrypoint.sh"
     entrypoint: [ "/kb/deployment/bin/dockerize" ]
-    depends_on: ["mongo","condor"]
+    depends_on: ["mongodb","condor"]
     environment:
       - POOL_PASSWORD=weakpassword
     env_file: test/deploy.cfg
@@ -34,23 +34,25 @@ services:
       - "-template"
       - "/kb/module/build/templates/condor_config.templ:/etc/condor/condor_config"
       - "-template"
-      - "/kb/module/build/templates/minikb.templ:/kb/module/deploy.cfg"
+      - "/kb/module/build/templates/deploy.docker.cfg.templ:/kb/module/deploy.cfg"
       - "-timeout"
       - "120s"
       - "-wait"
-      - "tcp://mongo:27017"
+      - "tcp://mongodb:27017"
       - "-stdout"
       - "/kb/deployment/jettybase/logs/request.log"
       - "./scripts/entrypoint.sh"
     entrypoint: [ "/kb/deployment/bin/dockerize" ]
-    depends_on: ["mongo","condor"]
+    depends_on: ["mongodb","condor"]
     environment:
       - POOL_PASSWORD=weakpassword
       - LOCAL_DEV=1
+      - KB_DEPLOYMENT_CONFIG=/kb/module/deploy.cfg
     env_file: test/deploy.cfg
     ports: ["23:22"]
     volumes:
       - ./:/ee2
+      - /Users:/Users
 
 
 
@@ -141,9 +143,13 @@ services:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
       ZOOKEEPER_INIT_LIMIT: 5
-      ZOOKEEPER_SYNC_LIMIT: 2
+      ZOOKEEPER_SYNC_LIMIT: 2docker-compose rm
       ZOOKEEPER_SERVERS: zookeeper:12888:13888
 
-  mongo:
-    image: mongo:latest
+  mongodb:
+    image: mongo:3.2
+    environment:
+      # provide your credentials here
+      - MONGO_INITDB_ROOT_USERNAME=travis
+      - MONGO_INITDB_ROOT_PASSWORD=travis
     ports: ["27018:27017","1:2"]

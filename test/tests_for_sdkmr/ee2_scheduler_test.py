@@ -17,7 +17,6 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
-
         cls.condor = Condor(deploy)
         cls.job_id = "1234"
         cls.user = "kbase"
