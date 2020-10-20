@@ -82,25 +82,10 @@ def _create_sample_params(self):
     return params
 
 
-def read_fallback_config(config="/kb/module/deploy.cfg"):
-    print("Checking for", config)
-    if not os.path.isfile(config):
-        raise FileNotFoundError(config + " pwd=" + os.getcwd())
-
-
 def read_config_into_dict(config="deploy.cfg", section="execution_engine2"):
 
-    attempted_configs = []
-
     if not os.path.isfile(config):
-        attempted_configs.append(config)
-        config = "/kb/module/deploy.cfg"
-    elif not os.path.isfile(config):
-        attempted_configs.append(config)
-        config = "/kb/module/test/deploy.cfg"
-    elif not os.path.isfile(config):
-        attempted_configs.append(config)
-        raise FileNotFoundError(f"Couldn't find configs f{attempted_configs}")
+        raise FileNotFoundError(config, "Did you set your test.env?")
 
     config_parser = ConfigParser()
     config_parser.read(config)
