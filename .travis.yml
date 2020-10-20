@@ -30,7 +30,4 @@ script:
   # - make integration_test Doesn't yet work in travis
 
 after_success:
- # Need to set up credentials for this
- # - make build-docker-image #Maybe deprecate this for quay?
- #  - IMAGE_NAME=kbase/ee2 ./build/push2dockerhub.sh
  - codecov
