@@ -13,7 +13,7 @@ conda-package-handling==1.6.0
 configparser==3.7.4
 confluent-kafka==1.2.0
 coverage==4.5.3
-cryptography==2.8
+cryptography==3.2
 docker==4.3.1
 gevent==20.9.0
 gprof2dot==2019.11.30
