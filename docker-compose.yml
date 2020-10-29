@@ -49,7 +49,7 @@ services:
       - LOCAL_DEV=1
       - KB_DEPLOYMENT_CONFIG=/kb/module/deploy.cfg
     env_file: test/deploy.cfg
-    ports: ["23:22"]
+    ports: ["23:22","5678:5678"]
     volumes:
       - ./:/ee2
       - /Users:/Users
@@ -152,4 +152,7 @@ services:
       # provide your credentials here
       - MONGO_INITDB_ROOT_USERNAME=travis
       - MONGO_INITDB_ROOT_PASSWORD=travis
+      - MONGO_INITDB_DATABASE=ee2
     ports: ["27018:27017","1:2"]
+    volumes:
+      - "./test/dockerfiles/mongo/docker-entrypoint-initdb.d/:/docker-entrypoint-initdb.d/"
