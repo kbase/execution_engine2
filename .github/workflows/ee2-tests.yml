@@ -26,9 +26,11 @@ jobs:
       run: |
         flake8 ./lib ./test
         black --check ./lib ./test
-    - name: Test with pytest
+    - name: Build Docker Image
       run: |
         docker build . -t execution_engine:test
+    - name: Run Tests
+      run: |
         docker-compose up -d
         make test-coverage
     
