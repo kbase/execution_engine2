@@ -153,6 +153,6 @@ services:
       - MONGO_INITDB_ROOT_USERNAME=travis
       - MONGO_INITDB_ROOT_PASSWORD=travis
       - MONGO_INITDB_DATABASE=ee2
-    ports: ["27018:27017","1:2"]
+    ports: ["27018:27017","27017:27017"]
     volumes:
       - "./test/dockerfiles/mongo/docker-entrypoint-initdb.d/:/docker-entrypoint-initdb.d/"
