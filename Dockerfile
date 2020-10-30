@@ -44,7 +44,7 @@ RUN pip install --upgrade pip && python -V
 
 COPY ./requirements.txt /kb/module/requirements.txt
 RUN pip install -r /kb/module/requirements.txt
-RUN useradd kbase
+RUN adduser --disabled-password --gecos '' -shell /bin/bash kbase
 # -----------------------------------------
 
 COPY ./ /kb/module

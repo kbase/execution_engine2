@@ -13,7 +13,7 @@ CONDOR_DOCKER_IMAGE_TAG_NAME = kbase/ee2:condor_test_instance
 
 default: compile
 
-all: compile build build-test-script
+all: compile build
 
 compile:
 	kb-sdk compile $(SPEC_FILE) \
