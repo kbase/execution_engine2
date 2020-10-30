@@ -9,7 +9,7 @@ cffi==1.14.0
 chardet==3.0.4
 codecov==2.0.15
 conda
-conda-package-handling==1.6.0
+conda-package-handling
 configparser==3.7.4
 confluent-kafka==1.2.0
 coverage==4.5.3
