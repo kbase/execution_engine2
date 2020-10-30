@@ -28,7 +28,7 @@ jobs:
         black --check ./lib ./test
     - name: Build Docker Image
       run: |
-        docker build . -t execution_engine:test
+        docker build . -t execution_engine2:test
     - name: Run Tests
       run: |
         docker-compose up -d
