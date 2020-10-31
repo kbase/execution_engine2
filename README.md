@@ -25,7 +25,8 @@ See the .travis file for information on how to test locally
 ## Build and exec into the dev container
 
 ```
-docker-compose up --build -d
+docker build . -t execution_engine2:test
+docker-compose up -d
 docker-compose exec ee2_with_ssh bash
 #cp test/env/test.example.docker.env 
 cd /Users/XXXX/XXX/XX/XX/execution_engine2
