@@ -209,6 +209,12 @@ class SDKMethodRunner:
         """ Authorization Required Read/Write """
         return self.get_runjob().run(params=params, as_admin=as_admin)
 
+    def run_job_batch(self, params, batch_params, as_admin=False):
+        """ Authorization Required Read/Write """
+        return self.get_runjob().run_batch(
+            params=params, batch_params=batch_params, as_admin=as_admin
+        )
+
     def run_job_concierge(self, params, concierge_params):
         """ Authorization Required : Be the kbaseconcierge user """
         return self.get_runjob().run(params=params, concierge_params=concierge_params)
@@ -247,6 +253,7 @@ class SDKMethodRunner:
         )
 
     def cancel_job(self, job_id, terminated_code=None, as_admin=False):
+        # TODO: Cancel Child Jobs as well
         """ Authorization Required Read/Write """
         return self.get_jobs_status().cancel_job(
             job_id=job_id, terminated_code=terminated_code, as_admin=as_admin

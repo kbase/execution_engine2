@@ -143,6 +143,18 @@
         */
         funcdef run_job(RunJobParams params) returns (job_id job_id) authentication required;
 
+        typedef structure {
+            int wsid;
+        } BatchParams;
+
+        typedef structure {
+            job_id parent_job_id;
+            list<job_id> children_job_ids;
+        } BatchSubmission;
+
+
+        funcdef run_job_batch(list<RunJobParams> params, BatchParams batch_params) returns (BatchSubmission ids) authentication required;
+
 
         /* EE2Constants Concierge Params are
             request_cpus: int
@@ -565,7 +577,7 @@
         funcdef get_admin_permission()  returns (AdminRolesResults) authentication required;
 
         /* Get a list of clientgroups manually extracted from the config file */
-        funcdef get_client_groups() returns (list<string> client_groups) authentication required;
+        funcdef get_client_groups() returns (list<string> client_groups);
 
 
     };

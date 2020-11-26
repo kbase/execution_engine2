@@ -7,7 +7,7 @@ the logic to retrieve info needed by the runnner to start the job
 import os
 import time
 from enum import Enum
-from typing import Optional, Dict, NamedTuple
+from typing import Optional, Dict, NamedTuple, Union, List
 
 from lib.execution_engine2.db.models.models import (
     Job,
@@ -16,6 +16,7 @@ from lib.execution_engine2.db.models.models import (
     JobRequirements,
     Status,
     ErrorCode,
+    TerminatedCode,
 )
 from lib.execution_engine2.sdk.EE2Constants import ConciergeParams
 from lib.execution_engine2.utils.CondorTuples import CondorResources
@@ -152,6 +153,17 @@ class EE2RunJob:
                     f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
                 )
 
+    def _check_workspace_permissions_list(self, wsids):
+        perms = self.sdkmr.get_workspace_auth().can_write_list(wsids)
+        bad_ws = [key for key in perms.keys() if perms[key] is False]
+        if len(bad_ws) > 0:
+            self.logger.debug(
+                f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {bad_ws}."
+            )
+            raise PermissionError(
+                f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {bad_ws}."
+            )
+
     def _finish_created_job(
         self, job_id, exception, error_code=None, error_message=None
     ):
@@ -175,7 +187,11 @@ class EE2RunJob:
             error=f"{exception}",
         )
 
-    def _prepare_to_run(self, params, concierge_params) -> PreparedJobParams:
+    def _prepare_to_run(self, params, concierge_params=None) -> PreparedJobParams:
+        """
+        Creates a job record, grabs info about the objects,
+        checks the catalog resource requirements, and submits to condor
+        """
         # perform sanity checks before creating job
         self._check_ws_objects(source_objects=params.get("source_ws_objects"))
         method = params.get("method")
@@ -202,7 +218,7 @@ class EE2RunJob:
 
         return PreparedJobParams(params=params, job_id=job_id)
 
-    def _run(self, params, concierge_params):
+    def _run(self, params, concierge_params=None):
         prepared = self._prepare_to_run(
             params=params, concierge_params=concierge_params
         )
@@ -240,6 +256,107 @@ class EE2RunJob:
         )
 
         return job_id
+
+    def _abort_child_jobs(self, child_job_ids):
+        """
+        Cancel a list of child jobs, and their child jobs
+        """
+        for child_job_id in child_job_ids:
+            try:
+                self.sdkmr.cancel_job(
+                    job_id=child_job_id,
+                    terminated_code=TerminatedCode.terminated_by_batch_abort.value,
+                )
+            except Exception as e:
+                # TODO Maybe add a retry here?
+                self.logger.error(f"Couldn't cancel child job {e}")
+
+    def _create_parent_job(self, wsid, meta):
+        """
+        This creates the parent job for all children to mark as their ancestor
+        :param params:
+        :return:
+        """
+        job_input = JobInput()
+        job_input.service_ver = "batch"
+        job_input.app_id = "batch"
+        job_input.method = "batch"
+        job_input.narrative_cell_info = Meta()
+
+        if meta:
+            job_input.narrative_cell_info.run_id = meta.get("run_id")
+            job_input.narrative_cell_info.token_id = meta.get("token_id")
+            job_input.narrative_cell_info.tag = meta.get("tag")
+            job_input.narrative_cell_info.cell_id = meta.get("cell_id")
+            job_input.narrative_cell_info.status = meta.get("status")
+
+        with self.sdkmr.get_mongo_util().mongo_engine_connection():
+            j = Job()
+            j.job_input = job_input
+
+            j.status = Status.queued.value
+            j.child_jobs = list()
+            j.wsid = wsid
+            j.user = self.sdkmr.user_id
+            j.save()
+
+        # TODO Do we need a new kafka call?
+        self.sdkmr.kafka_client.send_kafka_message(
+            message=KafkaCreateJob(job_id=str(j.id), user=j.user)
+        )
+        return j
+
+    def _run_batch(self, parent_job: Job, params):
+        child_jobs = []
+        for job_param in params:
+            if "parent_job_id" not in job_param:
+                job_param["parent_job_id"] = str(parent_job.id)
+            try:
+                child_jobs.append(str(self._run(params=job_param)))
+            except Exception as e:
+                self.logger.debug(
+                    msg=f"Failed to submit child job. Aborting entire batch job {e}"
+                )
+                self._abort_child_jobs(child_jobs)
+                raise e
+
+        with self.sdkmr.get_mongo_util().mongo_engine_connection():
+            parent_job.child_jobs = child_jobs
+            parent_job.save()
+
+        return child_jobs
+
+    def run_batch(
+        self, params, batch_params, as_admin=False
+    ) -> Dict[str, Union[Job, List[str]]]:
+        """
+        :param params: List of RunJobParams (See Spec File)
+        :param as_admin: Allows you to run jobs in other people's workspaces
+        :return: A list of condor job ids or a failure notification
+        """
+        wsid = batch_params.get("wsid")
+        meta = batch_params.get("meta")
+        if as_admin:
+            self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
+        else:
+            # TODO use workspace_permissions_list
+            self._check_workspace_permissions(wsid)
+
+        wsids = [job_input.get("wsid") for job_input in params]
+        self._check_workspace_permissions_list(wsids)
+
+        # TODO
+        # Iterate over each wsid and make sure you aren't running a job in someone elses workspace
+
+        # TODO GET WSID as SEPERATE PRAM
+
+        parent_job = self._create_parent_job(wsid=wsid, meta=meta)
+        children_jobs = self._run_batch(parent_job=parent_job, params=params)
+        print(
+            "About to return",
+            {"parent_job_id": str(parent_job.id), "children_job_ids": children_jobs},
+        )
+        return {"parent_job_id": str(parent_job.id), "children_job_ids": children_jobs}
 
     def run(
         self, params=None, as_admin=False, concierge_params: Dict = None

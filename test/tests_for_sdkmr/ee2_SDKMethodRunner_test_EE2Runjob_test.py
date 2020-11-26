@@ -239,6 +239,45 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    def test_run_job_batch(self, rq_mock, condor_mock):
+        rq_mock.add_matcher(
+            run_job_adapter(
+                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
+            )
+        )
+        runner = self.getRunner()
+        runner.get_condor = MagicMock(return_value=condor_mock)
+        job = get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
+        job["method"] = job["job_input"]["app_id"]
+        job["app_id"] = job["job_input"]["app_id"]
+        job["service_ver"] = job["job_input"]["service_ver"]
+
+        si = SubmissionInfo(clusterid="test", submit=job, error=None)
+        condor_mock.run_job = MagicMock(return_value=si)
+        condor_mock.extract_resources = MagicMock(return_value=self.cr)
+
+        jobs = [job, job, job]
+        job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
+        print(f"Job ids are {job_ids} ")
+        assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
+        assert "children_job_ids" in job_ids and isinstance(
+            job_ids["children_job_ids"], list
+        )
+        assert len(job_ids["children_job_ids"]) == len(jobs)
+
+        # Test that you can't run a job in someone elses workspace
+        job_bad = get_example_job(user=self.user_id, wsid=1234).to_mongo().to_dict()
+        job_bad["method"] = job["job_input"]["app_id"]
+        job_bad["app_id"] = job["job_input"]["app_id"]
+        job_bad["service_ver"] = job["job_input"]["service_ver"]
+
+        jobs = [job, job_bad]
+
+        with self.assertRaises(PermissionError):
+            runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
+
+    @requests_mock.Mocker()
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_run_job_fail(self, rq_mock, condor_mock):
         rq_mock.add_matcher(
             run_job_adapter(
