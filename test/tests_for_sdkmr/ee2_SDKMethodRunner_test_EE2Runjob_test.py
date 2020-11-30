@@ -266,14 +266,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         assert len(job_ids["children_job_ids"]) == len(jobs)
 
         # Test that you can't run a job in someone elses workspace
-        job_bad = get_example_job(user=self.user_id, wsid=1234).to_mongo().to_dict()
-        job_bad["method"] = job["job_input"]["app_id"]
-        job_bad["app_id"] = job["job_input"]["app_id"]
-        job_bad["service_ver"] = job["job_input"]["service_ver"]
-
-        jobs = [job, job_bad]
-
         with self.assertRaises(PermissionError):
+            job_bad = get_example_job(user=self.user_id, wsid=1234).to_mongo().to_dict()
+            job_bad["method"] = job["job_input"]["app_id"]
+            job_bad["app_id"] = job["job_input"]["app_id"]
+            job_bad["service_ver"] = job["job_input"]["service_ver"]
+            jobs = [job, job_bad]
             runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
     @requests_mock.Mocker()

@@ -339,16 +339,10 @@ class EE2RunJob:
         if as_admin:
             self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
         else:
-            # TODO use workspace_permissions_list
+            # Make sure you aren't running a job in someone elses workspace
             self._check_workspace_permissions(wsid)
-
-        wsids = [job_input.get("wsid") for job_input in params]
-        self._check_workspace_permissions_list(wsids)
-
-        # TODO
-        # Iterate over each wsid and make sure you aren't running a job in someone elses workspace
-
-        # TODO GET WSID as SEPERATE PRAM
+            wsids = [job_input.get("wsid", wsid) for job_input in params]
+            self._check_workspace_permissions_list(wsids)
 
         parent_job = self._create_parent_job(wsid=wsid, meta=meta)
         children_jobs = self._run_batch(parent_job=parent_job, params=params)

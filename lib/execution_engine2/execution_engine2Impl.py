@@ -28,7 +28,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "cd0d218975b855b65f8d4f907398fc1ce5998485"
+    GIT_COMMIT_HASH = "08d094f09629d1073a91dbf1f6d2ff7dc8e30712"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -295,22 +295,22 @@ class execution_engine2:
            "children_job_ids" of list of type "job_id" (A job id.)
         """
         # ctx is the context object
-        # return variables are: ids
+        # return variables are: job_ids
         #BEGIN run_job_batch
         mr = SDKMethodRunner(
             self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache, mongo_util=self.mongo_util
         )
-        job_id = mr.run_job_batch(params, batch_params)
+        job_ids = mr.run_job_batch(params, batch_params)
         #END run_job_batch
 
         # At some point might do deeper type checking...
-        if not isinstance(ids, dict):
+        if not isinstance(job_ids, dict):
             raise ValueError('Method run_job_batch return value ' +
-                             'ids is not type dict as required.')
+                             'job_ids is not type dict as required.')
         # return the results
-        return [ids]
+        return [job_ids]
 
     def run_job_concierge(self, ctx, params, concierge_params):
         """

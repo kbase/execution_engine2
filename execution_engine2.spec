@@ -153,7 +153,7 @@
         } BatchSubmission;
 
 
-        funcdef run_job_batch(list<RunJobParams> params, BatchParams batch_params) returns (BatchSubmission ids) authentication required;
+        funcdef run_job_batch(list<RunJobParams> params, BatchParams batch_params) returns (BatchSubmission job_ids) authentication required;
 
 
         /* EE2Constants Concierge Params are
