@@ -293,9 +293,8 @@ class EE2RunJob:
         with self.sdkmr.get_mongo_util().mongo_engine_connection():
             j = Job()
             j.job_input = job_input
-
+            j.batch_job = True
             j.status = Status.queued.value
-            j.child_jobs = list()
             j.wsid = wsid
             j.user = self.sdkmr.user_id
             j.save()
