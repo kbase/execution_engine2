@@ -1,17 +1,17 @@
 import json
+import os.path
+import uuid
 from configparser import ConfigParser
 from datetime import datetime
 from typing import List, Dict
-import uuid
 
 import requests
 from dotenv import load_dotenv
-from lib.execution_engine2.utils.CondorTuples import CondorResources, JobInfo
+
 from lib.execution_engine2.db.models.models import Job, JobInput, Meta
 from lib.execution_engine2.db.models.models import Status
 from lib.execution_engine2.exceptions import MalformedTimestampException
-
-import os.path
+from lib.execution_engine2.utils.CondorTuples import CondorResources, JobInfo
 
 
 def bootstrap():
@@ -62,7 +62,6 @@ def get_example_job(
 def get_example_job_as_dict_for_runjob(
     user=None, wsid=None, authstrat=None, scheduler_id=None
 ):
-
     job = get_example_job(
         user=user, wsid=wsid, authstrat=authstrat, scheduler_id=scheduler_id
     )
@@ -83,7 +82,6 @@ def _create_sample_params(self):
 
 
 def read_config_into_dict(config="deploy.cfg", section="execution_engine2"):
-
     if not os.path.isfile(config):
         raise FileNotFoundError(config, "Did you set your test.env?")
 
@@ -337,7 +335,6 @@ def get_sample_condor_info(job=None, error=None):
 
 
 def get_sample_job_params(method=None, wsid="123"):
-
     if not method:
         method = "default_method"
 
