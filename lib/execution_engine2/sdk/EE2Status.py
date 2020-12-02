@@ -5,7 +5,10 @@ from typing import Dict
 
 from bson import ObjectId
 
-from execution_engine2.exceptions import InvalidStatusTransitionException
+from execution_engine2.exceptions import (
+    InvalidStatusTransitionException,
+    ChildrenNotFoundError,
+)
 from execution_engine2.sdk.EE2Constants import JobError
 from lib.execution_engine2.authorization.authstrategy import can_read_jobs
 from lib.execution_engine2.db.models.models import (
@@ -102,6 +105,7 @@ class JobsStatus:
         self.sdkmr.get_mongo_util().cancel_job(
             job_id=job_id, terminated_code=terminated_code
         )
+
         for child_job_id in job.child_jobs:
             self.cancel_job(
                 job_id=child_job_id,
@@ -538,6 +542,27 @@ class JobsStatus:
         log_exec_stats_params["job_id"] = job_id
 
         self.sdkmr.catalog_utils.catalog.log_exec_stats(log_exec_stats_params)
+
+    def abandon_children(self, parent_job_id, child_job_ids, as_admin=False) -> Dict:
+        if not parent_job_id:
+            raise ValueError("Please provide valid parent_job id")
+        if not child_job_ids:
+            raise ValueError("Please provide job_ids of children to abandon")
+
+        job = self.sdkmr.get_job_with_permission(
+            parent_job_id, JobPermissions.WRITE, as_admin=as_admin
+        )  # type: Job
+        for child_job_id in child_job_ids:
+            if child_job_id not in job.child_jobs:
+                raise ChildrenNotFoundError(
+                    f"Couldn't find {child_job_id} in {child_job_ids}"
+                )
+
+        with self.sdkmr.get_mongo_util().mongo_engine_connection():
+            job.update(pull_all__child_jobs=child_job_ids)
+            job.reload()
+
+        return {"parent_job_id": parent_job_id, "child_jobs": job.child_jobs}
 
     def start_job(self, job_id, skip_estimation=True, as_admin=False):
         """

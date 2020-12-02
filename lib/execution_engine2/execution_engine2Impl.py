@@ -28,7 +28,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "08d094f09629d1073a91dbf1f6d2ff7dc8e30712"
+    GIT_COMMIT_HASH = "32280f5971a9a8a1388885e90c6180b997d59407"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -311,6 +311,36 @@ class execution_engine2:
                              'job_ids is not type dict as required.')
         # return the results
         return [job_ids]
+
+    def abandon_children(self, ctx, params):
+        """
+        :param params: instance of type "AbandonChildren" -> structure:
+           parameter "parent_job_id" of type "job_id" (A job id.), parameter
+           "child_job_ids" of list of type "job_id" (A job id.), parameter
+           "as_admin" of type "boolean" (@range [0,1])
+        :returns: instance of type "BatchSubmission" -> structure: parameter
+           "parent_job_id" of type "job_id" (A job id.), parameter
+           "children_job_ids" of list of type "job_id" (A job id.)
+        """
+        # ctx is the context object
+        # return variables are: parent_and_child_ids
+        #BEGIN abandon_children
+        mr = SDKMethodRunner(
+            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            job_permission_cache=self.job_permission_cache,
+            admin_permissions_cache=self.admin_permissions_cache, mongo_util=self.mongo_util
+        )
+        parent_and_child_ids = mr.abandon_children(parent_job_id=params['parent_job_id'],
+                                                   child_job_ids=params['child_job_ids'],
+                                                   as_admin=params.get('as_admin', False))
+        #END abandon_children
+
+        # At some point might do deeper type checking...
+        if not isinstance(parent_and_child_ids, dict):
+            raise ValueError('Method abandon_children return value ' +
+                             'parent_and_child_ids is not type dict as required.')
+        # return the results
+        return [parent_and_child_ids]
 
     def run_job_concierge(self, ctx, params, concierge_params):
         """
