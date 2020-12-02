@@ -28,7 +28,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "32280f5971a9a8a1388885e90c6180b997d59407"
+    GIT_COMMIT_HASH = "673ab27187f8a3cdda834b1a987163137205e6f2"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -292,7 +292,7 @@ class execution_engine2:
            parameter "wsid" of Long
         :returns: instance of type "BatchSubmission" -> structure: parameter
            "parent_job_id" of type "job_id" (A job id.), parameter
-           "children_job_ids" of list of type "job_id" (A job id.)
+           "child_job_ids" of list of type "job_id" (A job id.)
         """
         # ctx is the context object
         # return variables are: job_ids
@@ -320,7 +320,7 @@ class execution_engine2:
            "as_admin" of type "boolean" (@range [0,1])
         :returns: instance of type "BatchSubmission" -> structure: parameter
            "parent_job_id" of type "job_id" (A job id.), parameter
-           "children_job_ids" of list of type "job_id" (A job id.)
+           "child_job_ids" of list of type "job_id" (A job id.)
         """
         # ctx is the context object
         # return variables are: parent_and_child_ids

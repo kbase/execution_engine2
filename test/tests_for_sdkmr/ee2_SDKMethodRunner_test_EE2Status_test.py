@@ -190,14 +190,12 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
         print(f"Job ids are {job_ids} ")
         assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
-        assert "children_job_ids" in job_ids and isinstance(
-            job_ids["children_job_ids"], list
-        )
-        assert len(job_ids["children_job_ids"]) == len(jobs)
+        assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
+        assert len(job_ids["child_job_ids"]) == len(jobs)
 
         runner.cancel_job(job_id=job_ids["parent_job_id"])
         job_status = runner.check_jobs(
-            job_ids=[job_ids["parent_job_id"]] + job_ids["children_job_ids"]
+            job_ids=[job_ids["parent_job_id"]] + job_ids["child_job_ids"]
         )
         for job in job_status["job_states"]:
             assert job["status"] == Status.terminated.value
@@ -225,22 +223,20 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
         print(f"Job ids are {job_ids} ")
         assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
-        assert "children_job_ids" in job_ids and isinstance(
-            job_ids["children_job_ids"], list
-        )
-        assert len(job_ids["children_job_ids"]) == len(jobs)
+        assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
+        assert len(job_ids["child_job_ids"]) == len(jobs)
 
         runner.abandon_children(
             parent_job_id=job_ids["parent_job_id"],
-            child_job_ids=job_ids["children_job_ids"][0:2],
+            child_job_ids=job_ids["child_job_ids"][0:2],
         )
 
         job_status = runner.check_jobs(job_ids=[job_ids["parent_job_id"]])[
             "job_states"
         ][0]
 
-        for job in job_ids["children_job_ids"][0:2]:
+        for job in job_ids["child_job_ids"][0:2]:
             print("Checking if abandoned:", job)
             assert job not in job_status["child_jobs"]
 
-        assert job_ids["children_job_ids"][2] in job_status["child_jobs"]
+        assert job_ids["child_job_ids"][2] in job_status["child_jobs"]

@@ -149,7 +149,7 @@
 
         typedef structure {
             job_id parent_job_id;
-            list<job_id> children_job_ids;
+            list<job_id> child_job_ids;
         } BatchSubmission;
 
         typedef structure {
