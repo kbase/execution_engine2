@@ -13,10 +13,7 @@ from execution_engine2.authorization.authstrategy import (
 from test.utils_shared.test_utils import (
     get_example_job,
     custom_ws_perm_maker,
-    bootstrap,
 )
-
-bootstrap()
 
 
 class AuthStrategyTestCase(unittest.TestCase):
