@@ -13,7 +13,12 @@ from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.db.models.models import Job
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
-from test.utils_shared.test_utils import bootstrap, get_example_job, run_job_adapter
+from test.utils_shared.test_utils import (
+    bootstrap,
+    get_example_job,
+    run_job_adapter,
+    get_example_job_as_dict,
+)
 from tests_for_db.mongo_test_helper import MongoTestHelper
 
 logging.basicConfig(level=logging.INFO)
@@ -225,10 +230,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
         runner = self.getRunner()
         runner.get_condor = MagicMock(return_value=condor_mock)
-        job = get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
-        job["method"] = job["job_input"]["app_id"]
-        job["app_id"] = job["job_input"]["app_id"]
-        job["service_ver"] = job["job_input"]["service_ver"]
+        job = get_example_job_as_dict(user=self.user_id, wsid=self.ws_id)
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
@@ -240,6 +242,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_run_job_batch(self, rq_mock, condor_mock):
+        """
+        Test running batch jobs
+        """
         rq_mock.add_matcher(
             run_job_adapter(
                 ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
@@ -247,10 +252,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
         runner = self.getRunner()
         runner.get_condor = MagicMock(return_value=condor_mock)
-        job = get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
-        job["method"] = job["job_input"]["app_id"]
-        job["app_id"] = job["job_input"]["app_id"]
-        job["service_ver"] = job["job_input"]["service_ver"]
+        job = get_example_job_as_dict(user=self.user_id, wsid=self.ws_id)
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
@@ -258,7 +260,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         jobs = [job, job, job]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
-        print(f"Job ids are {job_ids} ")
+
         assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
         assert "children_job_ids" in job_ids and isinstance(
             job_ids["children_job_ids"], list
@@ -284,10 +286,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
         runner = self.getRunner()
 
-        job = get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
-        job["method"] = job["job_input"]["app_id"]
-        job["app_id"] = job["job_input"]["app_id"]
-        job["service_ver"] = job["job_input"]["service_ver"]
+        job = get_example_job_as_dict(user=self.user_id, wsid=self.ws_id)
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)

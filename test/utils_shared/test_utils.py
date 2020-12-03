@@ -26,6 +26,25 @@ def bootstrap():
             pass
 
 
+def get_example_job_as_dict(
+    user: str = "boris",
+    wsid: int = 123,
+    authstrat: str = "kbaseworkspace",
+    scheduler_id: str = None,
+):
+    job = (
+        get_example_job(
+            user=user, wsid=wsid, authstrat=authstrat, scheduler_id=scheduler_id
+        )
+        .to_mongo()
+        .to_dict()
+    )
+    job["method"] = job["job_input"]["app_id"]
+    job["app_id"] = job["job_input"]["app_id"]
+    job["service_ver"] = job["job_input"]["service_ver"]
+    return job
+
+
 def get_example_job(
     user: str = "boris",
     wsid: int = 123,
