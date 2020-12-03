@@ -289,12 +289,13 @@ class EE2RunJob:
             job_input.narrative_cell_info.status = meta.get("status")
 
         with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            j = Job()
-            j.job_input = job_input
-            j.batch_job = True
-            j.status = Status.queued.value
-            j.wsid = wsid
-            j.user = self.sdkmr.user_id
+            j = Job(
+                job_input=job_input,
+                batch_job=True,
+                status=Status.created.value,
+                wsid=wsid,
+                user=self.sdkmr.user_id,
+            )
             j.save()
 
         # TODO Do we need a new kafka call?
