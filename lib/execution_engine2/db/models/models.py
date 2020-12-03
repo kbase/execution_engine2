@@ -208,6 +208,7 @@ class TerminatedCode(Enum):
     terminated_by_user = 0
     terminated_by_admin = 1
     terminated_by_automation = 2
+    terminated_by_batch_abort = 3
 
 
 class Status(Enum):
@@ -310,8 +311,9 @@ class Job(Document):
     job_input = EmbeddedDocumentField(JobInput, required=True)
     job_output = DynamicField()
     condor_job_ads = DynamicField()
+    child_jobs = ListField()
+    batch_job = BooleanField(default=False)
 
-    # meta = {"db_alias": "ee2"}
     meta = {"collection": "ee2_jobs"}
 
     def save(self, *args, **kwargs):

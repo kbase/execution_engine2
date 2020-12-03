@@ -88,6 +88,8 @@ class MongoUtilTest(unittest.TestCase):
                 "updated",
                 "job_input",
                 "scheduler_id",
+                "child_jobs",
+                "batch_job",
             ]
             self.assertCountEqual(job.keys(), expected_keys)
 
@@ -106,6 +108,8 @@ class MongoUtilTest(unittest.TestCase):
                 "status",
                 "updated",
                 "scheduler_id",
+                "batch_job",
+                "child_jobs",
             ]
             self.assertCountEqual(job.keys(), expected_keys)
 
@@ -123,6 +127,8 @@ class MongoUtilTest(unittest.TestCase):
                 "updated",
                 "job_input",
                 "scheduler_id",
+                "batch_job",
+                "child_jobs",
             ]
             self.assertCountEqual(job.keys(), expected_keys)
 
@@ -153,6 +159,8 @@ class MongoUtilTest(unittest.TestCase):
                 "updated",
                 "job_input",
                 "scheduler_id",
+                "batch_job",
+                "child_jobs",
             ]
 
             for job in jobs:
@@ -170,6 +178,8 @@ class MongoUtilTest(unittest.TestCase):
                 "updated",
                 "job_input",
                 "scheduler_id",
+                "batch_job",
+                "child_jobs",
             ]
             for job in jobs:
                 self.assertCountEqual(job.to_mongo().to_dict().keys(), expected_keys)
@@ -199,6 +209,8 @@ class MongoUtilTest(unittest.TestCase):
                 "updated",
                 "job_input",
                 "scheduler_id",
+                "batch_job",
+                "child_jobs",
             ]
 
             self.assertCountEqual(job.keys(), expected_keys)

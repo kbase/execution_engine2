@@ -388,6 +388,14 @@ class Application(object):
         )
         self.method_authentication["execution_engine2.run_job"] = "required"  # noqa
         self.rpc_service.add(
+            impl_execution_engine2.run_job_batch,
+            name="execution_engine2.run_job_batch",
+            types=[list, dict],
+        )
+        self.method_authentication[
+            "execution_engine2.run_job_batch"
+        ] = "required"  # noqa
+        self.rpc_service.add(
             impl_execution_engine2.run_job_concierge,
             name="execution_engine2.run_job_concierge",
             types=[dict, dict],
@@ -524,7 +532,7 @@ class Application(object):
         )
         self.method_authentication[
             "execution_engine2.get_client_groups"
-        ] = "required"  # noqa
+        ] = "none"  # noqa
         authurl = config.get(AUTH) if config else None
         self.auth_client = _KBaseAuth(authurl)
 
