@@ -16,53 +16,29 @@ You can also learn more about the apps implemented in this module from its [cata
 * Contributing requirements, such as pre-commit as per [CONTRIBUTING.rst](CONTRIBUTING.rst)
 
 
-# Setup and test  
+# Setup and test locally
   
-See the .travis file for information on how to test  
-  
-* modify test/example.env to add your token/endpoint for api tests  
-* modify test/example.env to add test/deploy.cfg path  
-* copy the test/example.env into test/test.env  
+See the .travis file for information on how to test locally
 
+# Setup and test with docker-compose on MacOS
 
+## Build and exec into the dev container
 
+```
+docker build . -t execution_engine2:test
+docker-compose up -d
+docker-compose exec ee2_with_ssh bash
+#cp test/env/test.example.docker.env 
+cd /Users/XXXX/XXX/XX/XX/execution_engine2
+make test-coverage
+```
   
-# Test Running Options  
-  
-## Run tests on local machine without docker (not recommended)  
-### Attempt to install all dependencies  
-* python3 -m venv venv && source venv && pip install -r requirements.txt  
-  
-* make test  
-* make test-models  
-  
-### If you cannot install dependencies on your local machine, install your python interpreter into a docker container  
-#### test/dockerfiles/condor/  
-  
-#### For light testing just htcondor bindings  
-* Ensure requirements.txt is up to date  
-```  
-cd test/dockerfiles/condor/  
-docker build -f DockerfileForInterpreter . -t ee2_dev  
-docker run -ti -d --privileged=true -v /sys/fs/cgroup:/sys/fs/cgroup:ro -v /Users:/Users  ee2_dev  
-```  
-  
-  
-#### For full testing, including the ability for containers to be networked  
-* Ensure requirements.txt is up to date  
-* Ensure docker-compose.env is populated  
-```  
-cd /test/dockerfiles/condor  
-docker build -f Dockerfile . -t kbase/ee2:local_condor  
-#docker push kbase/ee2:local_condor  
-docker-compose up -d  
-```  
-  
-  
-# Installation from another module  
-  
-To use this code in another SDK module, call `kb-sdk install execution_engine2` in the other module's root directory.  
-  
+## Test Running Options  
+### PyCharm
+* Use a remote ssh debugger with the correct path mappings
+* Right click on the file you'd like to run and select run test
+
+ 
 # Help  
   
 Contact @Tianhao-Gu, @bio_boris, @briehl
