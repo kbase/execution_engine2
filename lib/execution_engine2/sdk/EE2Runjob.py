@@ -74,12 +74,10 @@ class EE2RunJob:
         inputs.parent_job_id = str(params.get("parent_job_id"))
         inputs.narrative_cell_info = Meta()
         meta = params.get("meta")
+
         if meta:
-            inputs.narrative_cell_info.run_id = meta.get("run_id")
-            inputs.narrative_cell_info.token_id = meta.get("token_id")
-            inputs.narrative_cell_info.tag = meta.get("tag")
-            inputs.narrative_cell_info.cell_id = meta.get("cell_id")
-            inputs.narrative_cell_info.status = meta.get("status")
+            for meta_attr in ["run_id", "token_id", "tag", "cell_id", "status"]:
+                inputs.narrative_cell_info[meta_attr] = meta.get(meta_attr)
 
         if resources:
             # TODO Should probably do some type checking on these before its passed in
@@ -156,7 +154,7 @@ class EE2RunJob:
     def _check_workspace_permissions_list(self, wsids):
         perms = self.sdkmr.get_workspace_auth().can_write_list(wsids)
         bad_ws = [key for key in perms.keys() if perms[key] is False]
-        if len(bad_ws) > 0:
+        if bad_ws:
             self.logger.debug(
                 f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {bad_ws}."
             )
@@ -291,12 +289,13 @@ class EE2RunJob:
             job_input.narrative_cell_info.status = meta.get("status")
 
         with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            j = Job()
-            j.job_input = job_input
-            j.batch_job = True
-            j.status = Status.queued.value
-            j.wsid = wsid
-            j.user = self.sdkmr.user_id
+            j = Job(
+                job_input=job_input,
+                batch_job=True,
+                status=Status.created.value,
+                wsid=wsid,
+                user=self.sdkmr.user_id,
+            )
             j.save()
 
         # TODO Do we need a new kafka call?
@@ -330,6 +329,7 @@ class EE2RunJob:
     ) -> Dict[str, Union[Job, List[str]]]:
         """
         :param params: List of RunJobParams (See Spec File)
+        :param batch_params: List of Batch Params, such as wsid (See Spec file)
         :param as_admin: Allows you to run jobs in other people's workspaces
         :return: A list of condor job ids or a failure notification
         """
@@ -344,12 +344,8 @@ class EE2RunJob:
             self._check_workspace_permissions_list(wsids)
 
         parent_job = self._create_parent_job(wsid=wsid, meta=meta)
-        child_jobs = self._run_batch(parent_job=parent_job, params=params)
-        print(
-            "About to return",
-            {"parent_job_id": str(parent_job.id), "child_job_ids": child_jobs},
-        )
-        return {"parent_job_id": str(parent_job.id), "child_job_ids": child_jobs}
+        children_jobs = self._run_batch(parent_job=parent_job, params=params)
+        return {"parent_job_id": str(parent_job.id), "children_job_ids": children_jobs}
 
     def run(
         self, params=None, as_admin=False, concierge_params: Dict = None

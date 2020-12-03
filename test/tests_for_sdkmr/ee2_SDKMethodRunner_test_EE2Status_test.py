@@ -177,10 +177,7 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         )
         runner = self.getRunner()  # type: SDKMethodRunner
         runner.get_condor = MagicMock(return_value=condor_mock)
-        job = get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
-        job["method"] = job["job_input"]["app_id"]
-        job["app_id"] = job["job_input"]["app_id"]
-        job["service_ver"] = job["job_input"]["service_ver"]
+        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=self.ws_id)
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
@@ -188,7 +185,6 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
 
         jobs = [job, job, job]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
-        print(f"Job ids are {job_ids} ")
         assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
         assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
         assert len(job_ids["child_job_ids"]) == len(jobs)

@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "PyTest",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": false,
+            "pythonPath": "/miniconda-latest/bin/python",
+            "module": "pytest",
+            "args": ["-sv", "--verbose", "--no-cov", "${file}"],
+            "cwd": "${workspaceRoot}",
+            "env": {"PYTHONPATH" : ".:lib:test"},
+            "envFile": "${workspaceRoot}/.env",
+
+        }
+    ]
+}
