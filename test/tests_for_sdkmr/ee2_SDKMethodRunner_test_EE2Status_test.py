@@ -169,44 +169,6 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
-    def test_abandon_children(self, rq_mock, condor_mock):
-        rq_mock.add_matcher(
-            run_job_adapter(
-                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
-            )
-        )
-        runner = self.getRunner()  # type: SDKMethodRunner
-        runner.get_condor = MagicMock(return_value=condor_mock)
-        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=self.ws_id)
-
-        si = SubmissionInfo(clusterid="test", submit=job, error=None)
-        condor_mock.run_job = MagicMock(return_value=si)
-        condor_mock.extract_resources = MagicMock(return_value=self.cr)
-
-        jobs = [job, job, job]
-        job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
-        print(f"Job ids are {job_ids} ")
-        assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
-        assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
-        assert len(job_ids["child_job_ids"]) == len(jobs)
-
-        runner.abandon_children(
-            parent_job_id=job_ids["parent_job_id"],
-            child_job_ids=job_ids["child_job_ids"][0:2],
-        )
-
-        job_status = runner.check_jobs(job_ids=[job_ids["parent_job_id"]])[
-            "job_states"
-        ][0]
-
-        for job in job_ids["child_job_ids"][0:2]:
-            print("Checking if abandoned:", job)
-            assert job not in job_status["child_jobs"]
-
-        assert job_ids["child_job_ids"][2] in job_status["child_jobs"]
-
-    @requests_mock.Mocker()
-    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_cancel_job_batch(self, rq_mock, condor_mock):
         rq_mock.add_matcher(
             run_job_adapter(
@@ -224,14 +186,49 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         jobs = [job, job, job]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
         assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
-        assert "children_job_ids" in job_ids and isinstance(
-            job_ids["children_job_ids"], list
-        )
-        assert len(job_ids["children_job_ids"]) == len(jobs)
+        assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
+        assert len(job_ids["child_job_ids"]) == len(jobs)
 
         runner.cancel_job(job_id=job_ids["parent_job_id"])
         job_status = runner.check_jobs(
-            job_ids=[job_ids["parent_job_id"]] + job_ids["children_job_ids"]
+            job_ids=[job_ids["parent_job_id"]] + job_ids["child_job_ids"]
         )
         for job in job_status["job_states"]:
             assert job["status"] == Status.terminated.value
+
+    @requests_mock.Mocker()
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    def test_abandon_children(self, rq_mock, condor_mock):
+        rq_mock.add_matcher(
+            run_job_adapter(
+                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
+            )
+        )
+        runner = self.getRunner()  # type: SDKMethodRunner
+        runner.get_condor = MagicMock(return_value=condor_mock)
+        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=self.ws_id)
+
+        si = SubmissionInfo(clusterid="test", submit=job, error=None)
+        condor_mock.run_job = MagicMock(return_value=si)
+        condor_mock.extract_resources = MagicMock(return_value=self.cr)
+
+        jobs = [job, job, job]
+        job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
+
+        assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
+        assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
+        assert len(job_ids["child_job_ids"]) == len(jobs)
+
+        runner.abandon_children(
+            parent_job_id=job_ids["parent_job_id"],
+            child_job_ids=job_ids["child_job_ids"][0:2],
+        )
+
+        job_status = runner.check_jobs(job_ids=[job_ids["parent_job_id"]])[
+            "job_states"
+        ][0]
+
+        for job_id in job_ids["child_job_ids"][0:2]:
+            assert job_id not in job_status["child_jobs"]
+
+        assert job_ids["child_job_ids"][2] in job_status["child_jobs"]

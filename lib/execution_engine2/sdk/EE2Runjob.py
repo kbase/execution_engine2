@@ -345,7 +345,7 @@ class EE2RunJob:
 
         parent_job = self._create_parent_job(wsid=wsid, meta=meta)
         children_jobs = self._run_batch(parent_job=parent_job, params=params)
-        return {"parent_job_id": str(parent_job.id), "children_job_ids": children_jobs}
+        return {"parent_job_id": str(parent_job.id), "child_job_ids": children_jobs}
 
     def run(
         self, params=None, as_admin=False, concierge_params: Dict = None

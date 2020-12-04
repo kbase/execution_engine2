@@ -332,7 +332,7 @@ class execution_engine2:
         )
         parent_and_child_ids = mr.abandon_children(parent_job_id=params['parent_job_id'],
                                                    child_job_ids=params['child_job_ids'],
-                                                   as_admin=params.get('as_admin', False))
+                                                   as_admin=params.get('as_admin'))
         #END abandon_children
 
         # At some point might do deeper type checking...
@@ -1305,7 +1305,7 @@ class execution_engine2:
             self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
             mongo_util=self.mongo_util
         )
-        result = mr.check_job_canceled(job_id=params["job_id"],       as_admin=params.get('as_admin'))
+        result = mr.check_job_canceled(job_id=params["job_id"], as_admin=params.get('as_admin'))
         #END check_job_canceled
 
         # At some point might do deeper type checking...
