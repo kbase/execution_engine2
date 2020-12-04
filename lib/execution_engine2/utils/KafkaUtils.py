@@ -3,7 +3,7 @@
 import json
 import logging
 from dataclasses import dataclass
-from typing import Optional, Type
+from typing import Optional
 
 from confluent_kafka import Producer
 
@@ -12,7 +12,6 @@ from lib.execution_engine2.db.models.models import Status, ErrorCode
 logger = logging.getLogger("ee2")
 STATUS_EVENT_TYPE = "job_status_update"
 CONDOR_EVENT_TYPE = "condor_request"
-
 
 VALID_CONDOR_COMMANDS = [
     "condor_q",
