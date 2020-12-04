@@ -105,6 +105,11 @@ class JobsStatus:
         self.sdkmr.get_mongo_util().cancel_job(
             job_id=job_id, terminated_code=terminated_code
         )
+        for child_job_id in job.child_jobs:
+            self.cancel_job(
+                job_id=child_job_id,
+                terminated_code=TerminatedCode.terminated_by_batch_abort.value,
+            )
 
         for child_job_id in job.child_jobs:
             self.cancel_job(
