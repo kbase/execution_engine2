@@ -214,7 +214,7 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
 
         jobs = [job, job, job]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
-        print(f"Job ids are {job_ids} ")
+
         assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
         assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
         assert len(job_ids["child_job_ids"]) == len(jobs)
@@ -228,8 +228,7 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
             "job_states"
         ][0]
 
-        for job in job_ids["child_job_ids"][0:2]:
-            print("Checking if abandoned:", job)
-            assert job not in job_status["child_jobs"]
+        for job_id in job_ids["child_job_ids"][0:2]:
+            assert job_id not in job_status["child_jobs"]
 
         assert job_ids["child_job_ids"][2] in job_status["child_jobs"]
