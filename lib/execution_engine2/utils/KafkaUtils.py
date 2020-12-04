@@ -200,7 +200,7 @@ class KafkaClient:
             )
         self.server_address = server_address
 
-    def send_kafka_message(self, message: Type, topic: str = DEFAULT_TOPIC):
+    def send_kafka_message(self, message, topic: str = DEFAULT_TOPIC):
         """
         :param message: The message to send to the queue, which likely has been passed thru the dataclass
         :param topic: The kafka topic, default is likely be ee2
