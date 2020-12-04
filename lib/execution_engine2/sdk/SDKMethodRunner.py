@@ -319,6 +319,38 @@ class SDKMethodRunner:
         """ Authorization Required: Read """
         return self.get_jobs_status().get_job_status(job_id=job_id, as_admin=as_admin)
 
+    def check_job_batch(
+        self,
+        parent_job_id,
+        check_permission=True,
+        exclude_fields=None,
+        as_admin=False,
+    ):
+        if as_admin is True:
+            self.check_as_admin(requested_perm=JobPermissions.READ)
+            check_permission = False
+
+        if exclude_fields and "child_jobs" in exclude_fields:
+            raise ValueError(
+                "You silly goose. You can't exclude child jobs from this endpoint"
+            )
+
+        parent_job_status = self.get_jobs_status().check_job(
+            job_id=parent_job_id,
+            check_permission=check_permission,
+            exclude_fields=exclude_fields,
+        )
+        # child_job_ids = parent_job["child_job"]
+        # if children:
+        #     chil self.get_jobs_status().check_jobs(
+        #         job_ids=job_ids,
+        #         check_permission=check_permission,
+        #         exclude_fields=exclude_fields,
+        #         return_list=1,
+        #     )
+
+        return {"parent_job": parent_job_status, "child_jobs": []}
+
     def check_jobs(
         self,
         job_ids,
