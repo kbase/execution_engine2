@@ -159,16 +159,11 @@
         } AbandonChildren;
 
 
-        typedef structure {
-            job_id parent_job_id;
-            list<job_id> child_job_ids;
-            boolean as_admin;
-        } AbandonChildren;
-
-
         funcdef run_job_batch(list<RunJobParams> params, BatchParams batch_params) returns (BatchSubmission job_ids) authentication required;
 
         funcdef abandon_children(AbandonChildren params) returns (BatchSubmission parent_and_child_ids) authentication required;
+
+
         /* EE2Constants Concierge Params are
             request_cpus: int
             request_memory: int in MB
@@ -317,19 +312,14 @@
         funcdef start_job(StartJobParams params) returns () authentication required;
 
         /*
-            job_id: The job id of the parent job
             exclude_fields: exclude certain fields to return. default None.
             exclude_fields strings can be one of fields defined in execution_engine2.db.models.models.Job
-            batch: Optional field to return info about child_jobs;
         */
         typedef structure {
             job_id job_id;
             list<string> exclude_fields;
             boolean as_admin;
         } CheckJobParams;
-
-
-
 
     /*
         job_id - string - id of the job
@@ -400,7 +390,6 @@
         */
         funcdef check_job(CheckJobParams params) returns (JobState job_state) authentication required;
 
-
         /*
             parent_job - state of parent job
             job_states - states of child jobs
@@ -411,8 +400,6 @@
             list<JobState> job_states;
             UnspecifiedObject aggregate_states;
         } CheckJobBatchResults;
-
-
 
         /*
             get current status of a parent job, and it's children, if it has any.

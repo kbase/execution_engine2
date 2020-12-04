@@ -28,7 +28,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "27e1c2692d0f7fc669f60960be96850d2890e125"
+    GIT_COMMIT_HASH = "78ab4aaa17181deb81e06cd077c31bf6929b009f"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -687,11 +687,10 @@ class execution_engine2:
     def check_job(self, ctx, params):
         """
         get current status of a job
-        :param params: instance of type "CheckJobParams" (job_id: The job id
-           of the parent job exclude_fields: exclude certain fields to
-           return. default None. exclude_fields strings can be one of fields
-           defined in execution_engine2.db.models.models.Job batch: Optional
-           field to return info about child_jobs;) -> structure: parameter
+        :param params: instance of type "CheckJobParams" (exclude_fields:
+           exclude certain fields to return. default None. exclude_fields
+           strings can be one of fields defined in
+           execution_engine2.db.models.models.Job) -> structure: parameter
            "job_id" of type "job_id" (A job id.), parameter "exclude_fields"
            of list of String, parameter "as_admin" of type "boolean" (@range
            [0,1])
@@ -804,11 +803,10 @@ class execution_engine2:
     def check_job_batch(self, ctx, params):
         """
         get current status of a parent job, and it's children, if it has any.
-        :param params: instance of type "CheckJobParams" (job_id: The job id
-           of the parent job exclude_fields: exclude certain fields to
-           return. default None. exclude_fields strings can be one of fields
-           defined in execution_engine2.db.models.models.Job batch: Optional
-           field to return info about child_jobs;) -> structure: parameter
+        :param params: instance of type "CheckJobParams" (exclude_fields:
+           exclude certain fields to return. default None. exclude_fields
+           strings can be one of fields defined in
+           execution_engine2.db.models.models.Job) -> structure: parameter
            "job_id" of type "job_id" (A job id.), parameter "exclude_fields"
            of list of String, parameter "as_admin" of type "boolean" (@range
            [0,1])
