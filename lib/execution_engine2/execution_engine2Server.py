@@ -462,6 +462,14 @@ class Application(object):
         )
         self.method_authentication["execution_engine2.check_job"] = "required"  # noqa
         self.rpc_service.add(
+            impl_execution_engine2.check_job_batch,
+            name="execution_engine2.check_job_batch",
+            types=[dict],
+        )
+        self.method_authentication[
+            "execution_engine2.check_job_batch"
+        ] = "required"  # noqa
+        self.rpc_service.add(
             impl_execution_engine2.check_jobs,
             name="execution_engine2.check_jobs",
             types=[dict],

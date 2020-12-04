@@ -159,7 +159,10 @@
         } AbandonChildren;
 
 
+
         funcdef run_job_batch(list<RunJobParams> params, BatchParams batch_params) returns (BatchSubmission job_ids) authentication required;
+
+
 
         funcdef abandon_children(AbandonChildren params) returns (BatchSubmission parent_and_child_ids) authentication required;
 
@@ -312,14 +315,19 @@
         funcdef start_job(StartJobParams params) returns () authentication required;
 
         /*
+            job_id: The job id of the parent job
             exclude_fields: exclude certain fields to return. default None.
             exclude_fields strings can be one of fields defined in execution_engine2.db.models.models.Job
+            batch: Optional field to return info about child_jobs;
         */
         typedef structure {
             job_id job_id;
             list<string> exclude_fields;
             boolean as_admin;
         } CheckJobParams;
+
+
+
 
     /*
         job_id - string - id of the job
@@ -390,9 +398,28 @@
         */
         funcdef check_job(CheckJobParams params) returns (JobState job_state) authentication required;
 
+
+        /*
+            parent_job - state of parent job
+            job_states - states of child jobs
+            aggregate_states - count of all available child job states, even if they are zero
+        */
+        typedef structure {
+            JobState parent_job;
+            list<JobState> job_states;
+            UnspecifiedObject aggregate_states;
+        } CheckJobBatchResults;
+
+
+
+        /*
+            get current status of a parent job, and it's children, if it has any.
+        */
+        funcdef check_job_batch(CheckJobParams params) returns (CheckJobBatchResults) authentication required;
+
+
         /*
             job_states - states of jobs
-
             could be mapping<job_id, JobState> or list<JobState>
         */
         typedef structure {
