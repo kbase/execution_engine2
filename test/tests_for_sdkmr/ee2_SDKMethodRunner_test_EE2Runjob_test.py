@@ -262,10 +262,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
         assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
-        assert "children_job_ids" in job_ids and isinstance(
-            job_ids["children_job_ids"], list
-        )
-        assert len(job_ids["children_job_ids"]) == len(jobs)
+        assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
+        assert len(job_ids["child_job_ids"]) == len(jobs)
 
         # Test that you can't run a job in someone elses workspace
         with self.assertRaises(PermissionError):

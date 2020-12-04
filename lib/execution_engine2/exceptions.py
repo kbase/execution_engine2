@@ -36,6 +36,10 @@ class MalformedTimestampException(ExecutionEngineException):
     pass
 
 
+class ChildrenNotFoundError(ExecutionEngineException):
+    pass
+
+
 class RecordNotFoundException(ExecutionEngineException):
     pass
 

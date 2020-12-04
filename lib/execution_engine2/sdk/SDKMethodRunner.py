@@ -245,6 +245,13 @@ class SDKMethodRunner:
             job_id=job_id, skip_estimation=skip_estimation, as_admin=as_admin
         )
 
+    # Endpoints: Changing a job's status
+    def abandon_children(self, parent_job_id, child_job_ids, as_admin=False):
+        """ Authorization Required Read/Write """
+        return self.get_jobs_status().abandon_children(
+            parent_job_id=parent_job_id, child_job_ids=child_job_ids, as_admin=as_admin
+        )
+
     def update_job_status(self, job_id, status, as_admin=False):
         # TODO: Make this an ADMIN ONLY function? Why would anyone need to call this who is not an admin?
         """ Authorization Required: Read/Write """

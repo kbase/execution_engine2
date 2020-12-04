@@ -149,11 +149,19 @@
 
         typedef structure {
             job_id parent_job_id;
-            list<job_id> children_job_ids;
+            list<job_id> child_job_ids;
         } BatchSubmission;
+
+        typedef structure {
+            job_id parent_job_id;
+            list<job_id> child_job_ids;
+            boolean as_admin;
+        } AbandonChildren;
 
 
         funcdef run_job_batch(list<RunJobParams> params, BatchParams batch_params) returns (BatchSubmission job_ids) authentication required;
+
+        funcdef abandon_children(AbandonChildren params) returns (BatchSubmission parent_and_child_ids) authentication required;
 
 
         /* EE2Constants Concierge Params are

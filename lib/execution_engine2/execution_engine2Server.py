@@ -396,6 +396,14 @@ class Application(object):
             "execution_engine2.run_job_batch"
         ] = "required"  # noqa
         self.rpc_service.add(
+            impl_execution_engine2.abandon_children,
+            name="execution_engine2.abandon_children",
+            types=[dict],
+        )
+        self.method_authentication[
+            "execution_engine2.abandon_children"
+        ] = "required"  # noqa
+        self.rpc_service.add(
             impl_execution_engine2.run_job_concierge,
             name="execution_engine2.run_job_concierge",
             types=[dict, dict],
