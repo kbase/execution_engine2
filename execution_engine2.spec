@@ -406,7 +406,6 @@
         */
         funcdef check_job_batch(CheckJobParams params) returns (CheckJobBatchResults) authentication required;
 
-
         /*
             job_states - states of jobs
             could be mapping<job_id, JobState> or list<JobState>
