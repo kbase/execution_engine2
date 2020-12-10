@@ -316,7 +316,7 @@ class SDKMethodRunner:
         )
 
     def get_job_status_field(self, job_id, as_admin=False):
-
+        """ Authorization Required: Read """
         return self.get_jobs_status().get_job_status(job_id=job_id, as_admin=as_admin)
 
     def check_job_batch(
