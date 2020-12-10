@@ -221,8 +221,6 @@ class SDKMethodRunner:
 
     def get_job_params(self, job_id, as_admin=False):
         """ Authorization Required: Read """
-        # if as_admin:
-        #     self._check_as_admin(requested_perm=JobPermissions.READ)
         return self.get_runjob().get_job_params(job_id=job_id, as_admin=as_admin)
 
     # ENDPOINTS: Adding and retrieving Logs
@@ -340,7 +338,7 @@ class SDKMethodRunner:
             check_permission=check_permission,
             exclude_fields=exclude_fields,
         )
-        child_job_ids = parent_job_status.get("child_job_ids")
+        child_job_ids = parent_job_status.get("child_jobs")
         child_job_states = []
         if child_job_ids:
             child_job_states = self.get_jobs_status().check_jobs(
@@ -348,7 +346,7 @@ class SDKMethodRunner:
                 check_permission=True,
                 exclude_fields=exclude_fields,
                 return_list=1,
-            )
+            )["job_states"]
         return {
             "parent_jobstate": parent_job_status,
             "child_jobstates": child_job_states,

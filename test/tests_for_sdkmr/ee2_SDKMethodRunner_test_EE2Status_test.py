@@ -253,7 +253,9 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
         job_status = runner.check_job_batch(parent_job_id=job_ids["parent_job_id"])
-        # parent_job_state = job_status["parent_jobstate"]
+        parent_job_state = job_status["parent_jobstate"]
         child_jobstates = job_status["child_jobstates"]
 
         assert len(child_jobstates) == len(jobs)
+        for child_job in child_jobstates:
+            assert child_job["job_id"] in parent_job_state.get("child_jobs")
