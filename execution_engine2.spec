@@ -393,12 +393,11 @@
         /*
             parent_job - state of parent job
             job_states - states of child jobs
-            aggregate_states - count of all available child job states, even if they are zero
+            IDEA: ADD aggregate_states - count of all available child job states, even if they are zero
         */
         typedef structure {
-            JobState parent_job;
-            list<JobState> job_states;
-            UnspecifiedObject aggregate_states;
+            JobState parent_jobstate;
+            list<JobState> child_jobstates;
         } CheckJobBatchResults;
 
         /*
