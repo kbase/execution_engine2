@@ -232,3 +232,30 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
             assert job_id not in job_status["child_jobs"]
 
         assert job_ids["child_job_ids"][2] in job_status["child_jobs"]
+
+    @requests_mock.Mocker()
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    def test_check_job_batch(self, rq_mock, condor_mock):
+        rq_mock.add_matcher(
+            run_job_adapter(
+                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
+            )
+        )
+        runner = self.getRunner()  # type: SDKMethodRunner
+        runner.get_condor = MagicMock(return_value=condor_mock)
+        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=self.ws_id)
+
+        si = SubmissionInfo(clusterid="test", submit=job, error=None)
+        condor_mock.run_job = MagicMock(return_value=si)
+        condor_mock.extract_resources = MagicMock(return_value=self.cr)
+
+        jobs = [job, job, job]
+        job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
+
+        job_status = runner.check_job_batch(parent_job_id=job_ids["parent_job_id"])
+        parent_job_state = job_status["parent_jobstate"]
+        child_jobstates = job_status["child_jobstates"]
+
+        assert len(child_jobstates) == len(jobs)
+        for child_job in child_jobstates:
+            assert child_job["job_id"] in parent_job_state.get("child_jobs")
