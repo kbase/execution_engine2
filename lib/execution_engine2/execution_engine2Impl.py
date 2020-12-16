@@ -28,7 +28,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.1"
     GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "78ab4aaa17181deb81e06cd077c31bf6929b009f"
+    GIT_COMMIT_HASH = "7516c08a1e21d08ceaeaa3d4d38f45edf2dfc14a"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -243,6 +243,7 @@ class execution_engine2:
 
     def run_job_batch(self, ctx, params, batch_params):
         """
+        Run a list of jobs as per usual, except associate the children and parents together
         :param params: instance of list of type "RunJobParams" (method -
            service defined in standard JSON RPC way, typically it's module
            name from spec-file followed by '.' and name of funcdef from
@@ -288,21 +289,18 @@ class execution_engine2:
            or id, Z is the version, which is optional.), parameter "app_id"
            of String, parameter "meta" of mapping from String to String,
            parameter "wsid" of Long, parameter "parent_job_id" of String
-        :param batch_params: instance of type "BatchParams" -> structure:
-           parameter "wsid" of Long
-        :returns: instance of type "BatchSubmission" -> structure: parameter
+        :param batch_params: instance of type "BatchParams" (wsid: for
+           associating the main job to a wsid) -> structure: parameter "wsid"
+           of Long
+        :returns: instance of type "BatchSubmissionResults" (parent_job_id:
+           The job id of the batch job child_job_ids: The job ids of the
+           child jobs that were submitted) -> structure: parameter
            "parent_job_id" of type "job_id" (A job id.), parameter
            "child_job_ids" of list of type "job_id" (A job id.)
         """
         # ctx is the context object
         # return variables are: job_ids
         #BEGIN run_job_batch
-        mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
-            job_permission_cache=self.job_permission_cache,
-            admin_permissions_cache=self.admin_permissions_cache, mongo_util=self.mongo_util
-        )
-        job_ids = mr.run_job_batch(params, batch_params)
         #END run_job_batch
 
         # At some point might do deeper type checking...
@@ -314,11 +312,16 @@ class execution_engine2:
 
     def abandon_children(self, ctx, params):
         """
-        :param params: instance of type "AbandonChildren" -> structure:
-           parameter "parent_job_id" of type "job_id" (A job id.), parameter
-           "child_job_ids" of list of type "job_id" (A job id.), parameter
-           "as_admin" of type "boolean" (@range [0,1])
-        :returns: instance of type "BatchSubmission" -> structure: parameter
+        Disassociate child jobs from a parent job
+        :param params: instance of type "AbandonChildrenParams"
+           (parent_job_id: the parent of the jobs to abandon child_job_ids: a
+           list of the job ids we abandon, as long as they have the correct
+           parent) -> structure: parameter "parent_job_id" of type "job_id"
+           (A job id.), parameter "child_job_ids" of list of type "job_id" (A
+           job id.), parameter "as_admin" of type "boolean" (@range [0,1])
+        :returns: instance of type "BatchSubmissionResults" (parent_job_id:
+           The job id of the batch job child_job_ids: The job ids of the
+           child jobs that were submitted) -> structure: parameter
            "parent_job_id" of type "job_id" (A job id.), parameter
            "child_job_ids" of list of type "job_id" (A job id.)
         """
@@ -341,6 +344,36 @@ class execution_engine2:
                              'parent_and_child_ids is not type dict as required.')
         # return the results
         return [parent_and_child_ids]
+
+    def retry_child_jobs(self, ctx, params):
+        """
+        Retry jobs in a batch job using existing saved run info
+        :param params: instance of type "RetryJobsParams" (parent_job_id: the
+           parent of the jobs to retry child_job_ids: a list of the job ids
+           we retry, as long as they have the correct parent) -> structure:
+           parameter "parent_job_id" of type "job_id" (A job id.), parameter
+           "child_job_ids" of list of type "job_id" (A job id.), parameter
+           "as_admin" of type "boolean" (@range [0,1])
+        :returns: instance of type "RetryJobsResults" (parent_job_id: the
+           parent job id new_child_jobs_ids: the new job ids, in the order we
+           received, or null for a failure failed_job_ids: the jobs we
+           couldn't retry for some reason) -> structure: parameter
+           "parent_job_id" of type "job_id" (A job id.), parameter
+           "new_child_job_ids" of list of type "job_id" (A job id.),
+           parameter "failed_child_job_retry_ids" of list of type "job_id" (A
+           job id.), parameter "as_admin" of type "boolean" (@range [0,1])
+        """
+        # ctx is the context object
+        # return variables are: job_ids
+        #BEGIN retry_child_jobs
+        #END retry_child_jobs
+
+        # At some point might do deeper type checking...
+        if not isinstance(job_ids, dict):
+            raise ValueError('Method retry_child_jobs return value ' +
+                             'job_ids is not type dict as required.')
+        # return the results
+        return [job_ids]
 
     def run_job_concierge(self, ctx, params, concierge_params):
         """
@@ -423,6 +456,7 @@ class execution_engine2:
 
     def get_job_params(self, ctx, params):
         """
+        Get job params required for job execution
         :param params: instance of type "GetJobParams" (Get job params
            necessary for job execution @optional as_admin) -> structure:
            parameter "job_id" of type "job_id" (A job id.), parameter
@@ -496,6 +530,7 @@ class execution_engine2:
 
     def update_job_status(self, ctx, params):
         """
+        Update the status for a job. Mostly used for testing purposes
         :param params: instance of type "UpdateJobStatusParams" (job_id - a
            job id status - the new status to set for the job.) -> structure:
            parameter "job_id" of type "job_id" (A job id.), parameter
@@ -528,6 +563,7 @@ class execution_engine2:
 
     def add_job_logs(self, ctx, params, lines):
         """
+        Add a logs for a running job, can also be used by an admin to add a special message
         :param params: instance of type "AddJobLogsParams" -> structure:
            parameter "job_id" of type "job_id" (A job id.), parameter
            "as_admin" of type "boolean" (@range [0,1])
@@ -570,6 +606,7 @@ class execution_engine2:
 
     def get_job_logs(self, ctx, params):
         """
+        Retrieve job logs for a particular job
         :param params: instance of type "GetJobLogsParams" (job id - the job
            id optional skip_lines Legacy Parameter for Offset optional offset
            Number of lines to skip (in case they were already loaded before).
@@ -661,6 +698,7 @@ class execution_engine2:
 
     def start_job(self, ctx, params):
         """
+        The first state transition used by the JobRunner once it begins running on a compute resource
         :param params: instance of type "StartJobParams" (skip_estimation:
            default true. If set true, job will set to running status skipping
            estimation step) -> structure: parameter "job_id" of type "job_id"
@@ -811,45 +849,45 @@ class execution_engine2:
            of list of String, parameter "as_admin" of type "boolean" (@range
            [0,1])
         :returns: instance of type "CheckJobBatchResults" (parent_job - state
-           of parent job job_states - states of child jobs aggregate_states -
-           count of all available child job states, even if they are zero) ->
-           structure: parameter "parent_job" of type "JobState" (job_id -
-           string - id of the job user - string - user who started the job
-           wsid - int - optional id of the workspace where the job is bound
-           authstrat - string - what strategy used to authenticate the job
-           job_input - object - inputs to the job (from the run_job call)  ##
-           TODO - verify updated - int - timestamp since epoch in
-           milliseconds of the last time the status was updated running - int
-           - timestamp since epoch in milliseconds of when it entered the
-           running state created - int - timestamp since epoch in
-           milliseconds when the job was created finished - int - timestamp
-           since epoch in milliseconds when the job was finished status -
-           string - status of the job. one of the following: created - job
-           has been created in the service estimating - an estimation job is
-           running to estimate resources required for the main job, and which
-           queue should be used queued - job is queued to be run running -
-           job is running on a worker node completed - job was completed
-           successfully error - job is no longer running, but failed with an
-           error terminated - job is no longer running, terminated either due
-           to user cancellation, admin cancellation, or some automated task
-           error_code - int - internal reason why the job is an error. one of
-           the following: 0 - unknown 1 - job crashed 2 - job terminated by
-           automation 3 - job ran over time limit 4 - job was missing its
-           automated output document 5 - job authentication token expired
-           errormsg - string - message (e.g. stacktrace) accompanying an
-           errored job error - object - the JSON-RPC error package that
-           accompanies the error code and message terminated_code - int -
-           internal reason why a job was terminated, one of: 0 - user
-           cancellation 1 - admin cancellation 2 - terminated by some
-           automatic process @optional error @optional error_code @optional
-           errormsg @optional terminated_code @optional estimating @optional
-           running @optional finished) -> structure: parameter "job_id" of
-           type "job_id" (A job id.), parameter "user" of String, parameter
-           "authstrat" of String, parameter "wsid" of Long, parameter
-           "status" of String, parameter "job_input" of type "RunJobParams"
-           (method - service defined in standard JSON RPC way, typically it's
-           module name from spec-file followed by '.' and name of funcdef
-           from spec-file corresponding to running method (e.g.
+           of parent job job_states - states of child jobs IDEA: ADD
+           aggregate_states - count of all available child job states, even
+           if they are zero) -> structure: parameter "parent_jobstate" of
+           type "JobState" (job_id - string - id of the job user - string -
+           user who started the job wsid - int - optional id of the workspace
+           where the job is bound authstrat - string - what strategy used to
+           authenticate the job job_input - object - inputs to the job (from
+           the run_job call)  ## TODO - verify updated - int - timestamp
+           since epoch in milliseconds of the last time the status was
+           updated running - int - timestamp since epoch in milliseconds of
+           when it entered the running state created - int - timestamp since
+           epoch in milliseconds when the job was created finished - int -
+           timestamp since epoch in milliseconds when the job was finished
+           status - string - status of the job. one of the following: created
+           - job has been created in the service estimating - an estimation
+           job is running to estimate resources required for the main job,
+           and which queue should be used queued - job is queued to be run
+           running - job is running on a worker node completed - job was
+           completed successfully error - job is no longer running, but
+           failed with an error terminated - job is no longer running,
+           terminated either due to user cancellation, admin cancellation, or
+           some automated task error_code - int - internal reason why the job
+           is an error. one of the following: 0 - unknown 1 - job crashed 2 -
+           job terminated by automation 3 - job ran over time limit 4 - job
+           was missing its automated output document 5 - job authentication
+           token expired errormsg - string - message (e.g. stacktrace)
+           accompanying an errored job error - object - the JSON-RPC error
+           package that accompanies the error code and message
+           terminated_code - int - internal reason why a job was terminated,
+           one of: 0 - user cancellation 1 - admin cancellation 2 -
+           terminated by some automatic process @optional error @optional
+           error_code @optional errormsg @optional terminated_code @optional
+           estimating @optional running @optional finished) -> structure:
+           parameter "job_id" of type "job_id" (A job id.), parameter "user"
+           of String, parameter "authstrat" of String, parameter "wsid" of
+           Long, parameter "status" of String, parameter "job_input" of type
+           "RunJobParams" (method - service defined in standard JSON RPC way,
+           typically it's module name from spec-file followed by '.' and name
+           of funcdef from spec-file corresponding to running method (e.g.
            'KBaseTrees.construct_species_tree' from trees service); params -
            the parameters of the method that performed this call; Optional
            parameters: service_ver - specific version of deployed service,
@@ -898,8 +936,8 @@ class execution_engine2:
            structure: parameter "name" of String, parameter "code" of Long,
            parameter "message" of String, parameter "error" of String,
            parameter "error_code" of Long, parameter "errormsg" of String,
-           parameter "terminated_code" of Long, parameter "job_states" of
-           list of type "JobState" (job_id - string - id of the job user -
+           parameter "terminated_code" of Long, parameter "child_jobstates"
+           of list of type "JobState" (job_id - string - id of the job user -
            string - user who started the job wsid - int - optional id of the
            workspace where the job is bound authstrat - string - what
            strategy used to authenticate the job job_input - object - inputs
@@ -983,8 +1021,7 @@ class execution_engine2:
            structure: parameter "name" of String, parameter "code" of Long,
            parameter "message" of String, parameter "error" of String,
            parameter "error_code" of Long, parameter "errormsg" of String,
-           parameter "terminated_code" of Long, parameter "aggregate_states"
-           of unspecified object
+           parameter "terminated_code" of Long
         """
         # ctx is the context object
         # return variables are: returnVal
@@ -1008,6 +1045,7 @@ class execution_engine2:
 
     def check_jobs(self, ctx, params):
         """
+        Get a list of all    information about jobs
         :param params: instance of type "CheckJobsParams" (As in check_job,
            exclude_fields strings can be used to exclude fields. see
            CheckJobParams for allowed strings. return_list - optional, return

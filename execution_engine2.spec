@@ -143,25 +143,68 @@
         */
         funcdef run_job(RunJobParams params) returns (job_id job_id) authentication required;
 
+
+
+        /*
+            parent_job_id: The job id of the batch job
+            child_job_ids: The job ids of the child jobs that were submitted
+        */
+        typedef structure {
+            job_id parent_job_id;
+            list<job_id> child_job_ids;
+        } BatchSubmissionResults;
+
+        /*
+            wsid: for associating the main job to a wsid
+        */
         typedef structure {
             int wsid;
         } BatchParams;
 
-        typedef structure {
-            job_id parent_job_id;
-            list<job_id> child_job_ids;
-        } BatchSubmission;
+        /* Run a list of jobs as per usual, except associate the children and parents together */
+        funcdef run_job_batch(list<RunJobParams> params, BatchParams batch_params) returns (BatchSubmissionResults job_ids) authentication required;
 
+
+
+
+        /*
+            parent_job_id: the parent of the jobs to abandon
+            child_job_ids: a list of the job ids we abandon, as long as they have the correct parent
+        */
         typedef structure {
             job_id parent_job_id;
             list<job_id> child_job_ids;
             boolean as_admin;
-        } AbandonChildren;
+        } AbandonChildrenParams;
 
+        /* Disassociate child jobs from a parent job */
+        funcdef abandon_children(AbandonChildrenParams params) returns (BatchSubmissionResults parent_and_child_ids) authentication required;
 
-        funcdef run_job_batch(list<RunJobParams> params, BatchParams batch_params) returns (BatchSubmission job_ids) authentication required;
+        /*
+            parent_job_id: the parent of the jobs to retry
+            child_job_ids: a list of the job ids we retry, as long as they have the correct parent
+        */
+        typedef structure {
+            job_id parent_job_id;
+            list<job_id> child_job_ids;
+            boolean as_admin;
+        } RetryJobsParams;
 
-        funcdef abandon_children(AbandonChildren params) returns (BatchSubmission parent_and_child_ids) authentication required;
+        /*
+            parent_job_id: the parent job id
+            new_child_jobs_ids: the new job ids, in the order we received, or null for a failure
+            failed_job_ids: the jobs we couldn't retry for some reason
+        */
+        typedef structure {
+            job_id parent_job_id;
+            list<job_id> new_child_job_ids;
+            list<job_id> failed_child_job_retry_ids;
+            boolean as_admin;
+        } RetryJobsResults;
+
+        /* Retry jobs in a batch job using existing saved run info */
+        funcdef retry_child_jobs(RetryJobsParams params) returns (RetryJobsResults job_ids) authentication required;
+
 
 
         /* EE2Constants Concierge Params are
@@ -197,6 +240,7 @@
             boolean as_admin;
         } GetJobParams;
 
+        /* Get job params required for job execution */
         funcdef get_job_params(GetJobParams params) returns (RunJobParams params) authentication required;
 
         /*
@@ -209,6 +253,7 @@
             boolean as_admin;
         } UpdateJobStatusParams;
 
+        /* Update the status for a job. Mostly used for testing purposes */
         funcdef update_job_status(UpdateJobStatusParams params) returns (job_id job_id) authentication required;
 
 
@@ -238,6 +283,8 @@
             job_id job_id;
             boolean as_admin;
         } AddJobLogsParams;
+
+        /* Add a logs for a running job, can also be used by an admin to add a special message  */
         funcdef add_job_logs(AddJobLogsParams params, list<LogLine> lines) returns (AddJobLogsResults results) authentication required;
 
 
@@ -269,6 +316,7 @@
             boolean as_admin;
         } GetJobLogsParams;
 
+        /* Retrieve job logs for a particular job */
         funcdef get_job_logs(GetJobLogsParams params) returns (GetJobLogsResults) authentication required;
 
 
@@ -309,6 +357,8 @@
             boolean skip_estimation;
             boolean as_admin;
         } StartJobParams;
+
+        /* The first state transition used by the JobRunner once it begins running on a compute resource */
         funcdef start_job(StartJobParams params) returns () authentication required;
 
         /*
@@ -425,6 +475,7 @@
             boolean return_list;
         } CheckJobsParams;
 
+        /* Get a list of all    information about jobs */
         funcdef check_jobs(CheckJobsParams params) returns (CheckJobsResults) authentication required;
 
 
