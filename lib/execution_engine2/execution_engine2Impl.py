@@ -301,6 +301,12 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: job_ids
         #BEGIN run_job_batch
+        mr = SDKMethodRunner(
+            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            job_permission_cache=self.job_permission_cache,
+            admin_permissions_cache=self.admin_permissions_cache, mongo_util=self.mongo_util
+        )
+        job_ids = mr.run_job_batch(params, batch_params)
         #END run_job_batch
 
         # At some point might do deeper type checking...
