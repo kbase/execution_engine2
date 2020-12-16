@@ -438,8 +438,7 @@
 
         /*
             parent_job - state of parent job
-            job_states - states of child jobs
-            IDEA: ADD aggregate_states - count of all available child job states, even if they are zero
+            child_jobstates - states of child jobs
         */
         typedef structure {
             JobState parent_jobstate;
@@ -447,7 +446,7 @@
         } CheckJobBatchResults;
 
         /*
-            get current status of a parent job, and it's children, if it has any.
+            get current status of a parent job, and its children, if it has any.
         */
         funcdef check_job_batch(CheckJobParams params) returns (CheckJobBatchResults) authentication required;
 
