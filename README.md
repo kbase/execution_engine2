@@ -22,16 +22,28 @@ See the .travis file for information on how to test locally
 
 # Setup and test with docker-compose on MacOS
 
-## Build and exec into the dev container
+## Build and exec into the dev container 
 
 ```
 docker build . -t execution_engine2:test
 docker-compose up -d
 docker-compose exec ee2_with_ssh bash
-#cp test/env/test.example.docker.env 
-cd /Users/XXXX/XXX/XX/XX/execution_engine2
+# (This directory is linked to your pwd via the docker-compose file)
+cd /ee2
 make test-coverage
 ```
+
+## To run a specific test directory or specific file
+```
+PYTHONPATH=.:lib:test pytest --cov-report=xml --cov lib/execution_engine2/ --verbose test/tests_for_db/
+PYTHONPATH=.:lib:test pytest --cov-report=xml --cov lib/execution_engine2/ --verbose test/tests_for_db/ee2_model_test.py
+```
+
+## To run a specific test via PyCharm
+See (Testing with PyCharm)[pycharm.md]
+
+
+
   
 ## Test Running Options  
 ### PyCharm
