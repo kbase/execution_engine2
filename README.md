@@ -39,9 +39,8 @@ PYTHONPATH=.:lib:test pytest --cov-report=xml --cov lib/execution_engine2/ --ver
 PYTHONPATH=.:lib:test pytest --cov-report=xml --cov lib/execution_engine2/ --verbose test/tests_for_db/ee2_model_test.py
 ```
 
-## To run a specific test via PyCharm
-See [/docs/testing_with_pycharm.md](Testing with pycharm)
-
+## To run a specific test file via PyCharm
+See [Testing with Pycharm](docs/testing_with_pycharm.md)
 
 
   
