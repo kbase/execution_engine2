@@ -25,6 +25,8 @@ See the .travis file for information on how to test locally
 ## Build and exec into the dev container 
 
 ```
+git clone https://github.com/kbase/execution_engine2.git
+cd execution_engine2
 docker build . -t execution_engine2:test
 docker-compose up -d
 docker-compose exec ee2_with_ssh bash
