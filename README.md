@@ -40,7 +40,7 @@ PYTHONPATH=.:lib:test pytest --cov-report=xml --cov lib/execution_engine2/ --ver
 ```
 
 ## To run a specific test via PyCharm
-See (Testing with PyCharm)[pycharm.md]
+See [/docs/testing_with_pycharm.md](Testing with pycharm)
 
 
 
