@@ -4,6 +4,7 @@
   * Fix up tests
   * Remove dependency on slack
   * Add batch endpoints
+  * Rename prod branch to "main"
 
 ## 0.0.3.4
   * Change 7 day periodic_remove to 7 day hold
