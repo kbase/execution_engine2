@@ -20,9 +20,14 @@ You can also learn more about the apps implemented in this module from its [cata
   
 See the .travis file for information on how to test locally
 
-# Setup and test with docker-compose on MacOS
+# Setup and test with docker-compose on MacOS/Linux
 
 ## Build and exec into the dev container 
+
+Make sure you have the latest versions of 
+
+* docker
+* docker-compose
 
 ```
 git clone https://github.com/kbase/execution_engine2.git
