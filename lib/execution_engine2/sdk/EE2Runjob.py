@@ -35,6 +35,11 @@ class PreparedJobParams(NamedTuple):
     job_id: str
 
 
+class JobResourceMappings(NamedTuple):
+    condor_resources: dict
+    method_service_versions: dict
+
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -42,14 +47,14 @@ if TYPE_CHECKING:
     from lib.execution_engine2.utils.CatalogUtils import CatalogUtils
     from lib.execution_engine2.utils import Condor
 
+
 class EE2RunJob:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr  # type: SDKMethodRunner
         self.override_clientgroup = os.environ.get("OVERRIDE_CLIENT_GROUP", None)
         self.logger = sdkmr.logger
         self.catalog_utils = sdkmr.catalog_utils  # type: CatalogUtils
-        self.condor = self.sdkmr.get_condor() # type: Condor
-
+        self.condor = self.sdkmr.get_condor()  # type: Condor
 
     def _init_job_rec(
         self,
@@ -57,6 +62,7 @@ class EE2RunJob:
         params: Dict,
         resources: CondorResources = None,
         concierge_params: ConciergeParams = None,
+        git_commit: str = None,
     ) -> str:
         job = Job()
         inputs = JobInput()
@@ -69,9 +75,11 @@ class EE2RunJob:
         inputs.method = params.get("method")
         inputs.params = params.get("params")
 
-        params["service_ver"] = self._get_module_git_commit(
-            params.get("method"), params.get("service_ver")
-        )
+        if git_commit:
+            params["service_ver"] = git_commit
+        else:
+            params["service_ver"] = self.catalog_utils.get_git_commit_version(params)
+
         inputs.service_ver = params.get("service_ver")
 
         inputs.app_id = params.get("app_id")
@@ -115,7 +123,22 @@ class EE2RunJob:
 
         return str(job.id)
 
+    def _get_module_git_commit(self, method, service_ver=None) -> Optional[str]:
+        # TODO Delete this in next PR, as get_mass_git_commit_versions now exists
+        module_name = method.split(".")[0]
 
+        if not service_ver:
+            service_ver = "release"
+
+        self.logger.debug(f"Getting commit for {module_name} {service_ver}")
+
+        module_version = self.sdkmr.catalog_utils.catalog.get_module_version(
+            {"module_name": module_name, "version": service_ver}
+        )
+
+        git_commit_hash = module_version.get("git_commit_hash")
+
+        return git_commit_hash
 
     def _check_ws_objects(self, source_objects) -> None:
         """
@@ -207,8 +230,6 @@ class EE2RunJob:
 
         return PreparedJobParams(params=params, job_id=job_id)
 
-
-
     def _submit(self, params, concierge_params, job_id):
         try:
             submission_info = self.sdkmr.get_condor().run_job(
@@ -235,52 +256,97 @@ class EE2RunJob:
             f"Attempting to update job to queued  {job_id} {condor_job_id} {submission_info}"
         )
 
-    def _cache_catalog_resources(self, param_set):
-        # Get a list of all of the methods
-        # Get their clientgroups and resources from the catalog
-        # Cache method resources and versions
-        mr_cache = self.catalog_utils.get_mass_resources()
-        mv_cache = dict()
-        for param in param_set:
-            method = param['method']
-            service_ver = param['service_ver']
-            # Get resources for method
-            if method not in mr_cache:
-                self.sdkmr.get_condor().extract_resources()
-                mr_cache[method] = self.catalog_utils.get_normalized_resources(method=method)
-            # Get Method Version via Git Commit
-            if method not in mv_cache and service_ver not in mv_cache[method]:
-                mv_cache[method][service_ver]= self._get_module_git_commit(method=method,
-                                                                           service_ver=service_ver)
+    # def _cache_catalog_resources(self, param_set):
+    #     # Get a list of all of the methods
+    #     # Get their clientgroups and resources from the catalog
+    #     # Cache method resources and versions
+    #     mr_cache = self.catalog_utils.get_mass_resources()
+    #     mv_cache = dict()
+    #     for param in param_set:
+    #         method = param['method']
+    #         service_ver = param['service_ver']
+    #         # Get resources for method
+    #         if method not in mr_cache:
+    #             self.sdkmr.get_condor().extract_resources()
+    #             mr_cache[method] = self.catalog_utils.get_normalized_resources(method=method)
+    #         # Get Method Version via Git Commit
+    #         if method not in mv_cache and service_ver not in mv_cache[method]:
+    #             mv_cache[method][service_ver]= self._get_module_git_commit(method=method,
+    #                                                                        service_ver=service_ver)
+    #
+    #     return CatalogUtils
 
-        return CatalogUtils.
-
-
-    def _run_batch(self, job_param_set: List[Dict]) -> List:
+    def _get_cached_catalog_resources(
+        self, job_param_set: List[dict]
+    ) -> JobResourceMappings:
         # Check workspace objects for each of the jobs
         workspace_check_time = time.time()
-        [self._check_ws_objects(param.get("source_ws_objects")) for param in job_param_set]
-        self.logger.debug(f"Took {time.time() - workspace_check_time} to check all workspace objects")
-        condor_resources = self.catalog_utils.get_mass_resources(job_param_set=job_param_set,
-                                                                condor=self.condor)
-        service_versions = self.catalog_utils.get_mass_git_commit_versions(job_param_set=job_param_set)
+        [
+            self._check_ws_objects(param.get("source_ws_objects"))
+            for param in job_param_set
+        ]
+        self.logger.debug(
+            f"Took {time.time() - workspace_check_time} to check all workspace objects"
+        )
+        # Get a mapping of condor resources
+        catalog_check_time = time.time()
+        condor_resources_mapping = self.catalog_utils.get_mass_resources(
+            job_param_set=job_param_set, condor=self.condor
+        )
+        self.logger.debug(
+            f"Took {time.time() - catalog_check_time} to get all condor resources"
+        )
+        # Get a mapping of method git versions
+        catalog_check_time_git = time.time()
+        service_versions_mapping = self.catalog_utils.get_mass_git_commit_versions(
+            job_param_set=job_param_set
+        )
+        self.logger.debug(
+            f"Took {time.time() - catalog_check_time_git} to get all method git service_versions"
+        )
+        return JobResourceMappings(
+            condor_resources=condor_resources_mapping,
+            method_service_versions=service_versions_mapping,
+        )
 
+    def _run_batch(self, parent_job: Job, job_param_set: List[Dict]) -> List:
+        # Gather Resources
+        catalog_resources = self._get_cached_catalog_resources(
+            job_param_set=job_param_set
+        )
+        condor_resources_mapping = catalog_resources.condor_resources
+        service_versions_mapping = catalog_resources.method_service_versions
+        child_job_ids = []
+        # Initiatialize Job Records
+        for job_params in job_param_set:
+            # Allow differing parent jobs
+            if "parent_job_id" not in job_params:
+                job_params["parent_job_id"] = parent_job.id
+                method = job_params["method"]
+                service_ver = job_params.get("service_ver", "release")
+                resources = condor_resources_mapping[method]
+                git_commit = service_versions_mapping[method][service_ver]
+                try:
+                    child_job_id = self._init_job_rec(
+                        user_id=self.sdkmr.user_id,
+                        params=job_params,
+                        resources=resources,
+                        git_commit=git_commit,
+                    )
+                    child_job_ids.append(child_job_id)
+                except Exception as e:
+                    self.logger.debug(
+                        msg=f"Failed to submit child job. Aborting entire batch job {e}"
+                    )
+                    self._abort_child_jobs(child_job_ids)
+                    raise e
+            # Save record of child jobs
+            with self.sdkmr.get_mongo_util().mongo_engine_connection():
+                parent_job.child_jobs = child_job_ids
+                parent_job.save()
 
-
-
-        cached_resources = defaultdict(CondorResources)
-        for method,i in enumerate(methods):
-            cached_resources[method] = extracted_resources[i] # type: CondorResources
-
-        #TODO Try this and mark all as failed if this fails
-        for param in params:
-            job_id = self._init_job_rec(
-                self.sdkmr.user_id, params, cached_resources[param['method']]
-            )
-            job_ids.append(job_id)
-
-
-
+            # TODO Launch Job Submission Thread
+            return child_jobs
 
     def _run(self, params, concierge_params=None):
         prepared = self._prepare_to_run(
@@ -288,7 +354,9 @@ class EE2RunJob:
         )
         params = prepared.params
         job_id = prepared.job_id
-        condor_job_id = self._submit(params=params,concierge_params=concierge_params,job_id=job_id)
+        condor_job_id = self._submit(
+            params=params, concierge_params=concierge_params, job_id=job_id
+        )
         self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
         self.sdkmr.slack_client.run_job_message(
             job_id=job_id, scheduler_id=condor_job_id, username=self.sdkmr.user_id
@@ -345,26 +413,6 @@ class EE2RunJob:
         )
         return j
 
-    def _run_batch(self, parent_job: Job, params):
-        child_jobs = []
-        for job_param in params:
-            if "parent_job_id" not in job_param:
-                job_param["parent_job_id"] = str(parent_job.id)
-            try:
-                child_jobs.append(str(self._run(params=job_param)))
-            except Exception as e:
-                self.logger.debug(
-                    msg=f"Failed to submit child job. Aborting entire batch job {e}"
-                )
-                self._abort_child_jobs(child_jobs)
-                raise e
-
-        with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            parent_job.child_jobs = child_jobs
-            parent_job.save()
-
-        return child_jobs
-
     def run_batch(
         self, params, batch_params, as_admin=False
     ) -> Dict[str, Union[Job, List[str]]]:
@@ -374,8 +422,11 @@ class EE2RunJob:
         :param as_admin: Allows you to run jobs in other people's workspaces
         :return: A list of condor job ids or a failure notification
         """
+        # TODO: Do we need a kafka event for the parent job?
         wsid = batch_params.get("wsid")
         meta = batch_params.get("meta")
+        workspace_permissions_time = time.time()
+
         if as_admin:
             self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
         else:
@@ -384,9 +435,11 @@ class EE2RunJob:
             wsids = [job_input.get("wsid", wsid) for job_input in params]
             self._check_workspace_permissions_list(wsids)
 
+        self.logger.debug(f"Time spent looking up workspace permissions {time.time() - workspace_permissions_time} ")
+
         parent_job = self._create_parent_job(wsid=wsid, meta=meta)
-        children_jobs = self._run_batch(parent_job=parent_job, param_set=params)
-        return {"parent_job_id": str(parent_job.id), "child_job_ids": children_jobs}
+        child_job_ids = self._run_batch(parent_job=parent_job, job_param_set=params)
+        return {"parent_job_id": str(parent_job.id), "child_job_ids": child_job_ids}
 
     def run(
         self, params=None, as_admin=False, concierge_params: Dict = None
