@@ -6,6 +6,7 @@ the logic to retrieve info needed by the runnner to start the job
 """
 import os
 import time
+from collections import defaultdict
 from enum import Enum
 from typing import Optional, Dict, NamedTuple, Union, List
 
@@ -38,13 +39,17 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-
+    from lib.execution_engine2.utils.CatalogUtils import CatalogUtils
+    from lib.execution_engine2.utils import Condor
 
 class EE2RunJob:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr  # type: SDKMethodRunner
         self.override_clientgroup = os.environ.get("OVERRIDE_CLIENT_GROUP", None)
-        self.logger = self.sdkmr.logger
+        self.logger = sdkmr.logger
+        self.catalog_utils = sdkmr.catalog_utils  # type: CatalogUtils
+        self.condor = self.sdkmr.get_condor() # type: Condor
+
 
     def _init_job_rec(
         self,
@@ -110,21 +115,7 @@ class EE2RunJob:
 
         return str(job.id)
 
-    def _get_module_git_commit(self, method, service_ver=None) -> Optional[str]:
-        module_name = method.split(".")[0]
 
-        if not service_ver:
-            service_ver = "release"
-
-        self.logger.debug(f"Getting commit for {module_name} {service_ver}")
-
-        module_version = self.sdkmr.catalog_utils.catalog.get_module_version(
-            {"module_name": module_name, "version": service_ver}
-        )
-
-        git_commit_hash = module_version.get("git_commit_hash")
-
-        return git_commit_hash
 
     def _check_ws_objects(self, source_objects) -> None:
         """
@@ -216,13 +207,9 @@ class EE2RunJob:
 
         return PreparedJobParams(params=params, job_id=job_id)
 
-    def _run(self, params, concierge_params=None):
-        prepared = self._prepare_to_run(
-            params=params, concierge_params=concierge_params
-        )
-        params = prepared.params
-        job_id = prepared.job_id
 
+
+    def _submit(self, params, concierge_params, job_id):
         try:
             submission_info = self.sdkmr.get_condor().run_job(
                 params=params, concierge_params=concierge_params
@@ -248,6 +235,60 @@ class EE2RunJob:
             f"Attempting to update job to queued  {job_id} {condor_job_id} {submission_info}"
         )
 
+    def _cache_catalog_resources(self, param_set):
+        # Get a list of all of the methods
+        # Get their clientgroups and resources from the catalog
+        # Cache method resources and versions
+        mr_cache = self.catalog_utils.get_mass_resources()
+        mv_cache = dict()
+        for param in param_set:
+            method = param['method']
+            service_ver = param['service_ver']
+            # Get resources for method
+            if method not in mr_cache:
+                self.sdkmr.get_condor().extract_resources()
+                mr_cache[method] = self.catalog_utils.get_normalized_resources(method=method)
+            # Get Method Version via Git Commit
+            if method not in mv_cache and service_ver not in mv_cache[method]:
+                mv_cache[method][service_ver]= self._get_module_git_commit(method=method,
+                                                                           service_ver=service_ver)
+
+        return CatalogUtils.
+
+
+    def _run_batch(self, job_param_set: List[Dict]) -> List:
+        # Check workspace objects for each of the jobs
+        workspace_check_time = time.time()
+        [self._check_ws_objects(param.get("source_ws_objects")) for param in job_param_set]
+        self.logger.debug(f"Took {time.time() - workspace_check_time} to check all workspace objects")
+        condor_resources = self.catalog_utils.get_mass_resources(job_param_set=job_param_set,
+                                                                condor=self.condor)
+        service_versions = self.catalog_utils.get_mass_git_commit_versions(job_param_set=job_param_set)
+
+
+
+
+        cached_resources = defaultdict(CondorResources)
+        for method,i in enumerate(methods):
+            cached_resources[method] = extracted_resources[i] # type: CondorResources
+
+        #TODO Try this and mark all as failed if this fails
+        for param in params:
+            job_id = self._init_job_rec(
+                self.sdkmr.user_id, params, cached_resources[param['method']]
+            )
+            job_ids.append(job_id)
+
+
+
+
+    def _run(self, params, concierge_params=None):
+        prepared = self._prepare_to_run(
+            params=params, concierge_params=concierge_params
+        )
+        params = prepared.params
+        job_id = prepared.job_id
+        condor_job_id = self._submit(params=params,concierge_params=concierge_params,job_id=job_id)
         self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
         self.sdkmr.slack_client.run_job_message(
             job_id=job_id, scheduler_id=condor_job_id, username=self.sdkmr.user_id
@@ -344,7 +385,7 @@ class EE2RunJob:
             self._check_workspace_permissions_list(wsids)
 
         parent_job = self._create_parent_job(wsid=wsid, meta=meta)
-        children_jobs = self._run_batch(parent_job=parent_job, params=params)
+        children_jobs = self._run_batch(parent_job=parent_job, param_set=params)
         return {"parent_job_id": str(parent_job.id), "child_job_ids": children_jobs}
 
     def run(

@@ -1,14 +1,65 @@
 import json
-from typing import List, Dict
+from collections import defaultdict
+from typing import List, Dict, TYPE_CHECKING
 
 from lib.installed_clients.CatalogClient import Catalog
+
+if TYPE_CHECKING:
+    from lib.execution_engine2.utils.CondorTuples import CondorResources
+    from lib.execution_engine2.utils import Condor
 
 
 class CatalogUtils:
     def __init__(self, url, admin_token):
         self.catalog = Catalog(url=url, token=admin_token)
 
-    def get_normalized_resources(self, method) -> Dict:
+    def get_git_commit_versions(self, params: Dict) -> str:
+        """
+        Convenience wrapper for getting a single git commit hash
+        :param params: Job Params
+        :return: A git commit hash
+        """
+        method = params['method']
+        service_ver = params.get("service_ver", "release")
+        return self.get_mass_git_commit_versions(job_param_set=[params])[method][service_ver]
+
+    def get_mass_git_commit_versions(self, job_param_set: List[Dict]):
+        """
+        Get a list of git commit versions based on method and service version for a set of jobs
+        :param job_param_set: List of batch job params
+        :return: A cached mapping of method to version to git commit
+        """
+        # Get requested git commit or default to released git commit version
+        git_commits = defaultdict(dict)
+        for param in job_param_set:
+            method = param['method']
+            module_name = method.split(".")[0]
+            service_ver = param.get('service_ver', 'release')
+            if 'method' not in git_commits and service_ver not in git_commits['method']:
+                module_version = self.catalog.get_module_version(
+                    {"module_name": module_name, "version": service_ver}
+                )
+                git_commits['method'][service_ver] = module_version.get("git_commit_hash")
+        return git_commits
+
+    def get_mass_resources(self, job_param_set: List[Dict], condor: Condor) -> Dict[str:CondorResources]:
+        """
+        Gets a list of required condor resources and clientgroups for a set of jobs
+
+        :param job_param_set: List of batch job params
+        :param condor: Instance of condor utils
+        :return: A cached mapping of method to extracted resources
+        """
+        condor_resources = dict()
+        for param in job_param_set:
+            method = param['method']
+            if method not in condor_resources:
+                normalized_resources = self.get_normalized_resources(method=method)
+                extracted_resources = condor.extract_resources(cgrr=normalized_resources)  # type: CondorResources
+                condor_resources[method] = extracted_resources
+        return condor_resources
+
+    def get_normalized_resources(self, method: str) -> Dict:
         """
         get client groups info from Catalog
         """
