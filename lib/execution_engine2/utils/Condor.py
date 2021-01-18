@@ -348,11 +348,11 @@ class Condor(Scheduler):
         sub = htcondor.Submit(submit)
         try:
             schedd = htcondor.Schedd()
-            self.logger.debug(schedd)
-            self.logger.debug(submit)
-            self.logger.debug(os.getuid())
-            self.logger.debug(pwd.getpwuid(os.getuid()).pw_name)
-            self.logger.debug(submit)
+            # Contains sensitive info
+            # self.logger.debug(schedd)
+            # self.logger.debug(submit)
+            # self.logger.debug(os.getuid())
+            # self.logger.debug(pwd.getpwuid(os.getuid()).pw_name)
             with schedd.transaction() as txn:
                 return SubmissionInfo(str(sub.queue(txn, 1)), sub, None)
         except Exception as e:

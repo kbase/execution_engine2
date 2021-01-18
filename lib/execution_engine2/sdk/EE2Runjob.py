@@ -252,8 +252,9 @@ class EE2RunJob:
             self._finish_created_job(job_id=job_id, exception=RuntimeError(error_msg))
             raise RuntimeError(error_msg)
 
+        # Submission info available in {submission_info} but contains sensitive info
         self.logger.debug(
-            f"Attempting to update job to queued  {job_id} {condor_job_id} {submission_info}"
+            f"Attempting to update job to queued  {job_id} {condor_job_id}"
         )
 
     # def _cache_catalog_resources(self, param_set):
@@ -346,7 +347,7 @@ class EE2RunJob:
                 parent_job.save()
 
             # TODO Launch Job Submission Thread
-            return child_jobs
+            return child_job_ids
 
     def _run(self, params, concierge_params=None):
         prepared = self._prepare_to_run(
@@ -357,6 +358,7 @@ class EE2RunJob:
         condor_job_id = self._submit(
             params=params, concierge_params=concierge_params, job_id=job_id
         )
+
         self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
         self.sdkmr.slack_client.run_job_message(
             job_id=job_id, scheduler_id=condor_job_id, username=self.sdkmr.user_id
@@ -435,7 +437,9 @@ class EE2RunJob:
             wsids = [job_input.get("wsid", wsid) for job_input in params]
             self._check_workspace_permissions_list(wsids)
 
-        self.logger.debug(f"Time spent looking up workspace permissions {time.time() - workspace_permissions_time} ")
+        self.logger.debug(
+            f"Time spent looking up workspace permissions {time.time() - workspace_permissions_time} "
+        )
 
         parent_job = self._create_parent_job(wsid=wsid, meta=meta)
         child_job_ids = self._run_batch(parent_job=parent_job, job_param_set=params)
