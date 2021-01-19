@@ -4,9 +4,9 @@ from typing import List, Dict, TYPE_CHECKING
 
 from lib.installed_clients.CatalogClient import Catalog
 
-if TYPE_CHECKING:
-    from lib.execution_engine2.utils.CondorTuples import CondorResources
-    from lib.execution_engine2.utils import Condor
+# if TYPE_CHECKING:
+#     from lib.execution_engine2.utils.CondorTuples import CondorResources
+#     from lib.execution_engine2.utils import Condor
 
 
 class CatalogUtils:
@@ -47,14 +47,14 @@ class CatalogUtils:
         return git_commits
 
     def get_mass_resources(
-        self, job_param_set: List[Dict], condor: Condor
-    ) -> Dict[str:CondorResources]:
+        self, job_param_set: List[Dict], condor
+    ) -> Dict:
         """
         Gets a list of required condor resources and clientgroups for a set of jobs
 
         :param job_param_set: List of batch job params
-        :param condor: Instance of condor utils
-        :return: A cached mapping of method to extracted resources
+        :param condor: Instance of condor utils # type: Condor
+        :return: A cached mapping of method to extracted resources # type: Dict[str:CondorResources]
         """
         condor_resources = dict()
         for param in job_param_set:
