@@ -61,8 +61,8 @@ class ee2_server_load_test(unittest.TestCase):
         runner._ee2_status._send_exec_stats_to_catalog = MagicMock(return_value=True)
         runner._ee2_status.update_finished_job_with_usage = MagicMock(return_value=True)
         runner.get_runjob()
-        runner._ee2_runjob._get_module_git_commit = MagicMock(
-            return_value="GitCommithash"
+        runner._ee2_runjob.catalog_utils.get_git_commit_version = MagicMock(
+            return_value="some_git_commit"
         )
         runner.get_job_logs()
         runner.get_condor()

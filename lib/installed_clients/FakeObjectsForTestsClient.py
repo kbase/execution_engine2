@@ -93,7 +93,7 @@ class FakeObjectsForTests(object):
            (EST time) 2013-04-03T08:56:32+0000 (UTC time)
            2013-04-03T08:56:32Z (UTC time)), parameter "version" of Long,
            parameter "saved_by" of type "username" (Login name of a KBase
-           user account.), parameter "wsid" of type "ws_id" (The unique,
+           user account_documents().), parameter "wsid" of type "ws_id" (The unique,
            permanent numerical ID of a workspace.), parameter "workspace" of
            type "ws_name" (A string used as a name for a workspace. Any
            string consisting of alphanumeric characters and "_", ".", or "-"

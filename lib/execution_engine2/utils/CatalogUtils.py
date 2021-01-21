@@ -4,6 +4,7 @@ from typing import List, Dict, TYPE_CHECKING, NamedTuple
 
 from lib.installed_clients.CatalogClient import Catalog
 
+
 # if TYPE_CHECKING:
 #     from lib.execution_engine2.utils.CondorTuples import CondorResources
 #     from lib.execution_engine2.utils import Condor
@@ -13,35 +14,15 @@ class MethodVersion(NamedTuple):
     version_request: str
     vcs: str
 
+
 class CatalogUtils:
     def __init__(self, url, admin_token):
         self.catalog = Catalog(url=url, token=admin_token)
         self.method_version_cache = defaultdict(dict)
+        self.condor_resources = dict()
 
-
-    
-
-    def get_git_commit_version(self, job_params: Dict) -> str:
-        """
-        Convenience wrapper for verifying a git commit hash, or getting git commit hash from a tag
-        :param params: Job Params (containing method and service_ver)
-        :return: A git commit hash for the requested job
-        """
-        method = job_params["method"]
-        service_ver = job_params.get("service_ver", "release")
-        version = self.get_mass_git_commit_versions(job_param_set=[job_params])
-        return version[method][service_ver]
-
-    def get_mass_git_commit_versions(self, job_param_set: List[Dict]):
-        """
-        If "service_ver" is "release|beta|dev", get git commit version for that version
-        if "service_ver" is a semantic version, get commit version for that semantic version
-        If "service_ver" is a git commit hash, see if that get commit is valid
-
-        :param job_param_set: List of batch job params (containing method and service_ver)
-        :return: A cached mapping of method to version to git commit
-        """
-        # example
+    def _get_git_commit_from_cache(self, method, service_ver):
+        # Structure of cache
         # { 'run_megahit' :
         #   {
         #       'dev' : 'cc91ddfe376f907aa56cfb3dd1b1b21cae8885z6', #Tag
@@ -50,39 +31,82 @@ class CatalogUtils:
         #    }
         # }
 
-        for param in job_param_set:
-            method = param["method"]
+        # If not in the cache add it
+        if method not in self.method_version_cache or service_ver not in self.method_version_cache[method]:
             module_name = method.split(".")[0]
-            service_ver = param.get("service_ver", "release")
-            if module_name not in self.method_version_cache or service_ver not in self.method_version_cache[method]:
-                module_version = self.catalog.get_module_version(
-                    {"module_name": module_name, "version": service_ver}
-                )
-                self.method_version_cache[method][service_ver] = module_version.get(
-                    "git_commit_hash"
-                )
-        return self.method_version_cache
+            module_version = self.catalog.get_module_version(
+                {"module_name": module_name, "version": service_ver}
+            )
+            self.method_version_cache[method][service_ver] = module_version.get(
+                "git_commit_hash"
+            )
+        # Retrieve from cache
+        return self.method_version_cache[method][service_ver]
 
-    def get_mass_resources(
-        self, job_param_set: List[Dict], condor
-    ) -> Dict:
+    def get_git_commit_version(self, job_params: Dict) -> str:
         """
-        Gets a list of required condor resources and clientgroups for a set of jobs
+        If "service_ver" is "release|beta|dev", get git commit version for that version
+        if "service_ver" is a semantic version, get commit version for that semantic version
+        If "service_ver" is a git commit hash, see if that get commit is valid
 
-        :param job_param_set: List of batch job params
+
+        Convenience wrapper for verifying a git commit hash, or getting git commit hash from a tag
+        :param params: Job Params (containing method and service_ver)
+        :return: A git commit hash for the requested job
+        """
+        service_ver = job_params.get("service_ver", "release")
+        vcs = self._get_git_commit_from_cache(method=job_params["method"],
+                                              service_ver=service_ver)
+        return vcs
+
+    # TODO Delete in next PR if we decide we don't want to do it this way
+    # def get_mass_git_commit_versions(self, job_param_set: List[Dict]):
+    #     """
+    #
+    #     :param job_param_set: List of batch job params (containing method and service_ver)
+    #     :return: A cached mapping of method to version to git commit
+    #     """
+    #     # Populate the cache
+    #     vcs_list = []
+    #     for job_params in job_param_set:
+    #         service_ver = job_params.get("service_ver", "release")
+    #         vcs_list.append(self._get_git_commit_from_cache(method=job_params["method"],
+    #                                                         service_ver=service_ver))
+    #     return vcs_list
+
+    def _get_cached_condor_resources(self, method, condor):
+        if method not in self.condor_resources:
+            normalized_resources = self.get_normalized_resources(method=method)
+            extracted_resources = condor.extract_resources(
+                cgrr=normalized_resources
+            )  # type: CondorResources
+            self.condor_resources[method] = extracted_resources
+
+    def get_condor_resources(self, job_params, condor):
+        """
+        Gets required condor resources and clientgroups for a  jobs
+
+        :param job_params: Job Params for a given job
         :param condor: Instance of condor utils # type: Condor
         :return: A cached mapping of method to extracted resources # type: Dict[str:CondorResources]
         """
-        condor_resources = dict()
-        for param in job_param_set:
-            method = param["method"]
-            if method not in condor_resources:
-                normalized_resources = self.get_normalized_resources(method=method)
-                extracted_resources = condor.extract_resources(
-                    cgrr=normalized_resources
-                )  # type: CondorResources
-                condor_resources[method] = extracted_resources
-        return condor_resources
+        return self._get_cached_condor_resources(method=job_params["method"], condor=condor)
+
+    #TODO Delete this if we decide to not use it in next PR
+    # def get_condor_resources_mass(
+    #         self, job_param_set: List[Dict], condor
+    # ) -> Dict:
+    #     """
+    #     Gets a list of required condor resources and clientgroups for a set of jobs
+    #
+    #     :param job_param_set: List of batch job params
+    #     :param condor: Instance of condor utils # type: Condor
+    #     :return: A cached mapping of method to extracted resources # type: Dict[str:CondorResources]
+    #     """
+    #     condor_resources = []
+    #     for job_params in job_param_set:
+    #         condor_resources.append(self._get_cached_condor_resources(method=job_params["method"], condor=condor))
+    #     return condor_resources
 
     def get_normalized_resources(self, method: str) -> Dict:
         """

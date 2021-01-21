@@ -260,16 +260,16 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         status4 = runner.check_job(job_id=job_id4)
 
         self.assertTrue("terminated_code" not in status0)
-        self.assertEquals(
+        self.assertEqual(
             status1["terminated_code"], TerminatedCode.terminated_by_automation.value
         )
-        self.assertEquals(
+        self.assertEqual(
             status2["terminated_code"], TerminatedCode.terminated_by_admin.value
         )
-        self.assertEquals(
+        self.assertEqual(
             status3["terminated_code"], TerminatedCode.terminated_by_user.value
         )
-        self.assertEquals(
+        self.assertEqual(
             status4["terminated_code"], TerminatedCode.terminated_by_user.value
         )
 

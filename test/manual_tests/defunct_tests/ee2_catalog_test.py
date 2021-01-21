@@ -47,13 +47,13 @@ class ee2_CatalogUtils_test(unittest.TestCase):
         method = "simpleapp.simple_add"
         print("A")
         app_settings1 = runner.catalog_utils.get_normalized_resources(method)
-        self.assertEquals(app_settings1["client_group"], "njs")
+        self.assertEqual(app_settings1["client_group"], "njs")
         self.assertIsInstance(app_settings1, dict)
 
         print("B")
         method = "simpleapp.simple_add2"
         app_settings2 = runner.catalog_utils.get_normalized_resources(method)
-        self.assertEquals(app_settings2, {})
+        self.assertEqual(app_settings2, {})
         self.assertIsInstance(app_settings2, dict)
 
         condor = Condor(self.config_file)

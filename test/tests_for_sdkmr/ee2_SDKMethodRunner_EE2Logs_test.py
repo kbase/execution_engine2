@@ -83,7 +83,7 @@ class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
 
             test_line = ori_lines[0]
 
-            self.assertEquals(test_line["line"], "Hello world")
+            self.assertEqual(test_line["line"], "Hello world")
             self.assertEqual(test_line["linepos"], 0)
             self.assertEqual(test_line["error"], False)
 

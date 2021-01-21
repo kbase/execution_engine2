@@ -131,7 +131,7 @@ class EE2TestAdminMode(unittest.TestCase):
         self.assertTrue(bson.objectid.ObjectId.is_valid(job_id))
 
         # RUNJOB BUT ATTEMPT TO BE AN ADMIN
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             expected_exception=PermissionError, expected_regex=lowly_user
         ):
             runner.run_job(params=job_params_1, as_admin=True)
@@ -141,7 +141,7 @@ class EE2TestAdminMode(unittest.TestCase):
         self.assertEqual(params["method"], job_params_1["method"])
 
         # get_job_params BUT ATTEMPT TO BE AN ADMIN
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             expected_exception=PermissionError, expected_regex=lowly_user
         ):
             runner.get_job_params(job_id=job_id, as_admin=True)
@@ -157,12 +157,12 @@ class EE2TestAdminMode(unittest.TestCase):
         runner.view_job_logs(job_id=job_id)
 
         # add_job_logs and view them, BUT ATTEMPT TO BE AN ADMIN
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             expected_exception=PermissionError, expected_regex=lowly_user
         ):
             runner.add_job_logs(job_id=job_id, log_lines=lines, as_admin=True)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             expected_exception=PermissionError, expected_regex=lowly_user
         ):
             runner.view_job_logs(job_id=job_id, as_admin=True)
@@ -238,7 +238,7 @@ class EE2TestAdminMode(unittest.TestCase):
         method_1 = "module_name.function_name"
         job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             expected_exception=RuntimeError,
             expected_regex=r"ServerError\('Token validation failed: Login failed! Server responded with code 401 Unauthorized'\)",
         ):
@@ -262,7 +262,7 @@ class EE2TestAdminMode(unittest.TestCase):
         self.assertEqual(admin_type, {"permission": "r"})
 
         # RUNJOB
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             expected_exception=PermissionError, expected_regex=lowly_admin
         ):
             runner.run_job(params=job_params_1, as_admin=True)

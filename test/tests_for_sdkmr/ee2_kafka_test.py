@@ -29,7 +29,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
 
     def test_status_change(self):
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             expected_exception=TypeError,
             expected_regex=r"__init__\(\) missing 1 required positional argument: 'scheduler_id'",
         ):
@@ -43,7 +43,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
             self.kc.send_kafka_message(
                 KafkaCreateJob(job_id="123", user="123", apple="123")
             )
-        self.assertRegexpMatches(
+        self.assertRegex(
             str(e.exception), ".*got an unexpected keyword argument.*"
         )
 
@@ -56,7 +56,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
                     scheduler_id=123,
                 )
             )
-        self.assertRegexpMatches(str(e.exception), ".*Invalid previous status.*")
+        self.assertRegex(str(e.exception), ".*Invalid previous status.*")
 
         with self.assertRaises(Exception) as e:
             self.kc.send_kafka_message(
@@ -69,7 +69,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
                     error_code=-1,
                 )
             )
-        self.assertRegexpMatches(str(e.exception), ".*-1 is not a valid ErrorCode.*")
+        self.assertRegex(str(e.exception), ".*-1 is not a valid ErrorCode.*")
 
     # def legacy_produce_and_consume(self):
     #     """
@@ -97,7 +97,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
     #         value = data[key]
     #         self.assertIn(key, last_msg)
     #         data_value = last_msg[key]
-    #         self.assertEquals(value, data_value)
+    #         self.assertEqual(value, data_value)
     #
     #     self.assertIn("error", last_msg)
     #
@@ -106,7 +106,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
     #         value2 = data2[key]
     #         self.assertIn(key, last_msg2)
     #         data_value2 = last_msg2[key]
-    #         self.assertEquals(value2, data_value2)
+    #         self.assertEqual(value2, data_value2)
     #
     #     self.assertIn("error", last_msg2)
     #

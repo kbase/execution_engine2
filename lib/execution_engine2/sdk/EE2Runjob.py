@@ -10,7 +10,7 @@ from collections import defaultdict
 from enum import Enum
 from typing import Optional, Dict, NamedTuple, Union, List
 
-from exceptions import MultipleParentJobsException
+from lib.execution_engine2.exceptions import MultipleParentJobsException
 from lib.execution_engine2.db.models.models import (
     Job,
     JobInput,
@@ -63,7 +63,6 @@ class EE2RunJob:
         params: Dict,
         resources: CondorResources = None,
         concierge_params: ConciergeParams = None,
-        cached_git_commit: str = None,
     ) -> str:
         job = Job()
         inputs = JobInput()
@@ -76,10 +75,7 @@ class EE2RunJob:
         inputs.method = params.get("method")
         inputs.params = params.get("params")
 
-        if cached_git_commit:
-            params["service_ver"] = cached_git_commit
-        else:
-             params["service_ver"] = self.catalog_utils.get_git_commit_version(job_params=params)
+        params["service_ver"] = self.catalog_utils.get_git_commit_version(job_params=params)
 
         inputs.service_ver = params.get("service_ver")
 
@@ -125,21 +121,7 @@ class EE2RunJob:
         return str(job.id)
 
     def _get_module_git_commit(self, method, service_ver=None) -> Optional[str]:
-        # TODO Delete this in next PR, as get_mass_git_commit_versions now exists
-        module_name = method.split(".")[0]
-
-        if not service_ver:
-            service_ver = "release"
-
-        self.logger.debug(f"Getting commit for {module_name} {service_ver}")
-
-        module_version = self.sdkmr.catalog_utils.catalog.get_module_version(
-            {"module_name": module_name, "version": service_ver}
-        )
-
-        git_commit_hash = module_version.get("git_commit_hash")
-
-        return git_commit_hash
+        return self.catalog_utils.get_git_commit_version()
 
     def _check_ws_objects(self, source_objects) -> None:
         """
@@ -278,68 +260,63 @@ class EE2RunJob:
     #
     #     return CatalogUtils
 
-    def _get_cached_catalog_resources(
-        self, job_param_set: List[dict]
-    ) -> JobResourceMappings:
-        # Check workspace objects for each of the jobs
-        workspace_check_time = time.time()
-        [
-            self._check_ws_objects(param.get("source_ws_objects"))
-            for param in job_param_set
-        ]
-        self.logger.debug(
-            f"Took {time.time() - workspace_check_time} to check all workspace objects"
-        )
-        # Get a mapping of condor resources
-        catalog_check_time = time.time()
-        condor_resources_mapping = self.catalog_utils.get_mass_resources(
-            job_param_set=job_param_set, condor=self.condor
-        )
-        self.logger.debug(
-            f"Took {time.time() - catalog_check_time} to get all condor resources"
-        )
-        # Get a mapping of method git versions. If one is not valid, throw the catalog error #TODO Test this
-        catalog_check_time_git = time.time()
-        service_versions_mapping = self.catalog_utils.get_mass_git_commit_versions(
-            job_param_set=job_param_set
-        )
-        self.logger.debug(
-            f"Took {time.time() - catalog_check_time_git} to get all method git service_versions"
-        )
-        return JobResourceMappings(
-            condor_resources=condor_resources_mapping,
-            method_service_versions=service_versions_mapping,
-        )
+    # TODO delete this after checking it in
+    # def _get_cached_catalog_resources(
+    #     self, job_param_set: List[dict]
+    # ) -> JobResourceMappings:
+    #     # Check workspace objects for each of the jobs
+    #     workspace_check_time = time.time()
+    #     [
+    #         self._check_ws_objects(param.get("source_ws_objects"))
+    #         for param in job_param_set
+    #     ]
+    #     self.logger.debug(
+    #         f"Took {time.time() - workspace_check_time} to check all workspace objects"
+    #     )
+    #     #Get a mapping of condor resources
+    #     catalog_check_time = time.time()
+    #     condor_resources_mapping = self.catalog_utils.get_mass_resources(
+    #         job_param_set=job_param_set, condor=self.condor
+    #     )
+    #     self.logger.debug(
+    #         f"Took {time.time() - catalog_check_time} to get all condor resources"
+    #     )
+    #     # Get a mapping of method git versions. If one is not valid, throw the catalog error #TODO Test this
+    #     catalog_check_time_git = time.time()
+    #
+    #
+    #     return JobResourceMappings(
+    #         condor_resources=condor_resources_mapping,
+    #         method_service_versions=service_versions_mapping,
+    #     )
+
+    def _evaluate_job_params_set(self, job_param_set, parent_job):
+        # Fail early before job submission if possible
+        # Make sure clientgroups and condor resources are set correctly for each job,
+        # or raise an exception if something goes wrong
+        for job_params in job_param_set:
+            self.catalog_utils.get_git_commit_version(job_params=job_params)
+            self.catalog_utils.get_condor_resources(job_params=job_params, condor=self.condor)
+            # Don't allow differing parent jobs, and ensure job always runs with the parent
+            if "parent_job_id" in job_params and job_params['parent_job_id'] != parent_job.id:
+                raise MultipleParentJobsException("Launching child jobs with differing parents is not allowed")
+
+
 
     def _run_batch(self, parent_job: Job, job_param_set: List[Dict]) -> List:
-        # Gather Resources
-        catalog_resources = self._get_cached_catalog_resources(
-            job_param_set=job_param_set
-        )
-        condor_resources_mapping = catalog_resources.condor_resources
-        service_versions_mapping = catalog_resources.method_service_versions
+        # Prepare jobs, fail early if possible
+        self._evaluate_job_params_set(job_param_set,parent_job)
+
         child_job_ids = []
         # Initiatialize Job Records
         for job_params in job_param_set:
-            # Don't allow differing parent jobs, and ensure job always runs with the parent
-            if "parent_job_id" in job_params and job_params['parent_job_id'] != parent_job.id :
-                raise MultipleParentJobsException("Launching child jobs with differing parents is not allowed")
-            elif "parent_job_id" not in job_params:
-                job_params['parent_job_id'] = parent_job.id
-
-            method = job_params["method"]
-            service_ver = job_params.get("service_ver", "release")
-            resources = condor_resources_mapping[method]
-            print(f"Checking for {method} {service_ver}  in {job_params}" )
-            cached_git_commit = service_versions_mapping[method][service_ver]
+            job_params['parent_job_id'] : parent_job.id
+            resources = self.catalog_utils.get_condor_resources(job_params=job_params, condor=self.condor)
             try:
-                print("About to append child w", service_versions_mapping[method][service_ver])
-
                 child_job_id = self._init_job_rec(
                     user_id=self.sdkmr.user_id,
                     params=job_params,
                     resources=resources,
-                    cached_git_commit=cached_git_commit,
                 )
                 child_job_ids.append(child_job_id)
             except Exception as e:
