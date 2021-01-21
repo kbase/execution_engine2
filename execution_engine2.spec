@@ -544,7 +544,7 @@
             list<JobState> jobs;
             int count;
             int query_count;
-            map<string, string> filter;
+            mapping<string, string> filter;
             int skip;
             list<string> projection;
             int limit;

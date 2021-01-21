@@ -40,6 +40,9 @@ cd /ee2
 make test-coverage
 ```
 
+Once the docker image is built, it does not need to be rebuilt after code changes to rerun tests.
+Just ensure the services are up, exec into the container, and run the tests.
+
 ## To run a specific test directory or specific file
 ```
 PYTHONPATH=.:lib:test pytest --cov-report=xml --cov lib/execution_engine2/ --verbose test/tests_for_db/
