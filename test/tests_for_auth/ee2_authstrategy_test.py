@@ -15,6 +15,9 @@ from test.utils_shared.test_utils import (
     custom_ws_perm_maker,
 )
 
+from installed_clients.WorkspaceClient import Workspace
+from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
+
 
 class AuthStrategyTestCase(unittest.TestCase):
     @classmethod
@@ -73,13 +76,17 @@ class AuthStrategyTestCase(unittest.TestCase):
             "POST", self.ws_url, [{"json": response, "status_code": 500}]
         )
 
+    def _get_workspace_auth(self, token) -> WorkspaceAuth:
+        # TODO these tests can be converted to unit tests by mocking the WorkspaceAuth class
+        return WorkspaceAuth(self.user, Workspace(url=self.ws_url, token=token))
+
     @requests_mock.Mocker()
     def test_can_read_job_ok(self, rq_mock):
         rq_mock.add_matcher(custom_ws_perm_maker(self.user, self.ws_access))
         (jobs, expected_perms) = self._generate_all_test_jobs(perm="read")
         for idx, job in enumerate(jobs):
             self.assertEqual(
-                expected_perms[idx], can_read_job(job, self.user, "foo", self.cfg)
+                expected_perms[idx], can_read_job(job, self.user, self._get_workspace_auth("foo"))
             )
 
     @requests_mock.Mocker()
@@ -89,7 +96,7 @@ class AuthStrategyTestCase(unittest.TestCase):
             user=self.other_user, wsid=123, authstrat="kbaseworkspace"
         )
         with self.assertRaises(RuntimeError) as e:
-            can_read_job(job, self.user, "token", self.cfg)
+            can_read_job(job, self.user, self._get_workspace_auth('token'))
         self.assertIn("Workspace 123 is deleted", str(e.exception))
 
     @requests_mock.Mocker()
@@ -98,7 +105,7 @@ class AuthStrategyTestCase(unittest.TestCase):
         (jobs, expected_perms) = self._generate_all_test_jobs(perm="write")
         for idx, job in enumerate(jobs):
             self.assertEqual(
-                expected_perms[idx], can_write_job(job, self.user, "foo", self.cfg)
+                expected_perms[idx], can_write_job(job, self.user, self._get_workspace_auth('foo'))
             )
 
     @requests_mock.Mocker()
@@ -108,7 +115,7 @@ class AuthStrategyTestCase(unittest.TestCase):
             user=self.other_user, wsid=123, authstrat="kbaseworkspace"
         )
         with self.assertRaises(RuntimeError) as e:
-            can_write_job(job, self.user, "token", self.cfg)
+            can_write_job(job, self.user, self._get_workspace_auth('token'))
         self.assertIn("Workspace 123 is deleted", str(e.exception))
 
     @requests_mock.Mocker()
@@ -121,7 +128,8 @@ class AuthStrategyTestCase(unittest.TestCase):
         (jobs, expected_perms) = self._generate_all_test_jobs(perm="read")
         for idx, job in enumerate(jobs):
             self.assertEqual(
-                [expected_perms[idx]], can_read_jobs([job], self.user, "foo", self.cfg)
+                [expected_perms[idx]],
+                can_read_jobs([job], self.user, self._get_workspace_auth('foo'))
             )
 
     @requests_mock.Mocker()
@@ -131,7 +139,7 @@ class AuthStrategyTestCase(unittest.TestCase):
             user=self.other_user, wsid=123, authstrat="kbaseworkspace"
         )
         with self.assertRaises(RuntimeError) as e:
-            can_read_jobs([job], self.user, "token", self.cfg)
+            can_read_jobs([job], self.user, self._get_workspace_auth('token'))
         self.assertIn("Workspace 123 is deleted", str(e.exception))
 
     @requests_mock.Mocker()
@@ -140,7 +148,8 @@ class AuthStrategyTestCase(unittest.TestCase):
         (jobs, expected_perms) = self._generate_all_test_jobs(perm="write")
         for idx, job in enumerate(jobs):
             self.assertEqual(
-                [expected_perms[idx]], can_write_jobs([job], self.user, "foo", self.cfg)
+                [expected_perms[idx]],
+                can_write_jobs([job], self.user, self._get_workspace_auth('foo'))
             )
 
     @requests_mock.Mocker()
@@ -150,5 +159,5 @@ class AuthStrategyTestCase(unittest.TestCase):
             user=self.other_user, wsid=123, authstrat="kbaseworkspace"
         )
         with self.assertRaises(RuntimeError) as e:
-            can_write_jobs([job], self.user, "token", self.cfg)
+            can_write_jobs([job], self.user, self._get_workspace_auth('token'))
         self.assertIn("Workspace 123 is deleted", str(e.exception))

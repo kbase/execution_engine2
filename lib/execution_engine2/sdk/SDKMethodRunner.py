@@ -135,9 +135,7 @@ class SDKMethodRunner:
 
     def get_workspace_auth(self) -> WorkspaceAuth:
         if self.workspace_auth is None:
-            self.workspace_auth = WorkspaceAuth(
-                self.token, self.user_id, self.workspace_url
-            )
+            self.workspace_auth = WorkspaceAuth(self.user_id, self.get_workspace())
         return self.workspace_auth
 
     def get_mongo_util(self) -> MongoUtil:

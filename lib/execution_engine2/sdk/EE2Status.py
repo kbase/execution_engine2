@@ -444,9 +444,7 @@ class JobsStatus:
                 self.sdkmr.logger.debug(
                     "Checking for read permission to: {}".format(job_ids)
                 )
-                perms = can_read_jobs(
-                    jobs, self.sdkmr.user_id, self.sdkmr.token, self.sdkmr.config
-                )
+                perms = can_read_jobs(jobs, self.sdkmr.user_id, self.sdkmr.get_workspace_auth())
             except RuntimeError as e:
                 self.sdkmr.logger.error(
                     f"An error occurred while checking read permissions for jobs {jobs}"
