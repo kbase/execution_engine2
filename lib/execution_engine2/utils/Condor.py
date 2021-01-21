@@ -5,7 +5,6 @@ Functions to call condor to manage jobs and extract resource requirements
 import logging
 import os
 import pathlib
-import pwd
 from configparser import ConfigParser
 from typing import Dict, Optional, Any, Tuple
 

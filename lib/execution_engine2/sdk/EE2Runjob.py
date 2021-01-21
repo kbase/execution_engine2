@@ -6,11 +6,9 @@ the logic to retrieve info needed by the runnner to start the job
 """
 import os
 import time
-from collections import defaultdict
 from enum import Enum
 from typing import Optional, Dict, NamedTuple, Union, List
 
-from lib.execution_engine2.exceptions import MultipleParentJobsException
 from lib.execution_engine2.db.models.models import (
     Job,
     JobInput,
@@ -20,6 +18,7 @@ from lib.execution_engine2.db.models.models import (
     ErrorCode,
     TerminatedCode,
 )
+from lib.execution_engine2.exceptions import MultipleParentJobsException
 from lib.execution_engine2.sdk.EE2Constants import ConciergeParams
 from lib.execution_engine2.utils.CondorTuples import CondorResources
 from lib.execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
