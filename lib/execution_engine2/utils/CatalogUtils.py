@@ -1,6 +1,6 @@
 import json
 from collections import defaultdict
-from typing import List, Dict, TYPE_CHECKING
+from typing import List, Dict, TYPE_CHECKING, NamedTuple
 
 from lib.installed_clients.CatalogClient import Catalog
 
@@ -8,43 +8,60 @@ from lib.installed_clients.CatalogClient import Catalog
 #     from lib.execution_engine2.utils.CondorTuples import CondorResources
 #     from lib.execution_engine2.utils import Condor
 
+class MethodVersion(NamedTuple):
+    method: str
+    version_request: str
+    vcs: str
 
 class CatalogUtils:
     def __init__(self, url, admin_token):
         self.catalog = Catalog(url=url, token=admin_token)
+        self.method_version_cache = defaultdict(dict)
 
-    def get_git_commit_version(self, params: Dict) -> str:
+
+    
+
+    def get_git_commit_version(self, job_params: Dict) -> str:
         """
-        Convenience wrapper for getting a single git commit hash
+        Convenience wrapper for verifying a git commit hash, or getting git commit hash from a tag
         :param params: Job Params (containing method and service_ver)
         :return: A git commit hash for the requested job
         """
-        method = params["method"]
-        service_ver = params.get("service_ver", "release")
-        return self.get_mass_git_commit_versions(job_param_set=[params])[method][
-            service_ver
-        ]
+        method = job_params["method"]
+        service_ver = job_params.get("service_ver", "release")
+        version = self.get_mass_git_commit_versions(job_param_set=[job_params])
+        return version[method][service_ver]
 
     def get_mass_git_commit_versions(self, job_param_set: List[Dict]):
         """
-        Get a list of git commit versions based on method and service version for a set of jobs
+        If "service_ver" is "release|beta|dev", get git commit version for that version
+        if "service_ver" is a semantic version, get commit version for that semantic version
+        If "service_ver" is a git commit hash, see if that get commit is valid
+
         :param job_param_set: List of batch job params (containing method and service_ver)
         :return: A cached mapping of method to version to git commit
         """
-        # Get requested git commit or default to released git commit version
-        git_commits = defaultdict(dict)
+        # example
+        # { 'run_megahit' :
+        #   {
+        #       'dev' : 'cc91ddfe376f907aa56cfb3dd1b1b21cae8885z6', #Tag
+        #       '2.5.0' : 'cc91ddfe376f907aa56cfb3dd1b1b21cae8885z6', #Semantic
+        #       'cc91ddfe376f907aa56cfb3dd1b1b21cae8885z6' : 'cc91ddfe376f907aa56cfb3dd1b1b21cae8885z6' #vcs
+        #    }
+        # }
+
         for param in job_param_set:
             method = param["method"]
             module_name = method.split(".")[0]
             service_ver = param.get("service_ver", "release")
-            if "method" not in git_commits and service_ver not in git_commits["method"]:
+            if module_name not in self.method_version_cache or service_ver not in self.method_version_cache[method]:
                 module_version = self.catalog.get_module_version(
                     {"module_name": module_name, "version": service_ver}
                 )
-                git_commits["method"][service_ver] = module_version.get(
+                self.method_version_cache[method][service_ver] = module_version.get(
                     "git_commit_hash"
                 )
-        return git_commits
+        return self.method_version_cache
 
     def get_mass_resources(
         self, job_param_set: List[Dict], condor

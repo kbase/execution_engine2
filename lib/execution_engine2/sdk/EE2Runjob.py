@@ -10,6 +10,7 @@ from collections import defaultdict
 from enum import Enum
 from typing import Optional, Dict, NamedTuple, Union, List
 
+from exceptions import MultipleParentJobsException
 from lib.execution_engine2.db.models.models import (
     Job,
     JobInput,
@@ -62,7 +63,7 @@ class EE2RunJob:
         params: Dict,
         resources: CondorResources = None,
         concierge_params: ConciergeParams = None,
-        git_commit: str = None,
+        cached_git_commit: str = None,
     ) -> str:
         job = Job()
         inputs = JobInput()
@@ -75,10 +76,10 @@ class EE2RunJob:
         inputs.method = params.get("method")
         inputs.params = params.get("params")
 
-        if git_commit:
-            params["service_ver"] = git_commit
+        if cached_git_commit:
+            params["service_ver"] = cached_git_commit
         else:
-            params["service_ver"] = self.catalog_utils.get_git_commit_version(params)
+             params["service_ver"] = self.catalog_utils.get_git_commit_version(job_params=params)
 
         inputs.service_ver = params.get("service_ver")
 
@@ -297,7 +298,7 @@ class EE2RunJob:
         self.logger.debug(
             f"Took {time.time() - catalog_check_time} to get all condor resources"
         )
-        # Get a mapping of method git versions
+        # Get a mapping of method git versions. If one is not valid, throw the catalog error #TODO Test this
         catalog_check_time_git = time.time()
         service_versions_mapping = self.catalog_utils.get_mass_git_commit_versions(
             job_param_set=job_param_set
@@ -320,34 +321,40 @@ class EE2RunJob:
         child_job_ids = []
         # Initiatialize Job Records
         for job_params in job_param_set:
-            # Allow differing parent jobs
-            if "parent_job_id" not in job_params:
-                job_params["parent_job_id"] = parent_job.id
-                method = job_params["method"]
-                service_ver = job_params.get("service_ver", "release")
-                resources = condor_resources_mapping[method]
-                git_commit = service_versions_mapping[method][service_ver]
-                try:
-                    child_job_id = self._init_job_rec(
-                        user_id=self.sdkmr.user_id,
-                        params=job_params,
-                        resources=resources,
-                        git_commit=git_commit,
-                    )
-                    child_job_ids.append(child_job_id)
-                except Exception as e:
-                    self.logger.debug(
-                        msg=f"Failed to submit child job. Aborting entire batch job {e}"
-                    )
-                    self._abort_child_jobs(child_job_ids)
-                    raise e
-            # Save record of child jobs
-            with self.sdkmr.get_mongo_util().mongo_engine_connection():
-                parent_job.child_jobs = child_job_ids
-                parent_job.save()
+            # Don't allow differing parent jobs, and ensure job always runs with the parent
+            if "parent_job_id" in job_params and job_params['parent_job_id'] != parent_job.id :
+                raise MultipleParentJobsException("Launching child jobs with differing parents is not allowed")
+            elif "parent_job_id" not in job_params:
+                job_params['parent_job_id'] = parent_job.id
 
-            # TODO Launch Job Submission Thread
-            return child_job_ids
+            method = job_params["method"]
+            service_ver = job_params.get("service_ver", "release")
+            resources = condor_resources_mapping[method]
+            print(f"Checking for {method} {service_ver}  in {job_params}" )
+            cached_git_commit = service_versions_mapping[method][service_ver]
+            try:
+                print("About to append child w", service_versions_mapping[method][service_ver])
+
+                child_job_id = self._init_job_rec(
+                    user_id=self.sdkmr.user_id,
+                    params=job_params,
+                    resources=resources,
+                    cached_git_commit=cached_git_commit,
+                )
+                child_job_ids.append(child_job_id)
+            except Exception as e:
+                self.logger.debug(
+                    msg=f"Failed to submit child job. Aborting entire batch job {e}"
+                )
+                self._abort_child_jobs(child_job_ids)
+                raise e
+        # Save record of child jobs
+        with self.sdkmr.get_mongo_util().mongo_engine_connection():
+            parent_job.child_jobs = child_job_ids
+            parent_job.save()
+
+        # TODO Launch Job Submission Thread
+        return child_job_ids
 
     def _run(self, params, concierge_params=None):
         prepared = self._prepare_to_run(

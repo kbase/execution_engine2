@@ -18,12 +18,14 @@ from test.utils_shared.test_utils import (
     get_sample_job_params,
     get_sample_condor_info,
 )
-
+from test.utils_shared.test_utils import bootstrap
 
 class EE2TestAdminMode(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+
         config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
+        print("About to load config file")
         config_parser = ConfigParser()
         config_parser.read(config_file)
 
