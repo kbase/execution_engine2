@@ -123,7 +123,7 @@
             params - the parameters of the method that performed this call;
 
             Optional parameters:
-            service_ver - optional, a semantic version string (e.g. 1.1.0). Only released modules
+            service_ver - One of tags (Release|Beta|Dev) a semantic version string (e.g. 1.1.0) or git commit. Only released modules
                   have versions, so if the tag is not 'release', and a version
                   is given, a ValueError will be raised.
             rpc_context - context of current method call including nested call

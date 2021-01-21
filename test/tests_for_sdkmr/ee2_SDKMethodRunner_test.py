@@ -200,7 +200,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         runner.get_condor = MagicMock(return_value=condor_mock)
         fixed_rj = EE2RunJob(runner)
-        fixed_rj._get_module_git_commit = MagicMock(return_value="hash_goes_here")
+        fixed_rj.catalog_utils.get_git_commit_version = MagicMock(
+            return_value="hash_goes_here"
+        )
         fixed_rj.sdkmr.catalog_utils.list_client_group_configs = MagicMock(
             return_value="cg goes her"
         )
@@ -869,14 +871,13 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner.workspace_auth.can_read = MagicMock(return_value=True)
 
         self.mock = MagicMock(return_value=True)
-        runner._ee2_runjob._get_module_git_commit = MagicMock(
+        runner._ee2_runjob.catalog_utils.get_git_commit_version = MagicMock(
             return_value="hash_goes_here"
         )
 
-        # fixed_rj = RunJob(runner)
-        # fixed_rj._get_module_git_commit = MagicMock(return_value='hash_goes_here')
-
-        runner._get_module_git_commit = MagicMock(return_value="git_commit_goes_here")
+        runner.catalog_utils.get_git_commit_version = MagicMock(
+            return_value="git_commit_goes_here"
+        )
 
         runner.get_condor = MagicMock(return_value=condor_mock)
         # ctx = {"user_id": self.user_id, "wsid": self.ws_id, "token": self.token}

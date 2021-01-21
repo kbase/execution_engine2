@@ -1,18 +1,12 @@
 import json
 from collections import defaultdict
-from typing import List, Dict, TYPE_CHECKING, NamedTuple
+from typing import List, Dict, TYPE_CHECKING
 
 from lib.installed_clients.CatalogClient import Catalog
 
 
 if TYPE_CHECKING:
     from lib.execution_engine2.utils.CondorTuples import CondorResources
-
-
-class MethodVersion(NamedTuple):
-    method: str
-    version_request: str
-    vcs: str
 
 
 class CatalogUtils:

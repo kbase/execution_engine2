@@ -35,11 +35,6 @@ class PreparedJobParams(NamedTuple):
     job_id: str
 
 
-class JobResourceMappings(NamedTuple):
-    condor_resources: dict
-    method_service_versions: dict
-
-
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -120,9 +115,6 @@ class EE2RunJob:
         )
 
         return str(job.id)
-
-    def _get_module_git_commit(self, method, service_ver=None) -> Optional[str]:
-        return self.catalog_utils.get_git_commit_version()
 
     def _check_ws_objects(self, source_objects) -> None:
         """
