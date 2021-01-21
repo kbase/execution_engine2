@@ -161,6 +161,8 @@ class JobStatusRange:
         # TODO USE AS_PYMONGO() FOR SPEED
         # TODO Better define default fields
         # TODO Instead of SKIP use ID GT LT https://www.codementor.io/arpitbhayani/fast-and-efficient-pagination-in-mongodb-9095flbqr
+        # ^ this one is important - the workspace was DOSed by a single open narrative at one
+        #   point due to skip abuse, which is why it was removed
 
     def _get_dummy_dates(self, creation_start_time, creation_end_time):
 

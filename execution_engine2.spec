@@ -525,30 +525,59 @@
 
 
         /*
-            Results of check_jobs_date_range
-            TODO : DOCUMENT THE RETURN OF STATS mapping
+            Results of check_jobs_date_range methods.
+
+            jobs - the jobs matching the query, up to `limit` jobs.
+            count - the number of jobs returned.
+            query_count - the number of jobs that matched the filters.
+            filter - DEPRECATED - this field may change in the future. The filters that were
+                applied to the jobs.
+            skip - the number of jobs that were skipped prior to beginning to return jobs.
+            projection - the list of fields included in the returned job. By default all fields.
+            limit - the maximum number of jobs returned.
+            sort_order - the order in which the results were sorted by the job ID - + for
+                ascending, - for descending.
+
+            TODO: DOCUMENT THE RETURN OF STATS mapping
         */
         typedef structure {
-            mapping<job_id, JobState> jobs;
+            list<JobState> jobs;
             int count;
             int query_count;
-            list<string> filter;
+            mapping<string, string> filter;
             int skip;
             list<string> projection;
             int limit;
             string sort_order;
         } CheckJobsDateRangeResults;
 
-
-
         /*
           Check job for all jobs in a given date/time range for all users (Admin function)
-            float start_time; # Filter based on creation timestamp since epoch
-            float end_time; # Filter based on creation timestamp since epoch
-            list<string> projection; # A list of fields to include in the projection, default ALL See "Projection Fields"
-            list<string> filter; # A list of simple filters to "AND" together, such as error_code=1, wsid=1234, terminated_code = 1
-            int limit; # The maximum number of records to return
-            string user; # Optional. Defaults off of your token
+            Notes on start_time and end_time:
+                These fields are designated as floats but floats, ints, and strings are all
+                accepted. Times are determined as follows:
+                - if the field is a float or a string that contains a float and only a float,
+                    the field value is treated as seconds since the epoch.
+                - if the field is an int or a string that contains an int and only an int,
+                    the field value is treated as milliseconds since the epoch.
+                - if the field is a string not matching the criteria above, it is treated as
+                    a date and time. Nearly any unambigous format can be parsed.
+
+            float start_time - Filter based on job creation timestamp since epoch
+            float end_time - Filter based on job creation timestamp since epoch
+            list<string> projection - A list of fields to include in the projection, default ALL
+                See "Projection Fields" above
+            list<string> filter - DEPRECATED: this field may change or be removed in the future.
+                A list of simple filters to "AND" together, such as error_code=1, wsid=1234,
+                terminated_code = 1
+            int limit - The maximum number of records to return
+            string user - The user whose job records will be returned. Optional. Default is the
+                current user.
+            int offset - the number of jobs to skip before returning records.
+            boolean ascending - true to sort by job ID ascending, false descending.
+            boolean as_admin - true to run the query as an admin; user must have admin EE2
+                permissions. Required if setting `user` to something other than your own.
+                TODO: this seems to have no effect
             @optional projection
             @optional filter
             @optional limit
@@ -568,8 +597,10 @@
             boolean as_admin;
         } CheckJobsDateRangeParams;
 
-        funcdef check_jobs_date_range_for_user(CheckJobsDateRangeParams params) returns (CheckJobsResults) authentication required;
-        funcdef check_jobs_date_range_for_all(CheckJobsDateRangeParams params) returns (CheckJobsResults) authentication required;
+        funcdef check_jobs_date_range_for_user(CheckJobsDateRangeParams params)
+            returns (CheckJobsDateRangeResults) authentication required;
+        funcdef check_jobs_date_range_for_all(CheckJobsDateRangeParams params)
+            returns (CheckJobsDateRangeResults) authentication required;
 
         typedef structure {
             UnspecifiedObject held_job;
@@ -586,7 +617,7 @@
 
 
         /*
-            str permission; # One of 'r|w|x' (('read' | 'write' | 'none'))
+            str permission - One of 'r|w|x' (('read' | 'write' | 'none'))
         */
           typedef structure {
             string permission;
