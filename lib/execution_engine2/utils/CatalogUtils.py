@@ -5,9 +5,9 @@ from typing import List, Dict, TYPE_CHECKING, NamedTuple
 from lib.installed_clients.CatalogClient import Catalog
 
 
-# if TYPE_CHECKING:
-#     from lib.execution_engine2.utils.CondorTuples import CondorResources
-#     from lib.execution_engine2.utils import Condor
+if TYPE_CHECKING:
+    from lib.execution_engine2.utils.CondorTuples import CondorResources
+
 
 class MethodVersion(NamedTuple):
     method: str
@@ -32,7 +32,10 @@ class CatalogUtils:
         # }
 
         # If not in the cache add it
-        if method not in self.method_version_cache or service_ver not in self.method_version_cache[method]:
+        if (
+            method not in self.method_version_cache
+            or service_ver not in self.method_version_cache[method]
+        ):
             module_name = method.split(".")[0]
             module_version = self.catalog.get_module_version(
                 {"module_name": module_name, "version": service_ver}
@@ -55,8 +58,9 @@ class CatalogUtils:
         :return: A git commit hash for the requested job
         """
         service_ver = job_params.get("service_ver", "release")
-        vcs = self._get_git_commit_from_cache(method=job_params["method"],
-                                              service_ver=service_ver)
+        vcs = self._get_git_commit_from_cache(
+            method=job_params["method"], service_ver=service_ver
+        )
         return vcs
 
     # TODO Delete in next PR if we decide we don't want to do it this way
@@ -90,9 +94,11 @@ class CatalogUtils:
         :param condor: Instance of condor utils # type: Condor
         :return: A cached mapping of method to extracted resources # type: Dict[str:CondorResources]
         """
-        return self._get_cached_condor_resources(method=job_params["method"], condor=condor)
+        return self._get_cached_condor_resources(
+            method=job_params["method"], condor=condor
+        )
 
-    #TODO Delete this if we decide to not use it in next PR
+    # TODO Delete this if we decide to not use it in next PR
     # def get_condor_resources_mass(
     #         self, job_param_set: List[Dict], condor
     # ) -> Dict:

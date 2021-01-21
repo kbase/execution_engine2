@@ -171,6 +171,5 @@ if __name__ == "__main__":
                 skip_through=last_timestamp,
             )
             time.sleep(5)
-        except Exception as e:
+        except Exception:
             slack_client.ee2_reaper_failure(endpoint=ee2_endpoint)
-

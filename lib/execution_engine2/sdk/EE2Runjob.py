@@ -75,7 +75,9 @@ class EE2RunJob:
         inputs.method = params.get("method")
         inputs.params = params.get("params")
 
-        params["service_ver"] = self.catalog_utils.get_git_commit_version(job_params=params)
+        params["service_ver"] = self.catalog_utils.get_git_commit_version(
+            job_params=params
+        )
 
         inputs.service_ver = params.get("service_ver")
 
@@ -296,22 +298,29 @@ class EE2RunJob:
         # or raise an exception if something goes wrong
         for job_params in job_param_set:
             self.catalog_utils.get_git_commit_version(job_params=job_params)
-            self.catalog_utils.get_condor_resources(job_params=job_params, condor=self.condor)
+            self.catalog_utils.get_condor_resources(
+                job_params=job_params, condor=self.condor
+            )
             # Don't allow differing parent jobs, and ensure job always runs with the parent
-            if "parent_job_id" in job_params and job_params['parent_job_id'] != parent_job.id:
-                raise MultipleParentJobsException("Launching child jobs with differing parents is not allowed")
-
-
+            if (
+                "parent_job_id" in job_params
+                and job_params["parent_job_id"] != parent_job.id
+            ):
+                raise MultipleParentJobsException(
+                    "Launching child jobs with differing parents is not allowed"
+                )
 
     def _run_batch(self, parent_job: Job, job_param_set: List[Dict]) -> List:
         # Prepare jobs, fail early if possible
-        self._evaluate_job_params_set(job_param_set,parent_job)
+        self._evaluate_job_params_set(job_param_set, parent_job)
 
         child_job_ids = []
         # Initiatialize Job Records
         for job_params in job_param_set:
-            job_params['parent_job_id'] : parent_job.id
-            resources = self.catalog_utils.get_condor_resources(job_params=job_params, condor=self.condor)
+            job_params["parent_job_id"]: parent_job.id
+            resources = self.catalog_utils.get_condor_resources(
+                job_params=job_params, condor=self.condor
+            )
             try:
                 child_job_id = self._init_job_rec(
                     user_id=self.sdkmr.user_id,

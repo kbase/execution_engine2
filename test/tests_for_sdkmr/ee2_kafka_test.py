@@ -43,9 +43,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
             self.kc.send_kafka_message(
                 KafkaCreateJob(job_id="123", user="123", apple="123")
             )
-        self.assertRegex(
-            str(e.exception), ".*got an unexpected keyword argument.*"
-        )
+        self.assertRegex(str(e.exception), ".*got an unexpected keyword argument.*")
 
         with self.assertRaises(Exception) as e:
             self.kc.send_kafka_message(

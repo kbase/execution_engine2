@@ -7,6 +7,7 @@ from lib.execution_engine2.authorization.roles import AdminAuthUtil
 from lib.execution_engine2.exceptions import AuthError
 
 from test.utils_shared.test_utils import bootstrap
+
 bootstrap()
 
 

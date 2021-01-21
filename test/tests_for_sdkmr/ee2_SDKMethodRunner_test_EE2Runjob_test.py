@@ -226,7 +226,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     def test_run_job(self, rq_mock, condor_mock):
         rq_mock.add_matcher(
             run_job_adapter(
-                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"},                               }
+                ws_perms_info={
+                    "user_id": self.user_id,
+                    "ws_perms": {self.ws_id: "a"},
+                }
             )
         )
         runner = self.getRunner()
@@ -248,8 +251,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         """
         rq_mock.add_matcher(
             run_job_adapter(
-                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"},
-                               }
+                ws_perms_info={
+                    "user_id": self.user_id,
+                    "ws_perms": {self.ws_id: "a"},
+                }
             )
         )
         runner = self.getRunner()
@@ -262,6 +267,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         jobs = [job, job, job]
         from pprint import pprint
+
         pprint(jobs)
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 

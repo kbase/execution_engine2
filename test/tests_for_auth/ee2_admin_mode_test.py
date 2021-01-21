@@ -20,6 +20,7 @@ from test.utils_shared.test_utils import (
 )
 from test.utils_shared.test_utils import bootstrap
 
+
 class EE2TestAdminMode(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
