@@ -32,8 +32,7 @@ def can_write_job(job: Job, user_id: str, ws_auth: WorkspaceAuth) -> bool:
     return _check_permissions(job, user_id, ws_auth, level="write")
 
 
-def can_read_jobs(
-    jobs: List[Job], user_id: str, ws_auth: WorkspaceAuth) -> List[bool]:
+def can_read_jobs(jobs: List[Job], user_id: str, ws_auth: WorkspaceAuth) -> List[bool]:
     """
     Returns a list of job permissions in the same order as the given list of Jobs.
     :param job: a Job model object
@@ -44,8 +43,7 @@ def can_read_jobs(
     return _check_permissions_list(jobs, user_id, ws_auth, level="read")
 
 
-def can_write_jobs(
-    jobs: List[Job], user_id: str, ws_auth: WorkspaceAuth) -> List[bool]:
+def can_write_jobs(jobs: List[Job], user_id: str, ws_auth: WorkspaceAuth) -> List[bool]:
     """
     Returns a list of job write permissions in the same order as the given list of Jobs.
     :param job: a Job model object
@@ -56,8 +54,7 @@ def can_write_jobs(
     return _check_permissions_list(jobs, user_id, ws_auth, level="write")
 
 
-def _check_permissions(
-    job: Job, user_id: str, ws_auth: WorkspaceAuth, level="read") -> bool:
+def _check_permissions(job: Job, user_id: str, ws_auth: WorkspaceAuth, level="read") -> bool:
     """
     Returns a job permissions, for either read or write ability
     :param job: a Job model object
@@ -80,8 +77,8 @@ def _check_permissions(
         return user_id == job.user
 
 
-def _check_permissions_list(
-    jobs: List[Job], user_id: str, ws_auth: WorkspaceAuth, level="read") -> List[bool]:
+def _check_permissions_list(jobs: List[Job], user_id: str, ws_auth: WorkspaceAuth, level="read"
+        ) -> List[bool]:
     """
     Returns True for each job the user has read access to, and False for the ones they don't.
     :param job: a Job model object
