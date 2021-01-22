@@ -86,7 +86,8 @@ class AuthStrategyTestCase(unittest.TestCase):
         (jobs, expected_perms) = self._generate_all_test_jobs(perm="read")
         for idx, job in enumerate(jobs):
             self.assertEqual(
-                expected_perms[idx], can_read_job(job, self.user, self._get_workspace_auth("foo"))
+                expected_perms[idx],
+                can_read_job(job, self.user, self._get_workspace_auth("foo")),
             )
 
     @requests_mock.Mocker()
@@ -96,7 +97,7 @@ class AuthStrategyTestCase(unittest.TestCase):
             user=self.other_user, wsid=123, authstrat="kbaseworkspace"
         )
         with self.assertRaises(RuntimeError) as e:
-            can_read_job(job, self.user, self._get_workspace_auth('token'))
+            can_read_job(job, self.user, self._get_workspace_auth("token"))
         self.assertIn("Workspace 123 is deleted", str(e.exception))
 
     @requests_mock.Mocker()
@@ -105,7 +106,8 @@ class AuthStrategyTestCase(unittest.TestCase):
         (jobs, expected_perms) = self._generate_all_test_jobs(perm="write")
         for idx, job in enumerate(jobs):
             self.assertEqual(
-                expected_perms[idx], can_write_job(job, self.user, self._get_workspace_auth('foo'))
+                expected_perms[idx],
+                can_write_job(job, self.user, self._get_workspace_auth("foo")),
             )
 
     @requests_mock.Mocker()
@@ -115,7 +117,7 @@ class AuthStrategyTestCase(unittest.TestCase):
             user=self.other_user, wsid=123, authstrat="kbaseworkspace"
         )
         with self.assertRaises(RuntimeError) as e:
-            can_write_job(job, self.user, self._get_workspace_auth('token'))
+            can_write_job(job, self.user, self._get_workspace_auth("token"))
         self.assertIn("Workspace 123 is deleted", str(e.exception))
 
     @requests_mock.Mocker()
@@ -129,7 +131,7 @@ class AuthStrategyTestCase(unittest.TestCase):
         for idx, job in enumerate(jobs):
             self.assertEqual(
                 [expected_perms[idx]],
-                can_read_jobs([job], self.user, self._get_workspace_auth('foo'))
+                can_read_jobs([job], self.user, self._get_workspace_auth("foo")),
             )
 
     @requests_mock.Mocker()
@@ -139,7 +141,7 @@ class AuthStrategyTestCase(unittest.TestCase):
             user=self.other_user, wsid=123, authstrat="kbaseworkspace"
         )
         with self.assertRaises(RuntimeError) as e:
-            can_read_jobs([job], self.user, self._get_workspace_auth('token'))
+            can_read_jobs([job], self.user, self._get_workspace_auth("token"))
         self.assertIn("Workspace 123 is deleted", str(e.exception))
 
     @requests_mock.Mocker()
@@ -149,7 +151,7 @@ class AuthStrategyTestCase(unittest.TestCase):
         for idx, job in enumerate(jobs):
             self.assertEqual(
                 [expected_perms[idx]],
-                can_write_jobs([job], self.user, self._get_workspace_auth('foo'))
+                can_write_jobs([job], self.user, self._get_workspace_auth("foo")),
             )
 
     @requests_mock.Mocker()
@@ -159,5 +161,5 @@ class AuthStrategyTestCase(unittest.TestCase):
             user=self.other_user, wsid=123, authstrat="kbaseworkspace"
         )
         with self.assertRaises(RuntimeError) as e:
-            can_write_jobs([job], self.user, self._get_workspace_auth('token'))
+            can_write_jobs([job], self.user, self._get_workspace_auth("token"))
         self.assertIn("Workspace 123 is deleted", str(e.exception))

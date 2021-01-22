@@ -54,7 +54,9 @@ def can_write_jobs(jobs: List[Job], user_id: str, ws_auth: WorkspaceAuth) -> Lis
     return _check_permissions_list(jobs, user_id, ws_auth, level="write")
 
 
-def _check_permissions(job: Job, user_id: str, ws_auth: WorkspaceAuth, level="read") -> bool:
+def _check_permissions(
+    job: Job, user_id: str, ws_auth: WorkspaceAuth, level="read"
+) -> bool:
     """
     Returns a job permissions, for either read or write ability
     :param job: a Job model object

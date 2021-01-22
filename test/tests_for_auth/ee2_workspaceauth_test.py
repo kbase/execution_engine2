@@ -48,7 +48,7 @@ class WorkspaceAuthTestCase(unittest.TestCase):
         ws_id_map = {"123": "r", "456": "a", "789": "n", "321": "w"}
         for ws_id in ws_id_map.keys():
             self._mock_ok_ws_perms(rq_mock, self.user, {ws_id: ws_id_map[ws_id]})
-            wsauth = WorkspaceAuth(self.user, self._get_ws('foo'))
+            wsauth = WorkspaceAuth(self.user, self._get_ws("foo"))
             perms = wsauth.can_read(ws_id)
             self.assertEqual(perms, cases[ws_id])
 
@@ -57,7 +57,7 @@ class WorkspaceAuthTestCase(unittest.TestCase):
         ws_id = 67890
         self._mock_ws_deleted(rq_mock, ws_id)
         with self.assertRaises(RuntimeError) as e:
-            wsauth = WorkspaceAuth(self.user, self._get_ws('foo'))
+            wsauth = WorkspaceAuth(self.user, self._get_ws("foo"))
             wsauth.can_read(ws_id)
         self.assertIn(
             "An error occurred while fetching user permissions from the Workspace",
@@ -70,7 +70,7 @@ class WorkspaceAuthTestCase(unittest.TestCase):
         ws_id_map = {"123": "r", "456": "a", "789": "n", "321": "w"}
         for ws_id in ws_id_map.keys():
             self._mock_ok_ws_perms(rq_mock, self.user, {ws_id: ws_id_map[ws_id]})
-            wsauth = WorkspaceAuth(self.user, self._get_ws('foo'))
+            wsauth = WorkspaceAuth(self.user, self._get_ws("foo"))
             perms = wsauth.can_write(ws_id)
             self.assertEqual(perms, cases[ws_id])
 
@@ -79,7 +79,7 @@ class WorkspaceAuthTestCase(unittest.TestCase):
         ws_id = 67890
         self._mock_ws_deleted(rq_mock, ws_id)
         with self.assertRaises(RuntimeError) as e:
-            wsauth = WorkspaceAuth(self.user, self._get_ws('foo'))
+            wsauth = WorkspaceAuth(self.user, self._get_ws("foo"))
             wsauth.can_write(ws_id)
         self.assertIn(
             "An error occurred while fetching user permissions from the Workspace",
@@ -91,7 +91,7 @@ class WorkspaceAuthTestCase(unittest.TestCase):
         ws_id_map = {"123": "r", "456": "a", "789": "n", "321": "w"}
         cases = {"123": True, "456": True, "789": False, "321": True}
         self._mock_ok_ws_perms(rq_mock, self.user, ws_id_map)
-        wsauth = WorkspaceAuth(self.user, self._get_ws('foo'))
+        wsauth = WorkspaceAuth(self.user, self._get_ws("foo"))
         perms = wsauth.can_read_list(list(ws_id_map.keys()))
         self.assertEqual(perms, cases)
 
@@ -100,7 +100,7 @@ class WorkspaceAuthTestCase(unittest.TestCase):
         ws_id = 67890
         self._mock_ws_deleted(rq_mock, ws_id)
         with self.assertRaises(RuntimeError) as e:
-            wsauth = WorkspaceAuth(self.user, self._get_ws('foo'))
+            wsauth = WorkspaceAuth(self.user, self._get_ws("foo"))
             wsauth.can_read_list([ws_id])
         self.assertIn(
             "An error occurred while fetching user permissions from the Workspace",
@@ -112,7 +112,7 @@ class WorkspaceAuthTestCase(unittest.TestCase):
         ws_id_map = {"123": "r", "456": "a", "789": "n", "321": "w"}
         cases = {"123": False, "456": True, "789": False, "321": True}
         self._mock_ok_ws_perms(rq_mock, self.user, ws_id_map)
-        wsauth = WorkspaceAuth(self.user, self._get_ws('foo'))
+        wsauth = WorkspaceAuth(self.user, self._get_ws("foo"))
         perms = wsauth.can_write_list(list(ws_id_map.keys()))
         self.assertEqual(perms, cases)
 
@@ -121,7 +121,7 @@ class WorkspaceAuthTestCase(unittest.TestCase):
         ws_id = 67890
         self._mock_ws_deleted(rq_mock, ws_id)
         with self.assertRaises(RuntimeError) as e:
-            wsauth = WorkspaceAuth(self.user, self._get_ws('foo'))
+            wsauth = WorkspaceAuth(self.user, self._get_ws("foo"))
             wsauth.can_write_list([ws_id])
         self.assertIn(
             "An error occurred while fetching user permissions from the Workspace",

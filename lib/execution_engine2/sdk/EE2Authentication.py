@@ -149,12 +149,16 @@ class EE2Auth:
         perm = False
         try:
             if level.value == JobPermissions.READ.value:
-                perm = can_read_job(job, self.sdkmr.user_id, self.sdkmr.get_workspace_auth())
+                perm = can_read_job(
+                    job, self.sdkmr.user_id, self.sdkmr.get_workspace_auth()
+                )
                 self._update_job_permission_cache(
                     job_id, self.sdkmr.user_id, level, perm
                 )
             elif level.value == JobPermissions.WRITE.value:
-                perm = can_write_job(job, self.sdkmr.user_id, self.sdkmr.get_workspace_auth())
+                perm = can_write_job(
+                    job, self.sdkmr.user_id, self.sdkmr.get_workspace_auth()
+                )
                 self._update_job_permission_cache(
                     job_id, self.sdkmr.user_id, level, perm
                 )
