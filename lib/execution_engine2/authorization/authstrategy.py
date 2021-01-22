@@ -77,8 +77,9 @@ def _check_permissions(job: Job, user_id: str, ws_auth: WorkspaceAuth, level="re
         return user_id == job.user
 
 
-def _check_permissions_list(jobs: List[Job], user_id: str, ws_auth: WorkspaceAuth, level="read"
-        ) -> List[bool]:
+def _check_permissions_list(
+    jobs: List[Job], user_id: str, ws_auth: WorkspaceAuth, level="read"
+) -> List[bool]:
     """
     Returns True for each job the user has read access to, and False for the ones they don't.
     :param job: a Job model object
