@@ -72,7 +72,7 @@ class CatalogUtils:
     #                                                         service_ver=service_ver))
     #     return vcs_list
 
-    def _get_cached_condor_resources(self, method, condor):
+    def _get_cached_condor_resources(self, method, condor) -> "CondorResources":
         if method not in self.condor_resources:
             normalized_resources = self.get_normalized_resources(method=method)
             extracted_resources = condor.extract_resources(
@@ -80,7 +80,9 @@ class CatalogUtils:
             )  # type: CondorResources
             self.condor_resources[method] = extracted_resources
 
-    def get_condor_resources(self, job_params, condor):
+        return self.condor_resources[method]
+
+    def get_condor_resources(self, job_params, condor) -> "CondorResources":
         """
         Gets required condor resources and clientgroups for a  jobs
 
@@ -161,6 +163,4 @@ class CatalogUtils:
                 )
             (key, value) = item.split("=")
             rv[key] = value
-        #
-        # print("Going to return", rv)
         return rv

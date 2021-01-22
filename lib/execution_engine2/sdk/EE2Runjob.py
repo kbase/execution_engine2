@@ -105,10 +105,8 @@ class EE2RunJob:
 
         job.job_input = inputs
         self.logger.debug(job.job_input.to_mongo().to_dict())
-
-        with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            self.logger.debug(job.to_mongo().to_dict())
-            job.save()
+        self.logger.debug(job.to_mongo().to_dict())
+        job.save()
 
         self.sdkmr.kafka_client.send_kafka_message(
             message=KafkaCreateJob(job_id=str(job.id), user=user_id)
@@ -326,9 +324,9 @@ class EE2RunJob:
                 self._abort_child_jobs(child_job_ids)
                 raise e
         # Save record of child jobs
-        with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            parent_job.child_jobs = child_job_ids
-            parent_job.save()
+
+        parent_job.child_jobs = child_job_ids
+        parent_job.save()
 
         # TODO Launch Job Submission Thread
         return child_job_ids
@@ -383,15 +381,14 @@ class EE2RunJob:
             job_input.narrative_cell_info.cell_id = meta.get("cell_id")
             job_input.narrative_cell_info.status = meta.get("status")
 
-        with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            j = Job(
-                job_input=job_input,
-                batch_job=True,
-                status=Status.created.value,
-                wsid=wsid,
-                user=self.sdkmr.user_id,
-            )
-            j.save()
+        j = Job(
+            job_input=job_input,
+            batch_job=True,
+            status=Status.created.value,
+            wsid=wsid,
+            user=self.sdkmr.user_id,
+        )
+        j.save()
 
         # TODO Do we need a new kafka call?
         self.sdkmr.kafka_client.send_kafka_message(
@@ -456,23 +453,23 @@ class EE2RunJob:
         # TODO RETRY FOR RACE CONDITION OF RUN/CANCEL
         # TODO PASS QUEUE TIME IN FROM SCHEDULER ITSELF?
         # TODO PASS IN SCHEDULER TYPE?
-        with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            j = self.sdkmr.get_mongo_util().get_job(job_id=job_id)
-            previous_status = j.status
-            j.status = Status.queued.value
-            j.queued = time.time()
-            j.scheduler_id = scheduler_id
-            j.scheduler_type = "condor"
-            j.save()
 
-            self.sdkmr.kafka_client.send_kafka_message(
-                message=KafkaQueueChange(
-                    job_id=str(j.id),
-                    new_status=j.status,
-                    previous_status=previous_status,
-                    scheduler_id=scheduler_id,
-                )
+        j = self.sdkmr.get_mongo_util().get_job(job_id=job_id)
+        previous_status = j.status
+        j.status = Status.queued.value
+        j.queued = time.time()
+        j.scheduler_id = scheduler_id
+        j.scheduler_type = "condor"
+        j.save()
+
+        self.sdkmr.kafka_client.send_kafka_message(
+            message=KafkaQueueChange(
+                job_id=str(j.id),
+                new_status=j.status,
+                previous_status=previous_status,
+                scheduler_id=scheduler_id,
             )
+        )
 
     def get_job_params(self, job_id, as_admin=False):
         """
