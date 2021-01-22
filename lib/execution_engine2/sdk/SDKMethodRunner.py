@@ -59,12 +59,16 @@ class SDKMethodRunner:
     def __init__(
         self,
         config,
-        user_id=None,
-        token=None,
+        user_id: str,
+        token: str,
         job_permission_cache=None,
         admin_permissions_cache=None,
         mongo_util=None,
     ):
+        if not user_id or not user_id.strip():
+            raise ValueError("user_id is required")
+        if not token or not token.strip():
+            raise ValueError("token is required")
         self.deployment_config_fp = os.environ["KB_DEPLOYMENT_CONFIG"]
         self.config = config
         self.mongo_util = mongo_util
