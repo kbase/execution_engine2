@@ -18,7 +18,8 @@ from lib.execution_engine2.db.models.models import (
     ErrorCode,
     TerminatedCode,
 )
-from lib.execution_engine2.exceptions import MultipleParentJobsException
+from lib.execution_engine2.exceptions import MultipleParentJobsException, CondorFailedJobSubmit, \
+    ExecutionEngineException
 from lib.execution_engine2.sdk.EE2Constants import ConciergeParams
 from lib.execution_engine2.utils.CondorTuples import CondorResources
 from lib.execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
@@ -50,6 +51,7 @@ class EE2RunJob:
         self.logger = sdkmr.logger
         self.catalog_utils = sdkmr.catalog_utils  # type: CatalogUtils
         self.condor = self.sdkmr.get_condor()  # type: Condor
+        self.user_id = sdkmr.user_id
 
     def _init_job_rec(
         self,
@@ -133,10 +135,10 @@ class EE2RunJob:
         if wsid:
             if not self.sdkmr.get_workspace_auth().can_write(wsid):
                 self.logger.debug(
-                    f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
+                    f"User {self.user_id} doesn't have permission to run jobs in workspace {wsid}."
                 )
                 raise PermissionError(
-                    f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
+                    f"User {self.user_id} doesn't have permission to run jobs in workspace {wsid}."
                 )
 
     def _check_workspace_permissions_list(self, wsids):
@@ -144,10 +146,10 @@ class EE2RunJob:
         bad_ws = [key for key in perms.keys() if perms[key] is False]
         if bad_ws:
             self.logger.debug(
-                f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {bad_ws}."
+                f"User {self.user_id} doesn't have permission to run jobs in workspace {bad_ws}."
             )
             raise PermissionError(
-                f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {bad_ws}."
+                f"User {self.user_id} doesn't have permission to run jobs in workspace {bad_ws}."
             )
 
     def _finish_created_job(
@@ -173,6 +175,40 @@ class EE2RunJob:
             error=f"{exception}",
         )
 
+    def _prepare_to_run_batch(self, child_job_params, child_job_ids):
+        """
+        The workspace objects have already been checked, along with resources/clientgroups for the jobs
+        The ee2 job ids already exist
+        Now to actually submit the jobs to condor, or fail if the submission is malformed
+        """
+        prepared_jobs = []
+        for i,child_job_param in enumerate(child_job_params):
+            job_id = child_job_ids[i]
+            child_job_params = self._add_essential_job_info(params=child_job_param, job_id=job_id, normalized_resources=dict)
+            prepared_jobs.append(PreparedJobParams(params=child_job_params,job_id=job_id))
+
+
+        condor_job_ids = self._submit_batch(child_job_params=prepared_jobs)
+        for condor_job_id in condor_job_ids:
+            job_id = "something, etiher get it from here or from the condor_job_Ids"
+            self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
+            self.sdkmr.slack_client.run_job_message(
+                job_id=job_id, scheduler_id=condor_job_id, username=self.user_id
+            )
+
+    def _add_essential_job_info(self, params, job_id, normalized_resources):
+        """
+        Mutate params to include job_id, user, token, and resources
+        :param params:
+        :return:
+        """
+        params["job_id"] = job_id
+        params["user_id"] = self.user_id
+        params["token"] = self.sdkmr.token
+        params["cg_resources_requirements"] = normalized_resources
+        return params
+
+
     def _prepare_to_run(self, params, concierge_params=None) -> PreparedJobParams:
         """
         Creates a job record, grabs info about the objects,
@@ -190,23 +226,55 @@ class EE2RunJob:
         # insert initial job document into db
 
         job_id = self._init_job_rec(
-            self.sdkmr.user_id, params, extracted_resources, concierge_params
+            self.user_id, params, extracted_resources, concierge_params
         )
+        params = self._add_essential_job_info(params = params, job_id=job_id,normalized_resources=normalized_resources)
 
-        params["job_id"] = job_id
-        params["user_id"] = self.sdkmr.user_id
-        params["token"] = self.sdkmr.token
-        params["cg_resources_requirements"] = normalized_resources
 
         self.logger.debug(
-            f"User {self.sdkmr.user_id} attempting to run job {method} {params}"
+            f"User {self.user_id} attempting to run job {method} {params}"
         )
 
         return PreparedJobParams(params=params, job_id=job_id)
 
+    def _submit_batch(self, child_job_params: List[PreparedJobParams]):
+        try:
+            submission_info = self.condor.run_job_batch(batch_job_params=child_job_params)
+
+            # condor_job_id = submission_info.clusterid
+            # self.logger.debug(f"Submitted job id and got '{condor_job_id}'")
+        except CondorFailedJobSubmit as cfjs:
+            self.logger.error(cfjs)
+            try:
+                for child_job_param in child_job_params:
+                    self._finish_created_job(job_id=child_job_param.job_id, exception=e)
+            except ExecutionEngineException as fj :
+                self.logger.error(fj)
+            raise cfjs
+
+        #TODO This part about inspecting the failure and cancelling them if no info was returned from condor
+        #due to some other issue
+
+
+        # if submission_info.error is not None and isinstance(
+        #     submission_info.error, Exception
+        # ):
+        #     self._finish_created_job(exception=submission_info.error, job_id=job_id)
+        #     raise submission_info.error
+        # if condor_job_id is None:
+        #     error_msg = "Condor job not ran, and error not found. Something went wrong"
+        #     self._finish_created_job(job_id=job_id, exception=RuntimeError(error_msg))
+        #     raise RuntimeError(error_msg)
+        #
+        # # Submission info available in {submission_info} but contains sensitive info
+        # self.logger.debug(
+        #     f"Attempting to update job to queued  {job_id} {condor_job_id}"
+        # )
+
+
     def _submit(self, params, concierge_params, job_id):
         try:
-            submission_info = self.sdkmr.get_condor().run_job(
+            submission_info = self.condor.run_job(
                 params=params, concierge_params=concierge_params
             )
             condor_job_id = submission_info.clusterid
@@ -231,56 +299,6 @@ class EE2RunJob:
             f"Attempting to update job to queued  {job_id} {condor_job_id}"
         )
 
-    # def _cache_catalog_resources(self, param_set):
-    #     # Get a list of all of the methods
-    #     # Get their clientgroups and resources from the catalog
-    #     # Cache method resources and versions
-    #     mr_cache = self.catalog_utils.get_mass_resources()
-    #     mv_cache = dict()
-    #     for param in param_set:
-    #         method = param['method']
-    #         service_ver = param['service_ver']
-    #         # Get resources for method
-    #         if method not in mr_cache:
-    #             self.sdkmr.get_condor().extract_resources()
-    #             mr_cache[method] = self.catalog_utils.get_normalized_resources(method=method)
-    #         # Get Method Version via Git Commit
-    #         if method not in mv_cache and service_ver not in mv_cache[method]:
-    #             mv_cache[method][service_ver]= self._get_module_git_commit(method=method,
-    #                                                                        service_ver=service_ver)
-    #
-    #     return CatalogUtils
-
-    # TODO delete this after checking it in
-    # def _get_cached_catalog_resources(
-    #     self, job_param_set: List[dict]
-    # ) -> JobResourceMappings:
-    #     # Check workspace objects for each of the jobs
-    #     workspace_check_time = time.time()
-    #     [
-    #         self._check_ws_objects(param.get("source_ws_objects"))
-    #         for param in job_param_set
-    #     ]
-    #     self.logger.debug(
-    #         f"Took {time.time() - workspace_check_time} to check all workspace objects"
-    #     )
-    #     #Get a mapping of condor resources
-    #     catalog_check_time = time.time()
-    #     condor_resources_mapping = self.catalog_utils.get_mass_resources(
-    #         job_param_set=job_param_set, condor=self.condor
-    #     )
-    #     self.logger.debug(
-    #         f"Took {time.time() - catalog_check_time} to get all condor resources"
-    #     )
-    #     # Get a mapping of method git versions. If one is not valid, throw the catalog error #TODO Test this
-    #     catalog_check_time_git = time.time()
-    #
-    #
-    #     return JobResourceMappings(
-    #         condor_resources=condor_resources_mapping,
-    #         method_service_versions=service_versions_mapping,
-    #     )
-
     def _evaluate_job_params_set(self, job_param_set, parent_job):
         # Fail early before job submission if possible
         # Make sure clientgroups and condor resources are set correctly for each job,
@@ -299,24 +317,32 @@ class EE2RunJob:
                     "Launching child jobs with differing parents is not allowed"
                 )
 
+    def _async_batch_submit(self, child_job_ids: List):
+
+
     def _run_batch(self, parent_job: Job, job_param_set: List[Dict]) -> List:
         # Prepare jobs, fail early if possible
         self._evaluate_job_params_set(job_param_set, parent_job)
 
         child_job_ids = []
-        # Initiatialize Job Records
+        # Initialize Job Records
         for job_params in job_param_set:
             job_params["parent_job_id"]: parent_job.id
             resources = self.catalog_utils.get_condor_resources(
                 job_params=job_params, condor=self.condor
             )
             try:
+
                 child_job_id = self._init_job_rec(
-                    user_id=self.sdkmr.user_id,
+                    user_id=self.user_id,
                     params=job_params,
                     resources=resources,
                 )
                 child_job_ids.append(child_job_id)
+                self.sdkmr.kafka_client.send_kafka_message(
+                    message=KafkaCreateJob(job_id=child_job_id, user=self.user_id)
+                )
+
             except Exception as e:
                 self.logger.debug(
                     msg=f"Failed to submit child job. Aborting entire batch job {e}"
@@ -324,10 +350,10 @@ class EE2RunJob:
                 self._abort_child_jobs(child_job_ids)
                 raise e
         # Save record of child jobs
-
         parent_job.child_jobs = child_job_ids
         parent_job.save()
 
+        self._async_htcondor_submit(child_job_ids)
         # TODO Launch Job Submission Thread
         return child_job_ids
 
@@ -343,7 +369,7 @@ class EE2RunJob:
 
         self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
         self.sdkmr.slack_client.run_job_message(
-            job_id=job_id, scheduler_id=condor_job_id, username=self.sdkmr.user_id
+            job_id=job_id, scheduler_id=condor_job_id, username=self.user_id
         )
 
         return job_id
@@ -386,7 +412,7 @@ class EE2RunJob:
             batch_job=True,
             status=Status.created.value,
             wsid=wsid,
-            user=self.sdkmr.user_id,
+            user=self.user_id,
         )
         j.save()
 
@@ -406,6 +432,7 @@ class EE2RunJob:
         :return: A list of condor job ids or a failure notification
         """
         # TODO: Do we need a kafka event for the parent job?
+        # TODO: Do we need a nice Exception for failing a batch submission?
         wsid = batch_params.get("wsid")
         meta = batch_params.get("meta")
         workspace_permissions_time = time.time()

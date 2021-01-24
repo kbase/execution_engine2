@@ -51,6 +51,9 @@ class CondorJobNotFoundException(ExecutionEngineException):
 class MultipleParentJobsException(ExecutionEngineException):
     pass
 
+class CondorFailedJobSubmit(ExecutionEngineException):
+    pass
+
 
 class AuthError(ExecutionEngineException):
     """Raised if a user is unauthorized for a particular action, or doesn't have the right auth role"""

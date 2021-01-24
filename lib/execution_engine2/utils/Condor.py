@@ -287,6 +287,7 @@ class Condor(Scheduler):
 
         return sub
 
+
     # TODO Copy stuff from Concierge Params into #AcctGroup/Clientgroup/JobPrio, CPu/MEMORY/DISK/
     def create_submit(
         self, params: Dict, concierge_params: ConciergeParams = None
@@ -323,6 +324,20 @@ class Condor(Scheduler):
 
         return sub
 
+    def run_job_batch(
+        self,
+        batch_job_params: Dict[str, str],
+    ) -> SubmissionInfo:
+        """
+        Submit an entire batch of jobs to condor
+        :param params: Listing of Params needed to run the job in condor, such as user/job_id/token/resource_requests
+        :return:
+        """
+        submit_files = []
+        for child_job_params in batch_job_params:
+            submit_files.append(self.create_submit(child_job_params))
+        return self.run_submit(submit_files)
+
     def run_job(
         self,
         params: Dict[str, str],
@@ -344,14 +359,11 @@ class Condor(Scheduler):
 
     def run_submit(self, submit: Dict[str, str]) -> SubmissionInfo:
 
+
         sub = htcondor.Submit(submit)
         try:
             schedd = htcondor.Schedd()
-            # Contains sensitive info
-            # self.logger.debug(schedd)
-            # self.logger.debug(submit)
-            # self.logger.debug(os.getuid())
-            # self.logger.debug(pwd.getpwuid(os.getuid()).pw_name)
+
             with schedd.transaction() as txn:
                 return SubmissionInfo(str(sub.queue(txn, 1)), sub, None)
         except Exception as e:
