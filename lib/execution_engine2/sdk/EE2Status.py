@@ -122,7 +122,7 @@ class JobsStatus:
         )
 
         # TODO Issue #190 IF success['TotalSuccess = 0'] == FALSE, don't send a kafka message?
-        self.sdkmr.get_condor().cancel_job(job_id=f"{job.scheduler_id}.0")
+        self.sdkmr.get_condor().cancel_job(job_id=f"{job.scheduler_id}")
         self.sdkmr.kafka_client.send_kafka_message(
             message=KafkaCancelJob(
                 job_id=str(job_id),
@@ -387,8 +387,7 @@ class JobsStatus:
             raise Exception(
                 f"Cannot update job {job_id} because it was not yet finished. {job.status}"
             )
-        condor = self.sdkmr.get_condor()
-        resources = condor.get_job_resource_info(job_id=job_id)
+        resources = self.sdkmr.get_condor().get_job_resource_info(job_id=job_id)
         self.sdkmr.logger.debug(f"Extracted the following condor job ads {resources}")
         self.sdkmr.get_mongo_util().update_job_resources(
             job_id=job_id, resources=resources

@@ -6,7 +6,7 @@ import logging
 import os
 import pathlib
 from configparser import ConfigParser
-from typing import Dict, Optional, Any, Tuple
+from typing import Dict, Optional, Any, Tuple, List
 
 import htcondor
 
@@ -287,7 +287,6 @@ class Condor(Scheduler):
 
         return sub
 
-
     # TODO Copy stuff from Concierge Params into #AcctGroup/Clientgroup/JobPrio, CPu/MEMORY/DISK/
     def create_submit(
         self, params: Dict, concierge_params: ConciergeParams = None
@@ -326,8 +325,8 @@ class Condor(Scheduler):
 
     def run_job_batch(
         self,
-        batch_job_params: Dict[str, str],
-    ) -> SubmissionInfo:
+        batch_job_params: List[Dict[str, str]],
+    ) -> List[SubmissionInfo]:
         """
         Submit an entire batch of jobs to condor
         :param params: Listing of Params needed to run the job in condor, such as user/job_id/token/resource_requests
@@ -336,7 +335,8 @@ class Condor(Scheduler):
         submit_files = []
         for child_job_params in batch_job_params:
             submit_files.append(self.create_submit(child_job_params))
-        return self.run_submit(submit_files)
+
+        return self.run_submit_batch(submit_files)
 
     def run_job(
         self,
@@ -357,13 +357,31 @@ class Condor(Scheduler):
 
         return self.run_submit(submit_file)
 
+    def run_submit_batch(
+        self, submit_batch: List[Dict[str, str]]
+    ) -> List[SubmissionInfo]:
+        # TODO What does this really return, does it show multiple clusters? Do we need a SubmissioInfoBatch?
+        # using htcondor.Schedd.submitMany will require a complete rethinking of submission
+        submission_infos = []
+        schedd = htcondor.Schedd()
+        ready_batch_submit = [htcondor.Submit(submit) for submit in submit_batch]
+
+        with schedd.transaction() as txn:
+            for sub in ready_batch_submit:
+                try:
+                    submission_infos.append(
+                        SubmissionInfo(str(sub.queue(txn, 1)), sub, None)
+                    )
+                except Exception as e:
+                    submission_infos.append(SubmissionInfo(None, sub, e))
+
+        return submission_infos
+
     def run_submit(self, submit: Dict[str, str]) -> SubmissionInfo:
-
-
+        # TODO Refactor to use schedd.submit
         sub = htcondor.Submit(submit)
         try:
             schedd = htcondor.Schedd()
-
             with schedd.transaction() as txn:
                 return SubmissionInfo(str(sub.queue(txn, 1)), sub, None)
         except Exception as e:

@@ -337,6 +337,7 @@ class MongoUtil:
         :param resources: The resources used by the job, as reported by condor
         :return:
         """
+        print("About to save and fail here")
         self.logger.debug(f"About to add {resources} to {job_id}")
         with self.mongo_engine_connection():
             j = Job.objects.with_id(job_id)  # type: Job
