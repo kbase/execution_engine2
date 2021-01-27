@@ -238,9 +238,14 @@ class EE2RunJob:
         * The ee2 job ids already exist
         * Now to prepare and actually submit the jobs to condor, or fail if the submission is malformed
         """
+        condor_submit_time = time.time()
         child_job_scheduler_ids = self._async__submit_child_batch_jobs(
             child_job_params_set, child_job_ids
         )
+        self.logger.debug(
+            f"Time spent submitting to htcondor {time.time() - condor_submit_time} "
+        )
+
         # TODO Print em
         return child_job_scheduler_ids
 
@@ -425,6 +430,7 @@ class EE2RunJob:
         :param child_job_params_set: The set of params for child jobs to be run in batch
         :return: A list of child job ids for saved entries in ee2, in "Created" status
         """
+        intialize_child_batch_time = time.time()
         # Prepare jobs, fail early if possible
         self._evaluate_job_params_set(child_job_params_set, parent_job)
         # Prepare child jobs
@@ -435,7 +441,9 @@ class EE2RunJob:
         parent_job.child_jobs = child_job_ids
         parent_job.save()
 
-        # TODO Launch Job Submission Thread
+        self.logger.debug(
+            f"Time spent _initialize_child_batch_job_records  {time.time() - intialize_child_batch_time} "
+        )
         return child_job_ids
 
     def _create_parent_job(self, wsid, meta):
@@ -444,6 +452,7 @@ class EE2RunJob:
         :param meta: Cell Information
         :return: Job Record of Parent for Batch Job
         """
+        parent_start_time = time.time()
         job_input = JobInput()
         job_input.service_ver = "batch"
         job_input.app_id = "batch"
@@ -469,6 +478,10 @@ class EE2RunJob:
         # TODO Do we need a new kafka call?
         self.sdkmr.kafka_client.send_kafka_message(
             message=KafkaCreateJob(job_id=str(j.id), user=j.user)
+        )
+
+        self.logger.debug(
+            f"Time creating parent job {time.time() - parent_start_time} "
         )
         return j
 
