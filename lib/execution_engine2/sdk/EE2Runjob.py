@@ -212,7 +212,7 @@ class EE2RunJob:
                 )
             )
         self.logger.debug(
-            f"Time spent start_catalog_lookup {time.time() - start_catalog_lookup} "
+            f"3. Time spent start_catalog_lookup {time.time() - start_catalog_lookup} "
         )
 
         start_batch_submit = time.time()
@@ -223,7 +223,7 @@ class EE2RunJob:
         child_job_ids = []
 
         self.logger.debug(
-            f"Time spent submitting batch job {time.time() - start_batch_submit} "
+            f"4. Time spent actually submitting batch job {time.time() - start_batch_submit} "
         )
 
         time_post_submitting = time.time()
@@ -237,7 +237,7 @@ class EE2RunJob:
             )
 
         self.logger.debug(
-            f"Time spent time_post_submitting {time.time() - time_post_submitting} "
+            f"5. Time spent updating jobs to queued {time.time() - time_post_submitting} "
         )
         return child_job_ids
 
@@ -253,7 +253,7 @@ class EE2RunJob:
             child_job_params_set, child_job_ids
         )
         self.logger.debug(
-            f"Time spent submitting child batch jobs {time.time() - condor_submit_time} "
+            f"2. Time spent submitting child batch jobs {time.time() - condor_submit_time} "
         )
 
         # TODO Print em
@@ -518,7 +518,7 @@ class EE2RunJob:
             wsids = [job_input.get("wsid", wsid) for job_input in params]
             self._check_workspace_permissions_list(wsids)
         self.logger.debug(
-            f"Time spent looking up workspace permissions {time.time() - workspace_permissions_time} "
+            f"1. Time spent looking up workspace permissions {time.time() - workspace_permissions_time} "
         )
         parent_job = self._create_parent_job(wsid=wsid, meta=meta)
         child_job_ids = self._initialize_child_batch_job_records(
