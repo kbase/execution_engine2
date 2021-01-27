@@ -71,7 +71,7 @@ def check_job_batch(job_ids):
         )
 
         if child_job1_state == "completed" and child_job2_state == "completed":
-            print("Job is done")
+            print("Batch Jobs are done")
             break
 
         if timeout <= 0:
