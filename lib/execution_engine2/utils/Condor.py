@@ -378,7 +378,7 @@ class Condor(Scheduler):
                 submit_result = batch_job.queue_with_itemdata(
                     txn, 1, iter(submit_batch)
                 )  # type: htcondor.SubmitResult
-                cluster_id = submit_result.cluster()
+                cluster_id = submit_result.cluster()  # type: int
                 # If a job fails, it might have the wrong cluster_id.proc, but thats OK, we will mark it as failed anyway
                 submission_infos = []
                 for i, sub in enumerate(submit_batch):
