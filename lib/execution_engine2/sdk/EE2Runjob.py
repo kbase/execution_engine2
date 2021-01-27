@@ -53,7 +53,7 @@ class EE2RunJob:
         self.override_clientgroup = os.environ.get("OVERRIDE_CLIENT_GROUP", None)
         self.logger = sdkmr.logger
         self.catalog_utils = sdkmr.catalog_utils  # type: CatalogUtils
-        self.condor = self.sdkmr.get_condor()  # type: Condor
+        # self.condor = self.sdkmr.get_condor()  # type: Condor
         self.user_id = sdkmr.user_id
 
     def _init_job_rec(
@@ -218,11 +218,13 @@ class EE2RunJob:
         batch_submission_info = self._submit_batch(
             child_job_params=child_job_params
         )  # type: List[SubmissionInfo]
-        child_job_ids = batch_submission_info[0]
+        child_job_ids = []
 
         for i, child_job_param in enumerate(child_job_params_set):
             child_job_id = child_job_param["job_id"]
-            child_scheduler_id = child_job_ids[i]
+            child_sub_info = batch_submission_info[i]  # type: SubmissionInfo
+            child_scheduler_id = child_sub_info.clusterid
+            child_job_ids.append(child_scheduler_id)
             self.update_job_to_queued(
                 job_id=child_job_id, scheduler_id=child_scheduler_id
             )
@@ -264,7 +266,7 @@ class EE2RunJob:
 
     def _submit_batch(self, child_job_params: List[Dict]) -> List[SubmissionInfo]:
         try:
-            submission_info_set = self.condor.run_job_batch(
+            submission_info_set = self.sdkmr.get_condor().run_job_batch(
                 batch_job_params=child_job_params
             )
         except CondorFailedJobSubmit as cfjs:
@@ -298,7 +300,7 @@ class EE2RunJob:
 
     def _submit(self, params, concierge_params, job_id):
         try:
-            submission_info = self.condor.run_job(
+            submission_info = self.sdkmr.get_condor().run_job(
                 params=params, concierge_params=concierge_params
             )
             condor_job_id = submission_info.clusterid
@@ -330,7 +332,7 @@ class EE2RunJob:
         for job_params in job_param_set:
             self.catalog_utils.get_git_commit_version(job_params=job_params)
             self.catalog_utils.get_condor_resources(
-                job_params=job_params, condor=self.condor
+                job_params=job_params, condor=self.sdkmr.get_condor()
             )
             # Don't allow differing parent jobs, and ensure job always runs with the parent
             if (
@@ -339,6 +341,8 @@ class EE2RunJob:
             ):
                 raise MultipleParentJobsException(
                     "Launching child jobs with differing parents is not allowed"
+                    + f"parent_job.wsid={parent_job.id} "
+                    + f"batch_job_params.wsid={job_params['parent_job_id']} "
                 )
 
     def _run(self, params, concierge_params=None):
@@ -380,7 +384,7 @@ class EE2RunJob:
         for job_params in child_job_params_set:
             job_params["parent_job_id"] = parent_job_id
             resources = self.catalog_utils.get_condor_resources(
-                job_params=job_params, condor=self.condor
+                job_params=job_params, condor=self.sdkmr.get_condor()
             )
             try:
 

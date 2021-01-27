@@ -860,26 +860,19 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_check_jobs_date_range(self, condor_mock):
         user_name = "wsadmin"
-
         runner = self.getRunner()
-
         runner.workspace_auth = MagicMock()
         runner.auth.get_user = MagicMock(return_value=user_name)
         runner.is_admin = True
         runner.check_is_admin = MagicMock(return_value=True)
-
         runner.workspace_auth.can_read = MagicMock(return_value=True)
-
-        self.mock = MagicMock(return_value=True)
         runner._ee2_runjob.catalog_utils.get_git_commit_version = MagicMock(
             return_value="hash_goes_here"
         )
-
         runner.catalog_utils.get_git_commit_version = MagicMock(
             return_value="git_commit_goes_here"
         )
 
-        runner.get_condor = MagicMock(return_value=condor_mock)
         # ctx = {"user_id": self.user_id, "wsid": self.ws_id, "token": self.token}
         job = get_example_job().to_mongo().to_dict()
         job["method"] = job["job_input"]["app_id"]
@@ -889,6 +882,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
         condor_mock.extract_resources = MagicMock(return_value=self.cr)
+        runner.get_condor = MagicMock(return_value=condor_mock)
 
         job_id1 = runner.run_job(params=job)
         job_id2 = runner.run_job(params=job)

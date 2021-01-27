@@ -26,6 +26,10 @@ bootstrap()
 
 from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 
+from test.utils_shared.test_utils import (
+    get_example_job_as_dict_for_runjob,
+)
+
 
 class ee2_SDKMethodRunner_test(unittest.TestCase):
     @classmethod
@@ -76,6 +80,18 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner.get_runjob()
         runner.get_job_logs()
         return runner
+
+    def get_batch_runner_and_sample_jobs(self, condor_mock):
+        runner = self.getRunner()  # type: SDKMethodRunner
+        runner.get_condor = MagicMock(return_value=condor_mock)
+        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=self.ws_id)
+        si = SubmissionInfo(clusterid="test", submit=job, error=None)
+        submit_infos = [si, si, si]
+        jobs = [job, job, job]
+        condor_mock.run_job_batch = MagicMock(return_value=submit_infos)
+        condor_mock.extract_resources = MagicMock(return_value=self.cr)
+
+        return (runner, jobs)
 
     def create_job_rec(self):
         return self.sdkmr_test_helper.create_job_rec()
@@ -257,32 +273,25 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 }
             )
         )
-        runner = self.getRunner()
-        runner.get_condor = MagicMock(return_value=condor_mock)
-        job = get_example_job_as_dict(user=self.user_id, wsid=self.ws_id)
-
-        si = SubmissionInfo(clusterid="test", submit=job, error=None)
-        condor_mock.run_job = MagicMock(return_value=si)
-        condor_mock.extract_resources = MagicMock(return_value=self.cr)
-
-        jobs = [job, job, job]
-        from pprint import pprint
-
-        pprint(jobs)
-        job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
-
+        batch_runner, batch_runner_jobs = self.get_batch_runner_and_sample_jobs(
+            condor_mock=condor_mock
+        )
+        job_ids = batch_runner.run_job_batch(
+            params=batch_runner_jobs, batch_params={"wsid": self.ws_id}
+        )
         assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
         assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
-        assert len(job_ids["child_job_ids"]) == len(jobs)
+        assert len(job_ids["child_job_ids"]) == len(batch_runner_jobs)
 
         # Test that you can't run a job in someone elses workspace
+        job = batch_runner_jobs[0]
         with self.assertRaises(PermissionError):
             job_bad = get_example_job(user=self.user_id, wsid=1234).to_mongo().to_dict()
             job_bad["method"] = job["job_input"]["app_id"]
             job_bad["app_id"] = job["job_input"]["app_id"]
             job_bad["service_ver"] = job["job_input"]["service_ver"]
             jobs = [job, job_bad]
-            runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
+            batch_runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
