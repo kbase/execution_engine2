@@ -114,7 +114,9 @@ class Condor(Scheduler):
         """
         for item in ("token", "user_id", "job_id", "cg_resources_requirements"):
             if item not in params:
-                raise MissingRunJobParamsException(f"{item} not found in params")
+                raise MissingRunJobParamsException(
+                    f"{item} not found in params {params}"
+                )
 
     def extract_resources(self, cgrr: Dict[str, str]) -> CondorResources:
         """

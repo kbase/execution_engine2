@@ -209,10 +209,12 @@ class EE2RunJob:
                 method
             )
             job_id = child_job_ids[i]
-            child_job_params = self._add_essential_job_info(
-                job_params=child_job_param,
-                job_id=job_id,
-                normalized_resources=normalized_resources,
+            child_job_params.append(
+                self._add_essential_job_info(
+                    job_params=child_job_param,
+                    job_id=job_id,
+                    normalized_resources=normalized_resources,
+                )
             )
 
         batch_submission_info = self._submit_batch(
