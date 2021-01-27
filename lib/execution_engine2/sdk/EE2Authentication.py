@@ -63,7 +63,6 @@ class EE2Auth:
 
         user_permission = self._get_user_admin_permissions()
 
-        self.sdkmr.logger.debug(f"Requesting perm {requested_perm}, {user_permission}")
         if requested_perm == AdminPermissions.WRITE:
             if user_permission == AdminPermissions.WRITE:
                 return True

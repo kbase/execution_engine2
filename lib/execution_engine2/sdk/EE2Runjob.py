@@ -197,6 +197,7 @@ class EE2RunJob:
 
     def _async__submit_child_batch_jobs(self, child_job_params_set, child_job_ids):
         child_job_params = []
+        start_catalog_lookup = time.time()
         for i, child_job_param in enumerate(child_job_params_set):
             method = child_job_param.get("method")
             normalized_resources = self.sdkmr.catalog_utils.get_normalized_resources(
@@ -210,12 +211,22 @@ class EE2RunJob:
                     normalized_resources=normalized_resources,
                 )
             )
+        self.logger.debug(
+            f"Time spent start_catalog_lookup {time.time() - start_catalog_lookup} "
+        )
+
+        start_batch_submit = time.time()
 
         batch_submission_info = self._submit_batch(
             child_job_params=child_job_params
         )  # type: List[SubmissionInfo]
         child_job_ids = []
 
+        self.logger.debug(
+            f"Time spent submitting batch job {time.time() - start_batch_submit} "
+        )
+
+        time_post_submitting = ""
         for i, child_job_param in enumerate(child_job_params_set):
             child_job_id = child_job_param["job_id"]
             child_sub_info = batch_submission_info[i]  # type: SubmissionInfo
@@ -229,6 +240,10 @@ class EE2RunJob:
                 scheduler_id=child_scheduler_id,
                 username=self.user_id,
             )
+
+        self.logger.debug(
+            f"Time spent time_post_submitting {time.time() - time_post_submitting} "
+        )
         return child_job_ids
 
     def _submit_child_batch_jobs(self, child_job_params_set, child_job_ids):
@@ -243,7 +258,7 @@ class EE2RunJob:
             child_job_params_set, child_job_ids
         )
         self.logger.debug(
-            f"Time spent submitting to htcondor {time.time() - condor_submit_time} "
+            f"Time spent submitting child batch jobs {time.time() - condor_submit_time} "
         )
 
         # TODO Print em
