@@ -9,7 +9,7 @@ import unittest
 from configparser import ConfigParser
 from unittest.mock import patch
 
-from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
+from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.db.models.models import Job, Status
 from lib.execution_engine2.execution_engine2Impl import execution_engine2
@@ -17,6 +17,7 @@ from lib.execution_engine2.sdk.EE2Status import JobsStatus
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.Condor import Condor
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
+from execution_engine2.utils.clients import UserClientSet
 from test.utils_shared.test_utils import (
     bootstrap,
     get_sample_job_params,
@@ -43,7 +44,7 @@ class ee2_server_load_test(unittest.TestCase):
         cls.ctx = {"token": cls.token, "user_id": cls.user_id}
         cls.impl = execution_engine2(cls.cfg)
         cls.method_runner = SDKMethodRunner(
-            cls.cfg, user_id=cls.user_id, token=cls.token
+            cls.cfg, UserClientSet(cls.cfg, cls.user_id, cls.token)
         )
         cls.mongo_util = MongoUtil(cls.cfg)
         cls.mongo_helper = MongoTestHelper(cls.cfg)
