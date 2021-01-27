@@ -106,7 +106,6 @@ class EE2Logs:
         self.sdkmr.get_job_with_permission(
             job_id, JobPermissions.WRITE, as_admin=as_admin
         )
-        self.sdkmr.logger.debug(f"About to add logs for {job_id}")
         try:
             try:
                 job_log = self.mongo_util.get_job_log_pymongo(job_id)
