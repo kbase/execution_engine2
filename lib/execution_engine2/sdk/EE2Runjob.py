@@ -226,7 +226,7 @@ class EE2RunJob:
             f"Time spent submitting batch job {time.time() - start_batch_submit} "
         )
 
-        time_post_submitting = ""
+        time_post_submitting = time.time()
         for i, child_job_param in enumerate(child_job_params_set):
             child_job_id = child_job_param["job_id"]
             child_sub_info = batch_submission_info[i]  # type: SubmissionInfo
@@ -234,11 +234,6 @@ class EE2RunJob:
             child_job_ids.append(child_scheduler_id)
             self.update_job_to_queued(
                 job_id=child_job_id, scheduler_id=child_scheduler_id
-            )
-            self.sdkmr.slack_client.run_job_message(
-                job_id=child_job_id,
-                scheduler_id=child_scheduler_id,
-                username=self.user_id,
             )
 
         self.logger.debug(

@@ -45,7 +45,7 @@ def submit_100_echo_batch():
 
     print("Begin Submit")
     params = []
-    for i in range(100):
+    for i in range(30):
         params.append(get_params(f"Hello {i}"))
 
     batch_params = {
