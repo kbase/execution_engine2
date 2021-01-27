@@ -195,13 +195,7 @@ class EE2RunJob:
         job_params["cg_resources_requirements"] = normalized_resources
         return job_params
 
-    def _submit_child_batch_jobs(self, child_job_params_set, child_job_ids):
-        """
-        * The workspace objects have already been checked, along with resources/clientgroups for the jobs
-        in _initialize_child_batch_job_records
-        * The ee2 job ids already exist
-        * Now to prepare and actually submit the jobs to condor, or fail if the submission is malformed
-        """
+    def _async__submit_child_batch_jobs(self, child_job_params_set, child_job_ids):
         child_job_params = []
         for i, child_job_param in enumerate(child_job_params_set):
             method = child_job_param.get("method")
@@ -236,6 +230,19 @@ class EE2RunJob:
                 username=self.user_id,
             )
         return child_job_ids
+
+    def _submit_child_batch_jobs(self, child_job_params_set, child_job_ids):
+        """
+        * The workspace objects have already been checked, along with resources/clientgroups for the jobs
+        in _initialize_child_batch_job_records
+        * The ee2 job ids already exist
+        * Now to prepare and actually submit the jobs to condor, or fail if the submission is malformed
+        """
+        child_job_scheduler_ids = self._async__submit_child_batch_jobs(
+            child_job_params_set, child_job_ids
+        )
+        # TODO Print em
+        return child_job_scheduler_ids
 
     def _prepare_to_run(self, params, concierge_params=None) -> PreparedJobParams:
         """

@@ -13,6 +13,7 @@ import htcondor
 from lib.execution_engine2.exceptions import (
     MissingCondorRequirementsException,
     MissingRunJobParamsException,
+    CondorFailedJobSubmit,
 )
 from lib.execution_engine2.sdk.EE2Runjob import ConciergeParams
 from lib.execution_engine2.utils.CondorTuples import (
@@ -366,18 +367,29 @@ class Condor(Scheduler):
         # using htcondor.Schedd.submitMany will require a complete rethinking of submission
         submission_infos = []
         schedd = htcondor.Schedd()
-        ready_batch_submit = [htcondor.Submit(submit) for submit in submit_batch]
+
+        # Grab arbitrary submit. Note, if submit format changes, then this won't work
+        batch_job = htcondor.Submit(submit_batch[0])
 
         with schedd.transaction() as txn:
-            for sub in ready_batch_submit:
-                try:
-                    submission_infos.append(
-                        SubmissionInfo(str(sub.queue(txn, 1)), sub, None)
-                    )
-                except Exception as e:
-                    submission_infos.append(SubmissionInfo(None, sub, e))
+            try:
 
-        return submission_infos
+                # Submit an iterator that emits dictionaries of all changes
+                submit_result = batch_job.queue_with_itemdata(
+                    txn, 1, iter(submit_batch)
+                )  # type: htcondor.SubmitResult
+                cluster_id = submit_result.cluster()
+                # If a job fails, it might have the wrong cluster_id.proc, but thats OK, we will mark it as failed anyway
+                submission_infos = []
+                for i, sub in enumerate(submit_batch):
+                    submission_infos.append(
+                        SubmissionInfo(
+                            clusterid=f"{cluster_id}.{i}", submit=sub, error=None
+                        )
+                    )
+                return submission_infos
+            except Exception as e:
+                raise CondorFailedJobSubmit(e)
 
     def run_submit(self, submit: Dict[str, str]) -> SubmissionInfo:
         # TODO Refactor to use schedd.submit
@@ -387,7 +399,7 @@ class Condor(Scheduler):
             with schedd.transaction() as txn:
                 return SubmissionInfo(str(sub.queue(txn, 1)), sub, None)
         except Exception as e:
-            return SubmissionInfo(None, sub, e)
+            raise CondorFailedJobSubmit(e)
 
     def get_job_resource_info(
         self, job_id: Optional[str] = None, cluster_id: Optional[str] = None

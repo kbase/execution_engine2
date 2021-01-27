@@ -40,7 +40,27 @@ def submit_echo_job2(echo):
         print("Failed to submit echo job", e)
 
 
-def submit_echo_batch(echo):
+def submit_100_echo_batch():
+    import time
+
+    print("Begin Submit")
+    params = []
+    for i in range(100):
+        params.append(get_params(f"Hello {i}"))
+
+    batch_params = {
+        "wsid": wsid,
+    }
+    start = time.time()
+    print("Start", start)
+    job_ids = ee2.run_job_batch(params=params, batch_params=batch_params)
+    end = time.time()
+    print("End", end)
+    print("End - Start", end - start)
+    return job_ids
+
+
+def submit_two_echo_batch():
     params1 = get_params("yo 1")
     params2 = get_params("yo 2")
     batch_params = {
@@ -80,5 +100,8 @@ def check_job_batch(job_ids):
 
 # This file just for reference for manual test, not a unit test
 
-jids = submit_echo_batch("yo")
-check_job_batch(jids)
+# jids = submit_two_echo_batch()
+# check_job_batch(jids)
+
+# submit_two_echo_batch()
+submit_100_echo_batch()
