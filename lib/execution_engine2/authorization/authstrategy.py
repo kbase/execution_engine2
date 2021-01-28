@@ -10,68 +10,60 @@ from collections import defaultdict
 KBASE_WS_AUTHSTRAT = "kbaseworkspace"
 
 
-def can_read_job(job: Job, user_id: str, token: str, config: Dict[str, str]) -> bool:
+def can_read_job(job: Job, user_id: str, ws_auth: WorkspaceAuth) -> bool:
     """
     Returns True if the user has read access to the job, False otherwise.
     :param job: a Job model object
     :param user_id: string - the user id
-    :param token: string - the user's auth token
-    :param config: dict - the service config
+    :param ws_auth: a workspace authorization instance initialized with the user's token.
     :returns: bool - True if the user can read the job info
     """
-    return _check_permissions(job, user_id, token, config, level="read")
+    return _check_permissions(job, user_id, ws_auth, level="read")
 
 
-def can_write_job(job: Job, user_id: str, token: str, config: Dict[str, str]) -> bool:
+def can_write_job(job: Job, user_id: str, ws_auth: WorkspaceAuth) -> bool:
     """
     Returns True if the user has write access to the job, False otherwise.
     :param job: a Job model object
     :param user_id: string - the user id
-    :param token: string - the user's auth token
-    :param config: dict - the service config
+    :param ws_auth: a workspace authorization instance initialized with the user's token.
     :returns: bool - True if the user can read the job info
     """
-    return _check_permissions(job, user_id, token, config, level="write")
+    return _check_permissions(job, user_id, ws_auth, level="write")
 
 
-def can_read_jobs(
-    jobs: List[Job], user_id: str, token: str, config: Dict[str, str]
-) -> List[bool]:
+def can_read_jobs(jobs: List[Job], user_id: str, ws_auth: WorkspaceAuth) -> List[bool]:
     """
     Returns a list of job permissions in the same order as the given list of Jobs.
     :param job: a Job model object
     :param user_id: string - the user id
-    :param token: string - the user's auth token
-    :param config: dict - the service config
+    :param ws_auth: a workspace authorization instance initialized with the user's token.
     :returns: List[bool] - Has True values if the user can read job info, False otherwise
     """
-    return _check_permissions_list(jobs, user_id, token, config, level="read")
+    return _check_permissions_list(jobs, user_id, ws_auth, level="read")
 
 
-def can_write_jobs(
-    jobs: List[Job], user_id: str, token: str, config: Dict[str, str]
-) -> List[bool]:
+def can_write_jobs(jobs: List[Job], user_id: str, ws_auth: WorkspaceAuth) -> List[bool]:
     """
     Returns a list of job write permissions in the same order as the given list of Jobs.
     :param job: a Job model object
     :param user_id: string - the user id
-    :param token: string - the user's auth token
-    :param config: dict - the service config
+    :param ws_auth: a workspace authorization instance initialized with the user's token.
     :returns: List[bool] - Has True values if the user can write job info, False otherwise
     """
-    return _check_permissions_list(jobs, user_id, token, config, level="write")
+    return _check_permissions_list(jobs, user_id, ws_auth, level="write")
 
 
 def _check_permissions(
-    job: Job, user_id: str, token: str, config: Dict[str, str], level="read"
+    job: Job, user_id: str, ws_auth: WorkspaceAuth, level="read"
 ) -> bool:
     """
     Returns a job permissions, for either read or write ability
     :param job: a Job model object
     :param user_id: string - the user id
-    :param token: string - the user's auth token
-    :param config: dict - the service config
-    :param level: string - if "read", then returns the read value, if "write", return whether the user can write.
+    :param ws_auth: a workspace authorization instance initialized with the user's token.
+    :param level: string - if "read", then returns the read value, if "write", return whether
+         the user can write.
     :returns: bool - True if the permission is valid, False otherwise.
     """
     if user_id == job.user:
@@ -79,7 +71,6 @@ def _check_permissions(
     if job.authstrat == KBASE_WS_AUTHSTRAT:
         if job.wsid is None:
             return False
-        ws_auth = WorkspaceAuth(token, user_id, config["workspace-url"])
         if level == "read":
             return ws_auth.can_read(job.wsid)
         else:
@@ -89,15 +80,15 @@ def _check_permissions(
 
 
 def _check_permissions_list(
-    jobs: List[Job], user_id: str, token: str, config: Dict[str, str], level="read"
+    jobs: List[Job], user_id: str, ws_auth: WorkspaceAuth, level="read"
 ) -> List[bool]:
     """
     Returns True for each job the user has read access to, and False for the ones they don't.
     :param job: a Job model object
     :param user_id: string - the user id
-    :param token: string - the user's auth token
-    :param config: dict - the service config
-    :param level: string - if "read" then tests if the Job can be read, otherwise checks if it can be written
+    :param ws_auth: a workspace authorization instance initialized with the user's token.
+    :param level: string - if "read" then tests if the Job can be read, otherwise checks if it
+        can be written
     :returns: List[bool] - Has True values if the user can write job info, False otherwise
     """
 
@@ -134,7 +125,6 @@ def _check_permissions_list(
 
     if len(ws_ids_to_jobs):
         # If there's workspaces to look up, go do it.
-        ws_auth = WorkspaceAuth(token, user_id, config["workspace-url"])
         if level == "read":
             ws_perms = ws_auth.can_read_list(
                 list(ws_ids_to_jobs.keys())
