@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+# This test  is a manual integration/smoke test to make sure endpoints, not a unit test
+
 import logging
 import unittest
 

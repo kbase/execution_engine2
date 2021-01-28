@@ -1,3 +1,4 @@
+# NOT A UNIT TEST, A DEVELOPER TOOL
 # Log into the ee2 container, cd to /condor_shared as the kbase user and run this script
 import htcondor
 

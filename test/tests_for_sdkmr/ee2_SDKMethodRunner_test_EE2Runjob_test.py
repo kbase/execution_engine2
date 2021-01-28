@@ -29,6 +29,7 @@ from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_h
 from test.utils_shared.test_utils import (
     get_example_job_as_dict_for_runjob,
 )
+from lib.execution_engine2.exceptions import CondorFailedJobSubmit
 
 
 class ee2_SDKMethodRunner_test(unittest.TestCase):
@@ -302,12 +303,11 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             )
         )
         runner = self.getRunner()
-
         job = get_example_job_as_dict(user=self.user_id, wsid=self.ws_id)
-
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
         condor_mock.extract_resources = MagicMock(return_value=self.cr)
+        # runner.get_condor = MagicMock(return_value=condor_mock)
 
-        with self.assertRaises(expected_exception=RuntimeError):
+        with self.assertRaises(expected_exception=CondorFailedJobSubmit):
             runner.run_job(params=job)

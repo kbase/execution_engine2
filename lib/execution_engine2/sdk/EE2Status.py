@@ -440,9 +440,6 @@ class JobsStatus:
 
         if check_permission:
             try:
-                self.sdkmr.logger.debug(
-                    "Checking for read permission to: {}".format(job_ids)
-                )
                 perms = can_read_jobs(
                     jobs, self.sdkmr.user_id, self.sdkmr.token, self.sdkmr.config
                 )
