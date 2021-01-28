@@ -16,10 +16,7 @@ from enum import Enum
 
 import dateutil
 
-from installed_clients.WorkspaceClient import Workspace
 from installed_clients.authclient import KBaseAuth
-from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
-from execution_engine2.constants import ADMIN_WRITE_ROLE, ADMIN_READ_ROLE
 from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.db.models.models import Job
 from lib.execution_engine2.exceptions import AuthError
