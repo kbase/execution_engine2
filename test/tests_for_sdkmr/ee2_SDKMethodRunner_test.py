@@ -9,6 +9,7 @@ from configparser import ConfigParser
 from datetime import datetime, timedelta
 from pprint import pprint
 from unittest.mock import patch
+from pytest import raises
 
 import bson
 import dateutil
@@ -37,6 +38,7 @@ bootstrap()
 from lib.execution_engine2.sdk.EE2Runjob import EE2RunJob
 
 
+# TODO this isn't necessary with pytest, can just use regular old functions
 class ee2_SDKMethodRunner_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -120,6 +122,21 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     #     self.assertTrue(isinstance(git_commit_2, str))
     #     self.assertEqual(len(git_commit_1), len(git_commit_2))
     #    self.assertNotEqual(git_commit_1, git_commit_2)
+
+    def assert_exception_correct(self, got: Exception, expected: Exception):
+        assert got.args == expected.args
+        assert type(got) == type(expected)
+
+    def test_init_fail(self):
+        self._init_fail({}, None, "foo", ValueError("user_id is required"))
+        self._init_fail({}, "   \t  ", "foo", ValueError("user_id is required"))
+        self._init_fail({}, "user", None, ValueError("token is required"))
+        self._init_fail({}, "user", "   \t  ", ValueError("token is required"))
+
+    def _init_fail(self, cfg, user, token, expected):
+        with raises(Exception) as e:
+            SDKMethodRunner(cfg, user, token)
+        self.assert_exception_correct(e.value, expected)
 
     # Status
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
