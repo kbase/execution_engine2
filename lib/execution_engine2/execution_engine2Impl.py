@@ -1703,7 +1703,7 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: client_groups
         #BEGIN get_client_groups
-        # TODO I think this need to be actually extracted from the config file
+        # TODO I think this needs to be actually extracted from the config file
         client_groups = ['njs', 'bigmem', 'bigmemlong', 'extreme', 'concierge', 'hpc', 'kb_upload',
                          'terabyte', 'multi_tb', 'kb_upload_bulk']
         #END get_client_groups

@@ -21,7 +21,7 @@ from installed_clients.WorkspaceClient import Workspace
 
 class UserClientSet:
     '''
-    Clients rquired by EE2 for communicating with other services that need to be instantiated
+    Clients required by EE2 for communicating with other services that need to be instantiated
     on a per user basis. Also contains the user credentials for ease of use.
     '''
     def __init__(self, cfg: Dict[str, str], user_id: str, token: str):
@@ -57,7 +57,7 @@ class UserClientSet:
         self._workspace_auth = WorkspaceAuth(user_id, self._workspace)
 
     # create_autospec can't mock instance variables, so we add some boilerplate
-    # can make these properties but then they return MagicMocks which don't update with API
+    # Could make these properties but then they return MagicMocks which don't update with API
     # changes
 
     def user_id(self):
