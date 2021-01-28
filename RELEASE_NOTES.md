@@ -1,9 +1,26 @@
 # execution_engine2 (ee2) release notes
 =========================================
+
+## 0.0.X # TODO?
+  * TODO: Added CreatedJobsReaper
+  * TODO: Will add retry endpoint
+  * TODO: Will deprecate run_job transaction and use scheduler API
+  * TODO: Add ADR for 
+  * Add Resource Requests
+  * Refactor auth tests
+
+
+## 0.0.5 
+  * DATAUP-366
+  * Refactor run_jobs_batch endpoint to cache catalog calls for batch jobs, submit entire batch to condor in one transaction
+  * Launching 
+  * Added tests, Refactored tests, removed un-needed debug statements
+
+
 ## 0.0.4
   * Fix up tests
   * Remove dependency on slack
-  * Add batch endpoints
+  * Add batch endpoints, cancel_jobs now cancels child jobs
   * Rename prod branch to "main"
 
 ## 0.0.3.4
