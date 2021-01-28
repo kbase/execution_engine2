@@ -1,6 +1,4 @@
-"""
-Contains the various clients EE2 needs to communicate with other services it depends on.
-"""
+""" Contains the various clients EE2 needs to communicate with other services it depends on. """
 
 # Note on testing - this class is not generally unit-testable, and is only tested fully in
 # integration tests.
@@ -32,8 +30,8 @@ class UserClientSet:
         cfg - the configuration dictionary
         user_id - the ID of the user to be used to initialize the client set.
         token - the token of the user to be used to initialize the client set. Note that the set
-            trusts that the token actually belongs to the user ID, and currently does not independently
-            check the validity of the user ID.
+            trusts that the token actually belongs to the user ID, and currently does not
+            independently check the validity of the user ID.
 
         Expected keys in config:
         workspace-url - the URL of the kbase workspace service
