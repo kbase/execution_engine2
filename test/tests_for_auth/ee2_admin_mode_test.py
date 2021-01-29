@@ -12,7 +12,7 @@ from mock import patch
 from installed_clients.CatalogClient import Catalog
 from lib.execution_engine2.authorization.roles import AdminAuthUtil
 from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
-from execution_engine2.constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
+from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
 from lib.execution_engine2.db.models.models import Status
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.Condor import Condor

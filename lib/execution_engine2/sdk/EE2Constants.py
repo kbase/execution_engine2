@@ -9,6 +9,10 @@ from typing import Optional, NamedTuple
 KBASE_CONCIERGE_USERNAME = "kbaseconcierge"
 CONCIERGE_CLIENTGROUP = "kbase_concierge"
 
+# these also probably should be configurable.
+ADMIN_READ_ROLE = "EE2_ADMIN_RO"
+ADMIN_WRITE_ROLE = "EE2_ADMIN"
+
 
 class JobError(NamedTuple):
     name: str

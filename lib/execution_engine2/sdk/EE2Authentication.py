@@ -5,7 +5,7 @@ from cachetools import TTLCache
 from lib.execution_engine2.authorization.authstrategy import can_read_job, can_write_job
 from lib.execution_engine2.authorization.roles import AdminAuthUtil
 from lib.execution_engine2.db.models.models import Job
-from execution_engine2.constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
+from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
 
 
 class JobPermissions(Enum):
