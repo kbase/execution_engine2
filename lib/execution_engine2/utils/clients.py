@@ -53,7 +53,6 @@ class UserClientSet:
         ws_url = cfg.get("workspace-url")  # may want to make the keys constants?
         if not ws_url or not ws_url.strip():
             raise ValueError("missing workspace-url in configuration")
-        # TODO Originally did the above check but caused 36 test failures so... meh for now.
         self._workspace = Workspace(ws_url, token=token)
         self._workspace_auth = WorkspaceAuth(user_id, self._workspace)
 
