@@ -48,11 +48,13 @@ class UserClientSet:
         # Do a check that the url actually points to the workspace?
         # Also maybe consider passing in the workspace url rather than the dict, but the ClientSet
         # below will need lots of params so a dict makes sense there, maybe keep the apis similar?
-        # ws_url = cfg.get('workspace_url')  # may want to make the keys constants?
-        # if not ws_url or not ws_url.strip:
-        #     raise ValueError('missing workspace-url key in configuration')
+        # TODO the client throws a 'X is not a valid url' error if the url isn't valid, improve
+        #      by catching & rethrowing with a more clear message that the config is wrong
+        ws_url = cfg.get("workspace-url")  # may want to make the keys constants?
+        if not ws_url or not ws_url.strip():
+            raise ValueError("missing workspace-url in configuration")
         # TODO Originally did the above check but caused 36 test failures so... meh for now.
-        self._workspace = Workspace(cfg["workspace-url"], token=token)
+        self._workspace = Workspace(ws_url, token=token)
         self._workspace_auth = WorkspaceAuth(user_id, self._workspace)
 
     # create_autospec can't mock instance variables, so we add some boilerplate
