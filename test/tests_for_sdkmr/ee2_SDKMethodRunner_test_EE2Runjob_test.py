@@ -29,7 +29,7 @@ from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_h
 from test.utils_shared.test_utils import (
     get_example_job_as_dict_for_runjob,
 )
-from lib.execution_engine2.exceptions import CondorFailedJobSubmit
+from lib.execution_engine2.exceptions import CondorFailedJobSubmit, MultipleParentJobsException
 
 
 class ee2_SDKMethodRunner_test(unittest.TestCase):
@@ -274,6 +274,22 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 }
             )
         )
+
+        # Test multiple parents case
+        with self.assertRaises(MultipleParentJobsException):
+            batch_runner, batch_runner_jobs = self.get_batch_runner_and_sample_jobs(
+                condor_mock=condor_mock
+            )
+            batch_runner_jobs[0]['parent_job_id'] = 'parent1'
+            batch_runner_jobs[1]['parent_job_id'] = 'parent1'
+            job_ids = batch_runner.run_job_batch(
+                params=batch_runner_jobs, batch_params={"wsid": self.ws_id}
+            )
+            assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
+            assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
+            assert len(job_ids["child_job_ids"]) == len(batch_runner_jobs)
+
+        # Test regular case
         batch_runner, batch_runner_jobs = self.get_batch_runner_and_sample_jobs(
             condor_mock=condor_mock
         )
