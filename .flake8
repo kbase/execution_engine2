@@ -7,5 +7,6 @@ select = B,C,E,F,W,T4,B9
 exclude =
  .tox,
  execution_engine2Impl.py,
+ lib/installed_clients/,
  lib/execution_engine2/execution_engine2Impl.py,
  *Impl.py

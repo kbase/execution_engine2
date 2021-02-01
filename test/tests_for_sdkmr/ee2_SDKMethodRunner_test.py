@@ -467,7 +467,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         log = runner.view_job_logs(job_id=job_id, limit=3, skip_lines=0)
         self.assertEqual(
-            3, len(log["lines"]),
+            3,
+            len(log["lines"]),
         )
         self.assertEqual(0, log["lines"][0]["linepos"])
         self.assertEqual(2, log["lines"][-1]["linepos"])
@@ -475,7 +476,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         log = runner.view_job_logs(job_id=job_id, limit=3, skip_lines=5)
         self.assertEqual(
-            2, len(log["lines"]),
+            2,
+            len(log["lines"]),
         )
         self.assertEqual(6, log["lines"][0]["linepos"])
         self.assertEqual(7, log["last_line_number"])
@@ -771,8 +773,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_states_rl0_exclude_wsid[job_id]["status"], "created")
 
             # test check_workspace_jobs
-            job_states_from_workspace_check = runner.get_jobs_status().check_workspace_jobs(
-                self.ws_id, return_list="False"
+            job_states_from_workspace_check = (
+                runner.get_jobs_status().check_workspace_jobs(
+                    self.ws_id, return_list="False"
+                )
             )
             for job_id_from_wsid in job_states_from_workspace_check:
                 self.assertTrue(job_states_from_workspace_check[job_id_from_wsid])
@@ -806,8 +810,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             )
 
             # test check_workspace_jobs with exclude_fields
-            job_states_with_exclude_wsid = runner.get_jobs_status().check_workspace_jobs(
-                self.ws_id, exclude_fields=["wsid"], return_list=False
+            job_states_with_exclude_wsid = (
+                runner.get_jobs_status().check_workspace_jobs(
+                    self.ws_id, exclude_fields=["wsid"], return_list=False
+                )
             )
 
             logging.info(

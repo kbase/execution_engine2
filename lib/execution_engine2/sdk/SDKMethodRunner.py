@@ -20,6 +20,7 @@ from installed_clients.WorkspaceClient import Workspace
 from installed_clients.authclient import KBaseAuth
 from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from lib.execution_engine2.db.MongoUtil import MongoUtil
+from lib.execution_engine2.db.models.models import Job
 from lib.execution_engine2.exceptions import AuthError
 from lib.execution_engine2.sdk import (
     EE2Runjob,
@@ -34,7 +35,6 @@ from lib.execution_engine2.utils.Condor import Condor
 from lib.execution_engine2.utils.EE2Logger import get_logger
 from lib.execution_engine2.utils.KafkaUtils import KafkaClient
 from lib.execution_engine2.utils.SlackUtils import SlackClient
-from lib.execution_engine2.db.models.models import Job
 
 
 class JobPermissions(Enum):
@@ -209,14 +209,18 @@ class SDKMethodRunner:
         """ Authorization Required Read/Write """
         return self.get_runjob().run(params=params, as_admin=as_admin)
 
+    def run_job_batch(self, params, batch_params, as_admin=False):
+        """ Authorization Required Read/Write """
+        return self.get_runjob().run_batch(
+            params=params, batch_params=batch_params, as_admin=as_admin
+        )
+
     def run_job_concierge(self, params, concierge_params):
         """ Authorization Required : Be the kbaseconcierge user """
         return self.get_runjob().run(params=params, concierge_params=concierge_params)
 
     def get_job_params(self, job_id, as_admin=False):
         """ Authorization Required: Read """
-        # if as_admin:
-        #     self._check_as_admin(requested_perm=JobPermissions.READ)
         return self.get_runjob().get_job_params(job_id=job_id, as_admin=as_admin)
 
     # ENDPOINTS: Adding and retrieving Logs
@@ -239,6 +243,13 @@ class SDKMethodRunner:
             job_id=job_id, skip_estimation=skip_estimation, as_admin=as_admin
         )
 
+    # Endpoints: Changing a job's status
+    def abandon_children(self, parent_job_id, child_job_ids, as_admin=False):
+        """ Authorization Required Read/Write """
+        return self.get_jobs_status().abandon_children(
+            parent_job_id=parent_job_id, child_job_ids=child_job_ids, as_admin=as_admin
+        )
+
     def update_job_status(self, job_id, status, as_admin=False):
         # TODO: Make this an ADMIN ONLY function? Why would anyone need to call this who is not an admin?
         """ Authorization Required: Read/Write """
@@ -247,6 +258,7 @@ class SDKMethodRunner:
         )
 
     def cancel_job(self, job_id, terminated_code=None, as_admin=False):
+        # TODO: Cancel Child Jobs as well
         """ Authorization Required Read/Write """
         return self.get_jobs_status().cancel_job(
             job_id=job_id, terminated_code=terminated_code, as_admin=as_admin
@@ -304,6 +316,41 @@ class SDKMethodRunner:
     def get_job_status_field(self, job_id, as_admin=False):
         """ Authorization Required: Read """
         return self.get_jobs_status().get_job_status(job_id=job_id, as_admin=as_admin)
+
+    def check_job_batch(
+        self,
+        parent_job_id,
+        check_permission=True,
+        exclude_fields=None,
+        as_admin=False,
+    ):
+        """ Authorization Required: Read """
+
+        if as_admin is True:
+            self.check_as_admin(requested_perm=JobPermissions.READ)
+            check_permission = False
+
+        if exclude_fields and "child_jobs" in exclude_fields:
+            raise ValueError("You can't exclude child jobs from this endpoint")
+
+        parent_job_status = self.get_jobs_status().check_job(
+            job_id=parent_job_id,
+            check_permission=check_permission,
+            exclude_fields=exclude_fields,
+        )
+        child_job_ids = parent_job_status.get("child_jobs")
+        child_job_states = []
+        if child_job_ids:
+            child_job_states = self.get_jobs_status().check_jobs(
+                job_ids=child_job_ids,
+                check_permission=True,
+                exclude_fields=exclude_fields,
+                return_list=1,
+            )["job_states"]
+        return {
+            "parent_jobstate": parent_job_status,
+            "child_jobstates": child_job_states,
+        }
 
     def check_jobs(
         self,
@@ -378,8 +425,10 @@ class SDKMethodRunner:
             )
             job = self.get_mongo_util().get_job(job_id=job_id)
         else:
-            permission_found_in_cache = self.get_ee2_auth().get_job_permission_from_cache(
-                job_id=job_id, level=requested_job_perm
+            permission_found_in_cache = (
+                self.get_ee2_auth().get_job_permission_from_cache(
+                    job_id=job_id, level=requested_job_perm
+                )
             )
             job = self.get_mongo_util().get_job(job_id=job_id)
             if not permission_found_in_cache:

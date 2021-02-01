@@ -3,9 +3,9 @@ from confluent_kafka import Consumer, KafkaError
 
 def _test_sample_consumer():
     """
-     This is for testing
-     :return:
-     """
+    This is for testing
+    :return:
+    """
     consumer = Consumer(
         {
             "bootstrap.servers": "ci-kafka:9096",

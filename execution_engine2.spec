@@ -143,6 +143,26 @@
         */
         funcdef run_job(RunJobParams params) returns (job_id job_id) authentication required;
 
+        typedef structure {
+            int wsid;
+        } BatchParams;
+
+        typedef structure {
+            job_id parent_job_id;
+            list<job_id> child_job_ids;
+        } BatchSubmission;
+
+        typedef structure {
+            job_id parent_job_id;
+            list<job_id> child_job_ids;
+            boolean as_admin;
+        } AbandonChildren;
+
+
+        funcdef run_job_batch(list<RunJobParams> params, BatchParams batch_params) returns (BatchSubmission job_ids) authentication required;
+
+        funcdef abandon_children(AbandonChildren params) returns (BatchSubmission parent_and_child_ids) authentication required;
+
 
         /* EE2Constants Concierge Params are
             request_cpus: int
@@ -371,8 +391,22 @@
         funcdef check_job(CheckJobParams params) returns (JobState job_state) authentication required;
 
         /*
-            job_states - states of jobs
+            parent_job - state of parent job
+            job_states - states of child jobs
+            IDEA: ADD aggregate_states - count of all available child job states, even if they are zero
+        */
+        typedef structure {
+            JobState parent_jobstate;
+            list<JobState> child_jobstates;
+        } CheckJobBatchResults;
 
+        /*
+            get current status of a parent job, and it's children, if it has any.
+        */
+        funcdef check_job_batch(CheckJobParams params) returns (CheckJobBatchResults) authentication required;
+
+        /*
+            job_states - states of jobs
             could be mapping<job_id, JobState> or list<JobState>
         */
         typedef structure {
@@ -565,7 +599,7 @@
         funcdef get_admin_permission()  returns (AdminRolesResults) authentication required;
 
         /* Get a list of clientgroups manually extracted from the config file */
-        funcdef get_client_groups() returns (list<string> client_groups) authentication required;
+        funcdef get_client_groups() returns (list<string> client_groups);
 
 
     };

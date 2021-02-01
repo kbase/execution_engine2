@@ -25,11 +25,6 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
     def setUpClass(cls):
         deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
         config = read_config_into_dict(deploy)
-        # Should this just be added into read_config_into_dict function?
-        mongo_in_docker = config.get("mongo-in-docker-compose", None)
-        if mongo_in_docker is not None:
-            config["mongo-host"] = config["mongo-in-docker-compose"]
-
         cls.kc = KafkaClient(config["kafka-host"])
 
     def test_status_change(self):

@@ -2,6 +2,7 @@
 import logging
 import os
 import unittest
+from pprint import pprint
 
 from pymongo import MongoClient
 from pymongo.errors import OperationFailure
@@ -15,19 +16,10 @@ bootstrap()
 class ExecutionEngine2SchedulerTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
-
+        deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "/kb/module/deploy.cfg")
         config = read_config_into_dict(deploy, "execution_engine2")
-
-        # For running python interpreter in a docker container
-        mongo_in_docker = config.get("mongo-in-docker-compose", None)
-        if mongo_in_docker is not None:
-            config["mongo-host"] = config["mongo-in-docker-compose"]
-
         cls.config = config
-
         cls.ctx = {"job_id": "test", "user_id": "test", "token": "test"}
-
         cls.mongo_client = MongoClient(
             host=cls.config["mongo-host"],
             port=int(cls.config["mongo-port"]),
@@ -35,15 +27,19 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
             password=cls.config["mongo-password"],
             authSource="admin",
             authMechanism=cls.config["mongo-authmechanism"],
+            serverSelectionTimeoutMS=1000,
         )
 
         cls.db = cls.mongo_client.get_database(cls.config["mongo-database"])
 
         logging.info(f"Dropping user {cls.config['mongo-user']}")
+        print(f"Dropping user {cls.config['mongo-user']}")
         try:
             cls.db.command("dropUser", cls.config["mongo-user"])
         except OperationFailure as e:
             logging.info("Couldn't drop user")
+            print("Couldnt drop user", e)
+            pprint(cls.config)
             logging.info(e)
 
         # TODO ADD USER TO EE2?
@@ -57,8 +53,10 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
             )
         except OperationFailure:
             logging.info("Couldn't add user")
+            print("Couldn't add user")
 
         logging.info("Done running mongo setup")
+        print("Done running mongo")
 
     def test_database_configured(self):
         logging.info("\nChecking privileged user exists")

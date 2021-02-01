@@ -1,6 +1,7 @@
 import logging
-from pymongo import MongoClient
 import subprocess
+
+from pymongo import MongoClient
 
 
 class MongoTestHelper:
@@ -184,7 +185,12 @@ class MongoTestHelper:
         cfg = self.cfg
         logging.info(cfg)
         try:
-            my_client = MongoClient(cfg["mongo-host"], int(cfg["mongo-port"]))
+            my_client = MongoClient(
+                host=cfg["mongo-host"],
+                port=int(cfg["mongo-port"]),
+                password=cfg["mongo-password"],
+                user=cfg["mongo-user"],
+            )
             my_client.ee2.command(
                 "createUser",
                 cfg["mongo-user"],
@@ -199,8 +205,6 @@ class MongoTestHelper:
             int(cfg["mongo-port"]),
             username=cfg["mongo-user"],
             password=cfg["mongo-password"],
-            authSource=db,
-            authMechanism="DEFAULT",
         )
 
         my_db = my_client[db]
