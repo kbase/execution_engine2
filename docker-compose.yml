@@ -83,10 +83,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /sys/fs/cgroup:/sys/fs/cgroup
 
-
-
   condor:
-    image: kbase/condor:develop
+    image: quay.io/kbase/condor-worker:1.0.8.2
     hostname: condor
     environment:
       - POOL_PASSWORD=weakpassword
