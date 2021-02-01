@@ -18,11 +18,13 @@ from lib.execution_engine2.db.models.models import (
     ErrorCode,
     TerminatedCode,
 )
+
 from lib.execution_engine2.exceptions import (
     MultipleParentJobsException,
     CondorFailedJobSubmit,
     ExecutionEngineException,
 )
+
 from lib.execution_engine2.sdk.EE2Constants import ConciergeParams
 from lib.execution_engine2.utils.CondorTuples import CondorResources, SubmissionInfo
 from lib.execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
@@ -44,8 +46,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
     from lib.execution_engine2.utils.CatalogUtils import CatalogUtils
-    from lib.execution_engine2.utils import Condor
-
 
 class EE2RunJob:
     def __init__(self, sdkmr):
@@ -53,8 +53,8 @@ class EE2RunJob:
         self.override_clientgroup = os.environ.get("OVERRIDE_CLIENT_GROUP", None)
         self.logger = sdkmr.logger
         self.catalog_utils = sdkmr.catalog_utils  # type: CatalogUtils
-        # self.condor = self.sdkmr.get_condor()  # type: Condor
         self.user_id = sdkmr.user_id
+
 
     def _init_job_rec(
         self,
@@ -288,6 +288,7 @@ class EE2RunJob:
 
         return PreparedJobParams(params=params, job_id=job_id)
 
+
     def _submit_batch(self, child_job_params: List[Dict]) -> List[SubmissionInfo]:
         try:
             submission_info_set = self.sdkmr.get_condor().run_job_batch(
@@ -350,7 +351,7 @@ class EE2RunJob:
         )
 
     def _evaluate_job_params_set(self, job_param_set, parent_job):
-        # Fail early before job submission if possible
+        # Fail early before job submission if possible if job params are incorrect
         # Make sure clientgroups and condor resources are set correctly for each job,
         # or raise an exception if something goes wrong
         for job_params in job_param_set:
@@ -368,6 +369,39 @@ class EE2RunJob:
                     + f"parent_job.wsid={parent_job.id} "
                     + f"batch_job_params.wsid={job_params['parent_job_id']} "
                 )
+
+    def _run_batch(self, parent_job: Job, job_param_set: List[Dict]) -> List:
+        # Prepare jobs, fail early if possible
+        self._evaluate_job_params_set(job_param_set, parent_job)
+
+        child_job_ids = []
+        # Initialize Job Records
+        for job_params in job_param_set:
+            job_params["parent_job_id"]: parent_job.id
+            resources = self.catalog_utils.get_condor_resources(
+                job_params=job_params, condor=self.condor
+            )
+            try:
+                child_job_id = self._init_job_rec(
+                    user_id=self.sdkmr.user_id,
+                    params=job_params,
+                    resources=resources,
+                )
+                child_job_ids.append(child_job_id)
+            except Exception as e:
+                self.logger.debug(
+                    msg=f"Failed to submit child job. Aborting entire batch job {e}"
+                )
+                self._abort_child_jobs(child_job_ids)
+                raise e
+        # Save record of child jobs
+
+        parent_job.child_jobs = child_job_ids
+        parent_job.save()
+
+        # TODO Launch Job Submission Thread
+        return child_job_ids
+
 
     def _run(self, params, concierge_params=None):
         prepared = self._prepare_to_run(
@@ -489,10 +523,6 @@ class EE2RunJob:
         self.sdkmr.kafka_client.send_kafka_message(
             message=KafkaCreateJob(job_id=str(j.id), user=j.user)
         )
-
-        self.logger.debug(
-            f"Time creating parent job {time.time() - parent_start_time} "
-        )
         return j
 
     def run_batch(
@@ -510,6 +540,7 @@ class EE2RunJob:
         wsid = batch_params.get("wsid")
         meta = batch_params.get("meta")
         workspace_permissions_time = time.time()
+
         if as_admin:
             self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
         else:
@@ -517,6 +548,7 @@ class EE2RunJob:
             self._check_workspace_permissions(wsid)
             wsids = [job_input.get("wsid", wsid) for job_input in params]
             self._check_workspace_permissions_list(wsids)
+
         self.logger.debug(
             f"1. Time spent looking up workspace permissions {time.time() - workspace_permissions_time} "
         )

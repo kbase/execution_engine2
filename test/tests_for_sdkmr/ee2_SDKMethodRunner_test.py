@@ -866,12 +866,14 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner.is_admin = True
         runner.check_is_admin = MagicMock(return_value=True)
         runner.workspace_auth.can_read = MagicMock(return_value=True)
-        runner._ee2_runjob.catalog_utils.get_git_commit_version = MagicMock(
-            return_value="hash_goes_here"
-        )
+
+        self.mock = MagicMock(return_value=True)
+
         runner.catalog_utils.get_git_commit_version = MagicMock(
             return_value="git_commit_goes_here"
         )
+
+        runner.get_condor = MagicMock(return_value=condor_mock)
 
         # ctx = {"user_id": self.user_id, "wsid": self.ws_id, "token": self.token}
         job = get_example_job().to_mongo().to_dict()

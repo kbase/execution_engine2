@@ -84,8 +84,7 @@ class CatalogUtils:
 
     def get_condor_resources(self, job_params, condor) -> "CondorResources":
         """
-        Gets required condor resources and clientgroups for a  jobs
-
+        Gets required condor resources and clientgroups for a job submission
         :param job_params: Job Params for a given job
         :param condor: Instance of condor utils # type: Condor
         :return: A cached mapping of method to extracted resources # type: Dict[str:CondorResources]

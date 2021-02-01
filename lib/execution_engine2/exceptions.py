@@ -13,10 +13,14 @@ class IncorrectParamsException(ExecutionEngineValueError):
 
 
 class MissingRunJobParamsException(ExecutionEngineValueError):
+    """ Raised if job is missing RunJobParams"""
+
     pass
 
 
 class InvalidStatusTransitionException(ExecutionEngineValueError):
+    """ Raised if the status transition is NOT ALLOWED"""
+
     pass
 
 
@@ -25,26 +29,44 @@ class InvalidOperationForStatusException(ExecutionEngineValueError):
 
 
 class MissingCondorRequirementsException(ExecutionEngineValueError):
+    """ Raised if malformed requirements information is retrieved for an ee2 job"""
+
     pass
 
 
 class MalformedJobIdException(ExecutionEngineValueError):
+    """ Raised if bad ee2 id is passed in"""
+
     pass
 
 
 class MalformedTimestampException(ExecutionEngineException):
+    """ Bad timestamps """
+
     pass
 
 
 class ChildrenNotFoundError(ExecutionEngineException):
+    """Raised if children are not found for a given parent when attempting to abandon children"""
+
     pass
 
 
 class RecordNotFoundException(ExecutionEngineException):
+    """Raised if ee2 job or ee2 job log record is not found in db"""
+
     pass
 
 
 class CondorJobNotFoundException(ExecutionEngineException):
+    """Raised if condor job is not found"""
+
+    pass
+
+
+class MultipleParentJobsException(ExecutionEngineException):
+    """Raised if multiple parent jobs are submitted in the same batch job"""
+
     pass
 
 

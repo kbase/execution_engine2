@@ -275,6 +275,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             )
         )
 
+
         # Test multiple parents case
         with self.assertRaises(MultipleParentJobsException):
             batch_runner, batch_runner_jobs = self.get_batch_runner_and_sample_jobs(
