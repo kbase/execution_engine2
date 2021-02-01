@@ -282,7 +282,7 @@ class EE2RunJob:
     #     )
 
     def _evaluate_job_params_set(self, job_param_set, parent_job):
-        # Fail early before job submission if possible
+        # Fail early before job submission if possible if job params are incorrect
         # Make sure clientgroups and condor resources are set correctly for each job,
         # or raise an exception if something goes wrong
         for job_params in job_param_set:
@@ -304,7 +304,7 @@ class EE2RunJob:
         self._evaluate_job_params_set(job_param_set, parent_job)
 
         child_job_ids = []
-        # Initiatialize Job Records
+        # Initialize Job Records
         for job_params in job_param_set:
             job_params["parent_job_id"]: parent_job.id
             resources = self.catalog_utils.get_condor_resources(
