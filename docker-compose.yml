@@ -54,11 +54,9 @@ services:
       - ./:/ee2
       - /Users:/Users
 
-
-
   condor_worker_mini:
     privileged: true
-    image: kbase/condor-worker:develop
+    image: quay.io/kbase/condor-worker:1.0.8.2
     hostname: condor_worker_mini
     command:
       - "-poll"
@@ -84,7 +82,7 @@ services:
       - /sys/fs/cgroup:/sys/fs/cgroup
 
   condor:
-    image: quay.io/kbase/condor-worker:1.0.8.2
+    image: kbase/condor:develop
     hostname: condor
     environment:
       - POOL_PASSWORD=weakpassword
