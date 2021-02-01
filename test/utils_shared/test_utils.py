@@ -15,6 +15,10 @@ from lib.execution_engine2.utils.CondorTuples import CondorResources, JobInfo
 
 
 def bootstrap():
+    """
+    This loads up test env files for alternative IDEs, like PyCharm
+    :return:
+    """
     test_env_0 = "../test.env"
     test_env_1 = "test.env"
     test_env_2 = "test/test.env"

@@ -18,7 +18,6 @@ from test.utils_shared.test_utils import (
     get_sample_job_params,
     get_sample_condor_info,
 )
-from test.utils_shared.test_utils import bootstrap
 
 
 class EE2TestAdminMode(unittest.TestCase):

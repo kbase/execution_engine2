@@ -8,8 +8,6 @@ from lib.execution_engine2.exceptions import AuthError
 
 from test.utils_shared.test_utils import bootstrap
 
-bootstrap()
-
 
 class AdminAuthUtilTestCase(unittest.TestCase):
     @classmethod
