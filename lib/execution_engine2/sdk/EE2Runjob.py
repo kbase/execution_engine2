@@ -9,6 +9,7 @@ import time
 from enum import Enum
 from typing import Optional, Dict, NamedTuple, Union, List
 
+from exceptions import CondorFailedJobSubmit, ExecutionEngineException, MultipleParentJobsException
 from lib.execution_engine2.db.models.models import (
     Job,
     JobInput,
@@ -18,11 +19,7 @@ from lib.execution_engine2.db.models.models import (
     ErrorCode,
     TerminatedCode,
 )
-from lib.execution_engine2.exceptions import (
-    MultipleParentJobsException,
-    CondorFailedJobSubmit,
-    ExecutionEngineException,
-)
+
 from lib.execution_engine2.sdk.EE2Constants import ConciergeParams
 from lib.execution_engine2.utils.CondorTuples import CondorResources, SubmissionInfo
 from lib.execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
@@ -44,7 +41,6 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
     from lib.execution_engine2.utils.CatalogUtils import CatalogUtils
-    from lib.execution_engine2.utils import Condor
 
 
 class EE2RunJob:
@@ -53,15 +49,13 @@ class EE2RunJob:
         self.override_clientgroup = os.environ.get("OVERRIDE_CLIENT_GROUP", None)
         self.logger = sdkmr.logger
         self.catalog_utils = sdkmr.catalog_utils  # type: CatalogUtils
-        # self.condor = self.sdkmr.get_condor()  # type: Condor
-        self.user_id = sdkmr.user_id
 
     def _init_job_rec(
-        self,
-        user_id: str,
-        params: Dict,
-        resources: CondorResources = None,
-        concierge_params: ConciergeParams = None,
+            self,
+            user_id: str,
+            params: Dict,
+            resources: CondorResources = None,
+            concierge_params: ConciergeParams = None,
     ) -> str:
         job = Job()
         inputs = JobInput()
@@ -137,26 +131,20 @@ class EE2RunJob:
     def _check_workspace_permissions(self, wsid):
         if wsid:
             if not self.sdkmr.get_workspace_auth().can_write(wsid):
-                self.logger.debug(
-                    f"User {self.user_id} doesn't have permission to run jobs in workspace {wsid}."
-                )
                 raise PermissionError(
-                    f"User {self.user_id} doesn't have permission to run jobs in workspace {wsid}."
+                    f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
                 )
 
     def _check_workspace_permissions_list(self, wsids):
         perms = self.sdkmr.get_workspace_auth().can_write_list(wsids)
         bad_ws = [key for key in perms.keys() if perms[key] is False]
         if bad_ws:
-            self.logger.debug(
-                f"User {self.user_id} doesn't have permission to run jobs in workspace {bad_ws}."
-            )
             raise PermissionError(
-                f"User {self.user_id} doesn't have permission to run jobs in workspace {bad_ws}."
+                f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {bad_ws}."
             )
 
     def _finish_created_job(
-        self, job_id, exception, error_code=None, error_message=None
+            self, job_id, exception, error_code=None, error_message=None
     ):
         """
         :param job_id:
@@ -179,7 +167,7 @@ class EE2RunJob:
         )
 
     def _add_essential_job_info(
-        self, job_params: Dict, job_id: str, normalized_resources
+            self, job_params: Dict, job_id: str, normalized_resources
     ) -> Dict:
         """
         Mutate job params to include job_id, user, token, and resources
@@ -276,14 +264,15 @@ class EE2RunJob:
         # insert initial job document into db
 
         job_id = self._init_job_rec(
-            self.user_id, params, extracted_resources, concierge_params
+            self.sdkmr.user_id, params, extracted_resources, concierge_params
         )
+
         params = self._add_essential_job_info(
             job_params=params, job_id=job_id, normalized_resources=normalized_resources
         )
 
         self.logger.debug(
-            f"User {self.user_id} attempting to run job {method} {params}"
+            f"User {self.sdkmr.user_id} attempting to run job {method} {params}"
         )
 
         return PreparedJobParams(params=params, job_id=job_id)
@@ -335,7 +324,7 @@ class EE2RunJob:
             raise e
 
         if submission_info.error is not None and isinstance(
-            submission_info.error, Exception
+                submission_info.error, Exception
         ):
             self._finish_created_job(exception=submission_info.error, job_id=job_id)
             raise submission_info.error
@@ -350,7 +339,7 @@ class EE2RunJob:
         )
 
     def _evaluate_job_params_set(self, job_param_set, parent_job):
-        # Fail early before job submission if possible
+        # Fail early before job submission if possible if job params are incorrect
         # Make sure clientgroups and condor resources are set correctly for each job,
         # or raise an exception if something goes wrong
         for job_params in job_param_set:
@@ -360,8 +349,8 @@ class EE2RunJob:
             )
             # Don't allow differing parent jobs, and ensure job always runs with the parent
             if (
-                "parent_job_id" in job_params
-                and job_params["parent_job_id"] != parent_job.id
+                    "parent_job_id" in job_params
+                    and job_params["parent_job_id"] != parent_job.id
             ):
                 raise MultipleParentJobsException(
                     "Launching child jobs with differing parents is not allowed"
@@ -381,7 +370,7 @@ class EE2RunJob:
 
         self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
         self.sdkmr.slack_client.run_job_message(
-            job_id=job_id, scheduler_id=condor_job_id, username=self.user_id
+            job_id=job_id, scheduler_id=condor_job_id, username=self.sdkmr.user_id
         )
 
         return job_id
@@ -431,11 +420,10 @@ class EE2RunJob:
         return child_job_ids
 
     def _initialize_child_batch_job_records(
-        self, parent_job: Job, child_job_params_set: List[Dict]
+            self, parent_job: Job, child_job_params_set: List[Dict]
     ) -> List:
         """
         * Checks to see if params are valid or not
-
         :param parent_job: The parent job record
         :param child_job_params_set: The set of params for child jobs to be run in batch
         :return: A list of child job ids for saved entries in ee2, in "Created" status
@@ -458,11 +446,13 @@ class EE2RunJob:
 
     def _create_parent_job(self, wsid, meta):
         """
+        This creates the parent job for all children to mark as their ancestor
+        :param params:
+        :return:
         :param wsid: The workspace ID
         :param meta: Cell Information
         :return: Job Record of Parent for Batch Job
         """
-        parent_start_time = time.time()
         job_input = JobInput()
         job_input.service_ver = "batch"
         job_input.app_id = "batch"
@@ -481,7 +471,7 @@ class EE2RunJob:
             batch_job=True,
             status=Status.created.value,
             wsid=wsid,
-            user=self.user_id,
+            user=self.sdkmr.user_id,
         )
         j.save()
 
@@ -489,27 +479,24 @@ class EE2RunJob:
         self.sdkmr.kafka_client.send_kafka_message(
             message=KafkaCreateJob(job_id=str(j.id), user=j.user)
         )
-
-        self.logger.debug(
-            f"Time creating parent job {time.time() - parent_start_time} "
-        )
         return j
 
     def run_batch(
-        self, params, batch_params, as_admin=False
+            self, params, batch_params, as_admin=False
     ) -> Dict[str, Union[Job, List[str]]]:
         """
         Check permissions, setup parent job, and child jobs.
+
         :param params: List of RunJobParams (See Spec File)
         :param batch_params: List of Batch Params, such as wsid (See Spec file)
         :param as_admin: Allows you to run jobs in other people's workspaces
         :return: A list of condor job ids or a failure notification
         """
         # TODO: Do we need a kafka event for the parent job?
-        # TODO: Do we need a nice Exception for failing a batch submission?
         wsid = batch_params.get("wsid")
         meta = batch_params.get("meta")
         workspace_permissions_time = time.time()
+
         if as_admin:
             self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
         else:
@@ -517,9 +504,11 @@ class EE2RunJob:
             self._check_workspace_permissions(wsid)
             wsids = [job_input.get("wsid", wsid) for job_input in params]
             self._check_workspace_permissions_list(wsids)
+
         self.logger.debug(
-            f"1. Time spent looking up workspace permissions {time.time() - workspace_permissions_time} "
+            f"Time spent looking up workspace permissions {time.time() - workspace_permissions_time} "
         )
+
         parent_job = self._create_parent_job(wsid=wsid, meta=meta)
         child_job_ids = self._initialize_child_batch_job_records(
             parent_job=parent_job, child_job_params_set=params
@@ -529,11 +518,10 @@ class EE2RunJob:
         self._submit_child_batch_jobs(
             child_job_params_set=params, child_job_ids=child_job_ids
         )
-
         return {"parent_job_id": str(parent_job.id), "child_job_ids": child_job_ids}
 
     def run(
-        self, params=None, as_admin=False, concierge_params: Dict = None
+            self, params=None, as_admin=False, concierge_params: Dict = None
     ) -> Optional[str]:
         """
         :param params: SpecialRunJobParamsParams object (See spec file)
