@@ -6,6 +6,7 @@ from configparser import ConfigParser
 from lib.execution_engine2.authorization.roles import AdminAuthUtil
 from lib.execution_engine2.exceptions import AuthError
 
+
 class AdminAuthUtilTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

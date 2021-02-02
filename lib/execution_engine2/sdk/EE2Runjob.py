@@ -47,6 +47,7 @@ if TYPE_CHECKING:
     from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
     from lib.execution_engine2.utils.CatalogUtils import CatalogUtils
 
+
 class EE2RunJob:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr  # type: SDKMethodRunner
@@ -54,7 +55,6 @@ class EE2RunJob:
         self.logger = sdkmr.logger
         self.catalog_utils = sdkmr.catalog_utils  # type: CatalogUtils
         self.user_id = sdkmr.user_id
-
 
     def _init_job_rec(
         self,
@@ -288,7 +288,6 @@ class EE2RunJob:
 
         return PreparedJobParams(params=params, job_id=job_id)
 
-
     def _submit_batch(self, child_job_params: List[Dict]) -> List[SubmissionInfo]:
         try:
             submission_info_set = self.sdkmr.get_condor().run_job_batch(
@@ -401,7 +400,6 @@ class EE2RunJob:
 
         # TODO Launch Job Submission Thread
         return child_job_ids
-
 
     def _run(self, params, concierge_params=None):
         prepared = self._prepare_to_run(
