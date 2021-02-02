@@ -64,6 +64,11 @@ class CondorJobNotFoundException(ExecutionEngineException):
     pass
 
 
+class CondorFailedJobSubmit(ExecutionEngineException):
+    """Raised upon failure of submission to the HTCondor Queue"""
+
+    pass
+
 class MultipleParentJobsException(ExecutionEngineException):
     """Raised if multiple parent jobs are submitted in the same batch job"""
 
