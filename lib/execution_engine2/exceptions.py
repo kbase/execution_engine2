@@ -69,6 +69,7 @@ class CondorFailedJobSubmit(ExecutionEngineException):
 
     pass
 
+
 class MultipleParentJobsException(ExecutionEngineException):
     """Raised if multiple parent jobs are submitted in the same batch job"""
 
