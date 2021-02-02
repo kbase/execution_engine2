@@ -494,7 +494,7 @@ class EE2RunJob:
         :param meta: Cell Information
         :return: Job Record of Parent for Batch Job
         """
-        parent_start_time = time.time()
+
         job_input = JobInput()
         job_input.service_ver = "batch"
         job_input.app_id = "batch"
