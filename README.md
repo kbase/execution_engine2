@@ -49,7 +49,13 @@ PYTHONPATH=.:lib:test pytest --cov-report=xml --cov lib/execution_engine2/ --ver
 ## To run a specific test file via PyCharm
 See [Testing with Pycharm](docs/testing_with_pycharm.md)
 
-
+## Installing HTCondor Bindings from the mac
+* You may not be able to load without disabling the mac Security Gatekeeper with `sudo spctl --master-disable`
+* The HTCondor bindings only work on the Python.org install of python or your system install of python2.7. They will not work with anaconda. So download python from python.org
+* Download the mac bindings at https://research.cs.wisc.edu/htcondor/tarball/current/8.9.10/release/
+* Current version is [8.9.10](https://research.cs.wisc.edu/htcondor/tarball/current/8.9.10/release/condor-8.9.10-x86_64_MacOSX-unstripped.tar.gz)
+* Add <condor>/lib/python3 to PYTHONPATH.
+* `import htcondor`
   
 ## Test Running Options  
 ### PyCharm
