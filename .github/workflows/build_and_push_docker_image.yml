@@ -1,8 +1,6 @@
-name: Build Develop/Master
+name: Build Feature Branches
 
-on:
-  pull_request:
-    branches: [master,develop]
+on:  [pull_request]
 
 jobs:
   main:
