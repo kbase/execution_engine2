@@ -23,54 +23,61 @@ class UserClientSet:
     on a per user basis. Also contains the user credentials for ease of use.
     """
 
-    def __init__(self, cfg: Dict[str, str], user_id: str, token: str):
+    def __init__(
+        self,
+        user_id: str,
+        token: str,  # TODO is this needed?
+        workspace: Workspace,
+        workspace_auth: WorkspaceAuth,
+    ):
         """
         Initialize the client set.
 
-        cfg - the configuration dictionary
-        user_id - the ID of the user to be used to initialize the client set.
-        token - the token of the user to be used to initialize the client set. Note that the set
-            trusts that the token actually belongs to the user ID, and currently does not
-            independently check the validity of the user ID.
-
-        Expected keys in config:
-        workspace-url - the URL of the kbase workspace service
+        user_id - The user's ID.
+        token - The users's token
+        workspace - A workspace client initialized with the user's token.
+        workspace_auth - A workspace auth client initialized with the user's token.
         """
         if not user_id or not user_id.strip():
             raise ValueError("user_id is required")
         if not token or not token.strip():
             raise ValueError("token is required")
-        if not cfg:
-            raise ValueError("cfg is required")
-        self._user_id = user_id
-        self._token = token
+        if not workspace:
+            raise ValueError("workspace is required")
+        if not workspace_auth:
+            raise ValueError("workspace_auth is required")
+        self.user_id = user_id
+        self.token = token
+        self.workspace = workspace
+        self.workspace_auth = workspace_auth
 
-        # Do a check that the url actually points to the workspace?
-        # Also maybe consider passing in the workspace url rather than the dict, but the ClientSet
-        # below will need lots of params so a dict makes sense there, maybe keep the apis similar?
-        # TODO the client throws a 'X is not a valid url' error if the url isn't valid, improve
-        #      by catching & rethrowing with a more clear message that the config is wrong
-        ws_url = cfg.get("workspace-url")  # may want to make the keys constants?
-        if not ws_url or not ws_url.strip():
-            raise ValueError("missing workspace-url in configuration")
-        self._workspace = Workspace(ws_url, token=token)
-        self._workspace_auth = WorkspaceAuth(user_id, self._workspace)
 
-    # create_autospec can't mock instance variables, so we add some boilerplate
-    # Could make these properties but then they return MagicMocks which don't update with API
-    # changes
+def get_user_client_set(cfg: Dict[str, str], user_id: str, token: str):
+    """
+    Create the client set from a configuration dictionary.
 
-    def user_id(self):
-        return self._user_id
+    cfg - the configuration dictionary
+    user_id - the ID of the user to be used to initialize the client set.
+    token - the token of the user to be used to initialize the client set. Note that the set
+        trusts that the token actually belongs to the user ID, and currently does not
+        independently check the validity of the user ID.
 
-    def token(self):
-        return self._token
-
-    def workspace(self):
-        return self._workspace
-
-    def workspace_auth(self):
-        return self._workspace_auth
+    Expected keys in config:
+    workspace-url - the URL of the kbase workspace service
+    """
+    if not cfg:
+        raise ValueError("cfg is required")
+    # Do a check that the url actually points to the workspace?
+    # Also maybe consider passing in the workspace url rather than the dict, but the ClientSet
+    # below will need lots of params so a dict makes sense there, maybe keep the apis similar?
+    # TODO the client throws a 'X is not a valid url' error if the url isn't valid, improve
+    #      by catching & rethrowing with a more clear message that the config is wrong
+    ws_url = cfg.get("workspace-url")  # may want to make the keys constants?
+    if not ws_url or not ws_url.strip():
+        raise ValueError("missing workspace-url in configuration")
+    workspace = Workspace(ws_url, token=token)
+    workspace_auth = WorkspaceAuth(user_id, workspace)
+    return UserClientSet(user_id, token, workspace, workspace_auth)
 
 
 class ClientSet:

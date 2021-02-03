@@ -10,6 +10,7 @@ from mock import MagicMock
 from mock import patch
 
 from installed_clients.CatalogClient import Catalog
+from installed_clients.WorkspaceClient import Workspace
 from lib.execution_engine2.authorization.roles import AdminAuthUtil
 from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
@@ -17,7 +18,7 @@ from lib.execution_engine2.db.models.models import Status
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.Condor import Condor
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
-from execution_engine2.utils.clients import UserClientSet
+from execution_engine2.utils.clients import get_user_client_set, UserClientSet
 from test.utils_shared.test_utils import (
     get_sample_job_params,
     get_sample_condor_info,
@@ -45,7 +46,7 @@ class EE2TestAdminMode(unittest.TestCase):
         cls.token = "token"
 
         cls.method_runner = SDKMethodRunner(
-            cls.cfg, UserClientSet(cls.cfg, cls.user_id, cls.token)
+            cls.cfg, get_user_client_set(cls.cfg, cls.user_id, cls.token)
         )
 
     def setUp(self) -> None:
@@ -89,7 +90,7 @@ class EE2TestAdminMode(unittest.TestCase):
     def getRunner(self, user_clients=None) -> SDKMethodRunner:
         # Initialize these clients from None
         if not user_clients:
-            user_clients = UserClientSet(self.cfg, self.user_id, self.token)
+            user_clients = get_user_client_set(self.cfg, self.user_id, self.token)
         runner = SDKMethodRunner(self.cfg, user_clients)  # type : SDKMethodRunner
         runner.get_jobs_status()
         runner.get_runjob()
@@ -108,22 +109,23 @@ class EE2TestAdminMode(unittest.TestCase):
 
     # TODO How do you test ADMIN_MODE without increasing too much coverage
 
-    def get_mocks(self) -> (UserClientSet, WorkspaceAuth):
-        # add workspace client mock if needed
-        ucs = create_autospec(UserClientSet, instance=True, spec_set=True)
+    def get_mocks(
+        self, user_id=None, token="fake_token"
+    ) -> (UserClientSet, Workspace, WorkspaceAuth):
+        user_id = user_id if user_id else self.user_id
+        ws = create_autospec(Workspace, instance=True, spec_set=True)
         wsa = create_autospec(WorkspaceAuth, instance=True, spec_set=True)
-        ucs.workspace_auth.return_value = wsa
-        return ucs, wsa
+        ucs = UserClientSet(user_id, token, ws, wsa)
+        return ucs, ws, wsa
 
     @patch.object(Catalog, "get_module_version", return_value="module.version")
     @patch.object(AdminAuthUtil, "_fetch_user_roles")
     def test_regular_user(self, aau, catalog):
         # Regular User
         lowly_user = "Access Denied: You are not an administrator"
-        ucs, wsa = self.get_mocks()
-        ucs.user_id.return_value = self.user_id
-        wsa.can_write.return_value = True
-        runner = self.getRunner(ucs)
+        user_client_set, _, ws_auth = self.get_mocks()
+        ws_auth.can_write.return_value = True
+        runner = self.getRunner(user_client_set)
         aau.return_value = ["RegularJoe"]
         method_1 = "module_name.function_name"
         job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
@@ -140,7 +142,7 @@ class EE2TestAdminMode(unittest.TestCase):
 
         job_id = runner.run_job(params=job_params_1, as_admin=False)
         self.assertTrue(bson.objectid.ObjectId.is_valid(job_id))
-        wsa.can_write.assert_called_once_with(self.ws_id)
+        ws_auth.can_write.assert_called_once_with(self.ws_id)
 
         # RUNJOB BUT ATTEMPT TO BE AN ADMIN
         with self.assertRaisesRegexp(

@@ -67,16 +67,16 @@ class SDKMethodRunner:
         self.config = config
         self.mongo_util = mongo_util
         self.condor = None
-        self.workspace = user_clients.workspace()
-        self.workspace_auth = user_clients.workspace_auth()
+        self.workspace = user_clients.workspace
+        self.workspace_auth = user_clients.workspace_auth
         self.admin_roles = config.get("admin_roles", ["EE2_ADMIN", "EE2_ADMIN_RO"])
         self.catalog_utils = CatalogUtils(
             config["catalog-url"], config["catalog-token"]
         )
         self.auth_url = config.get("auth-url")
         self.auth = KBaseAuth(auth_url=config.get("auth-service-url"))
-        self.user_id = user_clients.user_id()
-        self.token = user_clients.token()
+        self.user_id = user_clients.user_id
+        self.token = user_clients.token
         self.debug = SDKMethodRunner.parse_bool_from_string(config.get("debug"))
         self.logger = get_logger()
 

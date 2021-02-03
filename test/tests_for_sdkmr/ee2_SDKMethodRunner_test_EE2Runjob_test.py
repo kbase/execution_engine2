@@ -13,7 +13,7 @@ from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.db.models.models import Job
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
-from execution_engine2.utils.clients import UserClientSet
+from execution_engine2.utils.clients import get_user_client_set
 from test.utils_shared.test_utils import (
     bootstrap,
     get_example_job,
@@ -51,7 +51,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         cls.token = "token"
 
         cls.method_runner = SDKMethodRunner(
-            cls.cfg, UserClientSet(cls.cfg, cls.user_id, cls.token)
+            cls.cfg, get_user_client_set(cls.cfg, cls.user_id, cls.token)
         )
 
         cls.mongo_util = MongoUtil(cls.cfg)

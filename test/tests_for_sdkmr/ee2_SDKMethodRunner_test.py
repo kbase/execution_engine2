@@ -23,7 +23,7 @@ from lib.execution_engine2.exceptions import AuthError
 from lib.execution_engine2.exceptions import InvalidStatusTransitionException
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
-from execution_engine2.utils.clients import UserClientSet
+from execution_engine2.utils.clients import get_user_client_set
 from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 from test.utils_shared.test_utils import (
     bootstrap,
@@ -64,7 +64,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         cls.token = "token"
 
         cls.method_runner = SDKMethodRunner(
-            cls.cfg, UserClientSet(cls.cfg, cls.user_id, cls.token)
+            cls.cfg, get_user_client_set(cls.cfg, cls.user_id, cls.token)
         )
         cls.mongo_util = MongoUtil(cls.cfg)
         cls.mongo_helper = MongoTestHelper(cls.cfg)
@@ -670,7 +670,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             # now test with a different user
             other_method_runner = SDKMethodRunner(
-                self.cfg, UserClientSet(self.cfg, "some_other_user", "other_token")
+                self.cfg,
+                get_user_client_set(self.cfg, "some_other_user", "other_token"),
             )
             job_states = other_method_runner.get_jobs_status().check_workspace_jobs(
                 self.ws_id

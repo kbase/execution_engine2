@@ -6,7 +6,7 @@ from cachetools import TTLCache
 
 from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-from execution_engine2.utils.clients import UserClientSet
+from execution_engine2.utils.clients import get_user_client_set, UserClientSet
 
 
 #END_HEADER
@@ -44,7 +44,7 @@ class execution_engine2:
     ADMIN_ROLES_CACHE_EXPIRE_TIME = 300  # seconds
 
     def get_user_clients(self, ctx) -> UserClientSet:
-        return UserClientSet(self.config, ctx['user_id'], ctx['token'])
+        return get_user_client_set(self.config, ctx['user_id'], ctx['token'])
 
     #END_CLASS_HEADER
 
