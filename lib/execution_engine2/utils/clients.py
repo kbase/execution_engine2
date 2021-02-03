@@ -26,7 +26,7 @@ class UserClientSet:
     def __init__(
         self,
         user_id: str,
-        token: str,  # TODO is this needed?
+        token: str,
         workspace: Workspace,
         workspace_auth: WorkspaceAuth,
     ):
