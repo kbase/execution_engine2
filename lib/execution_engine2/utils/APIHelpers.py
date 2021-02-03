@@ -28,4 +28,4 @@ class GenerateFromConfig:
             expected that the context object contains the user_id and token keys, and this method
             will fail with a KeyError if it does not.
         """
-        return get_user_client_set(self.cfg, ctx['user_id'], ctx['token'])
+        return get_user_client_set(self.cfg, ctx["user_id"], ctx["token"])
