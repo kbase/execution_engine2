@@ -86,7 +86,7 @@ def _check_permissions_list(
     Returns True for each job the user has read access to, and False for the ones they don't.
     :param job: a Job model object
     :param user_id: string - the user id
-    :param ws_auth: a workspace authorization instance initialized with the user's token.
+    :param ws_auth: a workspace authorization instance initialized with the user's token
     :param level: string - if "read" then tests if the Job can be read, otherwise checks if it
         can be written
     :returns: List[bool] - Has True values if the user can write job info, False otherwise
