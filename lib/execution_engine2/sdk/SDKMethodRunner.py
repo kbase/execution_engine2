@@ -16,9 +16,7 @@ from enum import Enum
 
 import dateutil
 
-from installed_clients.WorkspaceClient import Workspace
 from installed_clients.authclient import KBaseAuth
-from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.db.models.models import Job
 from lib.execution_engine2.exceptions import AuthError
@@ -35,6 +33,7 @@ from lib.execution_engine2.utils.Condor import Condor
 from lib.execution_engine2.utils.EE2Logger import get_logger
 from lib.execution_engine2.utils.KafkaUtils import KafkaClient
 from lib.execution_engine2.utils.SlackUtils import SlackClient
+from execution_engine2.utils.clients import UserClientSet
 
 
 class JobPermissions(Enum):
@@ -53,33 +52,31 @@ class SDKMethodRunner:
     """
     JOB_PERMISSION_CACHE_SIZE = 500
     JOB_PERMISSION_CACHE_EXPIRE_TIME = 300  # seconds
-    ADMIN_READ_ROLE = "EE2_ADMIN_RO"
-    ADMIN_WRITE_ROLE = "EE2_ADMIN"
 
     def __init__(
         self,
         config,
-        user_id=None,
-        token=None,
+        user_clients: UserClientSet,
         job_permission_cache=None,
         admin_permissions_cache=None,
         mongo_util=None,
     ):
+        if not user_clients:
+            raise ValueError("user_clients is required")
         self.deployment_config_fp = os.environ["KB_DEPLOYMENT_CONFIG"]
         self.config = config
         self.mongo_util = mongo_util
         self.condor = None
-        self.workspace = None
-        self.workspace_auth = None
+        self.workspace = user_clients.workspace
+        self.workspace_auth = user_clients.workspace_auth
         self.admin_roles = config.get("admin_roles", ["EE2_ADMIN", "EE2_ADMIN_RO"])
         self.catalog_utils = CatalogUtils(
             config["catalog-url"], config["catalog-token"]
         )
-        self.workspace_url = config.get("workspace-url")
         self.auth_url = config.get("auth-url")
         self.auth = KBaseAuth(auth_url=config.get("auth-service-url"))
-        self.user_id = user_id
-        self.token = token
+        self.user_id = user_clients.user_id
+        self.token = user_clients.token
         self.debug = SDKMethodRunner.parse_bool_from_string(config.get("debug"))
         self.logger = get_logger()
 
@@ -133,13 +130,6 @@ class SDKMethodRunner:
             self._ee2_status = EE2Status.JobsStatus(self)
         return self._ee2_status
 
-    def get_workspace_auth(self) -> WorkspaceAuth:
-        if self.workspace_auth is None:
-            self.workspace_auth = WorkspaceAuth(
-                self.token, self.user_id, self.workspace_url
-            )
-        return self.workspace_auth
-
     def get_mongo_util(self) -> MongoUtil:
         if self.mongo_util is None:
             self.mongo_util = MongoUtil(self.config)
@@ -149,11 +139,6 @@ class SDKMethodRunner:
         if self.condor is None:
             self.condor = Condor(self.deployment_config_fp)
         return self.condor
-
-    def get_workspace(self) -> Workspace:
-        if self.workspace is None:
-            self.workspace = Workspace(token=self.token, url=self.workspace_url)
-        return self.workspace
 
     # Permissions Decorators    #TODO Verify these actually work     #TODO add as_admin to these
 
@@ -452,8 +437,7 @@ class SDKMethodRunner:
         if as_admin:
             self.check_as_admin(requested_perm=JobPermissions.READ)
         else:
-            ws_auth = self.get_workspace_auth()
-            if not ws_auth.can_read(workspace_id):
+            if not self.workspace_auth.can_read(workspace_id):
                 self.logger.debug(
                     f"User {self.user_id} doesn't have permission to read jobs in workspace {workspace_id}."
                 )

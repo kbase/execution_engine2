@@ -9,6 +9,7 @@ from configparser import ConfigParser
 from datetime import datetime, timedelta
 from pprint import pprint
 from unittest.mock import patch
+from pytest import raises
 
 import bson
 import dateutil
@@ -22,12 +23,14 @@ from lib.execution_engine2.exceptions import AuthError
 from lib.execution_engine2.exceptions import InvalidStatusTransitionException
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
+from execution_engine2.utils.clients import get_user_client_set
 from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 from test.utils_shared.test_utils import (
     bootstrap,
     get_example_job,
     validate_job_state,
     run_job_adapter,
+    assert_exception_correct,
 )
 from tests_for_db.mongo_test_helper import MongoTestHelper
 
@@ -37,6 +40,7 @@ bootstrap()
 from lib.execution_engine2.sdk.EE2Runjob import EE2RunJob
 
 
+# TODO this isn't necessary with pytest, can just use regular old functions
 class ee2_SDKMethodRunner_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -60,7 +64,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         cls.token = "token"
 
         cls.method_runner = SDKMethodRunner(
-            cls.cfg, user_id=cls.user_id, token=cls.token
+            cls.cfg, get_user_client_set(cls.cfg, cls.user_id, cls.token)
         )
         cls.mongo_util = MongoUtil(cls.cfg)
         cls.mongo_helper = MongoTestHelper(cls.cfg)
@@ -120,6 +124,14 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     #     self.assertTrue(isinstance(git_commit_2, str))
     #     self.assertEqual(len(git_commit_1), len(git_commit_2))
     #    self.assertNotEqual(git_commit_1, git_commit_2)
+
+    def test_init_fail(self):
+        self._init_fail({}, None, ValueError("user_clients is required"))
+
+    def _init_fail(self, cfg, user_clients, expected):
+        with raises(Exception) as e:
+            SDKMethodRunner(cfg, user_clients)
+        assert_exception_correct(e.value, expected)
 
     # Status
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
@@ -658,7 +670,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             # now test with a different user
             other_method_runner = SDKMethodRunner(
-                self.cfg, user_id="some_other_user", token="other_token"
+                self.cfg,
+                get_user_client_set(self.cfg, "some_other_user", "other_token"),
             )
             job_states = other_method_runner.get_jobs_status().check_workspace_jobs(
                 self.ws_id

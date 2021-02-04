@@ -74,18 +74,12 @@ class JobStatusRange:
         if offset is None:
             offset = 0
 
-        if self.sdkmr.token is None:
-            raise AuthError("Please provide a token to check jobs date range")
-
-        token_user = self.sdkmr.auth.get_user(self.sdkmr.token)
-        if user is None:
-            user = token_user
-
         # Admins can view "ALL" or check_jobs for other users
-        if user != token_user:
+        if user != self.sdkmr.user_id:
             if not self.sdkmr.check_is_admin():
                 raise AuthError(
-                    f"You are not authorized to view all records or records for others. user={user} token={token_user}"
+                    "You are not authorized to view all records or records for others. "
+                    + f"user={user} token={self.sdkmr.user_id}"
                 )
 
         dummy_ids = self._get_dummy_dates(creation_start_time, creation_end_time)
@@ -161,6 +155,8 @@ class JobStatusRange:
         # TODO USE AS_PYMONGO() FOR SPEED
         # TODO Better define default fields
         # TODO Instead of SKIP use ID GT LT https://www.codementor.io/arpitbhayani/fast-and-efficient-pagination-in-mongodb-9095flbqr
+        # ^ this one is important - the workspace was DOSed by a single open narrative at one
+        #   point due to skip abuse, which is why it was removed
 
     def _get_dummy_dates(self, creation_start_time, creation_end_time):
 
