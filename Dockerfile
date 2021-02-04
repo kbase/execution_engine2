@@ -1,4 +1,4 @@
-FROM kbase/sdkbase2:python
+FROM quay.io/kbase/sdkbase2:python
 MAINTAINER KBase Developer
 
 RUN apt-get clean all && apt-get update --fix-missing -y
