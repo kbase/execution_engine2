@@ -379,3 +379,8 @@ def get_sample_job_params(method=None, wsid="123"):
     }
 
     return job_params
+
+
+def assert_exception_correct(got: Exception, expected: Exception):
+    assert got.args == expected.args
+    assert type(got) == type(expected)

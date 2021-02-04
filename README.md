@@ -52,6 +52,20 @@ PYTHONPATH=.:lib:test pytest --cov-report=xml --cov lib/execution_engine2/ --ver
 ## To run a specific test file via PyCharm
 See [Testing with Pycharm](docs/testing_with_pycharm.md)
 
+## To run pre-commit hooks
+
+`exec` into the docker container as before and switch to the `/ee2` directory.
+
+```
+pip install pre-commit
+pre-commit install
+pre-commit run --all-files
+```
+
+To remove the pre commit hooks:
+```
+pre-commit uninstall
+```
 
   
 ## Test Running Options  

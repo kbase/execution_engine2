@@ -6,6 +6,7 @@ from cachetools import TTLCache
 
 from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
+from execution_engine2.utils.APIHelpers import GenerateFromConfig
 
 
 #END_HEADER
@@ -59,9 +60,7 @@ class execution_engine2:
             maxsize=self.ADMIN_ROLES_CACHE_SIZE, ttl=self.ADMIN_ROLES_CACHE_EXPIRE_TIME
         )
         self.mongo_util = MongoUtil(config)
-
-
-
+        self.gen_cfg = GenerateFromConfig(config)
         #END_CONSTRUCTOR
         pass
 
@@ -227,7 +226,8 @@ class execution_engine2:
         # return variables are: job_id
         #BEGIN run_job
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            self.config,
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache, mongo_util=self.mongo_util
         )
@@ -298,7 +298,8 @@ class execution_engine2:
         # return variables are: job_ids
         #BEGIN run_job_batch
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            self.config,
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache, mongo_util=self.mongo_util
         )
@@ -326,7 +327,8 @@ class execution_engine2:
         # return variables are: parent_and_child_ids
         #BEGIN abandon_children
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            self.config,
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache, mongo_util=self.mongo_util
         )
@@ -408,7 +410,8 @@ class execution_engine2:
         # return variables are: job_id
         #BEGIN run_job_concierge
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            self.config,
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             mongo_util=self.mongo_util
         )
         job_id = mr.run_job_concierge(params=params,concierge_params=concierge_params)
@@ -478,8 +481,7 @@ class execution_engine2:
         #BEGIN get_job_params
         mr = SDKMethodRunner(
             self.config,
-            user_id=ctx.get("user_id"),
-            token=ctx.get("token"),
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
             mongo_util=self.mongo_util
@@ -508,8 +510,7 @@ class execution_engine2:
         #BEGIN update_job_status
         mr = SDKMethodRunner(
             self.config,
-            user_id=ctx.get("user_id"),
-            token=ctx.get("token"),
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
             mongo_util=self.mongo_util
@@ -547,8 +548,7 @@ class execution_engine2:
         #BEGIN add_job_logs
         mr = SDKMethodRunner(
             self.config,
-            user_id=ctx.get("user_id"),
-            token=ctx.get("token"),
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
             mongo_util=self.mongo_util
@@ -599,8 +599,7 @@ class execution_engine2:
 
         mr = SDKMethodRunner(
             self.config,
-            user_id=ctx.get("user_id"),
-            token=ctx.get("token"),
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
             mongo_util=self.mongo_util
@@ -641,8 +640,7 @@ class execution_engine2:
         #BEGIN finish_job
         mr = SDKMethodRunner(
             self.config,
-            user_id=ctx.get("user_id"),
-            token=ctx.get("token"),
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
             mongo_util=self.mongo_util
@@ -671,8 +669,7 @@ class execution_engine2:
         #BEGIN start_job
         mr = SDKMethodRunner(
             self.config,
-            user_id=ctx.get("user_id"),
-            token=ctx.get("token"),
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
             mongo_util=self.mongo_util
@@ -784,7 +781,8 @@ class execution_engine2:
         # return variables are: job_state
         #BEGIN check_job
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            self.config,
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             mongo_util=self.mongo_util
         )
         job_state = mr.check_job(
@@ -990,7 +988,8 @@ class execution_engine2:
         # return variables are: returnVal
         #BEGIN check_job_batch
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            self.config,
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             mongo_util=self.mongo_util
         )
         returnVal = mr.check_job_batch(
@@ -1108,7 +1107,8 @@ class execution_engine2:
         # return variables are: returnVal
         #BEGIN check_jobs
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            self.config,
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             mongo_util=self.mongo_util
         )
         returnVal = mr.check_jobs(
@@ -1228,7 +1228,8 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: returnVal
         #BEGIN check_workspace_jobs
-        mr = SDKMethodRunner(self.config, user_id=ctx["user_id"], token=ctx["token"],
+        mr = SDKMethodRunner(self.config,
+                             user_clients=self.gen_cfg.get_user_clients(ctx),
                              mongo_util=self.mongo_util)
         returnVal = mr.check_workspace_jobs(
             params.get("workspace_id"),
@@ -1261,8 +1262,7 @@ class execution_engine2:
         #BEGIN cancel_job
         mr = SDKMethodRunner(
             self.config,
-            user_id=ctx.get("user_id"),
-            token=ctx.get("token"),
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
             mongo_util=self.mongo_util
@@ -1300,7 +1300,8 @@ class execution_engine2:
         # return variables are: result
         #BEGIN check_job_canceled
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            self.config,
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             mongo_util=self.mongo_util
         )
         result = mr.check_job_canceled(job_id=params["job_id"], as_admin=params.get('as_admin'))
@@ -1327,8 +1328,7 @@ class execution_engine2:
         #BEGIN get_job_status
         mr = SDKMethodRunner(
             self.config,
-            user_id=ctx.get("user_id"),
-            token=ctx.get("token"),
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache,
             mongo_util=self.mongo_util
@@ -1455,7 +1455,8 @@ class execution_engine2:
         # return variables are: returnVal
         #BEGIN check_jobs_date_range_for_user
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            self.config,
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             mongo_util=self.mongo_util
         )
         returnVal = mr.check_jobs_date_range_for_user(
@@ -1590,7 +1591,8 @@ class execution_engine2:
         # return variables are: returnVal
         #BEGIN check_jobs_date_range_for_all
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            self.config,
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             mongo_util=self.mongo_util
         )
         returnVal = mr.check_jobs_date_range_for_user(
@@ -1624,7 +1626,8 @@ class execution_engine2:
         # return variables are: returnVal
         #BEGIN handle_held_job
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            self.config,
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             mongo_util=self.mongo_util
         )
         returnVal = mr.handle_held_job(cluster_id=cluster_id)
@@ -1646,7 +1649,8 @@ class execution_engine2:
         # return variables are: returnVal
         #BEGIN is_admin
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            self.config,
+            user_clients=self.get_cfg.get_user_clients(ctx),
             mongo_util=self.mongo_util
         )
         returnVal = mr.check_is_admin()
@@ -1671,7 +1675,8 @@ class execution_engine2:
         # return variables are: returnVal
         #BEGIN get_admin_permission
         mr = SDKMethodRunner(
-            self.config, user_id=ctx.get("user_id"), token=ctx.get("token"),
+            self.config,
+            user_clients=self.get_cfg.get_user_clients(ctx),
             mongo_util=self.mongo_util
         )
         returnVal = mr.get_admin_permission()
@@ -1692,6 +1697,7 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: client_groups
         #BEGIN get_client_groups
+        # TODO I think this needs to be actually extracted from the config file
         client_groups = ['njs', 'bigmem', 'bigmemlong', 'extreme', 'concierge', 'hpc', 'kb_upload',
                          'terabyte', 'multi_tb', 'kb_upload_bulk']
         #END get_client_groups

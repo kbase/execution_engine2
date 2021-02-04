@@ -5,6 +5,7 @@ from cachetools import TTLCache
 from lib.execution_engine2.authorization.authstrategy import can_read_job, can_write_job
 from lib.execution_engine2.authorization.roles import AdminAuthUtil
 from lib.execution_engine2.db.models.models import Job
+from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
 
 
 class JobPermissions(Enum):
@@ -33,12 +34,12 @@ class EE2Auth:
         aau = AdminAuthUtil(self.sdkmr.auth_url, self.sdkmr.admin_roles)
         p = aau.get_admin_role(
             token=self.sdkmr.token,
-            read_role=self.sdkmr.ADMIN_READ_ROLE,
-            write_role=self.sdkmr.ADMIN_WRITE_ROLE,
+            read_role=ADMIN_READ_ROLE,
+            write_role=ADMIN_WRITE_ROLE,
         )
-        if p == self.sdkmr.ADMIN_READ_ROLE:
+        if p == ADMIN_READ_ROLE:
             return AdminPermissions.READ
-        elif p == self.sdkmr.ADMIN_WRITE_ROLE:
+        elif p == ADMIN_WRITE_ROLE:
             return AdminPermissions.WRITE
         else:
             return AdminPermissions.NONE
@@ -149,16 +150,12 @@ class EE2Auth:
         perm = False
         try:
             if level.value == JobPermissions.READ.value:
-                perm = can_read_job(
-                    job, self.sdkmr.user_id, self.sdkmr.get_workspace_auth()
-                )
+                perm = can_read_job(job, self.sdkmr.user_id, self.sdkmr.workspace_auth)
                 self._update_job_permission_cache(
                     job_id, self.sdkmr.user_id, level, perm
                 )
             elif level.value == JobPermissions.WRITE.value:
-                perm = can_write_job(
-                    job, self.sdkmr.user_id, self.sdkmr.get_workspace_auth()
-                )
+                perm = can_write_job(job, self.sdkmr.user_id, self.sdkmr.workspace_auth)
                 self._update_job_permission_cache(
                     job_id, self.sdkmr.user_id, level, perm
                 )
