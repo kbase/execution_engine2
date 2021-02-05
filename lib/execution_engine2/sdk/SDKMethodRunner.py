@@ -8,7 +8,6 @@ The purpose of this class is to
 * Clients are only loaded if they are necessary
 
 """
-import json
 import os
 import time
 from datetime import datetime
