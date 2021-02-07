@@ -18,6 +18,7 @@ from lib.execution_engine2.db.models.models import (
     ErrorCode,
     TerminatedCode,
 )
+from execution_engine2.utils.arg_processing import parse_bool
 from lib.execution_engine2.utils.KafkaUtils import (
     KafkaCancelJob,
     KafkaCondorCommand,
@@ -486,7 +487,7 @@ class JobsStatus:
             {job_id: job_states.get(job_id, []) for job_id in job_ids}
         )
 
-        if return_list is not None and self.sdkmr.parse_bool_from_string(return_list):
+        if return_list is not None and parse_bool(return_list):
             job_states = {"job_states": list(job_states.values())}
 
         return job_states

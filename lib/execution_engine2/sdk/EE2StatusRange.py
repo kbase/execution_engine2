@@ -6,6 +6,7 @@ from typing import Dict
 
 from bson import ObjectId
 
+from execution_engine2.utils.arg_processing import parse_bool
 from lib.execution_engine2.db.models.models import Job
 from lib.execution_engine2.exceptions import AuthError
 
@@ -187,7 +188,7 @@ class JobStatusRange:
         if ascending is None:
             return "+"
         else:
-            if self.sdkmr.parse_bool_from_string(ascending):
+            if parse_bool(ascending):
                 return "+"
             else:
                 return "-"

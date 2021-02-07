@@ -8,7 +8,6 @@ The purpose of this class is to
 * Clients are only loaded if they are necessary
 
 """
-import json
 import os
 import time
 from datetime import datetime
@@ -34,6 +33,7 @@ from lib.execution_engine2.utils.EE2Logger import get_logger
 from lib.execution_engine2.utils.KafkaUtils import KafkaClient
 from lib.execution_engine2.utils.SlackUtils import SlackClient
 from execution_engine2.utils.clients import UserClientSet
+from execution_engine2.utils.arg_processing import parse_bool
 
 
 class JobPermissions(Enum):
@@ -77,7 +77,7 @@ class SDKMethodRunner:
         self.auth = KBaseAuth(auth_url=config.get("auth-service-url"))
         self.user_id = user_clients.user_id
         self.token = user_clients.token
-        self.debug = SDKMethodRunner.parse_bool_from_string(config.get("debug"))
+        self.debug = parse_bool(config.get("debug"))
         self.logger = get_logger()
 
         self.job_permission_cache = EE2Authentication.EE2Auth.get_cache(
@@ -458,19 +458,6 @@ class SDKMethodRunner:
         )
 
         return job_states
-
-    @staticmethod
-    def parse_bool_from_string(str_or_bool):
-        if isinstance(str_or_bool, bool):
-            return str_or_bool
-
-        if isinstance(str_or_bool, int):
-            return str_or_bool
-
-        if isinstance(json.loads(str_or_bool.lower()), bool):
-            return json.loads(str_or_bool.lower())
-
-        raise Exception("Not a boolean value")
 
     @staticmethod
     def check_and_convert_time(time_input, assign_default_time=False):
