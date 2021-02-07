@@ -8,8 +8,9 @@ from typing import Union
 
 def parse_bool(putative_bool: Union[str, bool, int, float, None]) -> bool:
     """
-    Parse a string, bool, or int to a boolean value.
+    Parse a string, bool, int, or float to a boolean value.
     Strings containing 'true' or 'false', regardless of capitalization, are considered booleans.
+    Strings containing ints or floats are parsed to floats before processing.
 
     Raises ValueError if the value cannot be parsed.
     """
