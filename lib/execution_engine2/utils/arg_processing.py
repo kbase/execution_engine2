@@ -6,7 +6,7 @@ normalizers.
 from typing import Union
 
 
-def parse_bool(putative_bool: Union[str, bool, int, None]) -> bool:
+def parse_bool(putative_bool: Union[str, bool, int, float, None]) -> bool:
     """
     Parse a string, bool, or int to a boolean value.
     Strings containing 'true' or 'false', regardless of capitalization, are considered booleans.
