@@ -13,19 +13,23 @@ def parse_bool(putative_bool: Union[str, bool, int, None]) -> bool:
 
     Raises ValueError if the value cannot be parsed.
     """
-    if putative_bool is None:
+    pb = putative_bool
+    if pb is None:
         return False
 
-    if isinstance(putative_bool, bool):
-        return putative_bool
+    if isinstance(pb, bool) or isinstance(pb, int) or isinstance(pb, float):
+        return bool(pb)
 
-    if isinstance(putative_bool, int):
-        return bool(putative_bool)
-
-    if isinstance(putative_bool, str):
-        if putative_bool.lower() == "true":
+    if isinstance(pb, str):
+        try:
+            return bool(float(pb))
+        except ValueError:
+            pass  # check for 'true' and 'false' strings next
+        # they're more likely and if we really wanted to optimize they should go first.
+        # probably doesn't matter at all and it makes the code a bit simpler
+        if pb.lower() == "true":
             return True
-        if putative_bool.lower() == "false":
+        if pb.lower() == "false":
             return False
 
-    raise ValueError(f"{putative_bool} is not a boolean value")
+    raise ValueError(f"{pb} is not a boolean value")
