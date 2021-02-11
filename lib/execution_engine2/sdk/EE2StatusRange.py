@@ -1,6 +1,6 @@
 from collections import Counter
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict
 
@@ -167,14 +167,16 @@ class JobStatusRange:
             )
 
         creation_start_time = self.sdkmr.check_and_convert_time(creation_start_time)
-        creation_start_date = datetime.fromtimestamp(creation_start_time)
+        creation_start_date = datetime.fromtimestamp(
+            creation_start_time, tz=timezone.utc
+        )
         dummy_start_id = ObjectId.from_datetime(creation_start_date)
 
         if creation_end_time is None:
             raise Exception("Please provide a valid end time for when job was created")
 
         creation_end_time = self.sdkmr.check_and_convert_time(creation_end_time)
-        creation_end_date = datetime.fromtimestamp(creation_end_time)
+        creation_end_date = datetime.fromtimestamp(creation_end_time, tz=timezone.utc)
         dummy_end_id = ObjectId.from_datetime(creation_end_date)
 
         if creation_start_time > creation_end_time:

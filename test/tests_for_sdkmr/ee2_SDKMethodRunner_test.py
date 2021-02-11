@@ -6,7 +6,7 @@ import os
 import time
 import unittest
 from configparser import ConfigParser
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pprint import pprint
 from unittest.mock import patch
 from pytest import raises
@@ -864,7 +864,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         with self.mongo_util.mongo_engine_connection():
             job2 = self.create_job_from_job(job1, new_id)
             job2.save()
-            print("Saved job with id", job2.id, job2.id.generation_time)
+            print(
+                "Saved job with id",
+                job2.id,
+                job2.id.generation_time,
+                job2.id.generation_time.timestamp(),
+            )
             job1.delete()
 
     # flake8: noqa: C901
@@ -912,7 +917,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         new_job_ids = []
 
-        now = datetime.utcnow()
+        now = datetime.now(tz=timezone.utc)
         last_month = now - timedelta(days=30)
         last_month_and_1_hour = now - timedelta(days=30) - timedelta(hours=1)
 
@@ -920,6 +925,17 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         yesterday = now - timedelta(days=1)
         tomorrow = now + timedelta(days=1)
         day_after = now + timedelta(days=2)
+
+        print(
+            f"Last month - 1 hour: {last_month_and_1_hour} "
+            + f"ts: {last_month_and_1_hour.timestamp()}"
+        )
+        print(f"Last month:          {last_month} ts: {last_month.timestamp()}")
+        print(f"Last Week:           {last_week} ts: {last_week.timestamp()}")
+        print(f"Yesterday:           {yesterday} ts: {yesterday.timestamp()}")
+        print(f"Now:                 {now} ts: {now.timestamp()}")
+        print(f"Tomorrow:            {tomorrow} ts: {tomorrow.timestamp()}")
+        print(f"Day after:           {day_after} ts: {day_after.timestamp()}")
 
         with self.mongo_util.mongo_engine_connection():
             # Last Month
@@ -1028,10 +1044,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 if job_id in new_job_ids:
                     count += 1
                     self.assertIn(js["status"], ["created", "queued"])
-                    date = SDKMethodRunner.check_and_convert_time(js["created"])
-                    ts = date
-                    print(date, last_week, tomorrow)
-                    print(ts, last_week.timestamp(), tomorrow.timestamp())
+                    ts = SDKMethodRunner.check_and_convert_time(js["created"])
+                    print(f"Timestamp: {ts}")
                     self.assertTrue(ts > last_month_and_1_hour.timestamp())
                     self.assertTrue(ts < tomorrow.timestamp())
             self.assertEqual(4, count)
@@ -1079,10 +1093,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 if job_id in new_job_ids:
                     count += 1
                     self.assertIn(js["status"], ["created", "queued"])
-                    date = SDKMethodRunner.check_and_convert_time(js["created"])
-                    ts = date
-                    print(date, last_week, tomorrow)
-                    print(ts, last_week.timestamp(), tomorrow.timestamp())
+                    ts = SDKMethodRunner.check_and_convert_time(js["created"])
+                    print(f"Timestamp: {ts}")
                     self.assertTrue(ts > last_month_and_1_hour.timestamp())
                     self.assertTrue(ts < tomorrow.timestamp())
 
