@@ -167,7 +167,9 @@ class JobStatusRange:
             )
 
         creation_start_time = self.sdkmr.check_and_convert_time(creation_start_time)
-        creation_start_date = datetime.fromtimestamp(creation_start_time, tz=timezone.utc)
+        creation_start_date = datetime.fromtimestamp(
+            creation_start_time, tz=timezone.utc
+        )
         dummy_start_id = ObjectId.from_datetime(creation_start_date)
 
         if creation_end_time is None:
