@@ -27,17 +27,18 @@ TEMP_DIR = Path("test_temp_can_delete")
 JARS_DIR = Path("/opt/jars/lib/jars")
 
 
-@fixture(scope='module')
+@fixture(scope="module")
 def config():
     yield get_test_config()
 
 
-@fixture(scope='module')
+@fixture(scope="module")
 def mongo_client(config):
     mc = pymongo.MongoClient(
-        config['mongo-host'],
-        username=config['mongo-user'],
-        password=config['mongo-password'])
+        config["mongo-host"],
+        username=config["mongo-user"],
+        password=config["mongo-password"],
+    )
     yield mc
 
     mc.close()
@@ -52,36 +53,38 @@ def _clean_auth_db(mongo_client):
     mongo_client.drop_database(AUTH_DB)
 
 
-@fixture(scope='module')
+@fixture(scope="module")
 def auth_url(config, mongo_client):
     # clean up from any previously failed test runs that left the db in place
     _clean_auth_db(mongo_client)
 
     # make a user for the auth db
     mongo_client[AUTH_DB].command(
-        "createUser",
-        AUTH_MONGO_USER,
-        pwd="authpwd",
-        roles=["readWrite"])
+        "createUser", AUTH_MONGO_USER, pwd="authpwd", roles=["readWrite"]
+    )
     auth = AuthController(
         JARS_DIR,
         config["mongo-host"],
         AUTH_DB,
         TEMP_DIR,
         mongo_user=AUTH_MONGO_USER,
-        mongo_pwd="authpwd")
-    print(f'Started KBase Auth2 {auth.version} on port {auth.port} '
-          + f'in dir {auth.temp_dir} in {auth.startup_count}s')
-    url = f'http://localhost:{auth.port}'
+        mongo_pwd="authpwd",
+    )
+    print(
+        f"Started KBase Auth2 {auth.version} on port {auth.port} "
+        + f"in dir {auth.temp_dir} in {auth.startup_count}s"
+    )
+    url = f"http://localhost:{auth.port}"
 
     yield url
 
-    print(f'shutting down auth, KEEP_TEMP_FILES={KEEP_TEMP_FILES}')
+    print(f"shutting down auth, KEEP_TEMP_FILES={KEEP_TEMP_FILES}")
     auth.destroy(not KEEP_TEMP_FILES)
 
     # Because the tests are run with mongo in a persistent docker container via docker-compose,
     # we need to clean up after ourselves.
     _clean_auth_db(mongo_client)
+
 
 # TODO start the ee2 service
 # TODO wipe the ee2 database between every test
@@ -89,5 +92,6 @@ def auth_url(config, mongo_client):
 
 def test_is_admin(auth_url):
     import requests
+
     print(requests.get(auth_url).text)
     # TODO add a test
