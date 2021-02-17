@@ -16,3 +16,4 @@ sdk.cfg
 lib/execution_engine2/execution_engine2Impl.py.bak*
 
 coverage.xml
+test_temp_can_delete
