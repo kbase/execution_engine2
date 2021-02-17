@@ -10,8 +10,6 @@ If the latter, the test auth integration will likely need to be converted to a d
 exposed to other containers.
 """
 
-import shutil
-import tempfile
 from pathlib import Path
 import pymongo
 from pytest import fixture
