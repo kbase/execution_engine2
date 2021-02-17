@@ -25,6 +25,7 @@ from utils_shared.test_utils import (
     get_full_test_config,
     get_ee2_test_config,
     EE2_CONFIG_SECTION,
+    KB_DEPLOY_ENV,
     find_free_port,
 )
 from execution_engine2 import execution_engine2Server
@@ -134,7 +135,7 @@ def service(full_config, auth_url, mongo_client, config):
     _clear_ee2_db(mongo_client, config)
 
     # from this point on, calling the get_*_test_config methods will get the temp config file
-    os.environ['KB_DEPLOYMENT_CONFIG'] = cfgpath
+    os.environ[KB_DEPLOY_ENV] = cfgpath
     portint = find_free_port()
     Thread(
         target=execution_engine2Server.start_server,
