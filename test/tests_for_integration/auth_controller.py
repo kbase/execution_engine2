@@ -21,6 +21,7 @@ from utils_shared import test_utils
 
 _AUTH_CLASS = "us.kbase.test.auth2.StandaloneAuthServer"
 _JARS_FILE = Path(__file__).resolve().parent.joinpath("authjars")
+_RETRY_COUNT = 40
 
 
 class AuthController:
@@ -106,7 +107,7 @@ class AuthController:
             command, stdout=self._outfile, stderr=subprocess.STDOUT
         )
 
-        for count in range(40):
+        for count in range(_RETRY_COUNT):
             err = None
             time.sleep(1)  # wait for server to start
             try:
