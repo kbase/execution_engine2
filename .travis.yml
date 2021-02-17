@@ -19,6 +19,9 @@ before_install:
 
 
 install:
+  - cd /opt
+  - git clone https://github.com/kbase/jars
+  - cd -
   - pip install -r requirements.txt
   - pip install black flake8
   - flake8 ./lib ./test
