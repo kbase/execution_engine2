@@ -11,6 +11,8 @@ exclude = '''
   | __pycache__
   | lib/__pycache__
   | lib/execution_engine2/execution_engine2Impl.py
+  | lib/execution_engine2/authclient.py
+  | lib/biokbase/*
   | lib/installed_clients/*
 )
 '''

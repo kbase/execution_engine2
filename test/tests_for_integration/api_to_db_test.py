@@ -107,24 +107,24 @@ def auth_url(config, mongo_client):
 # side effect: modifies the config
 def _create_config_file(full_config, auth_url):
     ee2c = full_config[EE2_CONFIG_SECTION]
-    ee2c['auth-service-url'] = auth_url + "/api/legacy/KBase/Sessions/Login"
-    ee2c['auth-service-url-v2'] = auth_url + "/api/v2/token"
-    ee2c['auth-url'] = auth_url
-    ee2c['auth-service-url-allow-insecure'] = 'true'
+    ee2c["auth-service-url"] = auth_url + "/api/legacy/KBase/Sessions/Login"
+    ee2c["auth-service-url-v2"] = auth_url + "/api/v2/token"
+    ee2c["auth-url"] = auth_url
+    ee2c["auth-service-url-allow-insecure"] = "true"
 
-    deploy = tempfile.mkstemp('.cfg', 'deploy-', dir=TEMP_DIR, text=True)
+    deploy = tempfile.mkstemp(".cfg", "deploy-", dir=TEMP_DIR, text=True)
     os.close(deploy[0])
 
-    with open(deploy[1], 'w') as handle:
+    with open(deploy[1], "w") as handle:
         full_config.write(handle)
 
     return deploy[1]
 
 
 def _clear_ee2_db(mc: pymongo.MongoClient, config: Dict[str, str]):
-    ee2 = mc[config['mongo-database']]
+    ee2 = mc[config["mongo-database"]]
     for name in ee2.list_collection_names():
-        if not name.startswith('system.'):
+        if not name.startswith("system."):
             # don't drop collection since that drops indexes
             ee2.get_collection(name).delete_many({})
 
@@ -139,12 +139,12 @@ def service(full_config, auth_url, mongo_client, config):
     portint = find_free_port()
     Thread(
         target=execution_engine2Server.start_server,
-        kwargs={'port': portint},
-        daemon=True
+        kwargs={"port": portint},
+        daemon=True,
     ).start()
     time.sleep(0.05)
     port = str(portint)
-    print('running ee2 service at localhost:' + port)
+    print("running ee2 service at localhost:" + port)
     yield port
 
     # shutdown the server
@@ -163,6 +163,6 @@ def ee2_port(service, mongo_client, config):
 
 
 def test_is_admin(ee2_port):
-    ee2cli = ee2client('http://localhost:' + ee2_port)
+    ee2cli = ee2client("http://localhost:" + ee2_port)
     print(ee2cli.status())
     # TODO add a test

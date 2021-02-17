@@ -459,7 +459,8 @@ def get_full_test_config() -> ConfigParser:
     config_parser.read(config_file)
     if config_parser[EE2_CONFIG_SECTION].get("mongo-in-docker-compose"):
         config_parser[EE2_CONFIG_SECTION]["mongo-host"] = config_parser[
-            EE2_CONFIG_SECTION]["mongo-in-docker-compose"]
+            EE2_CONFIG_SECTION
+        ]["mongo-in-docker-compose"]
     return config_parser
 
 
