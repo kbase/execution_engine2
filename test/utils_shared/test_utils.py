@@ -1,7 +1,10 @@
 import json
 import os.path
 import uuid
+import logging
+import socket
 from configparser import ConfigParser
+from contextlib import closing
 from datetime import datetime
 from typing import List, Dict
 
@@ -384,3 +387,72 @@ def get_sample_job_params(method=None, wsid="123"):
 def assert_exception_correct(got: Exception, expected: Exception):
     assert got.args == expected.args
     assert type(got) == type(expected)
+
+
+def find_free_port() -> int:
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(("", 0))
+        return s.getsockname()[1]
+
+
+class TestException(Exception):
+    __test__ = False
+
+
+def create_auth_user(auth_url, username, displayname):
+    ret = requests.post(
+        auth_url + "/testmode/api/V2/testmodeonly/user",
+        headers={"accept": "application/json"},
+        json={"user": username, "display": displayname},
+    )
+    if not ret.ok:
+        ret.raise_for_status()
+
+
+def create_auth_login_token(auth_url, username):
+    ret = requests.post(
+        auth_url + "/testmode/api/V2/testmodeonly/token",
+        headers={"accept": "application/json"},
+        json={"user": username, "type": "Login"},
+    )
+    if not ret.ok:
+        ret.raise_for_status()
+    return ret.json()["token"]
+
+
+def create_auth_role(auth_url, role, description):
+    ret = requests.post(
+        auth_url + "/testmode/api/V2/testmodeonly/customroles",
+        headers={"accept": "application/json"},
+        json={"id": role, "desc": description},
+    )
+    if not ret.ok:
+        ret.raise_for_status()
+
+
+def set_custom_roles(auth_url, user, roles):
+    ret = requests.put(
+        auth_url + "/testmode/api/V2/testmodeonly/userroles",
+        headers={"accept": "application/json"},
+        json={"user": user, "customroles": roles},
+    )
+    if not ret.ok:
+        ret.raise_for_status()
+
+
+def get_test_config():
+    config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
+    logging.info(f"Loading config from {config_file}")
+
+    config_parser = ConfigParser()
+    config_parser.read(config_file)
+
+    cfg = {}
+
+    for nameval in config_parser.items("execution_engine2"):
+        cfg[nameval[0]] = nameval[1]
+
+    mongo_in_docker = cfg.get("mongo-in-docker-compose", None)
+    if mongo_in_docker is not None:
+        cfg["mongo-host"] = cfg["mongo-in-docker-compose"]
+    return cfg
