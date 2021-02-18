@@ -1650,7 +1650,7 @@ class execution_engine2:
         #BEGIN is_admin
         mr = SDKMethodRunner(
             self.config,
-            user_clients=self.get_cfg.get_user_clients(ctx),
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             mongo_util=self.mongo_util
         )
         returnVal = mr.check_is_admin()
@@ -1676,7 +1676,7 @@ class execution_engine2:
         #BEGIN get_admin_permission
         mr = SDKMethodRunner(
             self.config,
-            user_clients=self.get_cfg.get_user_clients(ctx),
+            user_clients=self.gen_cfg.get_user_clients(ctx),
             mongo_util=self.mongo_util
         )
         returnVal = mr.get_admin_permission()
