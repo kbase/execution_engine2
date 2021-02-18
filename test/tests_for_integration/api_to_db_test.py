@@ -104,8 +104,16 @@ def auth_url(config, mongo_client):
     _clean_auth_db(mongo_client)
 
 
-# side effect: modifies the config
-def _create_config_file(full_config, auth_url):
+def _update_config_and_create_config_file(full_config, auth_url):
+    """
+    Updates the config in place with the correct auth url for the tests and
+    writes the updated config to a temporary file.
+
+    Returns the file path.
+    """
+    # Don't call get_ee2_test_config here, we *want* to update the config object in place
+    # so any other tests that use the config fixture run against the test auth server if they
+    # access those keys
     ee2c = full_config[EE2_CONFIG_SECTION]
     ee2c["auth-service-url"] = auth_url + "/api/legacy/KBase/Sessions/Login"
     ee2c["auth-service-url-v2"] = auth_url + "/api/v2/token"
@@ -131,7 +139,9 @@ def _clear_ee2_db(mc: pymongo.MongoClient, config: Dict[str, str]):
 
 @fixture(scope="module")
 def service(full_config, auth_url, mongo_client, config):
-    cfgpath = _create_config_file(full_config, auth_url)
+    # also updates the config in place so it contains the correct auth urls for any other
+    # methods that use the config fixture
+    cfgpath = _update_config_and_create_config_file(full_config, auth_url)
     _clear_ee2_db(mongo_client, config)
 
     # from this point on, calling the get_*_test_config methods will get the temp config file
@@ -148,8 +158,9 @@ def service(full_config, auth_url, mongo_client, config):
     yield port
 
     # shutdown the server
-    # SampleServiceServer.stop_server()  <-- this causes an error. the start & stop methods are
-    # bugged. _proc is only set if newprocess=True
+    # SampleServiceServer.stop_server()  <-- this causes an error.
+    # See the server file for the full scoop, but in short, the stop method expects a _proc
+    # package variable to be set, but start doesn't always set it, and that causes an error.
 
     if not KEEP_TEMP_FILES:
         os.remove(cfgpath)
