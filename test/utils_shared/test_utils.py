@@ -17,6 +17,11 @@ from lib.execution_engine2.exceptions import MalformedTimestampException
 from lib.execution_engine2.utils.CondorTuples import CondorResources, JobInfo
 
 
+EE2_CONFIG_SECTION = "execution_engine2"
+KB_DEPLOY_ENV = "KB_DEPLOYMENT_CONFIG"
+DEFAULT_TEST_DEPLOY_CFG = "test/deploy.cfg"
+
+
 def bootstrap():
     test_env_0 = "../test.env"
     test_env_1 = "test.env"
@@ -440,19 +445,37 @@ def set_custom_roles(auth_url, user, roles):
         ret.raise_for_status()
 
 
-def get_test_config():
-    config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
+def get_full_test_config() -> ConfigParser:
+    f"""
+    Gets the full configuration for ee2, including all sections of the config file.
+
+    If the {KB_DEPLOY_ENV} environment variable is set, loads the configuration from there.
+    Otherwise, the repo's {DEFAULT_TEST_DEPLOY_CFG} file is used.
+    """
+    config_file = os.environ.get(KB_DEPLOY_ENV, DEFAULT_TEST_DEPLOY_CFG)
     logging.info(f"Loading config from {config_file}")
 
     config_parser = ConfigParser()
     config_parser.read(config_file)
+    if config_parser[EE2_CONFIG_SECTION].get("mongo-in-docker-compose"):
+        config_parser[EE2_CONFIG_SECTION]["mongo-host"] = config_parser[
+            EE2_CONFIG_SECTION
+        ]["mongo-in-docker-compose"]
+    return config_parser
+
+
+def get_ee2_test_config() -> Dict[str, str]:
+    f"""
+    Gets the configuration for the ee2 service, e.g. the {EE2_CONFIG_SECTION} section of the
+    deploy.cfg file.
+
+    If the {KB_DEPLOY_ENV} environment variable is set, loads the configuration from there.
+    Otherwise, the repo's {DEFAULT_TEST_DEPLOY_CFG} file is used.
+    """
+    cp = get_full_test_config()
 
     cfg = {}
-
-    for nameval in config_parser.items("execution_engine2"):
+    for nameval in cp.items(EE2_CONFIG_SECTION):
         cfg[nameval[0]] = nameval[1]
 
-    mongo_in_docker = cfg.get("mongo-in-docker-compose", None)
-    if mongo_in_docker is not None:
-        cfg["mongo-host"] = cfg["mongo-in-docker-compose"]
     return cfg

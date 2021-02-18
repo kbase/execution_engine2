@@ -10,11 +10,26 @@ If the latter, the test auth integration will likely need to be converted to a d
 exposed to other containers.
 """
 
+import os
+import tempfile
+import time
+
+from configparser import ConfigParser
+from threading import Thread
 from pathlib import Path
 import pymongo
 from pytest import fixture
+from typing import Dict
 from tests_for_integration.auth_controller import AuthController
-from utils_shared.test_utils import get_test_config
+from utils_shared.test_utils import (
+    get_full_test_config,
+    get_ee2_test_config,
+    EE2_CONFIG_SECTION,
+    KB_DEPLOY_ENV,
+    find_free_port,
+)
+from execution_engine2 import execution_engine2Server
+from installed_clients.execution_engine2Client import execution_engine2 as ee2client
 
 KEEP_TEMP_FILES = True
 AUTH_DB = "api_to_db_test"
@@ -26,8 +41,13 @@ JARS_DIR = Path("/opt/jars/lib/jars")
 
 
 @fixture(scope="module")
-def config():
-    yield get_test_config()
+def config() -> Dict[str, str]:
+    yield get_ee2_test_config()
+
+
+@fixture(scope="module")
+def full_config() -> ConfigParser:
+    yield get_full_test_config()
 
 
 @fixture(scope="module")
@@ -84,12 +104,76 @@ def auth_url(config, mongo_client):
     _clean_auth_db(mongo_client)
 
 
-# TODO start the ee2 service
-# TODO wipe the ee2 database between every test
+def _update_config_and_create_config_file(full_config, auth_url):
+    """
+    Updates the config in place with the correct auth url for the tests and
+    writes the updated config to a temporary file.
+
+    Returns the file path.
+    """
+    # Don't call get_ee2_test_config here, we *want* to update the config object in place
+    # so any other tests that use the config fixture run against the test auth server if they
+    # access those keys
+    ee2c = full_config[EE2_CONFIG_SECTION]
+    ee2c["auth-service-url"] = auth_url + "/api/legacy/KBase/Sessions/Login"
+    ee2c["auth-service-url-v2"] = auth_url + "/api/v2/token"
+    ee2c["auth-url"] = auth_url
+    ee2c["auth-service-url-allow-insecure"] = "true"
+
+    deploy = tempfile.mkstemp(".cfg", "deploy-", dir=TEMP_DIR, text=True)
+    os.close(deploy[0])
+
+    with open(deploy[1], "w") as handle:
+        full_config.write(handle)
+
+    return deploy[1]
 
 
-def test_is_admin(auth_url):
-    import requests
+def _clear_ee2_db(mc: pymongo.MongoClient, config: Dict[str, str]):
+    ee2 = mc[config["mongo-database"]]
+    for name in ee2.list_collection_names():
+        if not name.startswith("system."):
+            # don't drop collection since that drops indexes
+            ee2.get_collection(name).delete_many({})
 
-    print(requests.get(auth_url).text)
+
+@fixture(scope="module")
+def service(full_config, auth_url, mongo_client, config):
+    # also updates the config in place so it contains the correct auth urls for any other
+    # methods that use the config fixture
+    cfgpath = _update_config_and_create_config_file(full_config, auth_url)
+    _clear_ee2_db(mongo_client, config)
+
+    # from this point on, calling the get_*_test_config methods will get the temp config file
+    os.environ[KB_DEPLOY_ENV] = cfgpath
+    portint = find_free_port()
+    Thread(
+        target=execution_engine2Server.start_server,
+        kwargs={"port": portint},
+        daemon=True,
+    ).start()
+    time.sleep(0.05)
+    port = str(portint)
+    print("running ee2 service at localhost:" + port)
+    yield port
+
+    # shutdown the server
+    # SampleServiceServer.stop_server()  <-- this causes an error.
+    # See the server file for the full scoop, but in short, the stop method expects a _proc
+    # package variable to be set, but start doesn't always set it, and that causes an error.
+
+    if not KEEP_TEMP_FILES:
+        os.remove(cfgpath)
+
+
+@fixture
+def ee2_port(service, mongo_client, config):
+    _clear_ee2_db(mongo_client, config)
+
+    yield service
+
+
+def test_is_admin(ee2_port):
+    ee2cli = ee2client("http://localhost:" + ee2_port)
+    print(ee2cli.status())
     # TODO add a test
