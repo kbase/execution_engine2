@@ -27,8 +27,12 @@ from utils_shared.test_utils import (
     EE2_CONFIG_SECTION,
     KB_DEPLOY_ENV,
     find_free_port,
+    create_auth_login_token,
+    create_auth_user,
+    create_auth_role,
+    set_custom_roles,
 )
-from execution_engine2 import execution_engine2Server
+from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
 from installed_clients.execution_engine2Client import execution_engine2 as ee2client
 
 KEEP_TEMP_FILES = True
@@ -38,6 +42,13 @@ TEMP_DIR = Path("test_temp_can_delete")
 
 # may need to make this configurable
 JARS_DIR = Path("/opt/jars/lib/jars")
+
+USER_READ_ADMIN = "readuser"
+TOKEN_READ_ADMIN = None
+USER_NO_ADMIN = "nouser"
+TOKEN_NO_ADMIN = None
+USER_WRITE_ADMIN = "writeuser"
+TOKEN_WRITE_ADMIN = None
 
 
 @fixture(scope="module")
@@ -71,6 +82,25 @@ def _clean_auth_db(mongo_client):
     mongo_client.drop_database(AUTH_DB)
 
 
+def _set_up_auth_users(auth_url):
+    create_auth_role(auth_url, ADMIN_READ_ROLE, "ee2 admin read doohickey")
+    create_auth_role(auth_url, ADMIN_WRITE_ROLE, "ee2 admin write thinger")
+
+    global TOKEN_READ_ADMIN
+    create_auth_user(auth_url, USER_READ_ADMIN, "display1")
+    TOKEN_READ_ADMIN = create_auth_login_token(auth_url, USER_READ_ADMIN)
+    set_custom_roles(auth_url, USER_READ_ADMIN, [ADMIN_READ_ROLE])
+
+    global TOKEN_NO_ADMIN
+    create_auth_user(auth_url, USER_NO_ADMIN, "display2")
+    TOKEN_NO_ADMIN = create_auth_login_token(auth_url, USER_NO_ADMIN)
+
+    global TOKEN_WRITE_ADMIN
+    create_auth_user(auth_url, USER_WRITE_ADMIN, "display3")
+    TOKEN_WRITE_ADMIN = create_auth_login_token(auth_url, USER_WRITE_ADMIN)
+    set_custom_roles(auth_url, USER_WRITE_ADMIN, [ADMIN_WRITE_ROLE])
+
+
 @fixture(scope="module")
 def auth_url(config, mongo_client):
     # clean up from any previously failed test runs that left the db in place
@@ -94,6 +124,8 @@ def auth_url(config, mongo_client):
     )
     url = f"http://localhost:{auth.port}"
 
+    _set_up_auth_users(url)
+
     yield url
 
     print(f"shutting down auth, KEEP_TEMP_FILES={KEEP_TEMP_FILES}")
@@ -115,9 +147,9 @@ def _update_config_and_create_config_file(full_config, auth_url):
     # so any other tests that use the config fixture run against the test auth server if they
     # access those keys
     ee2c = full_config[EE2_CONFIG_SECTION]
-    ee2c["auth-service-url"] = auth_url + "/api/legacy/KBase/Sessions/Login"
-    ee2c["auth-service-url-v2"] = auth_url + "/api/v2/token"
-    ee2c["auth-url"] = auth_url
+    ee2c["auth-service-url"] = auth_url + "/testmode/api/legacy/KBase/Sessions/Login"
+    ee2c["auth-service-url-v2"] = auth_url + "/testmode/api/v2/token"
+    ee2c["auth-url"] = auth_url + "/testmode"
     ee2c["auth-service-url-allow-insecure"] = "true"
 
     deploy = tempfile.mkstemp(".cfg", "deploy-", dir=TEMP_DIR, text=True)
@@ -146,6 +178,11 @@ def service(full_config, auth_url, mongo_client, config):
 
     # from this point on, calling the get_*_test_config methods will get the temp config file
     os.environ[KB_DEPLOY_ENV] = cfgpath
+    # The server creates the configuration, impl, and application *AT IMPORT TIME* so we have to
+    # import *after* setting the config path.
+    # This is terrible design. Awful. It definitely wasn't me that wrote it over Xmas in 2012
+    from execution_engine2 import execution_engine2Server
+
     portint = find_free_port()
     Thread(
         target=execution_engine2Server.start_server,
@@ -173,7 +210,22 @@ def ee2_port(service, mongo_client, config):
     yield service
 
 
-def test_is_admin(ee2_port):
-    ee2cli = ee2client("http://localhost:" + ee2_port)
-    print(ee2cli.status())
-    # TODO add a test
+def test_is_admin_success(ee2_port):
+    ee2cli_read = ee2client("http://localhost:" + ee2_port, token=TOKEN_READ_ADMIN)
+    ee2cli_no = ee2client("http://localhost:" + ee2_port, token=TOKEN_NO_ADMIN)
+    ee2cli_write = ee2client("http://localhost:" + ee2_port, token=TOKEN_WRITE_ADMIN)
+
+    # note that if we ever need to have Java talk to ee2 these responses will break the SDK client
+    assert ee2cli_read.is_admin() is True
+    assert ee2cli_no.is_admin() is False
+    assert ee2cli_write.is_admin() is True
+
+
+def test_get_admin_permission_success(ee2_port):
+    ee2cli_read = ee2client("http://localhost:" + ee2_port, token=TOKEN_READ_ADMIN)
+    ee2cli_no = ee2client("http://localhost:" + ee2_port, token=TOKEN_NO_ADMIN)
+    ee2cli_write = ee2client("http://localhost:" + ee2_port, token=TOKEN_WRITE_ADMIN)
+
+    assert ee2cli_read.get_admin_permission() == {"permission": "r"}
+    assert ee2cli_no.get_admin_permission() == {"permission": "n"}
+    assert ee2cli_write.get_admin_permission() == {"permission": "w"}
