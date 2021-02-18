@@ -226,6 +226,6 @@ def test_get_admin_permission_success(ee2_port):
     ee2cli_no = ee2client("http://localhost:" + ee2_port, token=TOKEN_NO_ADMIN)
     ee2cli_write = ee2client("http://localhost:" + ee2_port, token=TOKEN_WRITE_ADMIN)
 
-    assert ee2cli_read.get_admin_permission() == {'permission': 'r'}
-    assert ee2cli_no.get_admin_permission() == {'permission': 'n'}
-    assert ee2cli_write.get_admin_permission() == {'permission': 'w'}
+    assert ee2cli_read.get_admin_permission() == {"permission": "r"}
+    assert ee2cli_no.get_admin_permission() == {"permission": "n"}
+    assert ee2cli_write.get_admin_permission() == {"permission": "w"}
