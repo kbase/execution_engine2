@@ -160,11 +160,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         # For a discussion of spec_set see
         # https://www.seanh.cc/2017/03/17/the-problem-with-mocks/
         j = create_autospec(Job, spec_set=False, instance=True)
-        j.id = bson.objectid.ObjectId('603051cfaf2e3401b0500982')
-        assert sdkmr.save_job(j) == '603051cfaf2e3401b0500982'
+        j.id = bson.objectid.ObjectId("603051cfaf2e3401b0500982")
+        assert sdkmr.save_job(j) == "603051cfaf2e3401b0500982"
 
         j.save.assert_called_once_with()
-
 
     # Status
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)

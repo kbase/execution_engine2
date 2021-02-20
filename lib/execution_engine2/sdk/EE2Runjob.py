@@ -117,8 +117,10 @@ class EE2RunJob:
 
         self.logger.debug(f"Getting commit for {module_name} {service_ver}")
 
-        module_version = self.sdkmr.get_catalog_utils().get_catalog().get_module_version(
-            {"module_name": module_name, "version": service_ver}
+        module_version = (
+            self.sdkmr.get_catalog_utils()
+            .get_catalog()
+            .get_module_version({"module_name": module_name, "version": service_ver})
         )
 
         git_commit_hash = module_version.get("git_commit_hash")
@@ -193,7 +195,9 @@ class EE2RunJob:
         self._check_ws_objects(source_objects=params.get("source_ws_objects"))
         method = params.get("method")
         # Normalize multiple formats into one format (csv vs json)
-        normalized_resources = self.sdkmr.get_catalog_utils().get_normalized_resources(method)
+        normalized_resources = self.sdkmr.get_catalog_utils().get_normalized_resources(
+            method
+        )
         # These are for saving into job inputs. Maybe its best to pass this into condor as well?
         extracted_resources = self.sdkmr.get_condor().extract_resources(
             cgrr=normalized_resources

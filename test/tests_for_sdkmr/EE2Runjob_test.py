@@ -16,7 +16,11 @@ from execution_engine2.utils.Condor import (
     CondorResources,
     SubmissionInfo,
 )
-from execution_engine2.utils.KafkaUtils import KafkaClient, KafkaQueueChange, KafkaCreateJob
+from execution_engine2.utils.KafkaUtils import (
+    KafkaClient,
+    KafkaQueueChange,
+    KafkaCreateJob,
+)
 from execution_engine2.utils.SlackUtils import SlackClient
 from lib.execution_engine2.db.MongoUtil import MongoUtil
 from installed_clients.WorkspaceClient import Workspace
@@ -54,18 +58,21 @@ def test_run_as_admin():
     sdkmr.get_kafka_client.return_value = kafka
     sdkmr.get_slack_client.return_value = slack
     sdkmr.get_mongo_util.return_value = mongo
-    sdkmr.get_user_id.return_value = 'someuser'
-    sdkmr.get_token.return_value = 'tokentokentoken'
+    sdkmr.get_user_id.return_value = "someuser"
+    sdkmr.get_token.return_value = "tokentokentoken"
     sdkmr.check_as_admin.return_value = True
-    sdkmr.save_job.return_value = '603051cfaf2e3401b0500982'
-    ws.get_object_info3.return_value = {'paths': [['1/2/3'], ['4/5/6']]}
+    sdkmr.save_job.return_value = "603051cfaf2e3401b0500982"
+    ws.get_object_info3.return_value = {"paths": [["1/2/3"], ["4/5/6"]]}
     catalog_resources = {
-        'client_group': 'grotesquememlong',
-        'request_cpus': '4',
-        "request_memory": "32"}
+        "client_group": "grotesquememlong",
+        "request_cpus": "4",
+        "request_memory": "32",
+    }
     catutils.get_normalized_resources.return_value = catalog_resources
-    condor.extract_resources.return_value = CondorResources("4", "2600", "32", "grotesquememlong")
-    catalog.get_module_version.return_value = {'git_commit_hash': 'git5678'}
+    condor.extract_resources.return_value = CondorResources(
+        "4", "2600", "32", "grotesquememlong"
+    )
+    catalog.get_module_version.return_value = {"git_commit_hash": "git5678"}
     condor.run_job.return_value = SubmissionInfo("cluster42", {}, None)
     retjob = Job()
     retjob.id = ObjectId("603051cfaf2e3401b0500982")
@@ -75,26 +82,26 @@ def test_run_as_admin():
     # set up the class to be tested and run the method
     rj = EE2RunJob(sdkmr)
     params = {
-        'method': 'lolcats.lol_unto_death',
-        'source_ws_objects': ['1/2/3', '4/5/6'],
+        "method": "lolcats.lol_unto_death",
+        "source_ws_objects": ["1/2/3", "4/5/6"],
     }
     assert rj.run(params, as_admin=True) == "603051cfaf2e3401b0500982"
 
     # check mocks called as expected
     sdkmr.check_as_admin.assert_called_once_with(JobPermissions.WRITE)
-    ws.get_object_info3.assert_called_once_with({
-        'objects': [{'ref': '1/2/3'}, {'ref': '4/5/6'}],
-        'ignoreErrors': 1
-    })
-    catutils.get_normalized_resources.assert_called_once_with('lolcats.lol_unto_death')
+    ws.get_object_info3.assert_called_once_with(
+        {"objects": [{"ref": "1/2/3"}, {"ref": "4/5/6"}], "ignoreErrors": 1}
+    )
+    catutils.get_normalized_resources.assert_called_once_with("lolcats.lol_unto_death")
     condor.extract_resources.assert_called_once_with(catalog_resources)
     catalog.get_module_version.assert_called_once_with(
-        {'module_name': 'lolcats', 'version': 'release'})
+        {"module_name": "lolcats", "version": "release"}
+    )
 
     # initial job data save
     expected_job = Job()
-    expected_job.user = 'someuser'
-    expected_job.status = 'created'
+    expected_job.user = "someuser"
+    expected_job.status = "created"
     ji = JobInput()
     ji.method = "lolcats.lol_unto_death"
     ji.service_ver = "git5678"
@@ -112,32 +119,37 @@ def test_run_as_admin():
     got_job = sdkmr.save_job.call_args_list[0][0][0]
     assert_jobs_equal(got_job, expected_job)
 
-    kafka.send_kafka_message.assert_any_call(KafkaCreateJob(
-        'someuser', '603051cfaf2e3401b0500982'))
+    kafka.send_kafka_message.assert_any_call(
+        KafkaCreateJob("someuser", "603051cfaf2e3401b0500982")
+    )
     condor.run_job.assert_called_once_with(
-        params={'method': 'lolcats.lol_unto_death',
-                'source_ws_objects': ['1/2/3', '4/5/6'],
-                'service_ver': 'git5678',
-                'job_id': '603051cfaf2e3401b0500982',
-                'user_id': 'someuser',
-                'token': 'tokentokentoken',
-                'cg_resources_requirements': {
-                    'client_group': 'grotesquememlong',
-                    'request_cpus': '4',
-                    'request_memory': '32'}
-                },
-        concierge_params=None
+        params={
+            "method": "lolcats.lol_unto_death",
+            "source_ws_objects": ["1/2/3", "4/5/6"],
+            "service_ver": "git5678",
+            "job_id": "603051cfaf2e3401b0500982",
+            "user_id": "someuser",
+            "token": "tokentokentoken",
+            "cg_resources_requirements": {
+                "client_group": "grotesquememlong",
+                "request_cpus": "4",
+                "request_memory": "32",
+            },
+        },
+        concierge_params=None,
     )
 
     # updated job data save
     mongo.get_job.assert_called_once_with("603051cfaf2e3401b0500982")
 
-    # update to queued stat
+    # update to queued state
     got_job = sdkmr.save_job.call_args_list[1][0][0]
     expected_job = Job()
     expected_job.id = ObjectId("603051cfaf2e3401b0500982")
     expected_job.status = "queued"
-    expected_job.queued = got_job.queued  # no way to test this really without code refactoring
+    # no way to test this really without code refactoring
+    expected_job.queued = got_job.queued
+
     expected_job.scheduler_type = "condor"
     expected_job.scheduler_id = "cluster42"
     assert_jobs_equal(got_job, expected_job)
@@ -151,7 +163,8 @@ def test_run_as_admin():
         )
     )
     slack.run_job_message.assert_called_once_with(
-        "603051cfaf2e3401b0500982", "cluster42", "someuser")
+        "603051cfaf2e3401b0500982", "cluster42", "someuser"
+    )
 
 
 def assert_jobs_equal(got_job: Job, expected_job: Job):
@@ -163,8 +176,8 @@ def assert_jobs_equal(got_job: Job, expected_job: Job):
     # JobRequirements1 == JobRequirements2 to work when their fields were identical, so we
     # do this disgusting hack instead. Note it will need to be updated any time a job field is
     # added.
-    if not hasattr(got_job, 'id'):
-        assert not hasattr(expected_job, 'id')
+    if not hasattr(got_job, "id"):
+        assert not hasattr(expected_job, "id")
     else:
         assert got_job.id == expected_job.id
     assert got_job.user == expected_job.user
@@ -194,34 +207,56 @@ def assert_jobs_equal(got_job: Job, expected_job: Job):
     else:
         assert got_job.job_input.wsid == expected_job.job_input.wsid
         assert got_job.job_input.method == expected_job.job_input.method
-        assert got_job.job_input.requested_release == expected_job.job_input.requested_release
+        assert (
+            got_job.job_input.requested_release
+            == expected_job.job_input.requested_release
+        )
         assert got_job.job_input.params == expected_job.job_input.params
         assert got_job.job_input.service_ver == expected_job.job_input.service_ver
         assert got_job.job_input.app_id == expected_job.job_input.app_id
-        assert got_job.job_input.source_ws_objects == expected_job.job_input.source_ws_objects
+        assert (
+            got_job.job_input.source_ws_objects
+            == expected_job.job_input.source_ws_objects
+        )
         assert got_job.job_input.parent_job_id == expected_job.job_input.parent_job_id
 
         assert got_job.job_input.requirements.clientgroup == (
-            expected_job.job_input.requirements.clientgroup)
-        assert got_job.job_input.requirements.cpu == expected_job.job_input.requirements.cpu
-        assert got_job.job_input.requirements.memory == expected_job.job_input.requirements.memory
-        assert got_job.job_input.requirements.disk == expected_job.job_input.requirements.disk
+            expected_job.job_input.requirements.clientgroup
+        )
+        assert (
+            got_job.job_input.requirements.cpu
+            == expected_job.job_input.requirements.cpu
+        )
+        assert (
+            got_job.job_input.requirements.memory
+            == expected_job.job_input.requirements.memory
+        )
+        assert (
+            got_job.job_input.requirements.disk
+            == expected_job.job_input.requirements.disk
+        )
         assert got_job.job_input.requirements.estimate == (
-            expected_job.job_input.requirements.estimate)
+            expected_job.job_input.requirements.estimate
+        )
 
         # this fails, which should be impossible given all the fields above pass
         # assert got_job.job_input.requirements == expected_job.job_input.requirements
 
         assert got_job.job_input.narrative_cell_info.run_id == (
-            expected_job.job_input.narrative_cell_info.run_id)
+            expected_job.job_input.narrative_cell_info.run_id
+        )
         assert got_job.job_input.narrative_cell_info.token_id == (
-            expected_job.job_input.narrative_cell_info.token_id)
+            expected_job.job_input.narrative_cell_info.token_id
+        )
         assert got_job.job_input.narrative_cell_info.tag == (
-            expected_job.job_input.narrative_cell_info.tag)
+            expected_job.job_input.narrative_cell_info.tag
+        )
         assert got_job.job_input.narrative_cell_info.cell_id == (
-            expected_job.job_input.narrative_cell_info.cell_id)
+            expected_job.job_input.narrative_cell_info.cell_id
+        )
         assert got_job.job_input.narrative_cell_info.status == (
-            expected_job.job_input.narrative_cell_info.status)
+            expected_job.job_input.narrative_cell_info.status
+        )
 
         # again, this fails, even though the fields are all ==
         # assert got_job.job_input.narrative_cell_info == (
