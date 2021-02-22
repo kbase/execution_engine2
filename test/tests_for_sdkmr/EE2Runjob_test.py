@@ -64,7 +64,7 @@ def test_run_as_admin():
 
     job_id = "603051cfaf2e3401b0500982"
 
-    # Set up call returns. These calls are in the order the occur in the code
+    # Set up call returns. These calls are in the order they occur in the code
     sdkmr.check_as_admin.return_value = True
     sdkmr.save_job.return_value = job_id
     ws.get_object_info3.return_value = {"paths": [["1/2/3"], ["4/5/6"]]}
