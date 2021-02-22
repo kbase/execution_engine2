@@ -42,26 +42,31 @@ def test_run_as_admin():
     # We intentionally do not check the logger methods as there are a lot of them and this is
     # already a very large test. This may be something to be added later when needed.
     sdkmr = create_autospec(SDKMethodRunner, spec_set=True, instance=True)
-    logger = create_autospec(Logger, spec_set=True, instance=True)
-    ws = create_autospec(Workspace, spec_set=True, instance=True)
-    catutils = create_autospec(CatalogUtils, spec_set=True, instance=True)
     catalog = create_autospec(Catalog, spec_set=True, instance=True)
+    catutils = create_autospec(CatalogUtils, spec_set=True, instance=True)
     condor = create_autospec(Condor, spec_set=True, instance=True)
     kafka = create_autospec(KafkaClient, spec_set=True, instance=True)
+    logger = create_autospec(Logger, spec_set=True, instance=True)
     mongo = create_autospec(MongoUtil, spec_set=True, instance=True)
     slack = create_autospec(SlackClient, spec_set=True, instance=True)
-    sdkmr.get_logger.return_value = logger
-    sdkmr.get_workspace.return_value = ws
-    sdkmr.get_catalog_utils.return_value = catutils
+    ws = create_autospec(Workspace, spec_set=True, instance=True)
+    # Set up basic getter calls
     catutils.get_catalog.return_value = catalog
+    sdkmr.get_catalog_utils.return_value = catutils
     sdkmr.get_condor.return_value = condor
     sdkmr.get_kafka_client.return_value = kafka
-    sdkmr.get_slack_client.return_value = slack
+    sdkmr.get_logger.return_value = logger
     sdkmr.get_mongo_util.return_value = mongo
-    sdkmr.get_user_id.return_value = "someuser"
+    sdkmr.get_slack_client.return_value = slack
     sdkmr.get_token.return_value = "tokentokentoken"
+    sdkmr.get_user_id.return_value = "someuser"
+    sdkmr.get_workspace.return_value = ws
+
+    job_id = "603051cfaf2e3401b0500982"
+
+    # Set up call returns. These calls are in the order the occur in the code
     sdkmr.check_as_admin.return_value = True
-    sdkmr.save_job.return_value = "603051cfaf2e3401b0500982"
+    sdkmr.save_job.return_value = job_id
     ws.get_object_info3.return_value = {"paths": [["1/2/3"], ["4/5/6"]]}
     catalog_resources = {
         "client_group": "grotesquememlong",
@@ -75,7 +80,7 @@ def test_run_as_admin():
     catalog.get_module_version.return_value = {"git_commit_hash": "git5678"}
     condor.run_job.return_value = SubmissionInfo("cluster42", {}, None)
     retjob = Job()
-    retjob.id = ObjectId("603051cfaf2e3401b0500982")
+    retjob.id = ObjectId(job_id)
     retjob.status = "created"
     mongo.get_job.return_value = retjob
 
@@ -85,9 +90,9 @@ def test_run_as_admin():
         "method": "lolcats.lol_unto_death",
         "source_ws_objects": ["1/2/3", "4/5/6"],
     }
-    assert rj.run(params, as_admin=True) == "603051cfaf2e3401b0500982"
+    assert rj.run(params, as_admin=True) == job_id
 
-    # check mocks called as expected
+    # check mocks called as expected. The order here is the order that they're called in the code.
     sdkmr.check_as_admin.assert_called_once_with(JobPermissions.WRITE)
     ws.get_object_info3.assert_called_once_with(
         {"objects": [{"ref": "1/2/3"}, {"ref": "4/5/6"}], "ignoreErrors": 1}
@@ -120,14 +125,14 @@ def test_run_as_admin():
     assert_jobs_equal(got_job, expected_job)
 
     kafka.send_kafka_message.assert_any_call(
-        KafkaCreateJob("someuser", "603051cfaf2e3401b0500982")
+        KafkaCreateJob("someuser", job_id)
     )
     condor.run_job.assert_called_once_with(
         params={
             "method": "lolcats.lol_unto_death",
             "source_ws_objects": ["1/2/3", "4/5/6"],
             "service_ver": "git5678",
-            "job_id": "603051cfaf2e3401b0500982",
+            "job_id": job_id,
             "user_id": "someuser",
             "token": "tokentokentoken",
             "cg_resources_requirements": {
@@ -140,12 +145,12 @@ def test_run_as_admin():
     )
 
     # updated job data save
-    mongo.get_job.assert_called_once_with("603051cfaf2e3401b0500982")
+    mongo.get_job.assert_called_once_with(job_id)
 
     # update to queued state
     got_job = sdkmr.save_job.call_args_list[1][0][0]
     expected_job = Job()
-    expected_job.id = ObjectId("603051cfaf2e3401b0500982")
+    expected_job.id = ObjectId(job_id)
     expected_job.status = "queued"
     # no way to test this really without code refactoring
     expected_job.queued = got_job.queued
@@ -156,14 +161,14 @@ def test_run_as_admin():
 
     kafka.send_kafka_message.assert_called_with(  # update to queued state
         KafkaQueueChange(
-            job_id="603051cfaf2e3401b0500982",
+            job_id=job_id,
             new_status="queued",
             previous_status="created",
             scheduler_id="cluster42",
         )
     )
     slack.run_job_message.assert_called_once_with(
-        "603051cfaf2e3401b0500982", "cluster42", "someuser"
+        job_id, "cluster42", "someuser"
     )
 
 
@@ -207,6 +212,7 @@ def assert_jobs_equal(got_job: Job, expected_job: Job):
     else:
         assert got_job.job_input.wsid == expected_job.job_input.wsid
         assert got_job.job_input.method == expected_job.job_input.method
+        # Watch out for tuples here: https://dbader.org/blog/catching-bogus-python-asserts
         assert (
             got_job.job_input.requested_release
             == expected_job.job_input.requested_release
