@@ -35,6 +35,22 @@ def test_run_as_admin():
     potential code paths or provide all the possible run inputs, such as job parameters, cell
     metadata, etc.
     """
+
+    # Set up data variables
+    job_id = "603051cfaf2e3401b0500982"
+    git_commit = "git5678"
+    ws_obj1 = "1/2/3"
+    ws_obj2 = "4/5/6"
+    client_group = "grotesquememlong"
+    cpus = "4"
+    mem = "32M"
+    cluster = "cluster42"
+    method = "lolcats.lol_unto_death"
+    user = "someuser"
+    token = "tokentokentoken"
+    created_state = "created"
+    queued_state = "queued"
+
     # The amount of mocking required here implies the method should be broken up into smaller
     # classes that are individually mockable. Or maybe it's just really complicated and this
     # is the best we can do. Worth looking into at some point though.
@@ -58,46 +74,44 @@ def test_run_as_admin():
     sdkmr.get_logger.return_value = logger
     sdkmr.get_mongo_util.return_value = mongo
     sdkmr.get_slack_client.return_value = slack
-    sdkmr.get_token.return_value = "tokentokentoken"
-    sdkmr.get_user_id.return_value = "someuser"
+    sdkmr.get_token.return_value = token
+    sdkmr.get_user_id.return_value = user
     sdkmr.get_workspace.return_value = ws
-
-    job_id = "603051cfaf2e3401b0500982"
 
     # Set up call returns. These calls are in the order they occur in the code
     sdkmr.check_as_admin.return_value = True
     sdkmr.save_job.return_value = job_id
-    ws.get_object_info3.return_value = {"paths": [["1/2/3"], ["4/5/6"]]}
+    ws.get_object_info3.return_value = {"paths": [[ws_obj1], [ws_obj2]]}
     catalog_resources = {
-        "client_group": "grotesquememlong",
-        "request_cpus": "4",
-        "request_memory": "32",
+        "client_group": client_group,
+        "request_cpus": cpus,
+        "request_memory": mem,
     }
     catutils.get_normalized_resources.return_value = catalog_resources
     condor.extract_resources.return_value = CondorResources(
-        "4", "2600", "32", "grotesquememlong"
+        cpus, "2600GB", mem, client_group
     )
-    catalog.get_module_version.return_value = {"git_commit_hash": "git5678"}
-    condor.run_job.return_value = SubmissionInfo("cluster42", {}, None)
+    catalog.get_module_version.return_value = {"git_commit_hash": git_commit}
+    condor.run_job.return_value = SubmissionInfo(cluster, {}, None)
     retjob = Job()
     retjob.id = ObjectId(job_id)
-    retjob.status = "created"
+    retjob.status = created_state
     mongo.get_job.return_value = retjob
 
     # set up the class to be tested and run the method
     rj = EE2RunJob(sdkmr)
     params = {
-        "method": "lolcats.lol_unto_death",
-        "source_ws_objects": ["1/2/3", "4/5/6"],
+        "method": method,
+        "source_ws_objects": [ws_obj1, ws_obj2],
     }
     assert rj.run(params, as_admin=True) == job_id
 
     # check mocks called as expected. The order here is the order that they're called in the code.
     sdkmr.check_as_admin.assert_called_once_with(JobPermissions.WRITE)
     ws.get_object_info3.assert_called_once_with(
-        {"objects": [{"ref": "1/2/3"}, {"ref": "4/5/6"}], "ignoreErrors": 1}
+        {"objects": [{"ref": ws_obj1}, {"ref": ws_obj2}], "ignoreErrors": 1}
     )
-    catutils.get_normalized_resources.assert_called_once_with("lolcats.lol_unto_death")
+    catutils.get_normalized_resources.assert_called_once_with(method)
     condor.extract_resources.assert_called_once_with(catalog_resources)
     catalog.get_module_version.assert_called_once_with(
         {"module_name": "lolcats", "version": "release"}
@@ -105,18 +119,18 @@ def test_run_as_admin():
 
     # initial job data save
     expected_job = Job()
-    expected_job.user = "someuser"
-    expected_job.status = "created"
+    expected_job.user = user
+    expected_job.status = created_state
     ji = JobInput()
-    ji.method = "lolcats.lol_unto_death"
-    ji.service_ver = "git5678"
-    ji.source_ws_objects = ["1/2/3", "4/5/6"]
+    ji.method = method
+    ji.service_ver = git_commit
+    ji.source_ws_objects = [ws_obj1, ws_obj2]
     ji.parent_job_id = "None"
     jr = JobRequirements()
-    jr.clientgroup = "grotesquememlong"
-    jr.cpu = "4"
-    jr.memory = "3"
-    jr.disk = "26"
+    jr.clientgroup = client_group
+    jr.cpu = cpus
+    jr.memory = "32"
+    jr.disk = "2600"
     ji.requirements = jr
     ji.narrative_cell_info = Meta()
     expected_job.job_input = ji
@@ -124,19 +138,19 @@ def test_run_as_admin():
     got_job = sdkmr.save_job.call_args_list[0][0][0]
     assert_jobs_equal(got_job, expected_job)
 
-    kafka.send_kafka_message.assert_any_call(KafkaCreateJob("someuser", job_id))
+    kafka.send_kafka_message.assert_any_call(KafkaCreateJob(user, job_id))
     condor.run_job.assert_called_once_with(
         params={
-            "method": "lolcats.lol_unto_death",
-            "source_ws_objects": ["1/2/3", "4/5/6"],
-            "service_ver": "git5678",
+            "method": method,
+            "source_ws_objects": [ws_obj1, ws_obj2],
+            "service_ver": git_commit,
             "job_id": job_id,
-            "user_id": "someuser",
-            "token": "tokentokentoken",
+            "user_id": user,
+            "token": token,
             "cg_resources_requirements": {
-                "client_group": "grotesquememlong",
-                "request_cpus": "4",
-                "request_memory": "32",
+                "client_group": client_group,
+                "request_cpus": cpus,
+                "request_memory": mem,
             },
         },
         concierge_params=None,
@@ -149,23 +163,23 @@ def test_run_as_admin():
     got_job = sdkmr.save_job.call_args_list[1][0][0]
     expected_job = Job()
     expected_job.id = ObjectId(job_id)
-    expected_job.status = "queued"
+    expected_job.status = queued_state
     # no way to test this really without code refactoring
     expected_job.queued = got_job.queued
 
     expected_job.scheduler_type = "condor"
-    expected_job.scheduler_id = "cluster42"
+    expected_job.scheduler_id = cluster
     assert_jobs_equal(got_job, expected_job)
 
     kafka.send_kafka_message.assert_called_with(  # update to queued state
         KafkaQueueChange(
             job_id=job_id,
-            new_status="queued",
-            previous_status="created",
-            scheduler_id="cluster42",
+            new_status=queued_state,
+            previous_status=created_state,
+            scheduler_id=cluster,
         )
     )
-    slack.run_job_message.assert_called_once_with(job_id, "cluster42", "someuser")
+    slack.run_job_message.assert_called_once_with(job_id, cluster, user)
 
 
 def assert_jobs_equal(got_job: Job, expected_job: Job):
