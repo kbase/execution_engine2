@@ -124,9 +124,7 @@ def test_run_as_admin():
     got_job = sdkmr.save_job.call_args_list[0][0][0]
     assert_jobs_equal(got_job, expected_job)
 
-    kafka.send_kafka_message.assert_any_call(
-        KafkaCreateJob("someuser", job_id)
-    )
+    kafka.send_kafka_message.assert_any_call(KafkaCreateJob("someuser", job_id))
     condor.run_job.assert_called_once_with(
         params={
             "method": "lolcats.lol_unto_death",
@@ -167,9 +165,7 @@ def test_run_as_admin():
             scheduler_id="cluster42",
         )
     )
-    slack.run_job_message.assert_called_once_with(
-        job_id, "cluster42", "someuser"
-    )
+    slack.run_job_message.assert_called_once_with(job_id, "cluster42", "someuser")
 
 
 def assert_jobs_equal(got_job: Job, expected_job: Job):
