@@ -265,4 +265,5 @@ def assert_jobs_equal(got_job: Job, expected_job: Job):
 
 def _super_hacky_equals(obj1, obj2, fields):
     for field in fields:
+        # An AttributeError will be raised if the field is not present in the object
         assert getattr(obj1, field) == getattr(obj2, field), field
