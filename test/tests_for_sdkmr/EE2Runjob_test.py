@@ -188,97 +188,55 @@ def assert_jobs_equal(got_job: Job, expected_job: Job):
     they're within 1 second of each other.
     """
     # I could not get assert got_job == expected_job to ever work, or even
-    # JobRequirements1 == JobRequirements2 to work when their fields were identical, so we
-    # do this disgusting hack instead. Note it will need to be updated any time a job field is
-    # added.
+    # JobRequirements1 == JobRequirements2 to work when their fields were identical.
+    # Also accessing the instance dict via vars() or __dict__ only produced {'_cls': 'Job'} so
+    # apparently MongoEngine does something very odd with the dict.
+    # Hence we do this disgusting hack instead. Note it will need to be updated any time a
+    # job field is added.
+
     if not hasattr(got_job, "id"):
         assert not hasattr(expected_job, "id")
     else:
         assert got_job.id == expected_job.id
-    assert got_job.user == expected_job.user
-    assert got_job.authstrat == expected_job.authstrat
-    assert got_job.wsid == expected_job.wsid
-    assert got_job.status == expected_job.status
 
     # The Job class fills the updated field with the output of time.time on instantiation
     # so we can't do a straight equality
     assert abs(got_job.updated - expected_job.updated) < 1
 
-    assert got_job.queued == expected_job.queued
-    assert got_job.estimating == expected_job.estimating
-    assert got_job.running == expected_job.running
-    assert got_job.finished == expected_job.finished
-    assert got_job.errormsg == expected_job.errormsg
-    assert got_job.msg == expected_job.msg
-    assert got_job.error == expected_job.error
-    assert got_job.terminated_code == expected_job.terminated_code
-    assert got_job.error_code == expected_job.error_code
-    assert got_job.scheduler_type == expected_job.scheduler_type
-    assert got_job.scheduler_id == expected_job.scheduler_id
-    assert got_job.scheduler_estimator_id == expected_job.scheduler_estimator_id
+    job_fields = ['user', 'authstrat', 'wsid', 'status', 'queued', 'estimating', 'running',
+                  'finished', 'errormsg', 'msg', 'error', 'terminated_code', 'error_code',
+                  'scheduler_type', 'scheduler_id', 'scheduler_estimator_id', 'job_output',
+                  'condor_job_ads', 'child_jobs', 'batch_job']
+
+    _super_hacky_equals(got_job, expected_job, job_fields)
 
     if not got_job.job_input:
         assert expected_job.job_input is None
     else:
-        assert got_job.job_input.wsid == expected_job.job_input.wsid
-        assert got_job.job_input.method == expected_job.job_input.method
-        # Watch out for tuples here: https://dbader.org/blog/catching-bogus-python-asserts
-        assert (
-            got_job.job_input.requested_release
-            == expected_job.job_input.requested_release
-        )
-        assert got_job.job_input.params == expected_job.job_input.params
-        assert got_job.job_input.service_ver == expected_job.job_input.service_ver
-        assert got_job.job_input.app_id == expected_job.job_input.app_id
-        assert (
-            got_job.job_input.source_ws_objects
-            == expected_job.job_input.source_ws_objects
-        )
-        assert got_job.job_input.parent_job_id == expected_job.job_input.parent_job_id
+        job_input_fields = ['wsid', 'method', 'requested_release', 'params', 'service_ver',
+                            'app_id', 'source_ws_objects', 'parent_job_id']
+        _super_hacky_equals(got_job.job_input, expected_job.job_input, job_input_fields)
 
-        assert got_job.job_input.requirements.clientgroup == (
-            expected_job.job_input.requirements.clientgroup
+        requirements_fields = ['clientgroup', 'cpu', 'memory', 'disk', 'estimate']
+        _super_hacky_equals(
+            got_job.job_input.requirements,
+            expected_job.job_input.requirements,
+            requirements_fields
         )
-        assert (
-            got_job.job_input.requirements.cpu
-            == expected_job.job_input.requirements.cpu
-        )
-        assert (
-            got_job.job_input.requirements.memory
-            == expected_job.job_input.requirements.memory
-        )
-        assert (
-            got_job.job_input.requirements.disk
-            == expected_job.job_input.requirements.disk
-        )
-        assert got_job.job_input.requirements.estimate == (
-            expected_job.job_input.requirements.estimate
-        )
-
         # this fails, which should be impossible given all the fields above pass
         # assert got_job.job_input.requirements == expected_job.job_input.requirements
 
-        assert got_job.job_input.narrative_cell_info.run_id == (
-            expected_job.job_input.narrative_cell_info.run_id
+        cell_info_fields = ['run_id', 'token_id', 'tag', 'cell_id', 'status']
+        _super_hacky_equals(
+            got_job.job_input.narrative_cell_info,
+            expected_job.job_input.narrative_cell_info,
+            cell_info_fields
         )
-        assert got_job.job_input.narrative_cell_info.token_id == (
-            expected_job.job_input.narrative_cell_info.token_id
-        )
-        assert got_job.job_input.narrative_cell_info.tag == (
-            expected_job.job_input.narrative_cell_info.tag
-        )
-        assert got_job.job_input.narrative_cell_info.cell_id == (
-            expected_job.job_input.narrative_cell_info.cell_id
-        )
-        assert got_job.job_input.narrative_cell_info.status == (
-            expected_job.job_input.narrative_cell_info.status
-        )
-
         # again, this fails, even though the fields are all ==
         # assert got_job.job_input.narrative_cell_info == (
         #     expected_job.job_input.narrative_cell_info)
 
-    assert got_job.job_output == expected_job.job_output
-    assert got_job.condor_job_ads == expected_job.condor_job_ads
-    assert got_job.child_jobs == expected_job.child_jobs
-    assert got_job.batch_job == expected_job.batch_job
+
+def _super_hacky_equals(obj1, obj2, fields):
+    for field in fields:
+        assert getattr(obj1, field) == getattr(obj2, field), field
