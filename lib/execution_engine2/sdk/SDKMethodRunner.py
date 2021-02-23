@@ -18,7 +18,7 @@ import dateutil
 
 from installed_clients.authclient import KBaseAuth
 from lib.execution_engine2.db.MongoUtil import MongoUtil
-from lib.execution_engine2.db.models.models import Job
+from execution_engine2.db.models.models import Job
 from lib.execution_engine2.exceptions import AuthError
 from lib.execution_engine2.sdk import (
     EE2Runjob,
