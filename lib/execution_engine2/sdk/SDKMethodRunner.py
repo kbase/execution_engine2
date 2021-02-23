@@ -148,7 +148,7 @@ class SDKMethodRunner:
     # that instance variables cannot be detected by create_autospec with spec_set=True, and thus
     # cannot be mocked in a rigorous way. The danger of not using spec_set=True is that if a
     # mocked class's API changes, the unit tests will still pass. Thus the choice is between
-    # unpythonic getters or false positives in unit tests, and we choose the latter.
+    # unpythonic getters or false positives in unit tests, and we choose the former.
     # For more details: https://www.seanh.cc/2017/03/17/the-problem-with-mocks/
 
     def get_workspace(self) -> Workspace:
