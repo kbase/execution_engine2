@@ -4,6 +4,7 @@ Unit tests for the EE2Runjob class.
 
 # Incomplete by a long way. Will add more unit tests as they come up.
 
+from typing import List
 from bson.objectid import ObjectId
 from logging import Logger
 from unittest.mock import create_autospec
@@ -226,7 +227,7 @@ def assert_jobs_equal(got_job: Job, expected_job: Job):
         "batch_job",
     ]
 
-    _super_hacky_equals(got_job, expected_job, job_fields)
+    _assert_field_subset_equal(got_job, expected_job, job_fields)
 
     if not got_job.job_input:
         assert expected_job.job_input is None
@@ -241,10 +242,12 @@ def assert_jobs_equal(got_job: Job, expected_job: Job):
             "source_ws_objects",
             "parent_job_id",
         ]
-        _super_hacky_equals(got_job.job_input, expected_job.job_input, job_input_fields)
+        _assert_field_subset_equal(
+            got_job.job_input, expected_job.job_input, job_input_fields
+        )
 
         requirements_fields = ["clientgroup", "cpu", "memory", "disk", "estimate"]
-        _super_hacky_equals(
+        _assert_field_subset_equal(
             got_job.job_input.requirements,
             expected_job.job_input.requirements,
             requirements_fields,
@@ -253,7 +256,7 @@ def assert_jobs_equal(got_job: Job, expected_job: Job):
         # assert got_job.job_input.requirements == expected_job.job_input.requirements
 
         cell_info_fields = ["run_id", "token_id", "tag", "cell_id", "status"]
-        _super_hacky_equals(
+        _assert_field_subset_equal(
             got_job.job_input.narrative_cell_info,
             expected_job.job_input.narrative_cell_info,
             cell_info_fields,
@@ -263,7 +266,15 @@ def assert_jobs_equal(got_job: Job, expected_job: Job):
         #     expected_job.job_input.narrative_cell_info)
 
 
-def _super_hacky_equals(obj1, obj2, fields):
+def _assert_field_subset_equal(obj1: object, obj2: object, fields: List[str]):
+    """
+    Checks that field subsets from two objects are the same.
+
+    :param obj1: The first object
+    :param obj2: The second object
+    :param fields: The fields in the objects to compare for equality. Any fields in the object
+        not in this list are ignored and not included in the equality calculation.
+    :raises AttributeError: If the field is not present in one or both of the objects.
+    """
     for field in fields:
-        # An AttributeError will be raised if the field is not present in the object
         assert getattr(obj1, field) == getattr(obj2, field), field
