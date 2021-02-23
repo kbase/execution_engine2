@@ -134,7 +134,7 @@ def test_run_as_admin():
     jr.disk = "2600"
     ji.requirements = jr
     ji.narrative_cell_info = Meta()
-    expected_job.job_input = ji 
+    expected_job.job_input = ji
     assert len(sdkmr.save_job.call_args_list) == 2
     got_job = sdkmr.save_job.call_args_list[0][0][0]
     assert_jobs_equal(got_job, expected_job)
