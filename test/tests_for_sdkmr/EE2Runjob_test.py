@@ -188,8 +188,7 @@ def assert_jobs_equal(got_job: Job, expected_job: Job):
     Checks that the two jobs are equivalent, except that the 'updated' fields are checked that
     they're within 1 second of each other.
     """
-    # I could not get assert got_job == expected_job to ever work, or even
-    # JobRequirements1 == JobRequirements2 to work when their fields were identical.
+    # I could not get assert got_job == expected_job to ever work when their fields were identical.
     # Also accessing the instance dict via vars() or __dict__ only produced {'_cls': 'Job'} so
     # apparently MongoEngine does something very odd with the dict.
     # Hence we do this disgusting hack instead. Note it will need to be updated any time a
@@ -218,6 +217,7 @@ def assert_jobs_equal(got_job: Job, expected_job: Job):
         "error",
         "terminated_code",
         "error_code",
+        "job_input",
         "scheduler_type",
         "scheduler_id",
         "scheduler_estimator_id",
@@ -228,42 +228,6 @@ def assert_jobs_equal(got_job: Job, expected_job: Job):
     ]
 
     _assert_field_subset_equal(got_job, expected_job, job_fields)
-
-    if not got_job.job_input:
-        assert expected_job.job_input is None
-    else:
-        job_input_fields = [
-            "wsid",
-            "method",
-            "requested_release",
-            "params",
-            "service_ver",
-            "app_id",
-            "source_ws_objects",
-            "parent_job_id",
-        ]
-        _assert_field_subset_equal(
-            got_job.job_input, expected_job.job_input, job_input_fields
-        )
-
-        requirements_fields = ["clientgroup", "cpu", "memory", "disk", "estimate"]
-        _assert_field_subset_equal(
-            got_job.job_input.requirements,
-            expected_job.job_input.requirements,
-            requirements_fields,
-        )
-        # this fails, which should be impossible given all the fields above pass
-        # assert got_job.job_input.requirements == expected_job.job_input.requirements
-
-        cell_info_fields = ["run_id", "token_id", "tag", "cell_id", "status"]
-        _assert_field_subset_equal(
-            got_job.job_input.narrative_cell_info,
-            expected_job.job_input.narrative_cell_info,
-            cell_info_fields,
-        )
-        # again, this fails, even though the fields are all ==
-        # assert got_job.job_input.narrative_cell_info == (
-        #     expected_job.job_input.narrative_cell_info)
 
 
 def _assert_field_subset_equal(obj1: object, obj2: object, fields: List[str]):

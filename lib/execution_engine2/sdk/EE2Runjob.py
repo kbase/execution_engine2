@@ -9,7 +9,7 @@ import time
 from enum import Enum
 from typing import Optional, Dict, NamedTuple, Union, List
 
-from lib.execution_engine2.db.models.models import (
+from execution_engine2.db.models.models import (
     Job,
     JobInput,
     Meta,
