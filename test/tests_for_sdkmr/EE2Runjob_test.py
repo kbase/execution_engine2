@@ -203,34 +203,60 @@ def assert_jobs_equal(got_job: Job, expected_job: Job):
     # so we can't do a straight equality
     assert abs(got_job.updated - expected_job.updated) < 1
 
-    job_fields = ['user', 'authstrat', 'wsid', 'status', 'queued', 'estimating', 'running',
-                  'finished', 'errormsg', 'msg', 'error', 'terminated_code', 'error_code',
-                  'scheduler_type', 'scheduler_id', 'scheduler_estimator_id', 'job_output',
-                  'condor_job_ads', 'child_jobs', 'batch_job']
+    job_fields = [
+        "user",
+        "authstrat",
+        "wsid",
+        "status",
+        "queued",
+        "estimating",
+        "running",
+        "finished",
+        "errormsg",
+        "msg",
+        "error",
+        "terminated_code",
+        "error_code",
+        "scheduler_type",
+        "scheduler_id",
+        "scheduler_estimator_id",
+        "job_output",
+        "condor_job_ads",
+        "child_jobs",
+        "batch_job",
+    ]
 
     _super_hacky_equals(got_job, expected_job, job_fields)
 
     if not got_job.job_input:
         assert expected_job.job_input is None
     else:
-        job_input_fields = ['wsid', 'method', 'requested_release', 'params', 'service_ver',
-                            'app_id', 'source_ws_objects', 'parent_job_id']
+        job_input_fields = [
+            "wsid",
+            "method",
+            "requested_release",
+            "params",
+            "service_ver",
+            "app_id",
+            "source_ws_objects",
+            "parent_job_id",
+        ]
         _super_hacky_equals(got_job.job_input, expected_job.job_input, job_input_fields)
 
-        requirements_fields = ['clientgroup', 'cpu', 'memory', 'disk', 'estimate']
+        requirements_fields = ["clientgroup", "cpu", "memory", "disk", "estimate"]
         _super_hacky_equals(
             got_job.job_input.requirements,
             expected_job.job_input.requirements,
-            requirements_fields
+            requirements_fields,
         )
         # this fails, which should be impossible given all the fields above pass
         # assert got_job.job_input.requirements == expected_job.job_input.requirements
 
-        cell_info_fields = ['run_id', 'token_id', 'tag', 'cell_id', 'status']
+        cell_info_fields = ["run_id", "token_id", "tag", "cell_id", "status"]
         _super_hacky_equals(
             got_job.job_input.narrative_cell_info,
             expected_job.job_input.narrative_cell_info,
-            cell_info_fields
+            cell_info_fields,
         )
         # again, this fails, even though the fields are all ==
         # assert got_job.job_input.narrative_cell_info == (
