@@ -22,7 +22,7 @@ from execution_engine2.utils.KafkaUtils import (
     KafkaCreateJob,
 )
 from execution_engine2.utils.SlackUtils import SlackClient
-from lib.execution_engine2.db.MongoUtil import MongoUtil
+from execution_engine2.db.MongoUtil import MongoUtil
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.CatalogClient import Catalog
 
