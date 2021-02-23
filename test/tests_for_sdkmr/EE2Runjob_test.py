@@ -6,7 +6,7 @@ Unit tests for the EE2Runjob class.
 
 from bson.objectid import ObjectId
 from logging import Logger
-from unittest.mock import create_autospec, call
+from unittest.mock import create_autospec
 from execution_engine2.db.models.models import Job, JobInput, JobRequirements, Meta
 from execution_engine2.sdk.EE2Runjob import EE2RunJob, JobPermissions
 from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
