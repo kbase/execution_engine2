@@ -134,7 +134,7 @@ def test_run_as_admin():
     jr.disk = "2600"
     ji.requirements = jr
     ji.narrative_cell_info = Meta()
-    expected_job.job_input = ji
+    expected_job.job_input = ji 
     assert len(sdkmr.save_job.call_args_list) == 2
     got_job = sdkmr.save_job.call_args_list[0][0][0]
     assert_jobs_equal(got_job, expected_job)
@@ -188,9 +188,15 @@ def assert_jobs_equal(got_job: Job, expected_job: Job):
     Checks that the two jobs are equivalent, except that the 'updated' fields are checked that
     they're within 1 second of each other.
     """
-    # I could not get assert got_job == expected_job to ever work when their fields were identical.
-    # Also accessing the instance dict via vars() or __dict__ only produced {'_cls': 'Job'} so
-    # apparently MongoEngine does something very odd with the dict.
+    # Job inherits from Document which inherits from BaseDocument in MongoEngine. BD provides
+    # the __eq__ method for the hierarchy, which bases equality on the Jobs having equal id
+    # fields, or if no id is present, on identity. Therefore
+    # assert job1 == job2
+    # will not work as a test mechanic.
+    # JobInput and its contained classes inherit from EmbeddedDocument which *does* have an
+    # __eq__ method that takes the class fields into account.
+    # Also note that all these classes use __slots__ so vars() and __dict__ are empty other
+    # than the class name.
     # Hence we do this disgusting hack instead. Note it will need to be updated any time a
     # job field is added.
 
@@ -217,10 +223,10 @@ def assert_jobs_equal(got_job: Job, expected_job: Job):
         "error",
         "terminated_code",
         "error_code",
-        "job_input",
         "scheduler_type",
         "scheduler_id",
         "scheduler_estimator_id",
+        "job_input",
         "job_output",
         "condor_job_ads",
         "child_jobs",
