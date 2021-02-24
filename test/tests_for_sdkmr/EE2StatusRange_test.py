@@ -61,41 +61,49 @@ def _run_minimal(user):
     ret = ee2sr.check_jobs_date_range_for_user("5/6/21", "7/6/21", user=user)
 
     assert ret == {
-        'count': 1,
-        'filter': {'id__gt': '000000230000000000000000',
-                   'id__lt': '0000005c0000000000000000',
-                   'user': expected_user},
-        'jobs': [{'_id': objectid,
-                  'authstrat': 'kbaseworkspace',
-                  'batch_job': False,
-                  'child_jobs': [],
-                  'created': 1613779407000,
-                  'job_id': objectid,
-                  'status': created_state,
-                  'updated': 1000000000,
-                  'user': expected_user}],
-        'limit': 2000,
-        'projection': [],
-        'query_count': job_count,
-        'skip': 0,
-        'sort_order': '+',
-        'stats': {'app_id': {None: 1},
-                  'clientgroup': {None: 1},
-                  'method': {None: 1},
-                  'status': {created_state: 1},
-                  'user': {expected_user: 1},
-                  'wsid': {None: 1}
-                  }
+        "count": 1,
+        "filter": {
+            "id__gt": "000000230000000000000000",
+            "id__lt": "0000005c0000000000000000",
+            "user": expected_user,
+        },
+        "jobs": [
+            {
+                "_id": objectid,
+                "authstrat": "kbaseworkspace",
+                "batch_job": False,
+                "child_jobs": [],
+                "created": 1613779407000,
+                "job_id": objectid,
+                "status": created_state,
+                "updated": 1000000000,
+                "user": expected_user,
+            }
+        ],
+        "limit": 2000,
+        "projection": [],
+        "query_count": job_count,
+        "skip": 0,
+        "sort_order": "+",
+        "stats": {
+            "app_id": {None: 1},
+            "clientgroup": {None: 1},
+            "method": {None: 1},
+            "status": {created_state: 1},
+            "user": {expected_user: 1},
+            "wsid": {None: 1},
+        },
     }
 
     # check mocks called as expected. Ordered as per the call order in the EE2SR code
     sdkmr.check_and_convert_time.assert_has_calls([call("5/6/21"), call("7/6/21")])
     expected_job_filter = {
-        'id__gt': '000000230000000000000000',
-        'id__lt': '0000005c0000000000000000',
-        'user': expected_user
+        "id__gt": "000000230000000000000000",
+        "id__lt": "0000005c0000000000000000",
+        "user": expected_user,
     }
     sdkmr.get_job_counts.assert_called_once_with(expected_job_filter)
-    sdkmr.get_jobs.assert_called_once_with(expected_job_filter, [], '+', 0, 2000)
+    sdkmr.get_jobs.assert_called_once_with(expected_job_filter, [], "+", 0, 2000)
     logger.debug.assert_called_once_with(
-        'Searching for jobs with id_gt 000000230000000000000000 id_lt 0000005c0000000000000000')
+        "Searching for jobs with id_gt 000000230000000000000000 id_lt 0000005c0000000000000000"
+    )

@@ -120,7 +120,9 @@ class JobStatusRange:
             job_filter_temp["user"] = user
 
         count = self.sdkmr.get_job_counts(job_filter_temp)
-        jobs = self.sdkmr.get_jobs(job_filter_temp, job_projection, sort_order, offset, limit)
+        jobs = self.sdkmr.get_jobs(
+            job_filter_temp, job_projection, sort_order, offset, limit
+        )
 
         self.sdkmr.get_logger().debug(
             f"Searching for jobs with id_gt {dummy_ids.start} id_lt {dummy_ids.stop}"
