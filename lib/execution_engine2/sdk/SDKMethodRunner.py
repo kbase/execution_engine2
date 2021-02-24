@@ -12,12 +12,13 @@ import os
 import time
 from datetime import datetime
 from enum import Enum
+from logging import Logger
 
 import dateutil
 
 from installed_clients.authclient import KBaseAuth
 from lib.execution_engine2.db.MongoUtil import MongoUtil
-from lib.execution_engine2.db.models.models import Job
+from execution_engine2.db.models.models import Job
 from lib.execution_engine2.exceptions import AuthError
 from lib.execution_engine2.sdk import (
     EE2Runjob,
@@ -34,6 +35,7 @@ from lib.execution_engine2.utils.KafkaUtils import KafkaClient
 from lib.execution_engine2.utils.SlackUtils import SlackClient
 from execution_engine2.utils.clients import UserClientSet
 from execution_engine2.utils.arg_processing import parse_bool
+from installed_clients.WorkspaceClient import Workspace
 
 
 class JobPermissions(Enum):
@@ -140,6 +142,62 @@ class SDKMethodRunner:
             self.condor = Condor(self.deployment_config_fp)
         return self.condor
 
+    # A note on getters:
+    # Getters are commonly described as unpythonic. However, accessing instance variables
+    # directly, rather than via getters, causes significant problems when mocking a class in
+    # that instance variables cannot be detected by create_autospec with spec_set=True, and thus
+    # cannot be mocked in a rigorous way. The danger of not using spec_set=True is that if a
+    # mocked class's API changes, the unit tests will still pass. Thus the choice is between
+    # unpythonic getters or false positives in unit tests, and we choose the former.
+    # For more details: https://www.seanh.cc/2017/03/17/the-problem-with-mocks/
+
+    def get_workspace(self) -> Workspace:
+        """
+        Get the workspace client for this instance of SDKMR.
+        """
+        return self.workspace
+
+    def get_logger(self) -> Logger:
+        """
+        Get the logger for this instance of SDKMR.
+        """
+        # There's not really any way to meaningfully test this method without passing in the
+        # logger, which seems... overkill?
+        return self.logger
+
+    def get_catalog_utils(self) -> CatalogUtils:
+        """
+        Get the catalog utilities for this instance of SDKMR.
+        """
+        # TODO Unit test this method once catalog_utils can be mocked.
+        return self.catalog_utils
+
+    def get_kafka_client(self) -> KafkaClient:
+        """
+        Get the Kafka client for this instance of SDKMR.
+        """
+        # TODO Unit test this method once kafka_client can be mocked.
+        return self.kafka_client
+
+    def get_slack_client(self) -> SlackClient:
+        """
+        Get the Kafka client for this instance of SDKMR.
+        """
+        # TODO Unit test this method once slack_client can be mocked.
+        return self.slack_client
+
+    def get_user_id(self) -> str:
+        """
+        Get the user id of the user for this instance of SDKMR.
+        """
+        return self.user_id
+
+    def get_token(self) -> str:
+        """
+        Get the token of the user for this instance of SDKMR.
+        """
+        return self.token
+
     # Permissions Decorators    #TODO Verify these actually work     #TODO add as_admin to these
 
     def allow_job_read(func):
@@ -174,6 +232,14 @@ class SDKMethodRunner:
             raise AuthError(
                 "You are not the concierge user. This method is not for you"
             )
+
+    def save_job(self, job: Job):
+        """
+        Save a job record to the Mongo database.
+        """
+        # The purpose of this method is to allow unit testing the various EE2*.py classes.
+        job.save()
+        return str(job.id)
 
     # API ENDPOINTS
 

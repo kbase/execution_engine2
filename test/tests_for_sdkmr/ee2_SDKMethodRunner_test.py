@@ -8,7 +8,7 @@ import unittest
 from configparser import ConfigParser
 from datetime import datetime, timedelta, timezone
 from pprint import pprint
-from unittest.mock import patch
+from unittest.mock import patch, create_autospec
 from pytest import raises
 
 import bson
@@ -17,12 +17,14 @@ import requests_mock
 from bson import ObjectId
 from mock import MagicMock
 
+from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.db.models.models import Job, Status, TerminatedCode
 from lib.execution_engine2.exceptions import AuthError
 from lib.execution_engine2.exceptions import InvalidStatusTransitionException
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
+from execution_engine2.utils.clients import UserClientSet
 from execution_engine2.utils.clients import get_user_client_set
 from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 from test.utils_shared.test_utils import (
@@ -38,6 +40,8 @@ logging.basicConfig(level=logging.INFO)
 bootstrap()
 
 from lib.execution_engine2.sdk.EE2Runjob import EE2RunJob
+
+from installed_clients.WorkspaceClient import Workspace
 
 
 # TODO this isn't necessary with pytest, can just use regular old functions
@@ -132,6 +136,34 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         with raises(Exception) as e:
             SDKMethodRunner(cfg, user_clients)
         assert_exception_correct(e.value, expected)
+
+    def test_getters(self):
+        ws = Workspace("https://fake.com")
+        wsa = WorkspaceAuth("user", ws)
+        cliset = UserClientSet("user", "token", ws, wsa)
+        sdkmr = SDKMethodRunner(self.cfg, cliset)
+
+        assert sdkmr.get_workspace() is ws
+        assert sdkmr.get_user_id() == "user"
+        assert sdkmr.get_token() == "token"
+
+    def test_save_job(self):
+        ws = Workspace("https://fake.com")
+        wsa = WorkspaceAuth("user", ws)
+        cliset = UserClientSet("user", "token", ws, wsa)
+        sdkmr = SDKMethodRunner(self.cfg, cliset)
+
+        # We cannot use spec_set=True here because the code must access the Job.id field,
+        # which is set dynamically. This means if the Job api changes, this test could pass
+        # when it should fail, but there doesn't seem to be a way around that other than
+        # completely rewriting how the code interfaces with MongoDB.
+        # For a discussion of spec_set see
+        # https://www.seanh.cc/2017/03/17/the-problem-with-mocks/
+        j = create_autospec(Job, spec_set=False, instance=True)
+        j.id = bson.objectid.ObjectId("603051cfaf2e3401b0500982")
+        assert sdkmr.save_job(j) == "603051cfaf2e3401b0500982"
+
+        j.save.assert_called_once_with()
 
     # Status
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)

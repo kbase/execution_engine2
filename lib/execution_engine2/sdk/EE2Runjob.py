@@ -9,7 +9,7 @@ import time
 from enum import Enum
 from typing import Optional, Dict, NamedTuple, Union, List
 
-from lib.execution_engine2.db.models.models import (
+from execution_engine2.db.models.models import (
     Job,
     JobInput,
     Meta,
@@ -20,7 +20,7 @@ from lib.execution_engine2.db.models.models import (
 )
 from lib.execution_engine2.sdk.EE2Constants import ConciergeParams
 from lib.execution_engine2.utils.CondorTuples import CondorResources
-from lib.execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
+from execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
 
 
 class JobPermissions(Enum):
@@ -44,7 +44,7 @@ class EE2RunJob:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr  # type: SDKMethodRunner
         self.override_clientgroup = os.environ.get("OVERRIDE_CLIENT_GROUP", None)
-        self.logger = self.sdkmr.logger
+        self.logger = self.sdkmr.get_logger()
 
     def _init_job_rec(
         self,
@@ -100,15 +100,14 @@ class EE2RunJob:
         job.job_input = inputs
         self.logger.debug(job.job_input.to_mongo().to_dict())
 
-        with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            self.logger.debug(job.to_mongo().to_dict())
-            job.save()
+        self.logger.debug(job.to_mongo().to_dict())
+        job_id = self.sdkmr.save_job(job)
 
-        self.sdkmr.kafka_client.send_kafka_message(
-            message=KafkaCreateJob(job_id=str(job.id), user=user_id)
+        self.sdkmr.get_kafka_client().send_kafka_message(
+            message=KafkaCreateJob(job_id=job_id, user=user_id)
         )
 
-        return str(job.id)
+        return job_id
 
     def _get_module_git_commit(self, method, service_ver=None) -> Optional[str]:
         module_name = method.split(".")[0]
@@ -118,8 +117,10 @@ class EE2RunJob:
 
         self.logger.debug(f"Getting commit for {module_name} {service_ver}")
 
-        module_version = self.sdkmr.catalog_utils.catalog.get_module_version(
-            {"module_name": module_name, "version": service_ver}
+        module_version = (
+            self.sdkmr.get_catalog_utils()
+            .get_catalog()
+            .get_module_version({"module_name": module_name, "version": service_ver})
         )
 
         git_commit_hash = module_version.get("git_commit_hash")
@@ -194,7 +195,9 @@ class EE2RunJob:
         self._check_ws_objects(source_objects=params.get("source_ws_objects"))
         method = params.get("method")
         # Normalize multiple formats into one format (csv vs json)
-        normalized_resources = self.sdkmr.catalog_utils.get_normalized_resources(method)
+        normalized_resources = self.sdkmr.get_catalog_utils().get_normalized_resources(
+            method
+        )
         # These are for saving into job inputs. Maybe its best to pass this into condor as well?
         extracted_resources = self.sdkmr.get_condor().extract_resources(
             cgrr=normalized_resources
@@ -202,16 +205,16 @@ class EE2RunJob:
         # insert initial job document into db
 
         job_id = self._init_job_rec(
-            self.sdkmr.user_id, params, extracted_resources, concierge_params
+            self.sdkmr.get_user_id(), params, extracted_resources, concierge_params
         )
 
         params["job_id"] = job_id
-        params["user_id"] = self.sdkmr.user_id
-        params["token"] = self.sdkmr.token
+        params["user_id"] = self.sdkmr.get_user_id()
+        params["token"] = self.sdkmr.get_token()
         params["cg_resources_requirements"] = normalized_resources
 
         self.logger.debug(
-            f"User {self.sdkmr.user_id} attempting to run job {method} {params}"
+            f"User {self.sdkmr.get_user_id()} attempting to run job {method} {params}"
         )
 
         return PreparedJobParams(params=params, job_id=job_id)
@@ -249,8 +252,8 @@ class EE2RunJob:
         )
 
         self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
-        self.sdkmr.slack_client.run_job_message(
-            job_id=job_id, scheduler_id=condor_job_id, username=self.sdkmr.user_id
+        self.sdkmr.get_slack_client().run_job_message(
+            job_id=job_id, scheduler_id=condor_job_id, username=self.sdkmr.get_user_id()
         )
 
         return job_id
@@ -374,23 +377,22 @@ class EE2RunJob:
         # TODO RETRY FOR RACE CONDITION OF RUN/CANCEL
         # TODO PASS QUEUE TIME IN FROM SCHEDULER ITSELF?
         # TODO PASS IN SCHEDULER TYPE?
-        with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            j = self.sdkmr.get_mongo_util().get_job(job_id=job_id)
-            previous_status = j.status
-            j.status = Status.queued.value
-            j.queued = time.time()
-            j.scheduler_id = scheduler_id
-            j.scheduler_type = "condor"
-            j.save()
+        j = self.sdkmr.get_mongo_util().get_job(job_id=job_id)
+        previous_status = j.status
+        j.status = Status.queued.value
+        j.queued = time.time()
+        j.scheduler_id = scheduler_id
+        j.scheduler_type = "condor"
+        self.sdkmr.save_job(j)
 
-            self.sdkmr.kafka_client.send_kafka_message(
-                message=KafkaQueueChange(
-                    job_id=str(j.id),
-                    new_status=j.status,
-                    previous_status=previous_status,
-                    scheduler_id=scheduler_id,
-                )
+        self.sdkmr.get_kafka_client().send_kafka_message(
+            message=KafkaQueueChange(
+                job_id=str(j.id),
+                new_status=j.status,
+                previous_status=previous_status,
+                scheduler_id=scheduler_id,
             )
+        )
 
     def get_job_params(self, job_id, as_admin=False):
         """

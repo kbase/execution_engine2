@@ -8,6 +8,11 @@ class CatalogUtils:
     def __init__(self, url, admin_token):
         self.catalog = Catalog(url=url, token=admin_token)
 
+    def get_catalog(self):
+        """ Get the catalog client for this instance. """
+        # TODO unit test this method after switching to dependency injection
+        return self.catalog
+
     def get_normalized_resources(self, method) -> Dict:
         """
         get client groups info from Catalog
