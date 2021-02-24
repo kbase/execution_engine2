@@ -11,6 +11,7 @@ from lib.execution_engine2.db.models.models import Job
 from lib.execution_engine2.exceptions import AuthError
 
 
+# TODO this class is duplicated all over the place, move to common file
 class JobPermissions(Enum):
     READ = "r"
     WRITE = "w"
@@ -75,8 +76,10 @@ class JobStatusRange:
         if offset is None:
             offset = 0
 
+        if user is None:
+            user = self.sdkmr.get_user_id()
         # Admins can view "ALL" or check_jobs for other users
-        if user != self.sdkmr.user_id:
+        if user != self.sdkmr.get_user_id():
             if not self.sdkmr.check_is_admin():
                 raise AuthError(
                     "You are not authorized to view all records or records for others. "
@@ -116,17 +119,10 @@ class JobStatusRange:
         if user != "ALL":
             job_filter_temp["user"] = user
 
-        with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            count = Job.objects.filter(**job_filter_temp).count()
-            jobs = (
-                Job.objects[:limit]
-                .filter(**job_filter_temp)
-                .order_by(f"{sort_order}_id")
-                .skip(offset)
-                .only(*job_projection)
-            )
+        count = self.sdkmr.get_job_counts(job_filter_temp)
+        jobs = self.sdkmr.get_jobs(job_filter_temp, job_projection, sort_order, offset, limit)
 
-        self.sdkmr.logger.debug(
+        self.sdkmr.get_logger().debug(
             f"Searching for jobs with id_gt {dummy_ids.start} id_lt {dummy_ids.stop}"
         )
 
