@@ -8,7 +8,7 @@ from bson.objectid import ObjectId
 
 from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.sdk.EE2StatusRange import JobStatusRange
-from execution_engine2.db.models.models import Job, JobInput, JobRequirements, Meta
+from execution_engine2.db.models.models import Job
 
 
 # Incomplete by a long way. Will add more unit tests as they come up.
