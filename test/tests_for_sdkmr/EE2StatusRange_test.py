@@ -121,9 +121,13 @@ def test_run_with_non_matching_user_and_not_admin():
     ee2sr = JobStatusRange(sdkmr)
     with raises(Exception) as got:
         ee2sr.check_jobs_date_range_for_user("5/6/21", "7/6/21", user="user2")
-    assert_exception_correct(got.value, AuthError(
-        "You are not authorized to view all records or records for others. user=user2 token=user1"
-    ))
+    assert_exception_correct(
+        got.value,
+        AuthError(
+            "You are not authorized to view all records or records for others. "
+            + "user=user2 token=user1"
+        ),
+    )
 
     sdkmr.get_user_id.assert_has_calls([call(), call()])
     sdkmr.check_is_admin.assert_called_once_with()
