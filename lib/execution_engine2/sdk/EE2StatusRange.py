@@ -7,7 +7,7 @@ from typing import Dict
 from bson import ObjectId
 
 from execution_engine2.utils.arg_processing import parse_bool
-from lib.execution_engine2.exceptions import AuthError
+from execution_engine2.exceptions import AuthError
 
 
 # TODO this class is duplicated all over the place, move to common file
@@ -78,11 +78,11 @@ class JobStatusRange:
         if user is None:
             user = self.sdkmr.get_user_id()
         # Admins can view "ALL" or check_jobs for other users
-        if user != self.sdkmr.get_user_id():
+        elif user != self.sdkmr.get_user_id():
             if not self.sdkmr.check_is_admin():
                 raise AuthError(
                     "You are not authorized to view all records or records for others. "
-                    + f"user={user} token={self.sdkmr.user_id}"
+                    + f"user={user} token={self.sdkmr.get_user_id()}"
                 )
 
         dummy_ids = self._get_dummy_dates(creation_start_time, creation_end_time)
