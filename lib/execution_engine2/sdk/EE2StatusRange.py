@@ -7,7 +7,6 @@ from typing import Dict
 from bson import ObjectId
 
 from execution_engine2.utils.arg_processing import parse_bool
-from lib.execution_engine2.db.models.models import Job
 from lib.execution_engine2.exceptions import AuthError
 
 
