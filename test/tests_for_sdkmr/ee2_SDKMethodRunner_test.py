@@ -20,7 +20,7 @@ from mock import MagicMock
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.db.models.models import Job, Status, TerminatedCode
-from lib.execution_engine2.exceptions import AuthError
+from execution_engine2.exceptions import AuthError
 from lib.execution_engine2.exceptions import InvalidStatusTransitionException
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources

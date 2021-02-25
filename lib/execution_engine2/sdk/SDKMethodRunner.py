@@ -233,13 +233,47 @@ class SDKMethodRunner:
                 "You are not the concierge user. This method is not for you"
             )
 
+    # The next few methods allow for unit testing the various EE2*.py classes.
+    # They could also be moved to the MongoUtil class, but there doesn't appear to be a need
+    # at this point since MongoEngine creates a global connection to MongoDB
+    # and makes it available to all the model objects.
+
     def save_job(self, job: Job):
         """
         Save a job record to the Mongo database.
         """
-        # The purpose of this method is to allow unit testing the various EE2*.py classes.
         job.save()
         return str(job.id)
+
+    def get_job_counts(self, job_filter):
+        """
+        Get the number of jobs matching a filter.
+
+        job_filter - a dict of keys to filter terms in the MongoEngine filter language.
+        """
+        return Job.objects.filter(**job_filter).count()
+
+    def get_jobs(self, job_filter, job_projection, sort_order, offset, limit):
+        """
+        Get jobs from the database.
+
+        job_filter - a dict of keys to filter terms in the MongoEngine filter language.
+        job_projection - a list of field names to include in the returned jobs.
+        sort_order - '+' to sort by job ID ascending, '-' descending.
+        offset - the number of jobs to skip before returning results.
+        limit - the maximum number of jobs to return.
+        """
+        # TODO Instead of SKIP use ID GT LT
+        #   https://www.codementor.io/arpitbhayani/fast-and-efficient-pagination-in-mongodb-9095flbqr
+        #   ^ this one is important - the workspace was DOSed by a single open narrative at one
+        #   point due to skip abuse, which is why it was removed
+        return (
+            Job.objects[:limit]
+            .filter(**job_filter)
+            .order_by(f"{sort_order}_id")
+            .skip(offset)
+            .only(*job_projection)
+        )
 
     # API ENDPOINTS
 
