@@ -8,7 +8,6 @@ The purpose of this class is to
 * Clients are only loaded if they are necessary
 
 """
-import os
 import time
 from datetime import datetime
 from enum import Enum
@@ -16,7 +15,6 @@ from logging import Logger
 
 import dateutil
 
-from installed_clients.authclient import KBaseAuth
 from lib.execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job
 from lib.execution_engine2.exceptions import AuthError
@@ -33,7 +31,6 @@ from lib.execution_engine2.utils.Condor import Condor
 from lib.execution_engine2.utils.EE2Logger import get_logger as _get_logger
 from lib.execution_engine2.utils.KafkaUtils import KafkaClient
 from lib.execution_engine2.utils.SlackUtils import SlackClient
-from execution_engine2.utils.arg_processing import parse_bool
 from installed_clients.WorkspaceClient import Workspace
 from execution_engine2.utils.clients import UserClientSet, ClientSet
 

@@ -5,7 +5,6 @@ import time
 
 from cachetools import TTLCache
 
-from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.utils.APIHelpers import GenerateFromConfig
 from execution_engine2.utils.clients import get_client_set
