@@ -57,7 +57,7 @@ class ee2_server_load_test(unittest.TestCase):
     def _getRunner(cls) -> SDKMethodRunner:
         runner = SDKMethodRunner(
             get_user_client_set(cls.cfg, cls.user_id, cls.token),
-            get_client_set(cls.cfg, cls.deploy)
+            get_client_set(cls.cfg, cls.deploy),
         )
         # Initialize these clients from None
         status = runner.get_jobs_status()  # type: JobsStatus

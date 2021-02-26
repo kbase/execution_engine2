@@ -152,7 +152,8 @@ class EE2TestAdminMode(unittest.TestCase):
         self.assertFalse(is_admin)
 
         aau.get_admin_role.assert_called_once_with(
-            self.token, ADMIN_READ_ROLE, ADMIN_WRITE_ROLE)
+            self.token, ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
+        )
 
         # Check Admin Status
         admin_type = runner.get_admin_permission()
@@ -237,7 +238,8 @@ class EE2TestAdminMode(unittest.TestCase):
         self.assertTrue(is_admin)
 
         adminauth.get_admin_role.assert_called_once_with(
-            self.token, ADMIN_READ_ROLE, ADMIN_WRITE_ROLE)
+            self.token, ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
+        )
 
         # Admin User with WRITE
 
@@ -299,7 +301,8 @@ class EE2TestAdminMode(unittest.TestCase):
         self.assertTrue(is_admin)
 
         adminauth.get_admin_role.assert_called_once_with(
-            self.token, ADMIN_READ_ROLE, ADMIN_WRITE_ROLE)
+            self.token, ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
+        )
 
         # Check Admin Status
         admin_type = runner.get_admin_permission()

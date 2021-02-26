@@ -90,14 +90,15 @@ class ClientSet:
     """
 
     def __init__(
-            self,
-            auth: KBaseAuth,
-            auth_admin: AdminAuthUtil,
-            condor: Condor,
-            catalog_utils: CatalogUtils,
-            kafka_client: KafkaClient,
-            mongo_util: MongoUtil,
-            slack_client: SlackClient):
+        self,
+        auth: KBaseAuth,
+        auth_admin: AdminAuthUtil,
+        condor: Condor,
+        catalog_utils: CatalogUtils,
+        kafka_client: KafkaClient,
+        mongo_util: MongoUtil,
+        slack_client: SlackClient,
+    ):
         """
         Initialize the client set from the individual clients.
         """
@@ -111,18 +112,22 @@ class ClientSet:
         self.mongo_util = mongo_util
         self.slack_client = slack_client
 
+
 # the constructor allows for mix and match of mocks and real implementations as needed
 # the method below handles all the client set up for going straight from a config
 
 
-def get_clients(cfg: Dict[str, str], cfg_path: str) -> (
-        KBaseAuth,
-        AdminAuthUtil,
-        Condor,
-        CatalogUtils,
-        MongoUtil,
-        KafkaClient,
-        SlackClient):
+def get_clients(
+    cfg: Dict[str, str], cfg_path: str
+) -> (
+    KBaseAuth,
+    AdminAuthUtil,
+    Condor,
+    CatalogUtils,
+    KafkaClient,
+    MongoUtil,
+    SlackClient,
+):
     """
     Get the set of clients used in the EE2 application that are not user-specific and can be
     reused from user to user.
@@ -159,7 +164,15 @@ def get_clients(cfg: Dict[str, str], cfg_path: str) -> (
     )
     # TODO check how MongoUtil handles a bad config + that error messages are understandable
     mongo_util = MongoUtil(cfg)
-    return auth, auth_admin, condor, catalog_utils, mongo_util, kafka_client, slack_client
+    return (
+        auth,
+        auth_admin,
+        condor,
+        catalog_utils,
+        kafka_client,
+        mongo_util,
+        slack_client,
+    )
 
 
 def get_client_set(cfg: Dict[str, str], cfg_path: str) -> ClientSet:
@@ -177,10 +190,5 @@ def get_client_set(cfg: Dict[str, str], cfg_path: str) -> ClientSet:
     kafka-host - the host string for a Kafka service
     slack-token - a token for contacting Slack
     """
-    auth, auth_admin, condor, catalog_utils, mongo_util, kafka_client, slack_client = (
-        get_clients(cfg, cfg_path)
-    )
 
-    return ClientSet(
-        auth, auth_admin, condor, catalog_utils, kafka_client, mongo_util, slack_client
-    )
+    return ClientSet(*get_clients(cfg, cfg_path))

@@ -47,7 +47,7 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
 
         cls.method_runner = SDKMethodRunner(
             get_user_client_set(cls.cfg, cls.user_id, cls.token),
-            get_client_set(cls.cfg, config_file)
+            get_client_set(cls.cfg, config_file),
         )
         cls.cr = CondorResources(
             request_cpus="1",
