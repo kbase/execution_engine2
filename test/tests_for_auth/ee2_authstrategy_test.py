@@ -26,11 +26,6 @@ class AuthStrategyTestCase(unittest.TestCase):
         cls.user = "some_user"
         cls.other_user = "some_other_user"
         config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
-        print("***")
-        print(config_file)
-        print(os.path.abspath(config_file))
-        with open(config_file) as f:
-            print(f.read())
         cls.cfg = dict()
         config = ConfigParser()
         config.read(config_file)
