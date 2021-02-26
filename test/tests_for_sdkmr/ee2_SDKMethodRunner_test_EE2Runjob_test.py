@@ -13,7 +13,11 @@ from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.db.models.models import Job
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
-from execution_engine2.utils.clients import get_user_client_set
+from execution_engine2.utils.clients import (
+    UserClientSet,
+    get_client_set,
+    get_user_client_set,
+)
 from test.utils_shared.test_utils import (
     bootstrap,
     get_example_job,
@@ -51,7 +55,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         cls.token = "token"
 
         cls.method_runner = SDKMethodRunner(
-            cls.cfg, get_user_client_set(cls.cfg, cls.user_id, cls.token)
+            get_user_client_set(cls.cfg, cls.user_id, cls.token),
+            get_client_set(cls.cfg, config_file)
         )
 
         cls.mongo_util = MongoUtil(cls.cfg)
@@ -67,7 +72,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             request_memory="100M",
             client_group="njs",
         )
-        cls.sdkmr_test_helper = ee2_sdkmr_test_helper(mr=cls.method_runner)
+        cls.sdkmr_test_helper = ee2_sdkmr_test_helper(cls.user_id)
 
     def getRunner(self) -> SDKMethodRunner:
         # Initialize these clients from None
@@ -81,7 +86,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         return self.sdkmr_test_helper.create_job_rec()
 
     def test_init_ok(self):
-        class_attri = ["config", "catalog_utils", "workspace", "mongo_util", "condor"]
+        class_attri = ["catalog_utils", "workspace", "mongo_util", "condor"]
         runner = self.getRunner()
         self.assertTrue(set(class_attri) <= set(runner.__dict__.keys()))
 

@@ -10,14 +10,14 @@ from configparser import ConfigParser
 from unittest.mock import patch
 
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
-from lib.execution_engine2.db.MongoUtil import MongoUtil
-from lib.execution_engine2.db.models.models import Job, Status
-from lib.execution_engine2.execution_engine2Impl import execution_engine2
-from lib.execution_engine2.sdk.EE2Status import JobsStatus
-from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-from lib.execution_engine2.utils.Condor import Condor
-from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
-from execution_engine2.utils.clients import get_user_client_set
+from execution_engine2.db.MongoUtil import MongoUtil
+from execution_engine2.db.models.models import Job, Status
+from execution_engine2.execution_engine2Impl import execution_engine2
+from execution_engine2.sdk.EE2Status import JobsStatus
+from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
+from execution_engine2.utils.Condor import Condor
+from execution_engine2.utils.CondorTuples import SubmissionInfo
+from execution_engine2.utils.clients import get_user_client_set, get_client_set
 from test.utils_shared.test_utils import (
     bootstrap,
     get_sample_job_params,
@@ -33,9 +33,9 @@ from mock import MagicMock
 class ee2_server_load_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
-        print("Deploy is", deploy)
-        config = read_config_into_dict(deploy)
+        cls.deploy = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
+        print("Deploy is", cls.deploy)
+        config = read_config_into_dict(cls.deploy)
         cls.cfg = config
         cls.user_id = "wsadmin"
         cls.ws_id = 9999
@@ -43,9 +43,7 @@ class ee2_server_load_test(unittest.TestCase):
 
         cls.ctx = {"token": cls.token, "user_id": cls.user_id}
         cls.impl = execution_engine2(cls.cfg)
-        cls.method_runner = SDKMethodRunner(
-            cls.cfg, get_user_client_set(cls.cfg, cls.user_id, cls.token)
-        )
+        cls.method_runner = cls._getRunner()
         cls.mongo_util = MongoUtil(cls.cfg)
         cls.mongo_helper = MongoTestHelper(cls.cfg)
 
@@ -55,18 +53,19 @@ class ee2_server_load_test(unittest.TestCase):
 
         cls.thread_count = 5
 
-    def getRunner(self) -> SDKMethodRunner:
-        # Initialize these clients from None
-        runner = copy.copy(self.__class__.method_runner)  # type : SDKMethodRunner
-        runner._ee2_status = runner.get_jobs_status()  # type: JobsStatus
-        runner._ee2_status._send_exec_stats_to_catalog = MagicMock(return_value=True)
-        runner._ee2_status.update_finished_job_with_usage = MagicMock(return_value=True)
-        runner.get_runjob()
-        runner._ee2_runjob._get_module_git_commit = MagicMock(
-            return_value="GitCommithash"
+    @classmethod
+    def _getRunner(cls) -> SDKMethodRunner:
+        runner = SDKMethodRunner(
+            get_user_client_set(cls.cfg, cls.user_id, cls.token),
+            get_client_set(cls.cfg, cls.deploy)
         )
+        # Initialize these clients from None
+        status = runner.get_jobs_status()  # type: JobsStatus
+        status._send_exec_stats_to_catalog = MagicMock(return_value=True)
+        status.update_finished_job_with_usage = MagicMock(return_value=True)
+        runjob = runner.get_runjob()
+        runjob._get_module_git_commit = MagicMock(return_value="GitCommithash")
         runner.get_job_logs()
-        runner.get_condor()
         runner.condor = MagicMock(autospec=True)
         # runner.get_job_resource_info = MagicMock(return_val={})
 
@@ -81,8 +80,7 @@ class ee2_server_load_test(unittest.TestCase):
 
         with self.mongo_util.mongo_engine_connection():
             ori_job_count = Job.objects.count()
-            runner = self.getRunner()
-
+            runner = self.method_runner
             # set job method differently to distinguish
             method_1 = "app_1.a_method"
             method_2 = "app_1.b_method"
@@ -141,7 +139,7 @@ class ee2_server_load_test(unittest.TestCase):
         """
         with self.mongo_util.mongo_engine_connection():
             ori_job_count = Job.objects.count()
-            runner = self.getRunner()
+            runner = self.method_runner
 
             job_params = get_sample_job_params()
 
@@ -329,7 +327,7 @@ class ee2_server_load_test(unittest.TestCase):
         """
         with self.mongo_util.mongo_engine_connection():
             ori_job_count = Job.objects.count()
-            runner = self.getRunner()
+            runner = self.method_runner
 
             job_params = get_sample_job_params()
 
@@ -419,7 +417,7 @@ class ee2_server_load_test(unittest.TestCase):
 
         with self.mongo_util.mongo_engine_connection():
             ori_job_count = Job.objects.count()
-            runner = self.getRunner()
+            runner = self.method_runner
 
             # set job method differently to distinguish
             method_1 = "a_method"
@@ -474,7 +472,7 @@ class ee2_server_load_test(unittest.TestCase):
 
         with self.mongo_util.mongo_engine_connection():
             ori_job_count = Job.objects.count()
-            runner = self.getRunner()
+            runner = self.method_runner
 
             job_params = get_sample_job_params()
 
@@ -582,7 +580,7 @@ class ee2_server_load_test(unittest.TestCase):
 
         with self.mongo_util.mongo_engine_connection():
             ori_job_count = Job.objects.count()
-            runner = self.getRunner()
+            runner = self.method_runner
 
             # create job
             job_id = runner.get_runjob()._init_job_rec(
@@ -643,7 +641,7 @@ class ee2_server_load_test(unittest.TestCase):
 
             ori_job_count = Job.objects.count()
             print("original job count is", ori_job_count)
-            runner = self.getRunner()
+            runner = self.method_runner
 
             # create job
             job_id = runner.get_runjob()._init_job_rec(

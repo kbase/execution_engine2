@@ -17,15 +17,21 @@ import requests_mock
 from bson import ObjectId
 from mock import MagicMock
 
+from execution_engine2.authorization.roles import AdminAuthUtil
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
-from lib.execution_engine2.db.MongoUtil import MongoUtil
+from execution_engine2.db.MongoUtil import MongoUtil
+from execution_engine2.utils.CatalogUtils import CatalogUtils
+from execution_engine2.utils.Condor import Condor
+from execution_engine2.utils.KafkaUtils import KafkaClient
+from execution_engine2.utils.SlackUtils import SlackClient
 from lib.execution_engine2.db.models.models import Job, Status, TerminatedCode
 from execution_engine2.exceptions import AuthError
 from lib.execution_engine2.exceptions import InvalidStatusTransitionException
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
-from execution_engine2.utils.clients import UserClientSet
-from execution_engine2.utils.clients import get_user_client_set
+from execution_engine2.utils.clients import UserClientSet, ClientSet
+from execution_engine2.utils.clients import get_user_client_set, get_client_set
+from installed_clients.authclient import KBaseAuth
 from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 from test.utils_shared.test_utils import (
     bootstrap,
@@ -34,6 +40,7 @@ from test.utils_shared.test_utils import (
     run_job_adapter,
     assert_exception_correct,
 )
+from test.utils_shared.mock_utils import get_client_mocks, ALL_CLIENTS
 from tests_for_db.mongo_test_helper import MongoTestHelper
 
 logging.basicConfig(level=logging.INFO)
@@ -48,11 +55,11 @@ from installed_clients.WorkspaceClient import Workspace
 class ee2_SDKMethodRunner_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
-        logging.info(f"Loading config from {config_file}")
+        cls.config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
+        logging.info(f"Loading config from {cls.config_file}")
 
         config_parser = ConfigParser()
-        config_parser.read(config_file)
+        config_parser.read(cls.config_file)
 
         cls.cfg = {}
 
@@ -68,7 +75,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         cls.token = "token"
 
         cls.method_runner = SDKMethodRunner(
-            cls.cfg, get_user_client_set(cls.cfg, cls.user_id, cls.token)
+            get_user_client_set(cls.cfg, cls.user_id, cls.token),
+            get_client_set(cls.cfg, cls.config_file)
         )
         cls.mongo_util = MongoUtil(cls.cfg)
         cls.mongo_helper = MongoTestHelper(cls.cfg)
@@ -83,7 +91,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             request_memory="100M",
             client_group="njs",
         )
-        cls.sdkmr_test_helper = ee2_sdkmr_test_helper(mr=cls.method_runner)
+        cls.sdkmr_test_helper = ee2_sdkmr_test_helper(cls.user_id)
 
     def getRunner(self) -> SDKMethodRunner:
         # Initialize these clients from None
@@ -130,7 +138,14 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     #    self.assertNotEqual(git_commit_1, git_commit_2)
 
     def test_init_fail(self):
-        self._init_fail({}, None, ValueError("user_clients is required"))
+        ws = Workspace("https://fake.com")
+        wsa = WorkspaceAuth("user", ws)
+        user_clients = UserClientSet("user", "token", ws, wsa)
+        clients_and_mocks = get_client_mocks(self.cfg, self.config_file, *ALL_CLIENTS)
+        clients = clients_and_mocks[ClientSet]
+
+        self._init_fail(None, clients, ValueError("user_clients is required"))
+        self._init_fail(user_clients, None, ValueError("clients is required"))
 
     def _init_fail(self, cfg, user_clients, expected):
         with raises(Exception) as e:
@@ -140,18 +155,26 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     def test_getters(self):
         ws = Workspace("https://fake.com")
         wsa = WorkspaceAuth("user", ws)
-        cliset = UserClientSet("user", "token", ws, wsa)
-        sdkmr = SDKMethodRunner(self.cfg, cliset)
+        user_clients = UserClientSet("user", "token", ws, wsa)
+        clients_and_mocks = get_client_mocks(self.cfg, self.config_file, *ALL_CLIENTS)
+
+        sdkmr = SDKMethodRunner(user_clients, clients_and_mocks[ClientSet])
 
         assert sdkmr.get_workspace() is ws
         assert sdkmr.get_user_id() == "user"
         assert sdkmr.get_token() == "token"
+        assert sdkmr.get_kafka_client() is clients_and_mocks[KafkaClient]
+        assert sdkmr.get_mongo_util() is clients_and_mocks[MongoUtil]
+        assert sdkmr.get_slack_client() is clients_and_mocks[SlackClient]
+        assert sdkmr.get_catalog_utils() is clients_and_mocks[CatalogUtils]
+        assert sdkmr.get_condor() is clients_and_mocks[Condor]
 
     def test_save_job(self):
         ws = Workspace("https://fake.com")
         wsa = WorkspaceAuth("user", ws)
         cliset = UserClientSet("user", "token", ws, wsa)
-        sdkmr = SDKMethodRunner(self.cfg, cliset)
+        clients_and_mocks = get_client_mocks(self.cfg, self.config_file, *ALL_CLIENTS)
+        sdkmr = SDKMethodRunner(cliset, clients_and_mocks[ClientSet])
 
         # We cannot use spec_set=True here because the code must access the Job.id field,
         # which is set dynamically. This means if the Job api changes, this test could pass
@@ -544,7 +567,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             runner = self.getRunner()
             runner._test_job_permissions = MagicMock(return_value=True)
-            runner.catalog_utils.catalog.log_exec_stats = MagicMock(return_value=True)
+            runner.catalog_utils.get_catalog().log_exec_stats = MagicMock(return_value=True)
 
             # test missing job_id input
             with self.assertRaises(ValueError) as context1:
@@ -702,8 +725,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             # now test with a different user
             other_method_runner = SDKMethodRunner(
-                self.cfg,
                 get_user_client_set(self.cfg, "some_other_user", "other_token"),
+                get_client_set(self.cfg, self.config_file)
             )
             job_states = other_method_runner.get_jobs_status().check_workspace_jobs(
                 self.ws_id

@@ -9,28 +9,42 @@ import bson
 from mock import MagicMock
 from mock import patch
 
+from execution_engine2.db.MongoUtil import MongoUtil
+from execution_engine2.utils.CatalogUtils import CatalogUtils
+from execution_engine2.utils.KafkaUtils import KafkaClient
+from execution_engine2.utils.SlackUtils import SlackClient
+
+from installed_clients.authclient import KBaseAuth
+
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
-from lib.execution_engine2.authorization.roles import AdminAuthUtil
-from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
+from execution_engine2.authorization.roles import AdminAuthUtil
+from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
-from lib.execution_engine2.db.models.models import Status
-from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-from lib.execution_engine2.utils.Condor import Condor
-from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
-from execution_engine2.utils.clients import get_user_client_set, UserClientSet
+from execution_engine2.db.models.models import Status
+from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
+from execution_engine2.utils.Condor import Condor
+from execution_engine2.utils.CondorTuples import SubmissionInfo
+from execution_engine2.utils.clients import (
+    UserClientSet,
+    ClientSet,
+    get_client_set,
+    get_user_client_set,
+)
 from test.utils_shared.test_utils import (
     get_sample_job_params,
     get_sample_condor_info,
 )
 
+from test.utils_shared.mock_utils import get_client_mocks as _get_client_mocks
+
 
 class EE2TestAdminMode(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
+        cls.config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
         config_parser = ConfigParser()
-        config_parser.read(config_file)
+        config_parser.read(cls.config_file)
 
         cls.cfg = {}
 
@@ -44,10 +58,6 @@ class EE2TestAdminMode(unittest.TestCase):
         cls.user_id = "wsadmin"
         cls.ws_id = 9999
         cls.token = "token"
-
-        cls.method_runner = SDKMethodRunner(
-            cls.cfg, get_user_client_set(cls.cfg, cls.user_id, cls.token)
-        )
 
     def setUp(self) -> None:
         """
@@ -87,11 +97,13 @@ class EE2TestAdminMode(unittest.TestCase):
         self.condor_patch.stop()
         self.condor_patch2.start()
 
-    def getRunner(self, user_clients=None) -> SDKMethodRunner:
+    def getRunner(self, user_clients=None, clients=None) -> SDKMethodRunner:
         # Initialize these clients from None
         if not user_clients:
             user_clients = get_user_client_set(self.cfg, self.user_id, self.token)
-        runner = SDKMethodRunner(self.cfg, user_clients)  # type : SDKMethodRunner
+        if not clients:
+            clients = get_client_set(self.cfg, self.config_file)
+        runner = SDKMethodRunner(user_clients, clients)  # type : SDKMethodRunner
         runner.get_jobs_status()
         runner.get_runjob()
         runner.get_job_logs()
@@ -109,30 +121,38 @@ class EE2TestAdminMode(unittest.TestCase):
 
     # TODO How do you test ADMIN_MODE without increasing too much coverage
 
-    def get_mocks(
-        self, user_id=None, token="fake_token"
+    def get_user_mocks(
+        self, user_id=None, token=None
     ) -> (UserClientSet, Workspace, WorkspaceAuth):
         user_id = user_id if user_id else self.user_id
+        token = token if token else self.token
         ws = create_autospec(Workspace, instance=True, spec_set=True)
         wsa = create_autospec(WorkspaceAuth, instance=True, spec_set=True)
         ucs = UserClientSet(user_id, token, ws, wsa)
         return ucs, ws, wsa
 
+    def get_client_mocks(self, *to_be_mocked):
+        return _get_client_mocks(self.cfg, self.config_file, *to_be_mocked)
+
     @patch.object(Catalog, "get_module_version", return_value="module.version")
-    @patch.object(AdminAuthUtil, "_fetch_user_roles")
-    def test_regular_user(self, aau, catalog):
+    def test_regular_user(self, catalog):
         # Regular User
         lowly_user = "Access Denied: You are not an administrator"
-        user_client_set, _, ws_auth = self.get_mocks()
+        user_client_set, _, ws_auth = self.get_user_mocks()
+        clients_and_mocks = self.get_client_mocks(AdminAuthUtil)
+        aau = clients_and_mocks[AdminAuthUtil]
+        aau.get_admin_role.return_value = None
         ws_auth.can_write.return_value = True
-        runner = self.getRunner(user_client_set)
-        aau.return_value = ["RegularJoe"]
+        runner = self.getRunner(user_client_set, clients_and_mocks[ClientSet])
         method_1 = "module_name.function_name"
         job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
 
         # Check Admin Status
         is_admin = runner.check_is_admin()
         self.assertFalse(is_admin)
+
+        aau.get_admin_role.assert_called_once_with(
+            self.token, ADMIN_READ_ROLE, ADMIN_WRITE_ROLE)
 
         # Check Admin Status
         admin_type = runner.get_admin_permission()
@@ -196,16 +216,19 @@ class EE2TestAdminMode(unittest.TestCase):
 
         # TODO do the above with as_admin=True and assert failure each time
 
-        # Start the job and get it's status as an admin
+        # Start the job and get its status as an admin
 
     @patch.object(Catalog, "get_module_version", return_value="module.version")
     @patch.object(WorkspaceAuth, "can_write", return_value=True)
-    @patch.object(AdminAuthUtil, "_fetch_user_roles")
-    def test_admin_writer(self, aau, workspace, catalog):
+    def test_admin_writer(self, workspace, catalog):
         # Admin User with WRITE
 
-        runner = self.getRunner()
-        aau.return_value = [ADMIN_READ_ROLE]
+        clients_and_mocks = self.get_client_mocks(AdminAuthUtil)
+        clients = clients_and_mocks[ClientSet]
+        adminauth = clients_and_mocks[AdminAuthUtil]
+
+        runner = self.getRunner(None, clients)
+        adminauth.get_admin_role.return_value = ADMIN_READ_ROLE
         method_1 = "module_name.function_name"
         job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
 
@@ -213,11 +236,14 @@ class EE2TestAdminMode(unittest.TestCase):
         is_admin = runner.check_is_admin()
         self.assertTrue(is_admin)
 
+        adminauth.get_admin_role.assert_called_once_with(
+            self.token, ADMIN_READ_ROLE, ADMIN_WRITE_ROLE)
+
         # Admin User with WRITE
 
-        runner = self.getRunner()
+        runner = self.getRunner(None, clients)
         # SET YOUR ADMIN STATUS HERE
-        aau.return_value = [ADMIN_WRITE_ROLE]
+        adminauth.get_admin_role.return_value = ADMIN_WRITE_ROLE
 
         method_1 = "module_name.function_name"
         job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
@@ -258,18 +284,22 @@ class EE2TestAdminMode(unittest.TestCase):
         ):
             runner.run_job(params=job_params_1, as_admin=False)
 
-    @patch.object(AdminAuthUtil, "_fetch_user_roles")
-    def test_admin_reader(self, aau):
-        # Admin User with WRITE
+    def test_admin_reader(self):
+        # Admin User with READ
         lowly_admin = r"Access Denied: You are a read-only admin. This function requires write access"
-        runner = self.getRunner()
-        aau.return_value = [ADMIN_READ_ROLE]
+        clients_and_mocks = self.get_client_mocks(AdminAuthUtil)
+        adminauth = clients_and_mocks[AdminAuthUtil]
+        runner = self.getRunner(None, clients_and_mocks[ClientSet])
+        adminauth.get_admin_role.return_value = ADMIN_READ_ROLE
         method_1 = "module_name.function_name"
         job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
 
         # Check Admin Status
         is_admin = runner.check_is_admin()
         self.assertTrue(is_admin)
+
+        adminauth.get_admin_role.assert_called_once_with(
+            self.token, ADMIN_READ_ROLE, ADMIN_WRITE_ROLE)
 
         # Check Admin Status
         admin_type = runner.get_admin_permission()

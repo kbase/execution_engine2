@@ -7,11 +7,13 @@ from typing import Dict
 
 from execution_engine2.authorization.roles import AdminAuthUtil
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
+from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.utils.CatalogUtils import CatalogUtils
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
 from execution_engine2.utils.KafkaUtils import KafkaClient
 from execution_engine2.utils.SlackUtils import SlackClient
+from execution_engine2.utils.arg_processing import parse_bool
 
 from installed_clients.authclient import KBaseAuth
 from installed_clients.WorkspaceClient import Workspace
@@ -87,33 +89,98 @@ class ClientSet:
     These are not user-specific and can be reused throughout the application.
     """
 
-    def __init__(self, cfg: Dict[str, str], cfg_path: str, debug: bool = False):
+    def __init__(
+            self,
+            auth: KBaseAuth,
+            auth_admin: AdminAuthUtil,
+            condor: Condor,
+            catalog_utils: CatalogUtils,
+            kafka_client: KafkaClient,
+            mongo_util: MongoUtil,
+            slack_client: SlackClient):
         """
-        Initialize the client set from a configuration dictionary.
-
-        cfg - the configuration dictionary
-        cfg_path - the path to the configuration file
-        debug - set clients that support it to debug mode
-
-        Expected keys in config:
-        auth-url - the root URL of the kbase auth service
-        catalog-url - the URL of the catalog service
-        catalog-token - a token to use with the catalog service. Ideally a service token
-        kafka-host - the host string for a Kafka service
-        slack-token - a token for contacting Slack
+        Initialize the client set from the individual clients.
         """
-        # TODO seems like it'd make sense to init Condor from a config dict like everything else
-        self.condor = Condor(cfg_path)
-        self.catalog_utils = CatalogUtils(cfg["catalog-url"], cfg["catalog-token"])
-        auth_url = cfg["auth-url"]
-        self.auth = KBaseAuth(auth_url=auth_url + "/api/legacy/KBase/Sessions/Login")
-        # TODO using hardcoded roles for now to avoid possible bugs with mismatched cfg roles
-        #       these should probably be configurable
-        self.auth_admin = AdminAuthUtil(auth_url, [ADMIN_READ_ROLE, ADMIN_WRITE_ROLE])
 
-        # KafkaClient has a nice error message when the arg is None
-        self.kafka_client = KafkaClient(cfg.get("kafka-host"))
-        # SlackClient handles None arguments
-        self.slack_client = SlackClient(
-            cfg.get("slack-token"), debug=debug, endpoint=cfg.get("ee2-url")
-        )
+        # TODO check no clients are None. Make a general method somewhere
+        self.auth = auth
+        self.auth_admin = auth_admin
+        self.condor = condor
+        self.catalog_utils = catalog_utils
+        self.kafka_client = kafka_client
+        self.mongo_util = mongo_util
+        self.slack_client = slack_client
+
+# the constructor allows for mix and match of mocks and real implementations as needed
+# the method below handles all the client set up for going straight from a config
+
+
+def get_clients(cfg: Dict[str, str], cfg_path: str) -> (
+        KBaseAuth,
+        AdminAuthUtil,
+        Condor,
+        CatalogUtils,
+        MongoUtil,
+        KafkaClient,
+        SlackClient):
+    """
+    Get the set of clients used in the EE2 application that are not user-specific and can be
+    reused from user to user.
+
+    cfg - the configuration dictionary
+    cfg_path - the path to the configuration file
+
+    Expected keys in config:
+    auth-url - the root URL of the kbase auth service
+    catalog-url - the URL of the catalog service
+    catalog-token - a token to use with the catalog service. Ideally a service token
+    kafka-host - the host string for a Kafka service
+    slack-token - a token for contacting Slack
+    """
+    # Condor needs access to the entire deploy.cfg file, not just the ee2 section
+    condor = Condor(cfg_path)
+    # Do a check to ensure the urls and tokens actually work correctly?
+    # TODO check keys are present - make some general methods for dealing with this
+    catalog_utils = CatalogUtils(cfg["catalog-url"], cfg["catalog-token"])
+    auth_url = cfg["auth-url"]
+    auth = KBaseAuth(auth_url=auth_url + "/api/legacy/KBase/Sessions/Login")
+    # TODO using hardcoded roles for now to avoid possible bugs with mismatched cfg roles
+    #      these should probably be configurable.
+    #      See https://github.com/kbase/execution_engine2/issues/295
+    auth_admin = AdminAuthUtil(auth_url, [ADMIN_READ_ROLE, ADMIN_WRITE_ROLE])
+
+    # KafkaClient has a nice error message when the arg is None
+    kafka_client = KafkaClient(cfg.get("kafka-host"))
+
+    debug = parse_bool(cfg.get("debug"))
+    # SlackClient handles None arguments
+    slack_client = SlackClient(
+        cfg.get("slack-token"), debug=debug, endpoint=cfg.get("ee2-url")
+    )
+    # TODO check how MongoUtil handles a bad config + that error messages are understandable
+    mongo_util = MongoUtil(cfg)
+    return auth, auth_admin, condor, catalog_utils, mongo_util, kafka_client, slack_client
+
+
+def get_client_set(cfg: Dict[str, str], cfg_path: str) -> ClientSet:
+    """
+    A helper method to create a ClientSet from a config dict rather than constructing and passing
+    in clients individually.
+
+    cfg - the configuration dictionary
+    cfg_path - the path to the configuration file
+
+    Expected keys in config:
+    auth-url - the root URL of the kbase auth service
+    catalog-url - the URL of the catalog service
+    catalog-token - a token to use with the catalog service. Ideally a service token
+    kafka-host - the host string for a Kafka service
+    slack-token - a token for contacting Slack
+    """
+    auth, auth_admin, condor, catalog_utils, mongo_util, kafka_client, slack_client = (
+        get_clients(cfg, cfg_path)
+    )
+
+    return ClientSet(
+        auth, auth_admin, condor, catalog_utils, kafka_client, mongo_util, slack_client
+    )

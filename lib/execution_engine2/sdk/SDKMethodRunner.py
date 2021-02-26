@@ -30,12 +30,12 @@ from lib.execution_engine2.sdk import (
 from lib.execution_engine2.sdk.EE2Constants import KBASE_CONCIERGE_USERNAME
 from lib.execution_engine2.utils.CatalogUtils import CatalogUtils
 from lib.execution_engine2.utils.Condor import Condor
-from lib.execution_engine2.utils.EE2Logger import get_logger
+from lib.execution_engine2.utils.EE2Logger import get_logger as _get_logger
 from lib.execution_engine2.utils.KafkaUtils import KafkaClient
 from lib.execution_engine2.utils.SlackUtils import SlackClient
-from execution_engine2.utils.clients import UserClientSet
 from execution_engine2.utils.arg_processing import parse_bool
 from installed_clients.WorkspaceClient import Workspace
+from execution_engine2.utils.clients import UserClientSet, ClientSet
 
 
 class JobPermissions(Enum):
@@ -57,30 +57,25 @@ class SDKMethodRunner:
 
     def __init__(
         self,
-        config,
         user_clients: UserClientSet,
+        clients: ClientSet,
         job_permission_cache=None,
         admin_permissions_cache=None,
-        mongo_util=None,
     ):
         if not user_clients:
             raise ValueError("user_clients is required")
-        self.deployment_config_fp = os.environ["KB_DEPLOYMENT_CONFIG"]
-        self.config = config
-        self.mongo_util = mongo_util
-        self.condor = None
+        if not clients:
+            raise ValueError("clients is required")
+        self.mongo_util = clients.mongo_util
+        self.condor = clients.condor
         self.workspace = user_clients.workspace
         self.workspace_auth = user_clients.workspace_auth
-        self.admin_roles = config.get("admin_roles", ["EE2_ADMIN", "EE2_ADMIN_RO"])
-        self.catalog_utils = CatalogUtils(
-            config["catalog-url"], config["catalog-token"]
-        )
-        self.auth_url = config.get("auth-url")
-        self.auth = KBaseAuth(auth_url=config.get("auth-service-url"))
+        self.catalog_utils = clients.catalog_utils
+        self.auth = clients.auth
+        self.auth_admin = clients.auth_admin
         self.user_id = user_clients.user_id
         self.token = user_clients.token
-        self.debug = parse_bool(config.get("debug"))
-        self.logger = get_logger()
+        self.logger = _get_logger()
 
         self.job_permission_cache = EE2Authentication.EE2Auth.get_cache(
             cache=job_permission_cache,
@@ -100,10 +95,8 @@ class SDKMethodRunner:
         self._ee2_logs = None
         self._ee2_status_range = None
         self._ee2_auth = None
-        self.kafka_client = KafkaClient(config.get("kafka-host"))
-        self.slack_client = SlackClient(
-            config.get("slack-token"), debug=self.debug, endpoint=config.get("ee2-url")
-        )
+        self.kafka_client = clients.kafka_client
+        self.slack_client = clients.slack_client
 
     # Various Clients: TODO: Think about sending in just required clients, not entire SDKMR
 
@@ -132,16 +125,6 @@ class SDKMethodRunner:
             self._ee2_status = EE2Status.JobsStatus(self)
         return self._ee2_status
 
-    def get_mongo_util(self) -> MongoUtil:
-        if self.mongo_util is None:
-            self.mongo_util = MongoUtil(self.config)
-        return self.mongo_util
-
-    def get_condor(self) -> Condor:
-        if self.condor is None:
-            self.condor = Condor(self.deployment_config_fp)
-        return self.condor
-
     # A note on getters:
     # Getters are commonly described as unpythonic. However, accessing instance variables
     # directly, rather than via getters, causes significant problems when mocking a class in
@@ -169,21 +152,18 @@ class SDKMethodRunner:
         """
         Get the catalog utilities for this instance of SDKMR.
         """
-        # TODO Unit test this method once catalog_utils can be mocked.
         return self.catalog_utils
 
     def get_kafka_client(self) -> KafkaClient:
         """
         Get the Kafka client for this instance of SDKMR.
         """
-        # TODO Unit test this method once kafka_client can be mocked.
         return self.kafka_client
 
     def get_slack_client(self) -> SlackClient:
         """
         Get the Kafka client for this instance of SDKMR.
         """
-        # TODO Unit test this method once slack_client can be mocked.
         return self.slack_client
 
     def get_user_id(self) -> str:
@@ -197,6 +177,18 @@ class SDKMethodRunner:
         Get the token of the user for this instance of SDKMR.
         """
         return self.token
+
+    def get_mongo_util(self) -> MongoUtil:
+        """
+        Get the mongo utilities for this instance of SDKMR.
+        """
+        return self.mongo_util
+
+    def get_condor(self) -> Condor:
+        """
+        Get the Condor interface for this instance of SDKMR
+        """
+        return self.condor
 
     # Permissions Decorators    #TODO Verify these actually work     #TODO add as_admin to these
 

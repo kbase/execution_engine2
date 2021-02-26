@@ -3,7 +3,6 @@ from enum import Enum
 from cachetools import TTLCache
 
 from lib.execution_engine2.authorization.authstrategy import can_read_job, can_write_job
-from lib.execution_engine2.authorization.roles import AdminAuthUtil
 from lib.execution_engine2.db.models.models import Job
 from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
 
@@ -31,8 +30,7 @@ class EE2Auth:
         return cache
 
     def _lookup_admin_permissions(self):
-        aau = AdminAuthUtil(self.sdkmr.auth_url, self.sdkmr.admin_roles)
-        p = aau.get_admin_role(
+        p = self.sdkmr.auth_admin.get_admin_role(
             token=self.sdkmr.token,
             read_role=ADMIN_READ_ROLE,
             write_role=ADMIN_WRITE_ROLE,
