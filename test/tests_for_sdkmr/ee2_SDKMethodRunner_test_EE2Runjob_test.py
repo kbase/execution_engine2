@@ -14,7 +14,6 @@ from lib.execution_engine2.db.models.models import Job
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
 from execution_engine2.utils.clients import (
-    UserClientSet,
     get_client_set,
     get_user_client_set,
 )

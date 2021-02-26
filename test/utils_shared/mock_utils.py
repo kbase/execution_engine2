@@ -7,7 +7,6 @@ from execution_engine2.utils.SlackUtils import SlackClient
 
 from installed_clients.authclient import KBaseAuth
 
-from installed_clients.CatalogClient import Catalog
 from execution_engine2.authorization.roles import AdminAuthUtil
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE

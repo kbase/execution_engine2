@@ -17,7 +17,6 @@ import requests_mock
 from bson import ObjectId
 from mock import MagicMock
 
-from execution_engine2.authorization.roles import AdminAuthUtil
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.utils.CatalogUtils import CatalogUtils
@@ -31,7 +30,6 @@ from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
 from execution_engine2.utils.clients import UserClientSet, ClientSet
 from execution_engine2.utils.clients import get_user_client_set, get_client_set
-from installed_clients.authclient import KBaseAuth
 from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 from test.utils_shared.test_utils import (
     bootstrap,

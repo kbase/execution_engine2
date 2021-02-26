@@ -9,13 +9,6 @@ import bson
 from mock import MagicMock
 from mock import patch
 
-from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.utils.CatalogUtils import CatalogUtils
-from execution_engine2.utils.KafkaUtils import KafkaClient
-from execution_engine2.utils.SlackUtils import SlackClient
-
-from installed_clients.authclient import KBaseAuth
-
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
 from execution_engine2.authorization.roles import AdminAuthUtil

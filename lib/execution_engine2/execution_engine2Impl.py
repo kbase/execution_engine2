@@ -62,7 +62,7 @@ class execution_engine2:
             maxsize=self.ADMIN_ROLES_CACHE_SIZE, ttl=self.ADMIN_ROLES_CACHE_EXPIRE_TIME
         )
         self.gen_cfg = GenerateFromConfig(config)
-        # move these into GFC? Since they're only generated once it doens't seem necessary
+        # move these into GFC? Since they're only generated once it doesn't seem necessary
         configpath = os.environ["KB_DEPLOYMENT_CONFIG"]
         self.clients = get_client_set(config, configpath)
         #END_CONSTRUCTOR
