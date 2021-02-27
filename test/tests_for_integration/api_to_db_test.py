@@ -201,7 +201,7 @@ def service(full_config, auth_url, mongo_client, config):
     # See the server file for the full scoop, but in short, the stop method expects a _proc
     # package variable to be set, but start doesn't always set it, and that causes an error.
 
-    # Tests are run in the same process to we need to be put the environment back the way it was
+    # Tests are run in the same process so we need to be put the environment back the way it was
     os.environ[KB_DEPLOY_ENV] = prior_deploy
 
     if not KEEP_TEMP_FILES:
