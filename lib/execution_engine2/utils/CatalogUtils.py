@@ -6,12 +6,12 @@ from lib.installed_clients.CatalogClient import Catalog
 
 class CatalogUtils:
     def __init__(self, url, admin_token):
-        self.catalog = Catalog(url=url, token=admin_token)
+        self._catalog = Catalog(url=url, token=admin_token)
 
     def get_catalog(self):
         """ Get the catalog client for this instance. """
         # TODO unit test this method after switching to dependency injection
-        return self.catalog
+        return self._catalog
 
     def get_normalized_resources(self, method) -> Dict:
         """
@@ -29,7 +29,7 @@ class CatalogUtils:
 
         module_name, function_name = method.split(".")
 
-        group_config = self.catalog.list_client_group_configs(
+        group_config = self._catalog.list_client_group_configs(
             {"module_name": module_name, "function_name": function_name}
         )
 

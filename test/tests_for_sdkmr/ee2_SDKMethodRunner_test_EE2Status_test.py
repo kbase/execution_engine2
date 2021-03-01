@@ -13,7 +13,7 @@ from mongoengine import ValidationError
 from lib.execution_engine2.db.models.models import Job
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
-from execution_engine2.utils.clients import get_user_client_set
+from execution_engine2.utils.clients import get_user_client_set, get_client_set
 from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 from test.utils_shared.test_utils import bootstrap, get_example_job
 
@@ -46,7 +46,8 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         cls.token = "token"
 
         cls.method_runner = SDKMethodRunner(
-            cls.cfg, get_user_client_set(cls.cfg, cls.user_id, cls.token)
+            get_user_client_set(cls.cfg, cls.user_id, cls.token),
+            get_client_set(cls.cfg, config_file),
         )
         cls.cr = CondorResources(
             request_cpus="1",
@@ -60,7 +61,7 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
             "DiskUsage": "1",
         }
         cls.mongo_util = cls.method_runner.get_mongo_util()
-        cls.sdkmr_test_helper = ee2_sdkmr_test_helper(mr=cls.method_runner)
+        cls.sdkmr_test_helper = ee2_sdkmr_test_helper(cls.user_id)
 
     def getRunner(self) -> SDKMethodRunner:
         # Initialize these clients from None

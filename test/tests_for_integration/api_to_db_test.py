@@ -35,7 +35,7 @@ from utils_shared.test_utils import (
 from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
 from installed_clients.execution_engine2Client import execution_engine2 as ee2client
 
-KEEP_TEMP_FILES = True
+KEEP_TEMP_FILES = False
 AUTH_DB = "api_to_db_test"
 AUTH_MONGO_USER = "auth"
 TEMP_DIR = Path("test_temp_can_delete")
@@ -174,8 +174,10 @@ def service(full_config, auth_url, mongo_client, config):
     # also updates the config in place so it contains the correct auth urls for any other
     # methods that use the config fixture
     cfgpath = _update_config_and_create_config_file(full_config, auth_url)
+    print(f"created test deploy at {cfgpath}")
     _clear_ee2_db(mongo_client, config)
 
+    prior_deploy = os.environ[KB_DEPLOY_ENV]
     # from this point on, calling the get_*_test_config methods will get the temp config file
     os.environ[KB_DEPLOY_ENV] = cfgpath
     # The server creates the configuration, impl, and application *AT IMPORT TIME* so we have to
@@ -198,6 +200,9 @@ def service(full_config, auth_url, mongo_client, config):
     # SampleServiceServer.stop_server()  <-- this causes an error.
     # See the server file for the full scoop, but in short, the stop method expects a _proc
     # package variable to be set, but start doesn't always set it, and that causes an error.
+
+    # Tests are run in the same process to we need to be put the environment back the way it was
+    os.environ[KB_DEPLOY_ENV] = prior_deploy
 
     if not KEEP_TEMP_FILES:
         os.remove(cfgpath)
