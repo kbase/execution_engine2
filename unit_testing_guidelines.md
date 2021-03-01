@@ -1,7 +1,7 @@
 # Unit and Integration Testing guidelines
 
 This document briefly covers testing philosophy with regard to integration and unit tests,
-especially for the Python language and in the context of developing a KBase core server like
+especially for the Python language and in the context of developing a KBase core service like
 the Execution Engine.
 
 ## Unit versus Integration tests
@@ -10,18 +10,19 @@ Unit tests cover one module, class, or function, called a code unit from here on
 a unit test file might cover the contents of `my_module.py` or more granularly `my_module.MyClass`.
 Code outside the code unit should be excluded from the tests. The exception is "value classes"
 which are classes which primarily hold data and whose behavior is based on that data. Other
-classes required by the unit under test should be mocked out.
+classes required by the unit under test should be mocked out as far as possible and practical.
 
 This makes unit tests fast and easy to understand, as only the isolated code unit needs to be
-comprehended in order to comprehend test failures.
+comprehended in order to grasp test failures.
 
 In contrast an integration test tests that two or more code units work well together. This can
 range from anything between testing two code units' interactions to api-to-DB tests for a server.
 Integration tests are typically much much slower, much more complex, take much more setup code,
-and are harder to understand. Due to this, it is advisable to mimize the number of integration
+and are harder to understand. Due to this, it is advisable to minimze the number of integration
 tests to the least possible to ensure the various code units work together correctly, and write
 unit tests to cover as much code as possible. In the author's experience, it is usually not
-difficult to write unit tests with 100% coverage for the code unit.
+difficult to write unit tests with 100% coverage for the code unit (although keep in mind
+that 100% test coverage does not necessarily indicate quality tests).
 
 ## Mocking dependencies
 
@@ -42,8 +43,8 @@ def get_object_name_from_id(url, token, ref):
 Note that the same situation may arise in a class that needs to contact the workspace regularly and
 constructs the client in its `__init__` method.
 
-This makes the function difficult to unit test as if run as is, it will contact the workspace
-service, which means that to run the test the workspace service must be running and populated
+This makes the function difficult to unit test, as if run as-is, it will contact the workspace
+service. This means that to run the test the workspace service must be running and populated
 with data, or a mock service must be running that can validate the call and return the expected
 payload.
 
@@ -85,7 +86,7 @@ In this test, we:
 
 No server, mock or otherwise, is required, nor is confusing and error-prone monkey patching.
 
-If step 4 is ommitted, any code that is run prior to the mock being called is essentially ignored
+If step 4 is omitted, any code that is run prior to the mock being called is ignored
 by the tests as long as the mock is called and an error doesn't occur. Confirming the correct
 call is required to test that any code that, for example, mutates the input arguments before
 calling the mock with said mutated arguments works correctly.
