@@ -21,10 +21,9 @@ from lib.execution_engine2.utils.CondorTuples import (
     SubmissionInfo,
     JobInfo,
 )
-from lib.execution_engine2.utils.Scheduler import Scheduler
 
 
-class Condor(Scheduler):
+class Condor:
     # TODO: Should these be outside of the class?
     REQUEST_CPUS = "request_cpus"
     REQUEST_MEMORY = "request_memory"
@@ -289,11 +288,11 @@ class Condor(Scheduler):
         return sub
 
     # TODO Copy stuff from Concierge Params into #AcctGroup/Clientgroup/JobPrio, CPu/MEMORY/DISK/
-    def create_submit(
+    def _create_submit(
         self, params: Dict, concierge_params: ConciergeParams = None
     ) -> Dict:
-        # this is required to be in the public API due to the Scheduler ABC
-        # currently only referenced in tests
+        # note some tests call this function directly and will need to be updated if the
+        # signature is changed
         self._check_for_missing_runjob_params(params)
 
         sub = self._add_resources_and_special_attributes(params, concierge_params)
@@ -338,11 +337,11 @@ class Condor(Scheduler):
         :return:
         """
         if submit_file is None:
-            submit_file = self.create_submit(params, concierge_params)
+            submit_file = self._create_submit(params, concierge_params)
 
-        return self.run_submit(submit_file)
+        return self._run_submit(submit_file)
 
-    def run_submit(self, submit: Dict[str, str]) -> SubmissionInfo:
+    def _run_submit(self, submit: Dict[str, str]) -> SubmissionInfo:
 
         sub = htcondor.Submit(submit)
         try:
@@ -363,7 +362,7 @@ class Condor(Scheduler):
         if job_id is not None and cluster_id is not None:
             raise Exception("Use only batch name (job_id) or cluster_id, not both")
 
-        condor_stats = self.get_job_info(job_id=job_id, cluster_id=cluster_id)
+        condor_stats = self._get_job_info(job_id=job_id, cluster_id=cluster_id)
         # Don't leak token into the logs here
         job_info = condor_stats.info
         if job_info is None:
@@ -396,11 +395,11 @@ class Condor(Scheduler):
 
         return extracted_resources
 
-    def get_job_info(
+    def _get_job_info(
         self, job_id: Optional[str] = None, cluster_id: Optional[str] = None
     ) -> JobInfo:
-        # this is required to be in the public API due to the Scheduler ABC
-        # currently only referenced in tests
+        # note some tests call this function directly and will need to be updated if the
+        # signature is changed
 
         if job_id is not None and cluster_id is not None:
             return JobInfo(
@@ -425,10 +424,6 @@ class Condor(Scheduler):
             self.logger.debug({"constraint": constraint, "limit": 1})
             raise e
             # return JobInfo(info=None, error=e)
-
-    def get_user_info(self, user_id, projection=None):
-        # this is required to be in the public API due to the Scheduler ABC
-        pass
 
     def cancel_job(self, job_id: str) -> bool:
         """

@@ -69,7 +69,7 @@ class EE2TestAdminMode(unittest.TestCase):
         )
         self.condor_patch2 = patch.object(
             target=Condor,
-            attribute="get_job_info",
+            attribute="_get_job_info",
             return_value=get_sample_condor_info(),
         )
 
@@ -106,7 +106,7 @@ class EE2TestAdminMode(unittest.TestCase):
     def get_runner_with_condor(self) -> SDKMethodRunner:
         runner = self.getRunner()
         condor = MagicMock(return_value={})
-        condor.get_job_info = MagicMock(return_value="")
+        condor._get_job_info = MagicMock(return_value="")
         condor.get_job_resource_info = MagicMock(return_value="njs")
         runner.condor = condor
 
