@@ -61,19 +61,19 @@ def test_get_object_name_from_id_success():
     ws = create_autospec(Workspace, spec_set=True, instance=True)                    [1]
     ws.get_object_info3.return_value = {'infos': [                                   [2]
         [3,
-         "my_name",
-         "Some.Type-1.0",
-         1/1/1T01:01:01+00:00,
+         'my_name',
+         'Some.Type-1.0',
+         '1/1/1T01:01:01+00:00',
          1,
-         "someguy",
+         'someguy',
          8,
-         "my_workspace",
-         79054025255fb1a26e4bc422aef54eb4, 82, {}]
+         'my_workspace',
+         '79054025255fb1a26e4bc422aef54eb4', 82, {}]
     ]}
 
-    assert get_object_name_from_id(ws, "8/3/1") == "my_workspace"                    [3]
+    assert get_object_name_from_id(ws, '8/3/1') == 'my_name'                         [3]
 
-    ws.get_object_info3.assert_called_once_with({'objects': [{'ref': "8/3/1"}]})     [4]
+    ws.get_object_info3.assert_called_once_with({'objects': [{'ref': '8/3/1'}]})     [4]
 ```
 
 In this test, we:
@@ -113,7 +113,7 @@ class Application:
             auth_protocol,
             auth_cache_time,
             ... more Application parameters go here):
-        self.auth = SomeCompaniessAuthImplementation(
+        self.auth = SomeCompaniesAuthImplementation(
             auth_url, auth_client_id, auth_client_secret, auth_protocol, auth_cache_time)
 ```
 
@@ -131,7 +131,8 @@ class Application:
 ```
 
 Where the interface of `auth_implementation` can be merely documented (e.g. ducktyping) or
-more rigorously defined with an [abstract base class](https://docs.python.org/3/library/abc.html).
+more rigorously defined with an [abstract base class](https://docs.python.org/3/library/abc.html)
+and [type hints](https://docs.python.org/3/library/typing.html).
 
 In this way, code that interprets a configuration at run time can build whichever version of
 the authentication module that is required and pass it to `Application`. This makes `Application`
@@ -146,17 +147,19 @@ could provide helper methods.
 Those familiar with the python mock library will be aware of the `Mock` class. In the examples
 above, we use `create_autospec` to create the mock rather than creating a mock class directly.
 The way `create_autospec` is used, with `spec_set=True` and `instance=True`, creates a mock object
-based off the API of the class being mocked, and unlike a regular mock, will not allow reading
-or writing of an attribute that does not exist on the class being mocked (as well as avoiding
-[other problems](https://docs.python.org/3/library/unittest.mock.html#auto-speccing)).
-This prevents test false positives if the API of the class changes but the tests are not
+based off the interface of the class being mocked, and unlike a regular mock, will not allow
+reading or writing of an attribute that does not exist on the class being mocked (as well as
+avoiding [other problems](https://docs.python.org/3/library/unittest.mock.html#auto-speccing)).
+This prevents test false positives if the interface of the class changes but the tests are not
 updated - a standard `Mock()` will allow method returns to be set and will record method calls
-for methods that do not exist, but in the example above, the tests would fail if, for example, `get_object_info3` was removed from the `Workspace` class.
+for methods that do not exist, but in the example above, the tests would fail if, for example,
+`get_object_info3` was removed from the `Workspace` class.
 
 The drawback of using `spec_set=True` is that autospeccing is unaware of any instance variables
 (e.g. `self.foo = foo_arg` in a constructor, for example). The unittest documentation suggests
 a number of approaches to get around this problem, but in the author's opinion the least
-bad option is to create getters (and setters for mutable instance variables) for any instance variables that need to be exposed in the class's public API. 
+bad option is to create getters (and setters for mutable instance variables) for any instance
+variables that need to be exposed in the class's public interface. 
 
 ## External services
 
@@ -166,10 +169,11 @@ is relatively simple, but other cases are much more difficult.
 
 If the service is easy to set up and run locally, an integration test with a live service
 is likely the best choice. Databases like MongoDB often fit this category as it is quick to
-download and run a binary.
+download and run a binary or Docker image.
 
-If the service is more difficult, a mock server might be employed to mock the service responses.
-This is dangerous because if the service API changes, the tests will result in false positives.
-An example is using a mock server in the [KBase auth2](https://github.com/kbase/auth2) repo
-to mock identity provider services, which cannot be installed locally and cannot be incorporated
-into automated testing without enormous difficulty.
+If the service is more difficult to run locally, a mock server might be employed to mock the
+service responses. This is dangerous because if the service API changes, the test results will
+contain false positives. An example is using a mock server in the
+[KBase auth2](https://github.com/kbase/auth2) repo to mock identity provider services, which
+cannot be installed locally and cannot be incorporated into automated testing without
+enormous difficulty.
