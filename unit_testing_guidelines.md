@@ -34,7 +34,7 @@ dependency should *provided to* the code unit rather than *constructed by* the c
 
 For example, consider a toy function that contacts the workspace service:
 
-```
+```python
 def get_object_name_from_id(url, token, ref):
     ws = Workspace(url, token=token)
     return ws.get_object_info3({'objects': [{'ref': ref}]})['infos'][1]
@@ -50,14 +50,14 @@ payload.
 
 Instead, we can rewrite the function (or class) with dependency injection:
 
-```
+```python
 def get_object_name_from_id(ws, ref):
     return ws.get_object_info3({'objects': [{'ref': ref}]})['infos'][1]
 ```
 
 Now we can easily pass in a mock object for the `Workspace` depencency in a unit test:
 
-```
+```python
 def test_get_object_name_from_id_success():
     ws = create_autospec(Workspace, spec_set=True, instance=True)                    [1]
     ws.get_object_info3.return_value = {'infos': [                                   [2]
@@ -104,7 +104,7 @@ another benefit as well: modularity. DI makes it much easier to swap out modules
 to provide alternate implmentations of the fuctionality. Imagine an application that requires an
 authorization module with a large number of parameters:
 
-```
+```python
 class Application:
 
     def __init__(self,
@@ -113,7 +113,8 @@ class Application:
             auth_client_secret,
             auth_protocol,
             auth_cache_time,
-            ... more Application parameters go here):
+            # more Application parameters go here
+    ):
         self.auth = SomeCompaniesAuthImplementation(
             auth_url, auth_client_id, auth_client_secret, auth_protocol, auth_cache_time)
 ```
@@ -124,7 +125,7 @@ another batch of parameters to support that implementation as well as a paramete
 
 An implementation based on DI might look like:
 
-```
+```python
 class Application:
 
     def __init__(self, auth_implementation):
