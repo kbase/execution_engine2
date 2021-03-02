@@ -325,23 +325,16 @@ class Condor:
     def run_job(
         self,
         params: Dict[str, str],
-        submit_file: Dict[str, str] = None,
         concierge_params: Dict[str, str] = None,
     ) -> SubmissionInfo:
         """
         TODO: Add a retry
         TODO: Add list of required params
         :param params:  Params to run the job, such as the username, job_id, token, client_group_and_requirements
-        :param submit_file: A optional completed Submit File
         :param concierge_params: Concierge Options for Submit Files
         :return:
         """
-        if submit_file is None:
-            submit_file = self._create_submit(params, concierge_params)
-
-        return self._run_submit(submit_file)
-
-    def _run_submit(self, submit: Dict[str, str]) -> SubmissionInfo:
+        submit = self._create_submit(params, concierge_params)
 
         sub = htcondor.Submit(submit)
         try:
