@@ -42,7 +42,7 @@ def get_client_mocks(config, config_path, *to_be_mocked):
     config_path is the path to the configfile.
     to_be_mocked is the classes in the client set that should be mocked, e.g. KBaseAuth, etc.
 
-    Returns a dict of the class to the the class's mock or implementation as specified in
+    Returns a dict of the class to the class's mock or implementation as specified in
     the arguments.
     """
     ret = {}
