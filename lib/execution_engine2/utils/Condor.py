@@ -42,7 +42,14 @@ class Condor:
     PYTHON_EXECUTABLE = "PYTHON_EXECUTABLE"
     DEFAULT_CLIENT_GROUP = "default_client_group"
 
-    def __init__(self, config_filepath):
+    def __init__(self, config_filepath, htc=htcondor):
+        """
+        Create the condor wrapper.
+
+        config_filepath - the path to the execution_engine2 configuration file.
+        htc - the htcondor module, or an alternate implementation or mock.
+        """
+        self.htcondor = htc
         self.config = ConfigParser()
         self.override_clientgroup = os.environ.get("OVERRIDE_CLIENT_GROUP", None)
         self.config.read(config_filepath)
@@ -336,9 +343,9 @@ class Condor:
         """
         submit = self._create_submit(params, concierge_params)
 
-        sub = htcondor.Submit(submit)
+        sub = self.htcondor.Submit(submit)
         try:
-            schedd = htcondor.Schedd()
+            schedd = self.htcondor.Schedd()
             self.logger.debug(schedd)
             self.logger.debug(submit)
             self.logger.debug(os.getuid())
@@ -409,7 +416,7 @@ class Condor:
         )
 
         try:
-            job = htcondor.Schedd().query(constraint=constraint, limit=1)
+            job = self.htcondor.Schedd().query(constraint=constraint, limit=1)
             if len(job) == 0:
                 job = [{}]
             return JobInfo(info=job[0], error=None)
@@ -447,8 +454,8 @@ class Condor:
             raise Exception("Please provide a list of condor ids to cancel")
 
         try:
-            cancel_jobs = htcondor.Schedd().act(
-                action=htcondor.JobAction.Remove, job_spec=scheduler_ids
+            cancel_jobs = self.htcondor.Schedd().act(
+                action=self.htcondor.JobAction.Remove, job_spec=scheduler_ids
             )
             self.logger.info(f"Cancel job message for {scheduler_ids} is")
             self.logger.debug(f"{cancel_jobs}")
