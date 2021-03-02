@@ -391,8 +391,8 @@ class Condor:
     def _get_job_info(
         self, job_id: Optional[str] = None, cluster_id: Optional[str] = None
     ) -> JobInfo:
-        # note some tests call this function directly and will need to be updated if the
-        # signature is changed
+        # note some tests replace this function with a MagicMock and will need to be updated if
+        # the signature is changed
 
         if job_id is not None and cluster_id is not None:
             return JobInfo(
