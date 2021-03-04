@@ -13,6 +13,7 @@ class UserCreds:
     username - the users's username.
     token - the user's token.
     """
+
     # TODO replace the creds in the clients.UserClientSet with this class
 
     def __init__(self, username: str, token: str):

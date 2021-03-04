@@ -11,12 +11,18 @@ def test_user_creds_init_success():
 
 
 def test_user_creds_init_fail():
-    _user_creds_init_fail(None, "t", IncorrectParamsException("Missing input parameter: username"))
-    _user_creds_init_fail("   \t    ", "t", IncorrectParamsException(
-        "Missing input parameter: username"))
-    _user_creds_init_fail("u", None, IncorrectParamsException("Missing input parameter: token"))
-    _user_creds_init_fail("u", "   \t    ", IncorrectParamsException(
-        "Missing input parameter: token"))
+    _user_creds_init_fail(
+        None, "t", IncorrectParamsException("Missing input parameter: username")
+    )
+    _user_creds_init_fail(
+        "   \t    ", "t", IncorrectParamsException("Missing input parameter: username")
+    )
+    _user_creds_init_fail(
+        "u", None, IncorrectParamsException("Missing input parameter: token")
+    )
+    _user_creds_init_fail(
+        "u", "   \t    ", IncorrectParamsException("Missing input parameter: token")
+    )
 
 
 def _user_creds_init_fail(username, token, expected):
