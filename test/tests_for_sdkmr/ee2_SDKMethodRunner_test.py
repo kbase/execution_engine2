@@ -635,7 +635,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(ori_job_count, new_count - 1)
 
         runner = self.getRunner()
-        condor.get_job_info = MagicMock(return_value={})
+        condor._get_job_info = MagicMock(return_value={})
         condor.get_job_resource_info = MagicMock(return_value={})
         runner.condor = condor
         runner._send_exec_stats_to_catalog = MagicMock(return_value=True)

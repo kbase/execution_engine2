@@ -48,7 +48,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         with self.assertRaisesRegex(
             Exception, "cg_resources_requirements not found in params"
         ):
-            c.create_submit(params)
+            c._create_submit(params)
 
     def test_create_submit_file(self):
         # Test with empty clientgroup
@@ -56,7 +56,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         c = self.condor
         params = self._create_sample_params(cgroups=["njs"])
 
-        default_sub = c.create_submit(params)
+        default_sub = c._create_submit(params)
 
         sub = default_sub
         self.assertEqual(sub["executable"], c.initial_dir + "/" + c.executable)
@@ -84,7 +84,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
             cgroups=["njs,request_cpus=8,request_memory=10GB,request_apples=5"]
         )
 
-        njs_sub = c.create_submit(params)
+        njs_sub = c._create_submit(params)
         sub = njs_sub
 
         self.assertIn("njs", sub["requirements"])
@@ -113,7 +113,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
 
         params = self._create_sample_params(cgroups="")
 
-        empty_sub = c.create_submit(params)
+        empty_sub = c._create_submit(params)
         sub = empty_sub
 
         self.assertEqual(sub[Condor.REQUEST_CPUS], c.config["njs"][Condor.REQUEST_CPUS])
@@ -133,17 +133,17 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
 
         params = self._create_sample_params(cgroups=["{}"])
 
-        empty_json_sub = c.create_submit(params)
+        empty_json_sub = c._create_submit(params)
 
         params = self._create_sample_params(cgroups=['{"client_group" : "njs"}'])
 
-        json_sub = c.create_submit(params)
+        json_sub = c._create_submit(params)
 
         params = self._create_sample_params(
             cgroups=['{"client_group" : "njs", "client_group_regex" : "false"}']
         )
 
-        json_sub_with_regex_disabled_njs = c.create_submit(params)
+        json_sub_with_regex_disabled_njs = c._create_submit(params)
 
         # json_sub_with_regex_disabled
 
@@ -166,7 +166,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
             )
 
             # json_sub_with_regex_disabled
-            c.create_submit(params)
+            c._create_submit(params)
 
         logging.info("Testing with real json, regex disabled, bigmem")
 
@@ -174,7 +174,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
             cgroups=['{"client_group" : "bigmem", "client_group_regex" : "FaLsE"}']
         )
 
-        json_sub_with_regex_disabled_bigmem = c.create_submit(params)
+        json_sub_with_regex_disabled_bigmem = c._create_submit(params)
         self.assertIn(
             '(CLIENTGROUP == "bigmem',
             json_sub_with_regex_disabled_bigmem["requirements"],
@@ -194,7 +194,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         c = self.condor
         params = self._create_sample_params(cgroups=["njs"])
         cp = self._get_concierge_params()
-        sub = c.create_submit(params=params, concierge_params=cp)
+        sub = c._create_submit(params=params, concierge_params=cp)
         # Concurrency limits removed
         self.assertNotIn("Concurrency_Limits", sub)
         self.assertEqual(sub["+AccountingGroup"], '"' + params["user_id"] + '"')
@@ -205,7 +205,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
 
         cp.client_group = "LeConcierge"
         cp.account_group = "LeCat"
-        sub2 = c.create_submit(params=params, concierge_params=cp)
+        sub2 = c._create_submit(params=params, concierge_params=cp)
         self.assertEqual(sub2["+KB_CLIENTGROUP"], f'"{str(cp.client_group)}"')
         self.assertEqual(sub2["+AccountingGroup"], '"' + cp.account_group + '"')
         self.assertNotIn("Concurrency_Limits", sub2)
