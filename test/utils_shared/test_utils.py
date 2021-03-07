@@ -1,7 +1,10 @@
 import json
 import os.path
 import uuid
+import logging
+import socket
 from configparser import ConfigParser
+from contextlib import closing
 from datetime import datetime
 from typing import List, Dict
 
@@ -12,6 +15,11 @@ from lib.execution_engine2.db.models.models import Job, JobInput, Meta
 from lib.execution_engine2.db.models.models import Status
 from lib.execution_engine2.exceptions import MalformedTimestampException
 from lib.execution_engine2.utils.CondorTuples import CondorResources, JobInfo
+
+
+EE2_CONFIG_SECTION = "execution_engine2"
+KB_DEPLOY_ENV = "KB_DEPLOYMENT_CONFIG"
+DEFAULT_TEST_DEPLOY_CFG = "test/deploy.cfg"
 
 
 def bootstrap():
@@ -383,3 +391,95 @@ def get_sample_job_params(method=None, wsid="123"):
     }
 
     return job_params
+
+
+def assert_exception_correct(got: Exception, expected: Exception):
+    assert got.args == expected.args
+    assert type(got) == type(expected)
+
+
+def find_free_port() -> int:
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(("", 0))
+        return s.getsockname()[1]
+
+
+class TestException(Exception):
+    __test__ = False
+
+
+def create_auth_user(auth_url, username, displayname):
+    ret = requests.post(
+        auth_url + "/testmode/api/V2/testmodeonly/user",
+        headers={"accept": "application/json"},
+        json={"user": username, "display": displayname},
+    )
+    if not ret.ok:
+        ret.raise_for_status()
+
+
+def create_auth_login_token(auth_url, username):
+    ret = requests.post(
+        auth_url + "/testmode/api/V2/testmodeonly/token",
+        headers={"accept": "application/json"},
+        json={"user": username, "type": "Login"},
+    )
+    if not ret.ok:
+        ret.raise_for_status()
+    return ret.json()["token"]
+
+
+def create_auth_role(auth_url, role, description):
+    ret = requests.post(
+        auth_url + "/testmode/api/V2/testmodeonly/customroles",
+        headers={"accept": "application/json"},
+        json={"id": role, "desc": description},
+    )
+    if not ret.ok:
+        ret.raise_for_status()
+
+
+def set_custom_roles(auth_url, user, roles):
+    ret = requests.put(
+        auth_url + "/testmode/api/V2/testmodeonly/userroles",
+        headers={"accept": "application/json"},
+        json={"user": user, "customroles": roles},
+    )
+    if not ret.ok:
+        ret.raise_for_status()
+
+
+def get_full_test_config() -> ConfigParser:
+    f"""
+    Gets the full configuration for ee2, including all sections of the config file.
+
+    If the {KB_DEPLOY_ENV} environment variable is set, loads the configuration from there.
+    Otherwise, the repo's {DEFAULT_TEST_DEPLOY_CFG} file is used.
+    """
+    config_file = os.environ.get(KB_DEPLOY_ENV, DEFAULT_TEST_DEPLOY_CFG)
+    logging.info(f"Loading config from {config_file}")
+
+    config_parser = ConfigParser()
+    config_parser.read(config_file)
+    if config_parser[EE2_CONFIG_SECTION].get("mongo-in-docker-compose"):
+        config_parser[EE2_CONFIG_SECTION]["mongo-host"] = config_parser[
+            EE2_CONFIG_SECTION
+        ]["mongo-in-docker-compose"]
+    return config_parser
+
+
+def get_ee2_test_config() -> Dict[str, str]:
+    f"""
+    Gets the configuration for the ee2 service, e.g. the {EE2_CONFIG_SECTION} section of the
+    deploy.cfg file.
+
+    If the {KB_DEPLOY_ENV} environment variable is set, loads the configuration from there.
+    Otherwise, the repo's {DEFAULT_TEST_DEPLOY_CFG} file is used.
+    """
+    cp = get_full_test_config()
+
+    cfg = {}
+    for nameval in cp.items(EE2_CONFIG_SECTION):
+        cfg[nameval[0]] = nameval[1]
+
+    return cfg

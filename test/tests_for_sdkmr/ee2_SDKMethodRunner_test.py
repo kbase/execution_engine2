@@ -6,9 +6,10 @@ import os
 import time
 import unittest
 from configparser import ConfigParser
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pprint import pprint
-from unittest.mock import patch
+from unittest.mock import patch, create_autospec
+from pytest import raises
 
 import bson
 import dateutil
@@ -16,19 +17,28 @@ import requests_mock
 from bson import ObjectId
 from mock import MagicMock
 
-from lib.execution_engine2.db.MongoUtil import MongoUtil
+from execution_engine2.authorization.workspaceauth import WorkspaceAuth
+from execution_engine2.db.MongoUtil import MongoUtil
+from execution_engine2.utils.CatalogUtils import CatalogUtils
+from execution_engine2.utils.Condor import Condor
+from execution_engine2.utils.KafkaUtils import KafkaClient
+from execution_engine2.utils.SlackUtils import SlackClient
 from lib.execution_engine2.db.models.models import Job, Status, TerminatedCode
-from lib.execution_engine2.exceptions import AuthError
+from execution_engine2.exceptions import AuthError
 from lib.execution_engine2.exceptions import InvalidStatusTransitionException
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
+from execution_engine2.utils.clients import UserClientSet, ClientSet
+from execution_engine2.utils.clients import get_user_client_set, get_client_set
 from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 from test.utils_shared.test_utils import (
     bootstrap,
     get_example_job,
     validate_job_state,
     run_job_adapter,
+    assert_exception_correct,
 )
+from test.utils_shared.mock_utils import get_client_mocks, ALL_CLIENTS
 from tests_for_db.mongo_test_helper import MongoTestHelper
 
 logging.basicConfig(level=logging.INFO)
@@ -36,15 +46,18 @@ bootstrap()
 
 from lib.execution_engine2.sdk.EE2Runjob import EE2RunJob
 
+from installed_clients.WorkspaceClient import Workspace
 
+
+# TODO this isn't necessary with pytest, can just use regular old functions
 class ee2_SDKMethodRunner_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
-        logging.info(f"Loading config from {config_file}")
+        cls.config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
+        logging.info(f"Loading config from {cls.config_file}")
 
         config_parser = ConfigParser()
-        config_parser.read(config_file)
+        config_parser.read(cls.config_file)
 
         cls.cfg = {}
 
@@ -60,7 +73,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         cls.token = "token"
 
         cls.method_runner = SDKMethodRunner(
-            cls.cfg, user_id=cls.user_id, token=cls.token
+            get_user_client_set(cls.cfg, cls.user_id, cls.token),
+            get_client_set(cls.cfg, cls.config_file),
         )
         cls.mongo_util = MongoUtil(cls.cfg)
         cls.mongo_helper = MongoTestHelper(cls.cfg)
@@ -75,7 +89,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             request_memory="100M",
             client_group="njs",
         )
-        cls.sdkmr_test_helper = ee2_sdkmr_test_helper(mr=cls.method_runner)
+        cls.sdkmr_test_helper = ee2_sdkmr_test_helper(cls.user_id)
 
     def getRunner(self) -> SDKMethodRunner:
         # Initialize these clients from None
@@ -120,6 +134,57 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     #     self.assertTrue(isinstance(git_commit_2, str))
     #     self.assertEqual(len(git_commit_1), len(git_commit_2))
     #    self.assertNotEqual(git_commit_1, git_commit_2)
+
+    def test_init_fail(self):
+        ws = Workspace("https://fake.com")
+        wsa = WorkspaceAuth("user", ws)
+        user_clients = UserClientSet("user", "token", ws, wsa)
+        clients_and_mocks = get_client_mocks(self.cfg, self.config_file, *ALL_CLIENTS)
+        clients = clients_and_mocks[ClientSet]
+
+        self._init_fail(None, clients, ValueError("user_clients is required"))
+        self._init_fail(user_clients, None, ValueError("clients is required"))
+
+    def _init_fail(self, cfg, user_clients, expected):
+        with raises(Exception) as e:
+            SDKMethodRunner(cfg, user_clients)
+        assert_exception_correct(e.value, expected)
+
+    def test_getters(self):
+        ws = Workspace("https://fake.com")
+        wsa = WorkspaceAuth("user", ws)
+        user_clients = UserClientSet("user", "token", ws, wsa)
+        clients_and_mocks = get_client_mocks(self.cfg, self.config_file, *ALL_CLIENTS)
+
+        sdkmr = SDKMethodRunner(user_clients, clients_and_mocks[ClientSet])
+
+        assert sdkmr.get_workspace() is ws
+        assert sdkmr.get_user_id() == "user"
+        assert sdkmr.get_token() == "token"
+        assert sdkmr.get_kafka_client() is clients_and_mocks[KafkaClient]
+        assert sdkmr.get_mongo_util() is clients_and_mocks[MongoUtil]
+        assert sdkmr.get_slack_client() is clients_and_mocks[SlackClient]
+        assert sdkmr.get_catalog_utils() is clients_and_mocks[CatalogUtils]
+        assert sdkmr.get_condor() is clients_and_mocks[Condor]
+
+    def test_save_job(self):
+        ws = Workspace("https://fake.com")
+        wsa = WorkspaceAuth("user", ws)
+        cliset = UserClientSet("user", "token", ws, wsa)
+        clients_and_mocks = get_client_mocks(self.cfg, self.config_file, *ALL_CLIENTS)
+        sdkmr = SDKMethodRunner(cliset, clients_and_mocks[ClientSet])
+
+        # We cannot use spec_set=True here because the code must access the Job.id field,
+        # which is set dynamically. This means if the Job api changes, this test could pass
+        # when it should fail, but there doesn't seem to be a way around that other than
+        # completely rewriting how the code interfaces with MongoDB.
+        # For a discussion of spec_set see
+        # https://www.seanh.cc/2017/03/17/the-problem-with-mocks/
+        j = create_autospec(Job, spec_set=False, instance=True)
+        j.id = bson.objectid.ObjectId("603051cfaf2e3401b0500982")
+        assert sdkmr.save_job(j) == "603051cfaf2e3401b0500982"
+
+        j.save.assert_called_once_with()
 
     # Status
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
@@ -502,7 +567,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             runner = self.getRunner()
             runner._test_job_permissions = MagicMock(return_value=True)
-            runner.catalog_utils.catalog.log_exec_stats = MagicMock(return_value=True)
+            runner.catalog_utils.get_catalog().log_exec_stats = MagicMock(
+                return_value=True
+            )
 
             # test missing job_id input
             with self.assertRaises(ValueError) as context1:
@@ -570,7 +637,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(ori_job_count, new_count - 1)
 
         runner = self.getRunner()
-        condor.get_job_info = MagicMock(return_value={})
+        condor._get_job_info = MagicMock(return_value={})
         condor.get_job_resource_info = MagicMock(return_value={})
         runner.condor = condor
         runner._send_exec_stats_to_catalog = MagicMock(return_value=True)
@@ -660,7 +727,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
             # now test with a different user
             other_method_runner = SDKMethodRunner(
-                self.cfg, user_id="some_other_user", token="other_token"
+                get_user_client_set(self.cfg, "some_other_user", "other_token"),
+                get_client_set(self.cfg, self.config_file),
             )
             job_states = other_method_runner.get_jobs_status().check_workspace_jobs(
                 self.ws_id
@@ -853,7 +921,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         with self.mongo_util.mongo_engine_connection():
             job2 = self.create_job_from_job(job1, new_id)
             job2.save()
-            print("Saved job with id", job2.id, job2.id.generation_time)
+            print(
+                "Saved job with id",
+                job2.id,
+                job2.id.generation_time,
+                job2.id.generation_time.timestamp(),
+            )
             job1.delete()
 
     # flake8: noqa: C901
@@ -900,7 +973,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         new_job_ids = []
 
-        now = datetime.utcnow()
+        now = datetime.now(tz=timezone.utc)
         last_month = now - timedelta(days=30)
         last_month_and_1_hour = now - timedelta(days=30) - timedelta(hours=1)
 
@@ -908,6 +981,17 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         yesterday = now - timedelta(days=1)
         tomorrow = now + timedelta(days=1)
         day_after = now + timedelta(days=2)
+
+        print(
+            f"Last month - 1 hour: {last_month_and_1_hour} "
+            + f"ts: {last_month_and_1_hour.timestamp()}"
+        )
+        print(f"Last month:          {last_month} ts: {last_month.timestamp()}")
+        print(f"Last Week:           {last_week} ts: {last_week.timestamp()}")
+        print(f"Yesterday:           {yesterday} ts: {yesterday.timestamp()}")
+        print(f"Now:                 {now} ts: {now.timestamp()}")
+        print(f"Tomorrow:            {tomorrow} ts: {tomorrow.timestamp()}")
+        print(f"Day after:           {day_after} ts: {day_after.timestamp()}")
 
         with self.mongo_util.mongo_engine_connection():
             # Last Month
@@ -1016,10 +1100,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 if job_id in new_job_ids:
                     count += 1
                     self.assertIn(js["status"], ["created", "queued"])
-                    date = SDKMethodRunner.check_and_convert_time(js["created"])
-                    ts = date
-                    print(date, last_week, tomorrow)
-                    print(ts, last_week.timestamp(), tomorrow.timestamp())
+                    ts = SDKMethodRunner.check_and_convert_time(js["created"])
+                    print(f"Timestamp: {ts}")
                     self.assertTrue(ts > last_month_and_1_hour.timestamp())
                     self.assertTrue(ts < tomorrow.timestamp())
             self.assertEqual(4, count)
@@ -1067,10 +1149,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 if job_id in new_job_ids:
                     count += 1
                     self.assertIn(js["status"], ["created", "queued"])
-                    date = SDKMethodRunner.check_and_convert_time(js["created"])
-                    ts = date
-                    print(date, last_week, tomorrow)
-                    print(ts, last_week.timestamp(), tomorrow.timestamp())
+                    ts = SDKMethodRunner.check_and_convert_time(js["created"])
+                    print(f"Timestamp: {ts}")
                     self.assertTrue(ts > last_month_and_1_hour.timestamp())
                     self.assertTrue(ts < tomorrow.timestamp())
 

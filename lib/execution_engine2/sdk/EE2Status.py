@@ -18,6 +18,7 @@ from lib.execution_engine2.db.models.models import (
     ErrorCode,
     TerminatedCode,
 )
+from execution_engine2.utils.arg_processing import parse_bool
 from lib.execution_engine2.utils.KafkaUtils import (
     KafkaCancelJob,
     KafkaCondorCommand,
@@ -445,7 +446,7 @@ class JobsStatus:
                     "Checking for read permission to: {}".format(job_ids)
                 )
                 perms = can_read_jobs(
-                    jobs, self.sdkmr.user_id, self.sdkmr.token, self.sdkmr.config
+                    jobs, self.sdkmr.user_id, self.sdkmr.workspace_auth
                 )
             except RuntimeError as e:
                 self.sdkmr.logger.error(
@@ -486,7 +487,7 @@ class JobsStatus:
             {job_id: job_states.get(job_id, []) for job_id in job_ids}
         )
 
-        if return_list is not None and self.sdkmr.parse_bool_from_string(return_list):
+        if return_list is not None and parse_bool(return_list):
             job_states = {"job_states": list(job_states.values())}
 
         return job_states
@@ -502,8 +503,7 @@ class JobsStatus:
         if exclude_fields is None:
             exclude_fields = []
 
-        ws_auth = self.sdkmr.get_workspace_auth()
-        if not ws_auth.can_read(workspace_id):
+        if not self.sdkmr.workspace_auth.can_read(workspace_id):
             self.sdkmr.logger.debug(
                 f"User {self.sdkmr.user_id} doesn't have permission to read jobs in workspace {workspace_id}."
             )

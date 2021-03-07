@@ -20,10 +20,9 @@ from lib.execution_engine2.utils.CondorTuples import (
     SubmissionInfo,
     JobInfo,
 )
-from lib.execution_engine2.utils.Scheduler import Scheduler
 
 
-class Condor(Scheduler):
+class Condor:
     # TODO: Should these be outside of the class?
     REQUEST_CPUS = "request_cpus"
     REQUEST_MEMORY = "request_memory"
@@ -42,7 +41,14 @@ class Condor(Scheduler):
     PYTHON_EXECUTABLE = "PYTHON_EXECUTABLE"
     DEFAULT_CLIENT_GROUP = "default_client_group"
 
-    def __init__(self, config_filepath):
+    def __init__(self, config_filepath, htc=htcondor):
+        """
+        Create the condor wrapper.
+
+        config_filepath - the path to the execution_engine2 configuration file.
+        htc - the htcondor module, or an alternate implementation or mock.
+        """
+        self.htcondor = htc
         self.config = ConfigParser()
         self.override_clientgroup = os.environ.get("OVERRIDE_CLIENT_GROUP", None)
         self.config.read(config_filepath)
@@ -80,7 +86,7 @@ class Condor(Scheduler):
         )
         self.logger = logging.getLogger("ee2")
 
-    def setup_environment_vars(self, params: Dict, client_group: str) -> str:
+    def _setup_environment_vars(self, params: Dict, client_group: str) -> str:
         # 7 day docker job timeout default, Catalog token used to get access to volume mounts
         dm = (
             str(params["cg_resources_requirements"].get("debug_mode", "")).lower()
@@ -152,7 +158,7 @@ class Condor(Scheduler):
 
         return cr
 
-    def extract_requirements(
+    def _extract_requirements(
         self, cgrr: Optional[dict] = None, client_group: Optional[str] = None
     ):
         """
@@ -234,7 +240,7 @@ class Condor(Scheduler):
         sub["request_disk"] = resources.request_disk
         client_group = resources.client_group
         # Set requirements statement
-        requirements = self.extract_requirements(cgrr=cgrr, client_group=client_group)
+        requirements = self._extract_requirements(cgrr=cgrr, client_group=client_group)
         sub["requirements"] = " && ".join(requirements)
         sub["+KB_CLIENTGROUP"] = f'"{client_group}"'
         return (sub, client_group)
@@ -268,7 +274,7 @@ class Condor(Scheduler):
         sub = dict()
         sub["JobBatchName"] = params.get("job_id")
         sub["arguments"] = f"{params['job_id']} {self.ee_endpoint}"
-        sub = self.add_job_labels(sub=sub, params=params)
+        sub = self._add_job_labels(sub=sub, params=params)
         # Extract special requirements
         (sub, client_group) = self._extract_resources_and_requirements(
             sub, params["cg_resources_requirements"]
@@ -281,16 +287,18 @@ class Condor(Scheduler):
             client_group = concierge_params.client_group
         sub["+AccountingGroup"] = f'"{sub["+AccountingGroup"]}"'
 
-        sub["environment"] = self.setup_environment_vars(
+        sub["environment"] = self._setup_environment_vars(
             params, client_group=client_group
         )
 
         return sub
 
     # TODO Copy stuff from Concierge Params into #AcctGroup/Clientgroup/JobPrio, CPu/MEMORY/DISK/
-    def create_submit(
+    def _create_submit(
         self, params: Dict, concierge_params: ConciergeParams = None
     ) -> Dict:
+        # note some tests call this function directly and will need to be updated if the
+        # signature is changed
         self._check_for_missing_runjob_params(params)
 
         sub = self._add_resources_and_special_attributes(params, concierge_params)
@@ -301,11 +309,8 @@ class Condor(Scheduler):
             sub[item] = str(sub[item])
         return sub
 
-    def concierge(self, sub, concierge_params):
-        pass
-
     @staticmethod
-    def add_job_labels(sub: Dict, params: Dict[str, str]):
+    def _add_job_labels(sub: Dict, params: Dict[str, str]):
         sub["+KB_PARENT_JOB_ID"] = params.get("parent_job_id", "")
         sub["+KB_MODULE_NAME"] = params.get("method", "").split(".")[0]
         sub["+KB_FUNCTION_NAME"] = params.get("method", "").split(".")[-1]
@@ -326,25 +331,18 @@ class Condor(Scheduler):
     def run_job(
         self,
         params: Dict[str, str],
-        submit_file: Dict[str, str] = None,
         concierge_params: Dict[str, str] = None,
     ) -> SubmissionInfo:
         """
         TODO: Add a retry
         TODO: Add list of required params
         :param params:  Params to run the job, such as the username, job_id, token, client_group_and_requirements
-        :param submit_file: A optional completed Submit File
         :param concierge_params: Concierge Options for Submit Files
         :return:
         """
-        if submit_file is None:
-            submit_file = self.create_submit(params, concierge_params)
+        submit = self._create_submit(params, concierge_params)
 
-        return self.run_submit(submit_file)
-
-    def run_submit(self, submit: Dict[str, str]) -> SubmissionInfo:
-
-        sub = htcondor.Submit(submit)
+        sub = self.htcondor.Submit(submit)
         try:
             schedd = htcondor.Schedd()
             # Contains sensitive info
@@ -363,7 +361,7 @@ class Condor(Scheduler):
         if job_id is not None and cluster_id is not None:
             raise Exception("Use only batch name (job_id) or cluster_id, not both")
 
-        condor_stats = self.get_job_info(job_id=job_id, cluster_id=cluster_id)
+        condor_stats = self._get_job_info(job_id=job_id, cluster_id=cluster_id)
         # Don't leak token into the logs here
         job_info = condor_stats.info
         if job_info is None:
@@ -396,9 +394,11 @@ class Condor(Scheduler):
 
         return extracted_resources
 
-    def get_job_info(
+    def _get_job_info(
         self, job_id: Optional[str] = None, cluster_id: Optional[str] = None
     ) -> JobInfo:
+        # note some tests replace this function with a MagicMock and will need to be updated if
+        # the signature is changed
 
         if job_id is not None and cluster_id is not None:
             return JobInfo(
@@ -415,7 +415,7 @@ class Condor(Scheduler):
         )
 
         try:
-            job = htcondor.Schedd().query(constraint=constraint, limit=1)
+            job = self.htcondor.Schedd().query(constraint=constraint, limit=1)
             if len(job) == 0:
                 job = [{}]
             return JobInfo(info=job[0], error=None)
@@ -424,18 +424,15 @@ class Condor(Scheduler):
             raise e
             # return JobInfo(info=None, error=e)
 
-    def get_user_info(self, user_id, projection=None):
-        pass
-
     def cancel_job(self, job_id: str) -> bool:
         """
 
         :param job_id:
         :return:
         """
-        return self.cancel_jobs([f"{job_id}"])
+        return self._cancel_jobs([f"{job_id}"])
 
-    def cancel_jobs(self, scheduler_ids: list):
+    def _cancel_jobs(self, scheduler_ids: list):
         """
         Possible return structure like this
         [
@@ -456,8 +453,8 @@ class Condor(Scheduler):
             raise Exception("Please provide a list of condor ids to cancel")
 
         try:
-            cancel_jobs = htcondor.Schedd().act(
-                action=htcondor.JobAction.Remove, job_spec=scheduler_ids
+            cancel_jobs = self.htcondor.Schedd().act(
+                action=self.htcondor.JobAction.Remove, job_spec=scheduler_ids
             )
             self.logger.info(f"Cancel job message for {scheduler_ids} is")
             self.logger.debug(f"{cancel_jobs}")

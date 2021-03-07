@@ -46,6 +46,12 @@ class CatalogUtils:
         if "service_ver" is a semantic version, get commit version for that semantic version
         If "service_ver" is a git commit hash, see if that get commit is valid
 
+        self._catalog = Catalog(url=url, token=admin_token)
+
+    def get_catalog(self):
+        """ Get the catalog client for this instance. """
+        # TODO unit test this method after switching to dependency injection
+        return self._catalog
 
         Convenience wrapper for verifying a git commit hash, or getting git commit hash from a tag
         :param params: Job Params (containing method and service_ver)
@@ -126,7 +132,7 @@ class CatalogUtils:
 
         module_name, function_name = method.split(".")
 
-        group_config = self.catalog.list_client_group_configs(
+        group_config = self._catalog.list_client_group_configs(
             {"module_name": module_name, "function_name": function_name}
         )
 

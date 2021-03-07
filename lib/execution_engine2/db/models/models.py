@@ -111,6 +111,9 @@ class Meta(EmbeddedDocument):
     cell_id = StringField()
     status = StringField()
 
+    def __repr__(self):
+        return self.to_json()
+
 
 class CondorResourceUsage(EmbeddedDocument):
     """
@@ -147,6 +150,9 @@ class JobRequirements(EmbeddedDocument):
     disk = IntField()
     estimate = EmbeddedDocumentField(Estimate)
 
+    def __repr__(self):
+        return self.to_json()
+
 
 class JobInput(EmbeddedDocument):
     """
@@ -163,6 +169,9 @@ class JobInput(EmbeddedDocument):
     parent_job_id = StringField()
     requirements = EmbeddedDocumentField(JobRequirements)
     narrative_cell_info = EmbeddedDocumentField(Meta, required=True)
+
+    def __repr__(self):
+        return self.to_json()
 
 
 class JobOutput(EmbeddedDocument):
