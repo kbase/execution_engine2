@@ -4,7 +4,6 @@ from typing import List, Dict, TYPE_CHECKING
 
 from lib.installed_clients.CatalogClient import Catalog
 
-
 if TYPE_CHECKING:
     from lib.execution_engine2.utils.CondorTuples import CondorResources
 
@@ -60,7 +59,6 @@ class CatalogUtils:
             method=job_params["method"], service_ver=service_ver
         )
         return vcs
-
 
     def _get_cached_condor_resources(self, method, condor) -> "CondorResources":
         if method not in self._condor_resources:
