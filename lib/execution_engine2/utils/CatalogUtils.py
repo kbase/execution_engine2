@@ -11,9 +11,14 @@ if TYPE_CHECKING:
 
 class CatalogUtils:
     def __init__(self, url, admin_token):
-        self.catalog = Catalog(url=url, token=admin_token)
-        self.method_version_cache = defaultdict(dict)
-        self.condor_resources = dict()
+        self._catalog = Catalog(url=url, token=admin_token)
+        self._method_version_cache = defaultdict(dict)
+        self._condor_resources = dict()
+
+    def get_catalog(self):
+        """ Get the catalog client for this instance. """
+        # TODO unit test this method after switching to dependency injection
+        return self._catalog
 
     def _get_git_commit_from_cache(self, method, service_ver):
         # Structure of cache
@@ -27,32 +32,25 @@ class CatalogUtils:
 
         # If not in the cache add it
         if (
-            method not in self.method_version_cache
-            or service_ver not in self.method_version_cache[method]
+            method not in self._method_version_cache
+            or service_ver not in self._method_version_cache[method]
         ):
             module_name = method.split(".")[0]
-            module_version = self.catalog.get_module_version(
+            module_version = self.get_catalog().get_module_version(
                 {"module_name": module_name, "version": service_ver}
             )
-            self.method_version_cache[method][service_ver] = module_version.get(
+            self._method_version_cache[method][service_ver] = module_version.get(
                 "git_commit_hash"
             )
         # Retrieve from cache
-        return self.method_version_cache[method][service_ver]
+        return self._method_version_cache[method][service_ver]
 
     def get_git_commit_version(self, job_params: Dict) -> str:
         """
         If "service_ver" is "release|beta|dev", get git commit version for that version
         if "service_ver" is a semantic version, get commit version for that semantic version
         If "service_ver" is a git commit hash, see if that get commit is valid
-
         self._catalog = Catalog(url=url, token=admin_token)
-
-    def get_catalog(self):
-        """ Get the catalog client for this instance. """
-        # TODO unit test this method after switching to dependency injection
-        return self._catalog
-
         Convenience wrapper for verifying a git commit hash, or getting git commit hash from a tag
         :param params: Job Params (containing method and service_ver)
         :return: A git commit hash for the requested job
@@ -63,30 +61,16 @@ class CatalogUtils:
         )
         return vcs
 
-    # TODO Delete in next PR if we decide we don't want to do it this way
-    # def get_mass_git_commit_versions(self, job_param_set: List[Dict]):
-    #     """
-    #
-    #     :param job_param_set: List of batch job params (containing method and service_ver)
-    #     :return: A cached mapping of method to version to git commit
-    #     """
-    #     # Populate the cache
-    #     vcs_list = []
-    #     for job_params in job_param_set:
-    #         service_ver = job_params.get("service_ver", "release")
-    #         vcs_list.append(self._get_git_commit_from_cache(method=job_params["method"],
-    #                                                         service_ver=service_ver))
-    #     return vcs_list
 
     def _get_cached_condor_resources(self, method, condor) -> "CondorResources":
-        if method not in self.condor_resources:
+        if method not in self._condor_resources:
             normalized_resources = self.get_normalized_resources(method=method)
             extracted_resources = condor.extract_resources(
                 cgrr=normalized_resources
             )  # type: CondorResources
-            self.condor_resources[method] = extracted_resources
+            self._condor_resources[method] = extracted_resources
 
-        return self.condor_resources[method]
+        return self._condor_resources[method]
 
     def get_condor_resources(self, job_params, condor) -> "CondorResources":
         """
