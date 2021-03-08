@@ -50,7 +50,7 @@ def parse_bool(putative_bool: Union[str, bool, int, float, None]) -> bool:
 
 def not_falsy(item: T, item_name: str) -> T:
     """
-    Check if a value is falsy and throw and exception if so.
+    Check if a value is falsy and throw an exception if so.
     :param item: the item to check for falsiness.
     :param item_name: the name of the item to include in any exception.
     :raises ValueError: if the item is falsy.
@@ -129,8 +129,6 @@ def check_string(
     :raises IncorrectParamsException: if the string is None, whitespace only, too long, or
         contains illegal characters.
     """
-    # See the IDMapping service if character classes are needed.
-    # Maybe package this stuff
     if max_len is not None and max_len < 1:
         raise ValueError("max_len must be > 0 if provided")
     if not string or not string.strip():
