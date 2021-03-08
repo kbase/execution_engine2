@@ -368,15 +368,16 @@ class JobsStatus:
                 )
             )
             self._send_exec_stats_to_catalog(job_id=job_id)
-        self.update_finished_job_with_usage(job_id, as_admin=as_admin)
+        self._update_finished_job_with_usage(job_id, as_admin=as_admin)
 
-    def update_finished_job_with_usage(self, job_id, as_admin=None) -> Dict:
+    def _update_finished_job_with_usage(self, job_id, as_admin=None) -> Dict:
         """
         # TODO Does this need a kafka message?
         :param job_id:
         :param as_admin:
         :return:
         """
+        # note this method is replaced by a magic mock in some tests
         job = self.sdkmr.get_job_with_permission(
             job_id=job_id, requested_job_perm=JobPermissions.WRITE, as_admin=as_admin
         )
