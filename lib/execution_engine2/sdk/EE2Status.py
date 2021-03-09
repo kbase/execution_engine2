@@ -391,7 +391,9 @@ class JobsStatus:
             )
         condor = self.sdkmr.get_condor()
         resources = condor.get_job_resource_info(job_id=job_id)
-        self.sdkmr.get_logger().debug(f"Extracted the following condor job ads {resources}")
+        self.sdkmr.get_logger().debug(
+            f"Extracted the following condor job ads {resources}"
+        )
         self.sdkmr.get_mongo_util().update_job_resources(
             job_id=job_id, resources=resources
         )
@@ -547,7 +549,9 @@ class JobsStatus:
         log_exec_stats_params["is_error"] = int(job.status == Status.error.value)
         log_exec_stats_params["job_id"] = job_id
 
-        self.sdkmr.get_catalog_utils().get_catalog().log_exec_stats(log_exec_stats_params)
+        self.sdkmr.get_catalog_utils().get_catalog().log_exec_stats(
+            log_exec_stats_params
+        )
 
     def abandon_children(self, parent_job_id, child_job_ids, as_admin=False) -> Dict:
         if not parent_job_id:

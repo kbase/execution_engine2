@@ -42,19 +42,11 @@ def test_finish_job_complete_minimal():
     """
     # set up constants
     job_id = "6046b539ce9c58ecf8c3e5f3"
-    job_output = {
-        'version': '1.1',
-        'id': job_id,
-        'result': [{"foo": "bar"}]
-    }
+    job_output = {"version": "1.1", "id": job_id, "result": [{"foo": "bar"}]}
     user = "someuser"
     app_id = "module/myapp"
     gitcommit = "somecommit"
-    resources = {
-        "fake": "condor",
-        "resources": "in",
-        "here": "yo"
-    }
+    resources = {"fake": "condor", "resources": "in", "here": "yo"}
     sched = "somescheduler"
 
     # set up mocks
@@ -73,8 +65,12 @@ def test_finish_job_complete_minimal():
     catutil.get_catalog.return_value = catalog
 
     # set up return values for mocks. Ordered as per order of operations in code
-    job1 = _finish_job_complete_minimal_get_test_job(job_id, sched, app_id, gitcommit, user)
-    job2 = _finish_job_complete_minimal_get_test_job(job_id, sched, app_id, gitcommit, user)
+    job1 = _finish_job_complete_minimal_get_test_job(
+        job_id, sched, app_id, gitcommit, user
+    )
+    job2 = _finish_job_complete_minimal_get_test_job(
+        job_id, sched, app_id, gitcommit, user
+    )
     job2.status = Status.completed.value
 
     sdkmr.get_job_with_permission.side_effect = [job1, job2]
@@ -86,15 +82,23 @@ def test_finish_job_complete_minimal():
 
     # check mocks called as expected. Ordered as per order of operations in code
 
-    sdkmr.get_job_with_permission.assert_has_calls([
-        call(job_id=job_id, requested_job_perm=JobPermissions.WRITE, as_admin=False),
-        call(job_id=job_id, requested_job_perm=JobPermissions.WRITE, as_admin=False)
-    ])
-    logger.debug.assert_has_calls([
-        call("Finishing job with a success"),
-        # depending on stable dict ordering for this test to pass
-        call(f"Extracted the following condor job ads {resources}")
-    ])
+    sdkmr.get_job_with_permission.assert_has_calls(
+        [
+            call(
+                job_id=job_id, requested_job_perm=JobPermissions.WRITE, as_admin=False
+            ),
+            call(
+                job_id=job_id, requested_job_perm=JobPermissions.WRITE, as_admin=False
+            ),
+        ]
+    )
+    logger.debug.assert_has_calls(
+        [
+            call("Finishing job with a success"),
+            # depending on stable dict ordering for this test to pass
+            call(f"Extracted the following condor job ads {resources}"),
+        ]
+    )
     mongo.finish_job_with_success.assert_called_once_with(job_id, job_output)
     kafka.send_kafka_message.assert_called_once_with(
         KafkaFinishJob(
@@ -107,17 +111,19 @@ def test_finish_job_complete_minimal():
         )
     )
     mongo.get_job.assert_called_once_with(job_id)
-    catalog.log_exec_stats.assert_called_once_with({
-        "user_id": user,
-        "app_module_name": "module",
-        "app_id": app_id,
-        "func_module_name": "module",
-        "func_name": "method_id",
-        "git_commit_hash": gitcommit,
-        "creation_time": 1615246649.0,  # from Job ObjectId
-        "exec_start_time": 123.0,
-        "finish_time": 456.5,
-        "is_error": 0,
-        "job_id": job_id
-    })
+    catalog.log_exec_stats.assert_called_once_with(
+        {
+            "user_id": user,
+            "app_module_name": "module",
+            "app_id": app_id,
+            "func_module_name": "module",
+            "func_name": "method_id",
+            "git_commit_hash": gitcommit,
+            "creation_time": 1615246649.0,  # from Job ObjectId
+            "exec_start_time": 123.0,
+            "finish_time": 456.5,
+            "is_error": 0,
+            "job_id": job_id,
+        }
+    )
     mongo.update_job_resources.assert_called_once_with(job_id, resources)
