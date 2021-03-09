@@ -2,8 +2,6 @@
 Unit tests for the EE2Status class.
 """
 
-from pytest import raises
-
 from logging import Logger
 from unittest.mock import create_autospec, call
 from bson.objectid import ObjectId
@@ -16,8 +14,6 @@ from lib.execution_engine2.utils.KafkaUtils import KafkaClient, KafkaFinishJob
 from lib.execution_engine2.utils.CatalogUtils import CatalogUtils
 from lib.execution_engine2.utils.Condor import Condor
 from installed_clients.CatalogClient import Catalog
-
-from utils_shared.test_utils import assert_exception_correct
 
 
 def _finish_job_complete_minimal_get_test_job(job_id, sched, app_id, gitcommit, user):
