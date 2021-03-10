@@ -45,18 +45,23 @@ class AppInfo:
         # that have a . separator rather than a /, and, in some cases, test data where the
         # module for the application and method is not the same, although that should never
         # happen in practice. Hence we support non-strict mode to allow for those cases.
-        mod, meth = _get2part_string(_check_string(method, "method ID"), '.', "method ID")
+        mod, meth = _get2part_string(
+            _check_string(method, "method ID"), ".", "method ID"
+        )
         self.module = _check_string(mod, "module portion of method ID")
         self.method = _check_string(meth, "method portion of method ID")
         app_id = _check_string(app_id, "application ID")
         if "/" in app_id and "." in app_id:
             raise IncorrectParamsException(
-                f"Application ID '{app_id}' has both '/' and '.' separators")
+                f"Application ID '{app_id}' has both '/' and '.' separators"
+            )
         if "/" in app_id:
             mod, app = _get2part_string(app_id, "/", "application ID")
-        elif '.' in app_id:
+        elif "." in app_id:
             if strict:
-                raise IncorrectParamsException(f"Application ID '{app_id}' contains a '.'")
+                raise IncorrectParamsException(
+                    f"Application ID '{app_id}' contains a '.'"
+                )
             mod, app = _get2part_string(app_id, ".", "application ID")
         else:
             mod = self.module
@@ -82,7 +87,12 @@ class AppInfo:
 
     def __eq__(self, other):
         if type(self) == type(other):
-            return (self.module, self.method, self.application_module, self.application) == (
+            return (
+                self.module,
+                self.method,
+                self.application_module,
+                self.application,
+            ) == (
                 other.module,
                 other.method,
                 other.application_module,
@@ -91,4 +101,6 @@ class AppInfo:
         return False
 
     def __hash__(self):
-        return hash((self.module, self.method, self.application_module, self.application))
+        return hash(
+            (self.module, self.method, self.application_module, self.application)
+        )
