@@ -62,7 +62,7 @@ class ee2_server_load_test(unittest.TestCase):
         # Initialize these clients from None
         status = runner.get_jobs_status()  # type: JobsStatus
         status._send_exec_stats_to_catalog = MagicMock(return_value=True)
-        status.update_finished_job_with_usage = MagicMock(return_value=True)
+        status._update_finished_job_with_usage = MagicMock(return_value=True)
         runjob = runner.get_runjob()
         runjob._get_module_git_commit = MagicMock(return_value="GitCommithash")
         runner.get_job_logs()
