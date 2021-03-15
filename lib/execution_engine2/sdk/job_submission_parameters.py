@@ -55,7 +55,9 @@ class JobRequirements:
         sr = scheduler_requirements if scheduler_requirements else {}
         for key, value in sr.items():
             _check_string(key, "key in scheduler requirements structure")
-            _check_string(value, f"value for key '{key}' in scheduler requirements structure")
+            _check_string(
+                value, f"value for key '{key}' in scheduler requirements structure"
+            )
         self.scheduler_requirements = FrozenMap(sr)
 
     def __eq__(self, other):
