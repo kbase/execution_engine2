@@ -29,6 +29,7 @@ importlib-metadata==2.0.0
 iniconfig==1.1.1
 Jinja2==2.10.3
 JSONRPCBase==0.2.0
+maps==5.1.1
 MarkupSafe==1.1.1
 memory-profiler==0.55.0
 mock==3.0.5
