@@ -33,7 +33,7 @@ def test_job_req_init_maximal():
         "someuser",
         True,
         {"proc": "x286", "maxmem": "640k"},
-        True
+        True,
     )
 
     assert jr.cpus == 6
@@ -198,7 +198,17 @@ def test_job_req_equals():
     assert JobRequirements(1, 1, 1, c1, t, u1, f, r1, t) != JobRequirements(
         1, 1, 1, c1a, t, u1a, f, r1a, f
     )
-    assert JobRequirements(1, 1, 1, c1, t, u1, f, r1, t) != (1, 1, 1, c1a, t, u1a, f, r1a, t)
+    assert JobRequirements(1, 1, 1, c1, t, u1, f, r1, t) != (
+        1,
+        1,
+        1,
+        c1a,
+        t,
+        u1a,
+        f,
+        r1a,
+        t,
+    )
 
 
 def test_job_req_hash():
