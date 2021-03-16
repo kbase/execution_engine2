@@ -3,18 +3,17 @@ Parameters for submitting a job to a scheduler.
 """
 
 from maps import FrozenMap
-from typing import Dict, List
+from typing import Dict, List, Union
 from execution_engine2.utils.arg_processing import (
     check_string as _check_string,
     not_falsy as _not_falsy,
-    not_falsy_in_iterable as _not_falsy_in_iterable,
 )
 from execution_engine2.utils.user_info import UserCreds
 from execution_engine2.utils.application_info import AppInfo
 from execution_engine2.exceptions import IncorrectParamsException
 
 
-def _gt_zero(num: int, name: str, optional=False) -> int:
+def _gt_zero(num: int, name: str, optional=False) -> Union[int, None]:
     if num is None and optional:
         return None
     if num is None or num < 1:
