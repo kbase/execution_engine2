@@ -32,10 +32,11 @@ class JobRequirements:
         memory_MB: int,
         disk_GB: int,
         client_group: str,
-        client_group_regex: bool = False,
+        client_group_regex: Union[bool, None] = None,
         as_user: str = None,
         ignore_concurrency_limits: bool = False,
         scheduler_requirements: Dict[str, str] = None,
+        debug_mode: bool = False,
     ):
         """
         Create the job requirements.
@@ -45,12 +46,13 @@ class JobRequirements:
         disk_GB - the amount of disk space, in GB, required for the job.
         client_group - the client group in which the job will run.
         client_group_regex - whether to treat the client group string as a regular expression
-            that can match multiple client groups.
+            that can match multiple client groups. Pass None for no preference.
         as_user - run the job as an alternate user; take the user's username.
         ignore_concurrency_limits - allow the user to run this job even if the user's maximum
             job count has already been reached.
         scheduler_requirements - arbitrary requirements for the scheduler passed as key/value
             pairs. Requires knowledge of the scheduler API.
+        debug_mode - whether to run the job in debug mode.
         """
         self.cpus = _gt_zero(cpus, "CPU count")
         self.memory_MB = _gt_zero(memory_MB, "memory in MB")
@@ -66,6 +68,7 @@ class JobRequirements:
                 value, f"value for key '{key}' in scheduler requirements structure"
             )
         self.scheduler_requirements = FrozenMap(sr)
+        self.debug_mode = debug_mode
 
     def __eq__(self, other):
         if type(self) == type(other):
@@ -78,6 +81,7 @@ class JobRequirements:
                 self.as_user,
                 self.ignore_concurrency_limits,
                 self.scheduler_requirements,
+                self.debug_mode,
             ) == (
                 other.cpus,
                 other.memory_MB,
@@ -87,6 +91,7 @@ class JobRequirements:
                 other.as_user,
                 other.ignore_concurrency_limits,
                 other.scheduler_requirements,
+                other.debug_mode,
             )
         return False
 
@@ -101,6 +106,7 @@ class JobRequirements:
                 self.as_user,
                 self.ignore_concurrency_limits,
                 self.scheduler_requirements,
+                self.debug_mode,
             )
         )
 
@@ -135,7 +141,6 @@ class JobSubmissionParameters:
         parent_job_id: str = None,
         wsid: int = None,
         source_ws_objects: List[str] = None,
-        debug_mode: bool = False,
     ):
         """
         Create the parameters.
@@ -147,7 +152,6 @@ class JobSubmissionParameters:
         parent_job_id - the ID of the parent job to this job, if any.
         wsid - the ID of the workspace with which the job is associated, if any.
         source_ws_objects - workspace objects that are part of the job input.
-        debug_mode - whether to run the job in debug mode.
         """
         self.job_id = _check_string(job_id, "job_id")
         self.app_info = _not_falsy(app_info, "app_info")
@@ -167,7 +171,6 @@ class JobSubmissionParameters:
                 )
             source_ws_objects[i] = upa
         self.source_ws_objects = tuple(source_ws_objects)
-        self.debug_mode = debug_mode
 
     def __eq__(self, other):
         if type(self) == type(other):
@@ -179,7 +182,6 @@ class JobSubmissionParameters:
                 self.parent_job_id,
                 self.wsid,
                 self.source_ws_objects,
-                self.debug_mode,
             ) == (
                 other.job_id,
                 other.app_info,
@@ -188,7 +190,6 @@ class JobSubmissionParameters:
                 other.parent_job_id,
                 other.wsid,
                 other.source_ws_objects,
-                other.debug_mode,
             )
         return False
 
@@ -202,6 +203,5 @@ class JobSubmissionParameters:
                 self.parent_job_id,
                 self.wsid,
                 self.source_ws_objects,
-                self.debug_mode,
             )
         )

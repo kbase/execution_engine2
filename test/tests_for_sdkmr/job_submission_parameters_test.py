@@ -16,10 +16,11 @@ def test_job_req_init_minimal():
     assert jr.memory_MB == 1
     assert jr.disk_GB == 1
     assert jr.client_group == "njs"
-    assert jr.client_group_regex is False
+    assert jr.client_group_regex is None
     assert jr.as_user is None
     assert jr.ignore_concurrency_limits is False
     assert jr.scheduler_requirements == {}
+    assert jr.debug_mode is False
 
 
 def test_job_req_init_maximal():
@@ -32,6 +33,7 @@ def test_job_req_init_maximal():
         "someuser",
         True,
         {"proc": "x286", "maxmem": "640k"},
+        True
     )
 
     assert jr.cpus == 6
@@ -42,6 +44,7 @@ def test_job_req_init_maximal():
     assert jr.as_user == "someuser"
     assert jr.ignore_concurrency_limits is True
     assert jr.scheduler_requirements == {"proc": "x286", "maxmem": "640k"}
+    assert jr.debug_mode is True
 
 
 def test_job_req_init_fail():
@@ -170,8 +173,8 @@ def test_job_req_equals():
     r2 = {"a": "c"}
 
     assert JobRequirements(1, 1, 1, c1) == JobRequirements(1, 1, 1, c1a)
-    assert JobRequirements(1, 1, 1, c1, t, u1, f, r1) == JobRequirements(
-        1, 1, 1, c1a, t, u1a, f, r1a
+    assert JobRequirements(1, 1, 1, c1, t, u1, f, r1, t) == JobRequirements(
+        1, 1, 1, c1a, t, u1a, f, r1a, t
     )
 
     assert JobRequirements(1, 1, 1, c1) != JobRequirements(2, 1, 1, c1a)
@@ -180,19 +183,22 @@ def test_job_req_equals():
     assert JobRequirements(1, 1, 1, c1) != JobRequirements(1, 1, 1, c2)
     assert JobRequirements(1, 1, 1, c1) != (1, 1, 1, c1)
 
-    assert JobRequirements(1, 1, 1, c1, t, u1, f, r1) != JobRequirements(
-        1, 1, 1, c1a, f, u1a, f, r1a
+    assert JobRequirements(1, 1, 1, c1, t, u1, f, r1, t) != JobRequirements(
+        1, 1, 1, c1a, f, u1a, f, r1a, t
     )
-    assert JobRequirements(1, 1, 1, c1, t, u1, f, r1) != JobRequirements(
-        1, 1, 1, c1a, t, u2, f, r1a
+    assert JobRequirements(1, 1, 1, c1, t, u1, f, r1, t) != JobRequirements(
+        1, 1, 1, c1a, t, u2, f, r1a, t
     )
-    assert JobRequirements(1, 1, 1, c1, t, u1, f, r1) != JobRequirements(
-        1, 1, 1, c1a, t, u1a, t, r1a
+    assert JobRequirements(1, 1, 1, c1, t, u1, f, r1, t) != JobRequirements(
+        1, 1, 1, c1a, t, u1a, t, r1a, t
     )
-    assert JobRequirements(1, 1, 1, c1, t, u1, f, r1) != JobRequirements(
-        1, 1, 1, c1a, t, u1a, f, r2
+    assert JobRequirements(1, 1, 1, c1, t, u1, f, r1, t) != JobRequirements(
+        1, 1, 1, c1a, t, u1a, f, r2, t
     )
-    assert JobRequirements(1, 1, 1, c1, t, u1, f, r1) != (1, 1, 1, c1a, t, u1a, f, r1a)
+    assert JobRequirements(1, 1, 1, c1, t, u1, f, r1, t) != JobRequirements(
+        1, 1, 1, c1a, t, u1a, f, r1a, f
+    )
+    assert JobRequirements(1, 1, 1, c1, t, u1, f, r1, t) != (1, 1, 1, c1a, t, u1a, f, r1a, t)
 
 
 def test_job_req_hash():
@@ -212,8 +218,8 @@ def test_job_req_hash():
     r2 = {"a": "c"}
 
     assert hash(JobRequirements(1, 1, 1, c1)) == hash(JobRequirements(1, 1, 1, c1a))
-    assert hash(JobRequirements(1, 1, 1, c1, t, u1, f, r1)) == hash(
-        JobRequirements(1, 1, 1, c1a, t, u1a, f, r1a)
+    assert hash(JobRequirements(1, 1, 1, c1, t, u1, f, r1, t)) == hash(
+        JobRequirements(1, 1, 1, c1a, t, u1a, f, r1a, t)
     )
 
     assert hash(JobRequirements(1, 1, 1, c1)) != hash(JobRequirements(2, 1, 1, c1a))
@@ -221,17 +227,20 @@ def test_job_req_hash():
     assert hash(JobRequirements(1, 1, 1, c1)) != hash(JobRequirements(1, 1, 2, c1a))
     assert hash(JobRequirements(1, 1, 1, c1)) != hash(JobRequirements(1, 1, 1, c2))
 
-    assert hash(JobRequirements(1, 1, 1, c1, t, u1, f, r1)) != hash(
-        JobRequirements(1, 1, 1, c1a, f, u1a, f, r1a)
+    assert hash(JobRequirements(1, 1, 1, c1, t, u1, f, r1, t)) != hash(
+        JobRequirements(1, 1, 1, c1a, f, u1a, f, r1a, t)
     )
-    assert hash(JobRequirements(1, 1, 1, c1, t, u1, f, r1)) != hash(
-        JobRequirements(1, 1, 1, c1a, t, u2, f, r1a)
+    assert hash(JobRequirements(1, 1, 1, c1, t, u1, f, r1, t)) != hash(
+        JobRequirements(1, 1, 1, c1a, t, u2, f, r1a, t)
     )
-    assert hash(JobRequirements(1, 1, 1, c1, t, u1, f, r1)) != hash(
-        JobRequirements(1, 1, 1, c1a, t, u1a, t, r1a)
+    assert hash(JobRequirements(1, 1, 1, c1, t, u1, f, r1, t)) != hash(
+        JobRequirements(1, 1, 1, c1a, t, u1a, t, r1a, t)
     )
-    assert hash(JobRequirements(1, 1, 1, c1, t, u1, f, r1)) != hash(
-        JobRequirements(1, 1, 1, c1a, t, u1a, f, r2)
+    assert hash(JobRequirements(1, 1, 1, c1, t, u1, f, r1, t)) != hash(
+        JobRequirements(1, 1, 1, c1a, t, u1a, f, r2, t)
+    )
+    assert hash(JobRequirements(1, 1, 1, c1, t, u1, f, r1, t)) != hash(
+        JobRequirements(1, 1, 1, c1a, t, u1a, f, r1a, f)
     )
 
 
@@ -250,7 +259,6 @@ def test_job_sub_init_minimal():
     assert jsp.parent_job_id is None
     assert jsp.wsid is None
     assert jsp.source_ws_objects == tuple()
-    assert jsp.debug_mode is False
 
 
 def test_job_sub_init_maximal():
@@ -262,7 +270,6 @@ def test_job_sub_init_maximal():
         "    parentid  \t   ",
         1,
         ["   1   /\t2   /   4", "6/7/8"],
-        True,
     )
 
     assert jsp.job_id == "jobid"
@@ -272,7 +279,6 @@ def test_job_sub_init_maximal():
     assert jsp.parent_job_id == "parentid"
     assert jsp.wsid == 1
     assert jsp.source_ws_objects == ("1/2/4", "6/7/8")
-    assert jsp.debug_mode is True
 
 
 def test_job_sub_init_fail():
@@ -403,13 +409,11 @@ def test_job_sub_equals():
     w1 = ["1/2/3"]
     w1a = ["1/2/3"]
     w2 = ["1/2/4"]
-    t = True
-    f = False
 
     JSP = JobSubmissionParameters
 
     assert JSP(j1, a1, r1, u1) == JSP(j1a, a1a, r1a, u1a)
-    assert JSP(j1, a1, r1, u1, p1, 1, w1, t) == JSP(j1a, a1a, r1a, u1a, p1a, 1, w1a, t)
+    assert JSP(j1, a1, r1, u1, p1, 1, w1) == JSP(j1a, a1a, r1a, u1a, p1a, 1, w1a)
 
     assert JSP(j1, a1, r1, u1) != JSP(j2, a1a, r1a, u1a)
     assert JSP(j1, a1, r1, u1) != JSP(j1a, a2, r1a, u1a)
@@ -417,11 +421,10 @@ def test_job_sub_equals():
     assert JSP(j1, a1, r1, u1) != JSP(j1a, a1a, r1a, u2)
     assert JSP(j1, a1, r1, u1) != (j1a, a1a, r1a, u1a)
 
-    assert JSP(j1, a1, r1, u1, p1, 1, w1, t) != JSP(j1a, a1a, r1a, u1a, p2, 1, w1a, t)
-    assert JSP(j1, a1, r1, u1, p1, 1, w1, t) != JSP(j1a, a1a, r1a, u1a, p1a, 2, w1a, t)
-    assert JSP(j1, a1, r1, u1, p1, 1, w1, t) != JSP(j1a, a1a, r1a, u1a, p1a, 1, w2, t)
-    assert JSP(j1, a1, r1, u1, p1, 1, w1, t) != JSP(j1a, a1a, r1a, u1a, p1a, 1, w1a, f)
-    assert JSP(j1, a1, r1, u1, p1, 1, w1, t) != (j1a, a1a, r1a, u1a, p1a, 1, w1a, t)
+    assert JSP(j1, a1, r1, u1, p1, 1, w1) != JSP(j1a, a1a, r1a, u1a, p2, 1, w1a)
+    assert JSP(j1, a1, r1, u1, p1, 1, w1) != JSP(j1a, a1a, r1a, u1a, p1a, 2, w1a)
+    assert JSP(j1, a1, r1, u1, p1, 1, w1) != JSP(j1a, a1a, r1a, u1a, p1a, 1, w2)
+    assert JSP(j1, a1, r1, u1, p1, 1, w1) != (j1a, a1a, r1a, u1a, p1a, 1, w1a)
 
 
 def test_job_sub_hash():
@@ -446,14 +449,12 @@ def test_job_sub_hash():
     w1 = ["1/2/3"]
     w1a = ["1/2/3"]
     w2 = ["1/2/4"]
-    t = True
-    f = False
 
     JSP = JobSubmissionParameters
 
     assert hash(JSP(j1, a1, r1, u1)) == hash(JSP(j1a, a1a, r1a, u1a))
-    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1, t)) == hash(
-        JSP(j1a, a1a, r1a, u1a, p1a, 1, w1a, t)
+    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1)) == hash(
+        JSP(j1a, a1a, r1a, u1a, p1a, 1, w1a)
     )
 
     assert hash(JSP(j1, a1, r1, u1)) != hash(JSP(j2, a1a, r1a, u1a))
@@ -461,15 +462,12 @@ def test_job_sub_hash():
     assert hash(JSP(j1, a1, r1, u1)) != hash(JSP(j1a, a1a, r2, u1a))
     assert hash(JSP(j1, a1, r1, u1)) != hash(JSP(j1a, a1a, r1a, u2))
 
-    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1, t)) != hash(
-        JSP(j1a, a1a, r1a, u1a, p2, 1, w1a, t)
+    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1)) != hash(
+        JSP(j1a, a1a, r1a, u1a, p2, 1, w1a)
     )
-    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1, t)) != hash(
-        JSP(j1a, a1a, r1a, u1a, p1a, 2, w1a, t)
+    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1)) != hash(
+        JSP(j1a, a1a, r1a, u1a, p1a, 2, w1a)
     )
-    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1, t)) != hash(
-        JSP(j1a, a1a, r1a, u1a, p1a, 1, w2, t)
-    )
-    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1, t)) != hash(
-        JSP(j1a, a1a, r1a, u1a, p1a, 1, w1a, f)
+    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1)) != hash(
+        JSP(j1a, a1a, r1a, u1a, p1a, 1, w2)
     )
