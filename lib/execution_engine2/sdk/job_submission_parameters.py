@@ -110,16 +110,16 @@ class JobRequirements:
 def _is_valid_UPA(upa: str) -> (str, bool):
     # returns an empty string if not a valid upa
     if upa is None or not upa.strip():
-        return '', False
-    parts = [p.strip() for p in upa.split('/')]
+        return "", False
+    parts = [p.strip() for p in upa.split("/")]
     if not len(parts) == 3:
-        return '', False
+        return "", False
     for p in parts:
         try:
             int(p)
         except ValueError:
-            return '', False
-    return '/'.join(parts), True
+            return "", False
+    return "/".join(parts), True
 
 
 class JobSubmissionParameters:
@@ -164,7 +164,8 @@ class JobSubmissionParameters:
             if not is_valid:
                 raise IncorrectParamsException(
                     f"source_ws_objects index {i}, '{ref}', "
-                    + 'is not a valid Unique Permanent Address')
+                    + "is not a valid Unique Permanent Address"
+                )
             source_ws_objects[i] = upa
         self.source_ws_objects = tuple(source_ws_objects)
         self.debug_mode = debug_mode

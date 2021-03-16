@@ -261,8 +261,8 @@ def test_job_sub_init_maximal():
         UserCreds("user", "tokeytoken"),
         "    parentid  \t   ",
         1,
-        ['   1   /\t2   /   4', '6/7/8'],
-        True
+        ["   1   /\t2   /   4", "6/7/8"],
+        True,
     )
 
     assert jsp.job_id == "jobid"
@@ -271,7 +271,7 @@ def test_job_sub_init_maximal():
     assert jsp.user_creds == UserCreds("user", "tokeytoken")
     assert jsp.parent_job_id == "parentid"
     assert jsp.wsid == 1
-    assert jsp.source_ws_objects == ('1/2/4', '6/7/8')
+    assert jsp.source_ws_objects == ("1/2/4", "6/7/8")
     assert jsp.debug_mode is True
 
 
@@ -282,28 +282,99 @@ def test_job_sub_init_fail():
     r = JobRequirements(6, 7, 4, "cligroup")
     u = UserCreds("user", "tokeytoken")
 
-    _job_sub_init_fail(n, a, r, u, n, n, n, IncorrectParamsException(
-        "Missing input parameter: job_id"))
-    _job_sub_init_fail("  \t   ", a, r, u, n, n, n, IncorrectParamsException(
-        "Missing input parameter: job_id"))
-    _job_sub_init_fail(j, n, r, u, n, n, n, ValueError(
-        "app_info cannot be a value that evaluates to false"))
-    _job_sub_init_fail(j, a, n, u, n, n, n, ValueError(
-        "job_reqs cannot be a value that evaluates to false"))
-    _job_sub_init_fail(j, a, r, n, n, n, n, ValueError(
-        "user_creds cannot be a value that evaluates to false"))
+    _job_sub_init_fail(
+        n, a, r, u, n, n, n, IncorrectParamsException("Missing input parameter: job_id")
+    )
+    _job_sub_init_fail(
+        "  \t   ",
+        a,
+        r,
+        u,
+        n,
+        n,
+        n,
+        IncorrectParamsException("Missing input parameter: job_id"),
+    )
+    _job_sub_init_fail(
+        j,
+        n,
+        r,
+        u,
+        n,
+        n,
+        n,
+        ValueError("app_info cannot be a value that evaluates to false"),
+    )
+    _job_sub_init_fail(
+        j,
+        a,
+        n,
+        u,
+        n,
+        n,
+        n,
+        ValueError("job_reqs cannot be a value that evaluates to false"),
+    )
+    _job_sub_init_fail(
+        j,
+        a,
+        r,
+        n,
+        n,
+        n,
+        n,
+        ValueError("user_creds cannot be a value that evaluates to false"),
+    )
     # the only way to get parent id to to fail is with a control char
-    _job_sub_init_fail(j, a, r, u, "par\bent", n, n, IncorrectParamsException(
-        "parent_job_id contains control characters"))
-    _job_sub_init_fail(j, a, r, u, n, 0, n, IncorrectParamsException(
-        "wsid must be at least 1"))
-    _job_sub_init_fail(j, a, r, u, n, n, ['1/2/3', n], IncorrectParamsException(
-        "source_ws_objects index 1, 'None', is not a valid Unique Permanent Address"))
-    _job_sub_init_fail(j, a, r, u, n, n, ['1/2/3', "   \t  "], IncorrectParamsException(
-        "source_ws_objects index 1, '   \t  ', is not a valid Unique Permanent Address"))
-    for o in ['1/2', '1/2/', '/1/2', '1/2/3/4', 'x/2/3', '1/x/3', '1/2/x']:
-        _job_sub_init_fail(j, a, r, u, n, n, [o], IncorrectParamsException(
-            f"source_ws_objects index 0, '{o}', is not a valid Unique Permanent Address")
+    _job_sub_init_fail(
+        j,
+        a,
+        r,
+        u,
+        "par\bent",
+        n,
+        n,
+        IncorrectParamsException("parent_job_id contains control characters"),
+    )
+    _job_sub_init_fail(
+        j, a, r, u, n, 0, n, IncorrectParamsException("wsid must be at least 1")
+    )
+    _job_sub_init_fail(
+        j,
+        a,
+        r,
+        u,
+        n,
+        n,
+        ["1/2/3", n],
+        IncorrectParamsException(
+            "source_ws_objects index 1, 'None', is not a valid Unique Permanent Address"
+        ),
+    )
+    _job_sub_init_fail(
+        j,
+        a,
+        r,
+        u,
+        n,
+        n,
+        ["1/2/3", "   \t  "],
+        IncorrectParamsException(
+            "source_ws_objects index 1, '   \t  ', is not a valid Unique Permanent Address"
+        ),
+    )
+    for o in ["1/2", "1/2/", "/1/2", "1/2/3/4", "x/2/3", "1/x/3", "1/2/x"]:
+        _job_sub_init_fail(
+            j,
+            a,
+            r,
+            u,
+            n,
+            n,
+            [o],
+            IncorrectParamsException(
+                f"source_ws_objects index 0, '{o}', is not a valid Unique Permanent Address"
+            ),
         )
 
 
@@ -329,9 +400,9 @@ def test_job_sub_equals():
     p1 = "I'm so miserable and you just don't care"
     p1a = "I'm so miserable and you just don't care"
     p2 = "Oh do shut up Portia"
-    w1 = ['1/2/3']
-    w1a = ['1/2/3']
-    w2 = ['1/2/4']
+    w1 = ["1/2/3"]
+    w1a = ["1/2/3"]
+    w2 = ["1/2/4"]
     t = True
     f = False
 
@@ -372,23 +443,33 @@ def test_job_sub_hash():
     p1 = "I'm so miserable and you just don't care"
     p1a = "I'm so miserable and you just don't care"
     p2 = "Oh do shut up Portia"
-    w1 = ['1/2/3']
-    w1a = ['1/2/3']
-    w2 = ['1/2/4']
+    w1 = ["1/2/3"]
+    w1a = ["1/2/3"]
+    w2 = ["1/2/4"]
     t = True
     f = False
 
     JSP = JobSubmissionParameters
 
-    assert hash(JSP(j1, a1, r1, u1)) == hash(JSP(j1a, a1a, r1a, u1a ))
-    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1, t)) == hash(JSP(j1a, a1a, r1a, u1a, p1a, 1, w1a, t))
+    assert hash(JSP(j1, a1, r1, u1)) == hash(JSP(j1a, a1a, r1a, u1a))
+    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1, t)) == hash(
+        JSP(j1a, a1a, r1a, u1a, p1a, 1, w1a, t)
+    )
 
     assert hash(JSP(j1, a1, r1, u1)) != hash(JSP(j2, a1a, r1a, u1a))
     assert hash(JSP(j1, a1, r1, u1)) != hash(JSP(j1a, a2, r1a, u1a))
     assert hash(JSP(j1, a1, r1, u1)) != hash(JSP(j1a, a1a, r2, u1a))
     assert hash(JSP(j1, a1, r1, u1)) != hash(JSP(j1a, a1a, r1a, u2))
 
-    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1, t)) != hash(JSP(j1a, a1a, r1a, u1a, p2, 1, w1a, t))
-    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1, t)) != hash(JSP(j1a, a1a, r1a, u1a, p1a, 2, w1a, t))
-    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1, t)) != hash(JSP(j1a, a1a, r1a, u1a, p1a, 1, w2, t))
-    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1, t)) != hash(JSP(j1a, a1a, r1a, u1a, p1a, 1, w1a, f))
+    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1, t)) != hash(
+        JSP(j1a, a1a, r1a, u1a, p2, 1, w1a, t)
+    )
+    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1, t)) != hash(
+        JSP(j1a, a1a, r1a, u1a, p1a, 2, w1a, t)
+    )
+    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1, t)) != hash(
+        JSP(j1a, a1a, r1a, u1a, p1a, 1, w2, t)
+    )
+    assert hash(JSP(j1, a1, r1, u1, p1, 1, w1, t)) != hash(
+        JSP(j1a, a1a, r1a, u1a, p1a, 1, w1a, f)
+    )
