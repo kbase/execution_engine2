@@ -57,7 +57,7 @@ class CatalogUtils:
             json_resources_request = ", ".join(resources_request)
             return json.loads(json_resources_request)
         # CSV Format
-        rr = resources_request[0].split(",")  # type: list
+        rr = resources_request  # type: list
         rv = {"client_group": rr.pop(0)}
         for item in rr:
             if "=" not in item:
