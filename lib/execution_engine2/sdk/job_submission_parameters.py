@@ -85,15 +85,15 @@ class JobRequirements:
         memory_MB: int = None,
         disk_GB: int = None,
         client_group: str = None,
-        client_group_regex: bool = False,
+        client_group_regex: Union[bool, None] = None,
         as_user: str = None,
         ignore_concurrency_limits: bool = False,
         scheduler_requirements: Dict[str, str] = None,
         debug_mode: bool = False,
     ):
         """
-        Test that a set of parameters are legal. All arguments are optional - parameters required
-        for initializing the class may be missing.
+        Test that a set of parameters are legal and returns normalized parmeters.
+        All arguments are optional - parameters required for initializing the class may be missing.
 
         cpus - the number of CPUs required for the job.
         memory_MB - the amount of memory, in MB, required for the job.
@@ -116,12 +116,18 @@ class JobRequirements:
         if disk_GB is not None:
             _gt_zero(disk_GB, "disk space in GB")
         if client_group is not None:
-            _check_string(client_group, "client_group")
-        # do nothing for client group regex, any value is acceptable
-        _check_string(as_user, "as_user", optional=True)
-        # do nothing for ignore con limits, any value is acceptable
-        cls._check_scheduler_requirements(scheduler_requirements)
-        # do nothing for debug_mode, any value is acceptable
+            client_group = _check_string(client_group, "client_group")
+        return (
+            cpus,
+            memory_MB,
+            disk_GB,
+            client_group,
+            None if client_group_regex is None else bool(client_group_regex),
+            _check_string(as_user, "as_user", optional=True),
+            bool(ignore_concurrency_limits),
+            cls._check_scheduler_requirements(scheduler_requirements),
+            bool(debug_mode),
+        )
 
     def _params(self):
         return (

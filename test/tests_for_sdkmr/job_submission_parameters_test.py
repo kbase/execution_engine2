@@ -200,14 +200,15 @@ def _job_req_init_fail(cpus, mem, disk, cgroup, user, reqs, expected):
 
 
 def test_job_req_check_parameters_no_input():
-    # if no exception, success
-    JobRequirements.check_parameters()
     n = None
-    JobRequirements.check_parameters(n, n, n, n, n, n, n, n, n)
+    f = False
+    assert JobRequirements.check_parameters() == (n, n, n, n, n, n, f, {}, f)
+    assert JobRequirements.check_parameters(n, n, n, n, n, n, n, n, n) == (
+        n, n, n, n, n, n, f, {}, f)
 
 
 def test_job_req_check_parameters_full_input():
-    JobRequirements.check_parameters(  # if no exception, success
+    assert JobRequirements.check_parameters(
         1,
         1,
         1,
@@ -217,21 +218,21 @@ def test_job_req_check_parameters_full_input():
         890,
         {"proc": "x286", "maxmem": "640k"},
         [],
-    )
+    ) == (1, 1, 1, "b", True, "user", True, {"proc": "x286", "maxmem": "640k"}, False)
 
 
 def test_job_req_check_parameters_whitespace_as_user():
-    JobRequirements.check_parameters(  # if no exception, success
+    assert JobRequirements.check_parameters(
         1,
         1,
         1,
         "   b   ",
-        "x",
+        False,
         " \t  ",
         890,
         {"proc": "x286", "maxmem": "640k"},
         [],
-    )
+    ) == (1, 1, 1, "b", False, None, True, {"proc": "x286", "maxmem": "640k"}, False)
 
 
 def test_job_req_check_parameters_fail():
