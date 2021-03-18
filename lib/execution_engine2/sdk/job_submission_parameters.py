@@ -58,11 +58,14 @@ class JobRequirements:
         self.memory_MB = _gt_zero(memory_MB, "memory in MB")
         self.disk_GB = _gt_zero(disk_GB, "disk space in GB")
         self.client_group = _check_string(client_group, "client_group")
-        self.client_group_regex = None if client_group_regex is None else bool(client_group_regex)
+        self.client_group_regex = (
+            None if client_group_regex is None else bool(client_group_regex)
+        )
         self.as_user = _check_string(as_user, "as_user", optional=True)
         self.ignore_concurrency_limits = bool(ignore_concurrency_limits)
-        self.scheduler_requirements = FrozenMap(self._check_scheduler_requirements(
-            scheduler_requirements))
+        self.scheduler_requirements = FrozenMap(
+            self._check_scheduler_requirements(scheduler_requirements)
+        )
         self.debug_mode = bool(debug_mode)
 
     @classmethod
@@ -86,7 +89,7 @@ class JobRequirements:
         as_user: str = None,
         ignore_concurrency_limits: bool = False,
         scheduler_requirements: Dict[str, str] = None,
-        debug_mode: bool = False
+        debug_mode: bool = False,
     ):
         """
         Test that a set of parameters are legal. All arguments are optional - parameters required

@@ -49,7 +49,13 @@ def test_job_req_init_maximal():
 
 def test_job_req_init_non_bools():
     for inp, expected in {
-            1: True, " ": True, (1,): True, 0: False, "": False, tuple(): False}.items():
+        1: True,
+        " ": True,
+        (1,): True,
+        0: False,
+        "": False,
+        tuple(): False,
+    }.items():
         jr = JobRequirements(
             6,
             7,
@@ -57,7 +63,8 @@ def test_job_req_init_non_bools():
             "cg",
             client_group_regex=inp,
             ignore_concurrency_limits=inp,
-            debug_mode=inp)
+            debug_mode=inp,
+        )
 
         assert jr.client_group_regex is expected
         assert jr.ignore_concurrency_limits is expected
@@ -72,7 +79,8 @@ def test_job_req_init_None_for_bools():
         "cg",
         client_group_regex=None,
         ignore_concurrency_limits=None,
-        debug_mode=None)
+        debug_mode=None,
+    )
 
     assert jr.client_group_regex is None
     assert jr.ignore_concurrency_limits is False
@@ -204,7 +212,7 @@ def test_job_req_check_parameters_full_input():
         1,
         1,
         "   b   ",
-        'x',
+        "x",
         " user ",
         890,
         {"proc": "x286", "maxmem": "640k"},
@@ -218,7 +226,7 @@ def test_job_req_check_parameters_whitespace_as_user():
         1,
         1,
         "   b   ",
-        'x',
+        "x",
         " \t  ",
         890,
         {"proc": "x286", "maxmem": "640k"},
@@ -228,24 +236,89 @@ def test_job_req_check_parameters_whitespace_as_user():
 
 def test_job_req_check_parameters_fail():
     n = None
-    _job_req_check_parameters_fail(0, 1, 1, "c", "u", n, IncorrectParamsException(
-        "CPU count must be at least 1"))
-    _job_req_check_parameters_fail(1, 0, 1, "c", "u", n, IncorrectParamsException(
-        "memory in MB must be at least 1"))
-    _job_req_check_parameters_fail(1, 1, 0, "c", "u", n, IncorrectParamsException(
-        "disk space in GB must be at least 1"))
-    _job_req_check_parameters_fail(1, 1, 1, " \t ", "u", n, IncorrectParamsException(
-        "Missing input parameter: client_group"))
-    _job_req_check_parameters_fail(1, 1, 1, "c", "  j\bi  ", n, IncorrectParamsException(
-        "as_user contains control characters"))
-    _job_req_check_parameters_fail(1, 1, 1, "c", "u", {None: 1}, IncorrectParamsException(
-        "Missing input parameter: key in scheduler requirements structure"))
-    _job_req_check_parameters_fail(1, 1, 1, "c", "u", {"a": None}, IncorrectParamsException(
-        "Missing input parameter: value for key 'a' in scheduler requirements structure"))
-    _job_req_check_parameters_fail(1, 1, 1, "c", "u", {" \t ": 1}, IncorrectParamsException(
-        "Missing input parameter: key in scheduler requirements structure"))
-    _job_req_check_parameters_fail(1, 1, 1, "c", "u", {"b": " \t "}, IncorrectParamsException(
-        "Missing input parameter: value for key 'b' in scheduler requirements structure"))
+    _job_req_check_parameters_fail(
+        0, 1, 1, "c", "u", n, IncorrectParamsException("CPU count must be at least 1")
+    )
+    _job_req_check_parameters_fail(
+        1,
+        0,
+        1,
+        "c",
+        "u",
+        n,
+        IncorrectParamsException("memory in MB must be at least 1"),
+    )
+    _job_req_check_parameters_fail(
+        1,
+        1,
+        0,
+        "c",
+        "u",
+        n,
+        IncorrectParamsException("disk space in GB must be at least 1"),
+    )
+    _job_req_check_parameters_fail(
+        1,
+        1,
+        1,
+        " \t ",
+        "u",
+        n,
+        IncorrectParamsException("Missing input parameter: client_group"),
+    )
+    _job_req_check_parameters_fail(
+        1,
+        1,
+        1,
+        "c",
+        "  j\bi  ",
+        n,
+        IncorrectParamsException("as_user contains control characters"),
+    )
+    _job_req_check_parameters_fail(
+        1,
+        1,
+        1,
+        "c",
+        "u",
+        {None: 1},
+        IncorrectParamsException(
+            "Missing input parameter: key in scheduler requirements structure"
+        ),
+    )
+    _job_req_check_parameters_fail(
+        1,
+        1,
+        1,
+        "c",
+        "u",
+        {"a": None},
+        IncorrectParamsException(
+            "Missing input parameter: value for key 'a' in scheduler requirements structure"
+        ),
+    )
+    _job_req_check_parameters_fail(
+        1,
+        1,
+        1,
+        "c",
+        "u",
+        {" \t ": 1},
+        IncorrectParamsException(
+            "Missing input parameter: key in scheduler requirements structure"
+        ),
+    )
+    _job_req_check_parameters_fail(
+        1,
+        1,
+        1,
+        "c",
+        "u",
+        {"b": " \t "},
+        IncorrectParamsException(
+            "Missing input parameter: value for key 'b' in scheduler requirements structure"
+        ),
+    )
 
 
 def _job_req_check_parameters_fail(cpu, mem, disk, cgroup, user, reqs, expected):
