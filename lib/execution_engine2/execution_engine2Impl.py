@@ -28,9 +28,9 @@ class execution_engine2:
     # state. A method could easily clobber the state set by another while
     # the latter method is running.
     ######################################### noqa
-    VERSION = "0.0.1"
-    GIT_URL = "https://bio-boris@github.com/kbase/execution_engine2"
-    GIT_COMMIT_HASH = "78ab4aaa17181deb81e06cd077c31bf6929b009f"
+    VERSION = "0.0.5"
+    GIT_URL = "https://github.com/mrcreosote/execution_engine2.git"
+    GIT_COMMIT_HASH = "330194d1f1c09c7dc9598fb7d6afedf50feb253d"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -804,45 +804,45 @@ class execution_engine2:
            of list of String, parameter "as_admin" of type "boolean" (@range
            [0,1])
         :returns: instance of type "CheckJobBatchResults" (parent_job - state
-           of parent job job_states - states of child jobs aggregate_states -
-           count of all available child job states, even if they are zero) ->
-           structure: parameter "parent_job" of type "JobState" (job_id -
-           string - id of the job user - string - user who started the job
-           wsid - int - optional id of the workspace where the job is bound
-           authstrat - string - what strategy used to authenticate the job
-           job_input - object - inputs to the job (from the run_job call)  ##
-           TODO - verify updated - int - timestamp since epoch in
-           milliseconds of the last time the status was updated running - int
-           - timestamp since epoch in milliseconds of when it entered the
-           running state created - int - timestamp since epoch in
-           milliseconds when the job was created finished - int - timestamp
-           since epoch in milliseconds when the job was finished status -
-           string - status of the job. one of the following: created - job
-           has been created in the service estimating - an estimation job is
-           running to estimate resources required for the main job, and which
-           queue should be used queued - job is queued to be run running -
-           job is running on a worker node completed - job was completed
-           successfully error - job is no longer running, but failed with an
-           error terminated - job is no longer running, terminated either due
-           to user cancellation, admin cancellation, or some automated task
-           error_code - int - internal reason why the job is an error. one of
-           the following: 0 - unknown 1 - job crashed 2 - job terminated by
-           automation 3 - job ran over time limit 4 - job was missing its
-           automated output document 5 - job authentication token expired
-           errormsg - string - message (e.g. stacktrace) accompanying an
-           errored job error - object - the JSON-RPC error package that
-           accompanies the error code and message terminated_code - int -
-           internal reason why a job was terminated, one of: 0 - user
-           cancellation 1 - admin cancellation 2 - terminated by some
-           automatic process @optional error @optional error_code @optional
-           errormsg @optional terminated_code @optional estimating @optional
-           running @optional finished) -> structure: parameter "job_id" of
-           type "job_id" (A job id.), parameter "user" of String, parameter
-           "authstrat" of String, parameter "wsid" of Long, parameter
-           "status" of String, parameter "job_input" of type "RunJobParams"
-           (method - service defined in standard JSON RPC way, typically it's
-           module name from spec-file followed by '.' and name of funcdef
-           from spec-file corresponding to running method (e.g.
+           of parent job job_states - states of child jobs IDEA: ADD
+           aggregate_states - count of all available child job states, even
+           if they are zero) -> structure: parameter "parent_jobstate" of
+           type "JobState" (job_id - string - id of the job user - string -
+           user who started the job wsid - int - optional id of the workspace
+           where the job is bound authstrat - string - what strategy used to
+           authenticate the job job_input - object - inputs to the job (from
+           the run_job call)  ## TODO - verify updated - int - timestamp
+           since epoch in milliseconds of the last time the status was
+           updated running - int - timestamp since epoch in milliseconds of
+           when it entered the running state created - int - timestamp since
+           epoch in milliseconds when the job was created finished - int -
+           timestamp since epoch in milliseconds when the job was finished
+           status - string - status of the job. one of the following: created
+           - job has been created in the service estimating - an estimation
+           job is running to estimate resources required for the main job,
+           and which queue should be used queued - job is queued to be run
+           running - job is running on a worker node completed - job was
+           completed successfully error - job is no longer running, but
+           failed with an error terminated - job is no longer running,
+           terminated either due to user cancellation, admin cancellation, or
+           some automated task error_code - int - internal reason why the job
+           is an error. one of the following: 0 - unknown 1 - job crashed 2 -
+           job terminated by automation 3 - job ran over time limit 4 - job
+           was missing its automated output document 5 - job authentication
+           token expired errormsg - string - message (e.g. stacktrace)
+           accompanying an errored job error - object - the JSON-RPC error
+           package that accompanies the error code and message
+           terminated_code - int - internal reason why a job was terminated,
+           one of: 0 - user cancellation 1 - admin cancellation 2 -
+           terminated by some automatic process @optional error @optional
+           error_code @optional errormsg @optional terminated_code @optional
+           estimating @optional running @optional finished) -> structure:
+           parameter "job_id" of type "job_id" (A job id.), parameter "user"
+           of String, parameter "authstrat" of String, parameter "wsid" of
+           Long, parameter "status" of String, parameter "job_input" of type
+           "RunJobParams" (method - service defined in standard JSON RPC way,
+           typically it's module name from spec-file followed by '.' and name
+           of funcdef from spec-file corresponding to running method (e.g.
            'KBaseTrees.construct_species_tree' from trees service); params -
            the parameters of the method that performed this call; Optional
            parameters: service_ver - specific version of deployed service,
@@ -891,8 +891,8 @@ class execution_engine2:
            structure: parameter "name" of String, parameter "code" of Long,
            parameter "message" of String, parameter "error" of String,
            parameter "error_code" of Long, parameter "errormsg" of String,
-           parameter "terminated_code" of Long, parameter "job_states" of
-           list of type "JobState" (job_id - string - id of the job user -
+           parameter "terminated_code" of Long, parameter "child_jobstates"
+           of list of type "JobState" (job_id - string - id of the job user -
            string - user who started the job wsid - int - optional id of the
            workspace where the job is bound authstrat - string - what
            strategy used to authenticate the job job_input - object - inputs
@@ -976,8 +976,7 @@ class execution_engine2:
            structure: parameter "name" of String, parameter "code" of Long,
            parameter "message" of String, parameter "error" of String,
            parameter "error_code" of Long, parameter "errormsg" of String,
-           parameter "terminated_code" of Long, parameter "aggregate_states"
-           of unspecified object
+           parameter "terminated_code" of Long
         """
         # ctx is the context object
         # return variables are: returnVal
@@ -1338,14 +1337,30 @@ class execution_engine2:
         """
         :param params: instance of type "CheckJobsDateRangeParams" (Check job
            for all jobs in a given date/time range for all users (Admin
-           function) float start_time; # Filter based on creation timestamp
-           since epoch float end_time; # Filter based on creation timestamp
-           since epoch list<string> projection; # A list of fields to include
-           in the projection, default ALL See "Projection Fields"
-           list<string> filter; # A list of simple filters to "AND" together,
-           such as error_code=1, wsid=1234, terminated_code = 1 int limit; #
-           The maximum number of records to return string user; # Optional.
-           Defaults off of your token @optional projection @optional filter
+           function) Notes on start_time and end_time: These fields are
+           designated as floats but floats, ints, and strings are all
+           accepted. Times are determined as follows: - if the field is a
+           float or a string that contains a float and only a float, the
+           field value is treated as seconds since the epoch. - if the field
+           is an int or a string that contains an int and only an int, the
+           field value is treated as milliseconds since the epoch. - if the
+           field is a string not matching the criteria above, it is treated
+           as a date and time. Nearly any unambigous format can be parsed.
+           float start_time - Filter based on job creation timestamp since
+           epoch float end_time - Filter based on job creation timestamp
+           since epoch list<string> projection - A list of fields to include
+           in the projection, default ALL See "Projection Fields" above
+           list<string> filter - DEPRECATED: this field may change or be
+           removed in the future. A list of simple filters to "AND" together,
+           such as error_code=1, wsid=1234, terminated_code = 1 int limit -
+           The maximum number of records to return string user - The user
+           whose job records will be returned. Optional. Default is the
+           current user. int offset - the number of jobs to skip before
+           returning records. boolean ascending - true to sort by job ID
+           ascending, false descending. boolean as_admin - true to run the
+           query as an admin; user must have admin EE2 permissions. Required
+           if setting `user` to something other than your own. TODO: this
+           seems to have no effect @optional projection @optional filter
            @optional limit @optional user @optional offset @optional
            ascending) -> structure: parameter "start_time" of Double,
            parameter "end_time" of Double, parameter "projection" of list of
@@ -1353,9 +1368,34 @@ class execution_engine2:
            Long, parameter "user" of String, parameter "offset" of Long,
            parameter "ascending" of type "boolean" (@range [0,1]), parameter
            "as_admin" of type "boolean" (@range [0,1])
-        :returns: instance of type "CheckJobsResults" (job_states - states of
-           jobs could be mapping<job_id, JobState> or list<JobState>) ->
-           structure: parameter "job_states" of list of type "JobState"
+        :returns: instance of type "CheckJobsDateRangeResults" (Projection
+           Fields user = StringField(required=True) authstrat = StringField(
+           required=True, default="kbaseworkspace",
+           validation=valid_authstrat ) wsid = IntField(required=False)
+           status = StringField(required=True, validation=valid_status)
+           updated = DateTimeField(default=datetime.datetime.utcnow,
+           autonow=True) estimating = DateTimeField(default=None)  # Time
+           when job began estimating running = DateTimeField(default=None)  #
+           Time when job started # Time when job finished, errored out, or
+           was terminated by the user/admin finished =
+           DateTimeField(default=None) errormsg = StringField() msg =
+           StringField() error = DynamicField() terminated_code =
+           IntField(validation=valid_termination_code) error_code =
+           IntField(validation=valid_errorcode) scheduler_type =
+           StringField() scheduler_id = StringField() scheduler_estimator_id
+           = StringField() job_input = EmbeddedDocumentField(JobInput,
+           required=True) job_output = DynamicField() /* /* Results of
+           check_jobs_date_range methods. jobs - the jobs matching the query,
+           up to `limit` jobs. count - the number of jobs returned.
+           query_count - the number of jobs that matched the filters. filter
+           - DEPRECATED - this field may change in the future. The filters
+           that were applied to the jobs. skip - the number of jobs that were
+           skipped prior to beginning to return jobs. projection - the list
+           of fields included in the returned job. By default all fields.
+           limit - the maximum number of jobs returned. sort_order - the
+           order in which the results were sorted by the job ID - + for
+           ascending, - for descending. TODO: DOCUMENT THE RETURN OF STATS
+           mapping) -> structure: parameter "jobs" of list of type "JobState"
            (job_id - string - id of the job user - string - user who started
            the job wsid - int - optional id of the workspace where the job is
            bound authstrat - string - what strategy used to authenticate the
@@ -1440,7 +1480,11 @@ class execution_engine2:
            structure: parameter "name" of String, parameter "code" of Long,
            parameter "message" of String, parameter "error" of String,
            parameter "error_code" of Long, parameter "errormsg" of String,
-           parameter "terminated_code" of Long
+           parameter "terminated_code" of Long, parameter "count" of Long,
+           parameter "query_count" of Long, parameter "filter" of mapping
+           from String to String, parameter "skip" of Long, parameter
+           "projection" of list of String, parameter "limit" of Long,
+           parameter "sort_order" of String
         """
         # ctx is the context object
         # return variables are: returnVal
@@ -1473,14 +1517,30 @@ class execution_engine2:
         """
         :param params: instance of type "CheckJobsDateRangeParams" (Check job
            for all jobs in a given date/time range for all users (Admin
-           function) float start_time; # Filter based on creation timestamp
-           since epoch float end_time; # Filter based on creation timestamp
-           since epoch list<string> projection; # A list of fields to include
-           in the projection, default ALL See "Projection Fields"
-           list<string> filter; # A list of simple filters to "AND" together,
-           such as error_code=1, wsid=1234, terminated_code = 1 int limit; #
-           The maximum number of records to return string user; # Optional.
-           Defaults off of your token @optional projection @optional filter
+           function) Notes on start_time and end_time: These fields are
+           designated as floats but floats, ints, and strings are all
+           accepted. Times are determined as follows: - if the field is a
+           float or a string that contains a float and only a float, the
+           field value is treated as seconds since the epoch. - if the field
+           is an int or a string that contains an int and only an int, the
+           field value is treated as milliseconds since the epoch. - if the
+           field is a string not matching the criteria above, it is treated
+           as a date and time. Nearly any unambigous format can be parsed.
+           float start_time - Filter based on job creation timestamp since
+           epoch float end_time - Filter based on job creation timestamp
+           since epoch list<string> projection - A list of fields to include
+           in the projection, default ALL See "Projection Fields" above
+           list<string> filter - DEPRECATED: this field may change or be
+           removed in the future. A list of simple filters to "AND" together,
+           such as error_code=1, wsid=1234, terminated_code = 1 int limit -
+           The maximum number of records to return string user - The user
+           whose job records will be returned. Optional. Default is the
+           current user. int offset - the number of jobs to skip before
+           returning records. boolean ascending - true to sort by job ID
+           ascending, false descending. boolean as_admin - true to run the
+           query as an admin; user must have admin EE2 permissions. Required
+           if setting `user` to something other than your own. TODO: this
+           seems to have no effect @optional projection @optional filter
            @optional limit @optional user @optional offset @optional
            ascending) -> structure: parameter "start_time" of Double,
            parameter "end_time" of Double, parameter "projection" of list of
@@ -1488,9 +1548,34 @@ class execution_engine2:
            Long, parameter "user" of String, parameter "offset" of Long,
            parameter "ascending" of type "boolean" (@range [0,1]), parameter
            "as_admin" of type "boolean" (@range [0,1])
-        :returns: instance of type "CheckJobsResults" (job_states - states of
-           jobs could be mapping<job_id, JobState> or list<JobState>) ->
-           structure: parameter "job_states" of list of type "JobState"
+        :returns: instance of type "CheckJobsDateRangeResults" (Projection
+           Fields user = StringField(required=True) authstrat = StringField(
+           required=True, default="kbaseworkspace",
+           validation=valid_authstrat ) wsid = IntField(required=False)
+           status = StringField(required=True, validation=valid_status)
+           updated = DateTimeField(default=datetime.datetime.utcnow,
+           autonow=True) estimating = DateTimeField(default=None)  # Time
+           when job began estimating running = DateTimeField(default=None)  #
+           Time when job started # Time when job finished, errored out, or
+           was terminated by the user/admin finished =
+           DateTimeField(default=None) errormsg = StringField() msg =
+           StringField() error = DynamicField() terminated_code =
+           IntField(validation=valid_termination_code) error_code =
+           IntField(validation=valid_errorcode) scheduler_type =
+           StringField() scheduler_id = StringField() scheduler_estimator_id
+           = StringField() job_input = EmbeddedDocumentField(JobInput,
+           required=True) job_output = DynamicField() /* /* Results of
+           check_jobs_date_range methods. jobs - the jobs matching the query,
+           up to `limit` jobs. count - the number of jobs returned.
+           query_count - the number of jobs that matched the filters. filter
+           - DEPRECATED - this field may change in the future. The filters
+           that were applied to the jobs. skip - the number of jobs that were
+           skipped prior to beginning to return jobs. projection - the list
+           of fields included in the returned job. By default all fields.
+           limit - the maximum number of jobs returned. sort_order - the
+           order in which the results were sorted by the job ID - + for
+           ascending, - for descending. TODO: DOCUMENT THE RETURN OF STATS
+           mapping) -> structure: parameter "jobs" of list of type "JobState"
            (job_id - string - id of the job user - string - user who started
            the job wsid - int - optional id of the workspace where the job is
            bound authstrat - string - what strategy used to authenticate the
@@ -1575,7 +1660,11 @@ class execution_engine2:
            structure: parameter "name" of String, parameter "code" of Long,
            parameter "message" of String, parameter "error" of String,
            parameter "error_code" of Long, parameter "errormsg" of String,
-           parameter "terminated_code" of Long
+           parameter "terminated_code" of Long, parameter "count" of Long,
+           parameter "query_count" of Long, parameter "filter" of mapping
+           from String to String, parameter "skip" of Long, parameter
+           "projection" of list of String, parameter "limit" of Long,
+           parameter "sort_order" of String
         """
         # ctx is the context object
         # return variables are: returnVal
@@ -1654,7 +1743,7 @@ class execution_engine2:
         """
         Check if current user has ee2 admin rights.
         If so, return the type of rights and their roles
-        :returns: instance of type "AdminRolesResults" (str permission; # One
+        :returns: instance of type "AdminRolesResults" (str permission - One
            of 'r|w|x' (('read' | 'write' | 'none'))) -> structure: parameter
            "permission" of String
         """

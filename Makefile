@@ -21,6 +21,10 @@ compile:
 		--pysrvname $(SERVICE_CAPS).$(SERVICE_CAPS)Server \
 		--pyimplname $(SERVICE_CAPS).$(SERVICE_CAPS)Impl;
 
+	kb-sdk compile $(SPEC_FILE) \
+		--out . \
+		--html \
+
 build:
 	chmod +x $(SCRIPTS_DIR)/entrypoint.sh
 
