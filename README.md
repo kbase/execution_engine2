@@ -105,6 +105,34 @@ pre-commit uninstall
     * Once the PR is apporoved, merge (no squash) to `main`.
     * Tag the merge commit in GitHub with the semantic version from `kbase.yml`.
  
+## KBase Catalog interactions
+
+### Client Groups
+
+EE2 understands client group specifications in JSON and CSV formats. Both formats have special
+fields in common:
+* `request_cpus` - the number of CPUs to request
+* `request_memory` - the amount of memory, in MB, to request
+* `request_disk` - the amount of memory, in GB, to request
+* `client_group_regex` - treat the client group (see below) as a regular expression
+* `debug_mode` - run the job in debug mode
+
+The client group is handled differently for JSON and CSV:
+* The JSON format has the `clientgroup` field, which is optional.
+* The CSV format must have the client group in the first 'column' of the CSV and is required. The
+  remainder of the 'columns' must be in `key=value` format.
+
+Any fields other than the above are sent on to the scheduler as key value pairs.
+
+For example, to set the client group to `bigmem`, request 32 CPUs, 64GB of memory, and 1TB of disk,
+the following would be entered in the catalog UI:
+* CSV: `bigmem, request_cpus=32, request_memory=64000, request_disk=1000`
+* JSON: `{"client_group": "bigmem", "request_cpus" : "32", "request_memory" : "64000", "request_disk" : "1000"}`
+
+Note that the representation of this data in the catalog API is idiosyncratic - both the JSON and
+CSV data are split by commas into parts. EE2 will detect JSON entries and reconsitute them before
+deserialization.
+
 # Help  
   
 Contact @Tianhao-Gu, @bio_boris, @briehl
