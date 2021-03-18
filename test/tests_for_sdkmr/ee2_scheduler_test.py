@@ -81,7 +81,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         logging.info("Testing with complex-empty clientgroup")
 
         params = self._create_sample_params(
-            cgroups=["njs,request_cpus=8,request_memory=10GB,request_apples=5"]
+            cgroups=["njs", "request_cpus=8", "request_memory=10GB", "request_apples=5"]
         )
 
         njs_sub = c._create_submit(params)
