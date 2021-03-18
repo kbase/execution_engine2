@@ -80,6 +80,30 @@ pre-commit uninstall
 * Use a remote ssh debugger with the correct path mappings
 * Right click on the file you'd like to run and select run test
 
+## Develop
+
+* To add a bugfix or new feature:
+    * Create a new feature branch, branching from `develop`. Ask a repo owner for help if
+      necessary.
+    * If you're a repo owner you can push directly to this branch. If not, make pull requests to
+      the branch as necessary.
+    * Add:
+        * Feature / bugfix code
+        * Tests
+        * Documentation, if applicable
+        * Release notes, if applicable
+        * See the PR template in `worksflows/pull_request_template.md` for details
+    * Once the feature is complete, create a PR from the feature branch to `develop` and request a
+      review from person with EE2 knowledge via the Github interface and via Slack.
+    * When the PR is approved, squash and merge into `develop` and delete the feature branch.
+* To create a new release:
+    * Increment the version as per [semantic versioning](https://semver.org/) in `kbase.yml`.
+        * Update the release notes to the correct version, if necessary.
+    * Run `make compile`.
+    * Go through the process above to get the changes into `develop`.
+    * Make a PR from `develop` to `main`.
+    * Once the PR is apporoved, merge (no squash) to `main`.
+    * Tag the merge commit in GitHub with the semantic version from `kbase.yml`.
  
 # Help  
   
