@@ -1,5 +1,9 @@
 # execution_engine2 (ee2) release notes
 =========================================
+## 0.0.5
+  * Fix a bug that caused job requirements from the catalog in CSV format to be ignored other
+    than the client group
+
 ## 0.0.4
   * Fix up tests
   * Remove dependency on slack
