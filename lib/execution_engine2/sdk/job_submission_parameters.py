@@ -33,7 +33,7 @@ class JobRequirements:
         disk_GB: int,
         client_group: str,
         client_group_regex: Union[bool, None] = None,
-        as_user: str = None,
+        bill_to_user: str = None,
         ignore_concurrency_limits: bool = False,
         scheduler_requirements: Dict[str, str] = None,
         debug_mode: bool = False,
@@ -47,7 +47,7 @@ class JobRequirements:
         client_group - the client group in which the job will run.
         client_group_regex - whether to treat the client group string as a regular expression
             that can match multiple client groups. Pass None for no preference.
-        as_user - run the job as an alternate user; takes the user's username.
+        bill_to_user - bill the job to an alternate user; takes the user's username.
         ignore_concurrency_limits - allow the user to run this job even if the user's maximum
             job count has already been reached.
         scheduler_requirements - arbitrary requirements for the scheduler passed as key/value
@@ -61,7 +61,7 @@ class JobRequirements:
         self.client_group_regex = (
             None if client_group_regex is None else bool(client_group_regex)
         )
-        self.as_user = _check_string(as_user, "as_user", optional=True)
+        self.bill_to_user = _check_string(bill_to_user, "bill_to_user", optional=True)
         self.ignore_concurrency_limits = bool(ignore_concurrency_limits)
         self.scheduler_requirements = FrozenMap(
             self._check_scheduler_requirements(scheduler_requirements)
@@ -86,7 +86,7 @@ class JobRequirements:
         disk_GB: int = None,
         client_group: str = None,
         client_group_regex: Union[bool, None] = None,
-        as_user: str = None,
+        bill_to_user: str = None,
         ignore_concurrency_limits: bool = False,
         scheduler_requirements: Dict[str, str] = None,
         debug_mode: bool = False,
@@ -101,7 +101,7 @@ class JobRequirements:
         client_group - the client group in which the job will run.
         client_group_regex - whether to treat the client group string as a regular expression
             that can match multiple client groups.
-        as_user - run the job as an alternate user; takes the user's username.
+        bill_to_user - bill the job to an alternate user; takes the user's username.
         ignore_concurrency_limits - allow the user to run this job even if the user's maximum
             job count has already been reached.
         scheduler_requirements - arbitrary requirements for the scheduler passed as key/value
@@ -123,7 +123,7 @@ class JobRequirements:
             disk_GB,
             client_group,
             None if client_group_regex is None else bool(client_group_regex),
-            _check_string(as_user, "as_user", optional=True),
+            _check_string(bill_to_user, "bill_to_user", optional=True),
             bool(ignore_concurrency_limits),
             cls._check_scheduler_requirements(scheduler_requirements),
             bool(debug_mode),
@@ -136,7 +136,7 @@ class JobRequirements:
             self.disk_GB,
             self.client_group,
             self.client_group_regex,
-            self.as_user,
+            self.bill_to_user,
             self.ignore_concurrency_limits,
             self.scheduler_requirements,
             self.debug_mode,
@@ -150,7 +150,7 @@ class JobRequirements:
                 other.disk_GB,
                 other.client_group,
                 other.client_group_regex,
-                other.as_user,
+                other.bill_to_user,
                 other.ignore_concurrency_limits,
                 other.scheduler_requirements,
                 other.debug_mode,

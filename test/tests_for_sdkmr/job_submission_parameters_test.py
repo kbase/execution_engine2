@@ -17,7 +17,7 @@ def test_job_req_init_minimal():
     assert jr.disk_GB == 1
     assert jr.client_group == "njs"
     assert jr.client_group_regex is None
-    assert jr.as_user is None
+    assert jr.bill_to_user is None
     assert jr.ignore_concurrency_limits is False
     assert jr.scheduler_requirements == {}
     assert jr.debug_mode is False
@@ -28,9 +28,9 @@ def test_job_req_init_maximal():
         6,
         7,
         8,
-        "bigmemlong",
+        "   bigmemlong  \t  ",
         True,
-        "someuser",
+        "\tsomeuser     ",
         True,
         {"proc": "x286", "maxmem": "640k"},
         True,
@@ -41,7 +41,7 @@ def test_job_req_init_maximal():
     assert jr.disk_GB == 8
     assert jr.client_group == "bigmemlong"
     assert jr.client_group_regex is True
-    assert jr.as_user == "someuser"
+    assert jr.bill_to_user == "someuser"
     assert jr.ignore_concurrency_limits is True
     assert jr.scheduler_requirements == {"proc": "x286", "maxmem": "640k"}
     assert jr.debug_mode is True
@@ -145,7 +145,7 @@ def test_job_req_init_fail():
         "f",
         "user\tname",
         n,
-        IncorrectParamsException("as_user contains control characters"),
+        IncorrectParamsException("bill_to_user contains control characters"),
     )
     _job_req_init_fail(
         1,
@@ -289,7 +289,7 @@ def test_job_req_check_parameters_fail():
         "c",
         "  j\bi  ",
         n,
-        IncorrectParamsException("as_user contains control characters"),
+        IncorrectParamsException("bill_to_user contains control characters"),
     )
     _job_req_check_parameters_fail(
         1,
