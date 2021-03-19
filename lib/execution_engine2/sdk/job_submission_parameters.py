@@ -70,19 +70,22 @@ class JobRequirements:
         self.scheduler_requirements = FrozenMap(sr)
         self.debug_mode = debug_mode
 
+    def _params(self):
+        return (
+            self.cpus,
+            self.memory_MB,
+            self.disk_GB,
+            self.client_group,
+            self.client_group_regex,
+            self.as_user,
+            self.ignore_concurrency_limits,
+            self.scheduler_requirements,
+            self.debug_mode,
+        )
+
     def __eq__(self, other):
         if type(self) == type(other):
-            return (
-                self.cpus,
-                self.memory_MB,
-                self.disk_GB,
-                self.client_group,
-                self.client_group_regex,
-                self.as_user,
-                self.ignore_concurrency_limits,
-                self.scheduler_requirements,
-                self.debug_mode,
-            ) == (
+            return self._params() == (
                 other.cpus,
                 other.memory_MB,
                 other.disk_GB,
@@ -96,19 +99,7 @@ class JobRequirements:
         return False
 
     def __hash__(self):
-        return hash(
-            (
-                self.cpus,
-                self.memory_MB,
-                self.disk_GB,
-                self.client_group,
-                self.client_group_regex,
-                self.as_user,
-                self.ignore_concurrency_limits,
-                self.scheduler_requirements,
-                self.debug_mode,
-            )
-        )
+        return hash(self._params())
 
 
 # move this function somewhere else?
@@ -172,17 +163,20 @@ class JobSubmissionParameters:
             source_ws_objects[i] = upa
         self.source_ws_objects = tuple(source_ws_objects)
 
+    def _params(self):
+        return (
+            self.job_id,
+            self.app_info,
+            self.job_reqs,
+            self.user_creds,
+            self.parent_job_id,
+            self.wsid,
+            self.source_ws_objects,
+        )
+
     def __eq__(self, other):
         if type(self) == type(other):
-            return (
-                self.job_id,
-                self.app_info,
-                self.job_reqs,
-                self.user_creds,
-                self.parent_job_id,
-                self.wsid,
-                self.source_ws_objects,
-            ) == (
+            return self._params() == (
                 other.job_id,
                 other.app_info,
                 other.job_reqs,
@@ -194,14 +188,4 @@ class JobSubmissionParameters:
         return False
 
     def __hash__(self):
-        return hash(
-            (
-                self.job_id,
-                self.app_info,
-                self.job_reqs,
-                self.user_creds,
-                self.parent_job_id,
-                self.wsid,
-                self.source_ws_objects,
-            )
-        )
+        return hash(self._params())
