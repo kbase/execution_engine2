@@ -24,6 +24,8 @@ def _check_raise(name, value, source):
 
 def _check_clientgroup(clientgroup, source):
     clientgroup = _string_request(clientgroup, "client group", source)
+    # this is a possible error mode from the catalog since it uses key=value pairs in CSV
+    # format
     if "=" in clientgroup:
         _check_raise("client group", clientgroup, source)
     return clientgroup
