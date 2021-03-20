@@ -72,9 +72,9 @@ def _bool_request(putative_bool, name, source):
     if type(putative_bool) == bool or type(putative_bool) == int:
         return bool(putative_bool)
     pbs = _string_request(putative_bool, name, source).lower()
-    if pbs == 'true':
+    if pbs == "true":
         return True
-    if pbs == 'false':
+    if pbs == "false":
         return False
     _check_raise(name, putative_bool, source)
 
@@ -138,8 +138,14 @@ class JobRequirementsResolver:
         if reqs is None:
             reqs = {}
         ret = {}
-        for key in [CLIENT_GROUP, REQUEST_CPUS, REQUEST_MEMORY, REQUEST_DISK,
-                    CLIENT_GROUP_REGEX, DEBUG_MODE]:
+        for key in [
+            CLIENT_GROUP,
+            REQUEST_CPUS,
+            REQUEST_MEMORY,
+            REQUEST_DISK,
+            CLIENT_GROUP_REGEX,
+            DEBUG_MODE,
+        ]:
             if not cls._has_value(reqs.get(key)):
                 if require_all_resources and key in _RESOURCES:
                     raise IncorrectParamsException(
