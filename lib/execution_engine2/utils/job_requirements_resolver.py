@@ -3,6 +3,7 @@ Contains resolvers for job requirements.
 """
 
 from typing import Dict, Union
+from enum import Enum
 
 from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.exceptions import IncorrectParamsException
@@ -14,6 +15,27 @@ REQUEST_DISK = "request_disk"
 CLIENT_GROUP_REGEX = "client_group_regex"
 DEBUG_MODE = "debug_mode"
 _RESOURCES = set([CLIENT_GROUP, REQUEST_CPUS, REQUEST_MEMORY, REQUEST_DISK])
+
+
+class RequirementsType(Enum):
+    """
+    A classification of the type of requirements requested by the user.
+    """
+
+    STANDARD = 1
+    """
+    No special requests.
+    """
+
+    PROCESSING = 2
+    """
+    The user requests special processing such as a CPU count, removal of concurrency limits, etc.
+    """
+
+    BILLING = 3
+    """
+    The user requests that they bill another user.
+    """
 
 
 def _check_raise(name, value, source):
@@ -107,6 +129,61 @@ class JobRequirementsResolver:
     2) Requirements in the KBase Catalog service
     3) Requirements from the EE2 configuration file (deploy.cfg).
     """
+
+    @classmethod
+    def get_requirements_type(
+        self,
+        cpus: int = None,
+        memory_MB: int = None,
+        disk_GB: int = None,
+        client_group: str = None,
+        client_group_regex: Union[bool, None] = None,
+        bill_to_user: str = None,
+        ignore_concurrency_limits: bool = False,
+        scheduler_requirements: Dict[str, str] = None,
+        debug_mode: bool = False,
+    ) -> RequirementsType:
+        f"""
+        Determine what type of requirements are being requested.
+
+        All parameters are optional.
+
+        cpus - the number of CPUs required for the job.
+        memory_MB - the amount of memory, in MB, required for the job.
+        disk_GB - the amount of disk space, in GB, required for the job.
+        client_group - the client group in which the job will run.
+        client_group_regex - whether to treat the client group string as a regular expression
+            that can match multiple client groups. Pass None for no preference.
+        bill_to_user - bill the job to an alternate user; takes the user's username.
+        ignore_concurrency_limits - allow the user to run this job even if the user's maximum
+            job count has already been reached.
+        scheduler_requirements - arbitrary requirements for the scheduler passed as key/value
+            pairs. Requires knowledge of the scheduler API.
+        debug_mode - whether to run the job in debug mode.
+
+        Returns the type of requirements requested by the user:
+        {RequirementsType.STANDARD.name} - if no requirements are requested
+        {RequirementsType.PROCESSING.name} - if any requirements other than bill_to_user are
+            requested
+        {RequirementsType.BILLING.name} - if bill_to_user is requested
+        """
+        args = JobRequirements.check_parameters(
+            cpus,
+            memory_MB,
+            disk_GB,
+            client_group,
+            client_group_regex,
+            bill_to_user,
+            ignore_concurrency_limits,
+            scheduler_requirements,
+            debug_mode,
+        )
+        if args[5]:  # bill_to_user
+            return RequirementsType.BILLING
+        if any(args) or args[4] is False:
+            # regex False means the user is asking for non default
+            return RequirementsType.PROCESSING
+        return RequirementsType.STANDARD
 
     @classmethod
     def normalize_job_reqs(
