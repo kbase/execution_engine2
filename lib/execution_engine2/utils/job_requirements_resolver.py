@@ -2,10 +2,23 @@
 Contains resolvers for job requirements.
 """
 
-from typing import Dict, Union
+from configparser import ConfigParser
+from typing import Iterable, Dict, Union, Set
 from enum import Enum
 
+from lib.installed_clients.CatalogClient import Catalog
+
+from execution_engine2.utils.arg_processing import (
+    check_string as _check_string,
+    not_falsy as _not_falsy,
+)
+
 from execution_engine2.sdk.job_submission_parameters import JobRequirements
+from execution_engine2.sdk.EE2Constants import (
+    EE2_CONFIG_SECTION,
+    EE2_DEFAULT_SECTION,
+    EE2_DEFAULT_CLIENT_GROUP
+)
 from execution_engine2.exceptions import IncorrectParamsException
 
 CLIENT_GROUP = "client_group"
@@ -129,6 +142,85 @@ class JobRequirementsResolver:
     2) Requirements in the KBase Catalog service
     3) Requirements from the EE2 configuration file (deploy.cfg).
     """
+
+    def __init__(
+        self,
+        catalog: Catalog,
+        cfgfile: Iterable[str],
+        override_client_group: str = None,
+    ):
+        """
+        Create the resolver.
+
+        catalog - a catalog client pointing at the relevant KBase catalog service.
+        cfgfile - the configuration file as an open file object or other iterable.
+        override_client_group - if provided, this client group will be used for all jobs, ignoring
+            all other sources of client group information.
+        """
+        self._catalog = _not_falsy(catalog, "catalog")
+        self._override_client_group = _check_string(
+            override_client_group, "override_client_group", optional=True
+        )
+        config = ConfigParser()
+        config.read_file(_not_falsy(cfgfile, "cfgfile"))
+        self._default_client_group = _check_string(
+            config.get(
+                section=EE2_DEFAULT_SECTION, option=EE2_DEFAULT_CLIENT_GROUP, fallback=None),
+            f"value for {EE2_DEFAULT_SECTION}.{EE2_DEFAULT_CLIENT_GROUP} in deployment config file"
+        )
+        self._clientgroup_default_configs = self._build_config(config)
+        if self._default_client_group not in self._clientgroup_default_configs:
+            raise ValueError("No deployment configuration entry for default "
+                             + f"client group '{self._default_client_group}'")
+        if (self._override_client_group
+                and self._override_client_group not in self._clientgroup_default_configs):
+            raise ValueError("No deployment configuration entry for override "
+                             + f"client group '{self._override_client_group}'")
+
+    def _build_config(self, config):
+        ret = {}
+        for sec in config.sections():
+            # if the default section is left as DEFAULT configparser shouldn't include it
+            # in the list, but just in case it changes...
+            if sec != EE2_CONFIG_SECTION and sec != EE2_DEFAULT_SECTION:
+                reqspec = {item[0]: item[1] for item in config.items(sec)}
+                reqspec[CLIENT_GROUP] = sec
+                ret[sec] = self.normalize_job_reqs(
+                    reqspec,
+                    f"section '{sec}' of the deployment configuration",
+                    require_all_resources=True
+                )
+        return ret
+
+    def get_override_client_group(self) -> Union[str, None]:
+        """
+        Get the override client group, if any. This client group supercedes all others.
+        """
+        return self._override_client_group
+
+    def get_default_client_group(self) -> str:
+        """
+        Get the default client group used if a client group is not provided by override, the user,
+        or the catalog.
+        """
+        return self._default_client_group
+
+    def get_configured_client_groups(self) -> Set[str]:
+        """
+        Get the client groups configured in the configuration file.
+        """
+        return self._clientgroup_default_configs.keys()
+
+    def get_configured_client_group_spec(self, clientgroup: str) -> Dict[str, Union[int, str]]:
+        f"""
+        Get the client ground specification in normalized format. Includes the {CLIENT_GROUP},
+        {REQUEST_CPUS}, {REQUEST_MEMORY}, and {REQUEST_DISK} keys. May, but usually will not,
+        include the {DEBUG_MODE} and {CLIENT_GROUP_REGEX} keys.
+        """
+        if clientgroup not in self._clientgroup_default_configs:
+            raise ValueError(f"Client group '{clientgroup}' is not configured")
+        # make a copy to prevent accidental mutation by the caller
+        return dict(self._clientgroup_default_configs[clientgroup])
 
     @classmethod
     def get_requirements_type(
