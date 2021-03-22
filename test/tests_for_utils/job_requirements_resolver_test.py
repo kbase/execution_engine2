@@ -432,6 +432,7 @@ def _get_simple_deploy_spec_file_obj():
         """
     )
 
+
 # Note the constructor uses the normalization class method under the hood for normalizing
 # the EE2 config file client groups. As such, we don't duplicate the testing of that method
 # here other than some spot checks. If the constructor changes significantly more
@@ -451,7 +452,7 @@ def test_init():
         "request_cpus": 4,
         "request_memory": 2000,
         "request_disk": 100,
-        "client_group": "cg1"
+        "client_group": "cg1",
     }
 
     assert jrr.get_configured_client_group_spec("cg2") == {
@@ -460,7 +461,7 @@ def test_init():
         "request_disk": 32,
         "client_group": "cg2",
         "debug_mode": True,
-        "client_group_regex": False
+        "client_group_regex": False,
     }
 
 
@@ -478,20 +479,36 @@ def test_init_with_override():
 
 def test_init_fail_missing_input():
     catalog = create_autospec(Catalog, spec_set=True, instance=True)
-    _init_fail(None, _get_simple_deploy_spec_file_obj(), None, ValueError(
-        "catalog cannot be a value that evaluates to false"))
-    _init_fail(catalog, None, None, ValueError(
-        "cfgfile cannot be a value that evaluates to false"))
-    _init_fail(catalog, [], None, ValueError(
-        "cfgfile cannot be a value that evaluates to false"))
+    _init_fail(
+        None,
+        _get_simple_deploy_spec_file_obj(),
+        None,
+        ValueError("catalog cannot be a value that evaluates to false"),
+    )
+    _init_fail(
+        catalog,
+        None,
+        None,
+        ValueError("cfgfile cannot be a value that evaluates to false"),
+    )
+    _init_fail(
+        catalog,
+        [],
+        None,
+        ValueError("cfgfile cannot be a value that evaluates to false"),
+    )
 
 
 def test_init_fail_no_override_in_config():
     catalog = create_autospec(Catalog, spec_set=True, instance=True)
 
     spec = _get_simple_deploy_spec_file_obj()
-    _init_fail(catalog, spec, "cg3", ValueError(
-        "No deployment configuration entry for override client group 'cg3'"))
+    _init_fail(
+        catalog,
+        spec,
+        "cg3",
+        ValueError("No deployment configuration entry for override client group 'cg3'"),
+    )
 
 
 def test_init_fail_default_config_error():
@@ -504,9 +521,15 @@ def test_init_fail_default_config_error():
         request_disk = 100GB
         """
 
-    _init_fail(catalog, StringIO(shared_spec), None, IncorrectParamsException(
-        "Missing input parameter: value for DEFAULT.default_client_group in deployment "
-        + "config file"))
+    _init_fail(
+        catalog,
+        StringIO(shared_spec),
+        None,
+        IncorrectParamsException(
+            "Missing input parameter: value for DEFAULT.default_client_group in deployment "
+            + "config file"
+        ),
+    )
 
     spec = StringIO(
         shared_spec
@@ -515,9 +538,15 @@ def test_init_fail_default_config_error():
         foo = bar
         """
     )
-    _init_fail(catalog, spec, None, IncorrectParamsException(
-        "Missing input parameter: value for DEFAULT.default_client_group in deployment "
-        + "config file"))
+    _init_fail(
+        catalog,
+        spec,
+        None,
+        IncorrectParamsException(
+            "Missing input parameter: value for DEFAULT.default_client_group in deployment "
+            + "config file"
+        ),
+    )
 
     spec = StringIO(
         shared_spec
@@ -526,8 +555,12 @@ def test_init_fail_default_config_error():
         default_client_group = njrs
         """
     )
-    _init_fail(catalog, spec, None, ValueError(
-        "No deployment configuration entry for default client group 'njrs'"))
+    _init_fail(
+        catalog,
+        spec,
+        None,
+        ValueError("No deployment configuration entry for default client group 'njrs'"),
+    )
 
 
 def test_init_fail_bad_config():
@@ -538,35 +571,62 @@ def test_init_fail_bad_config():
         default_client_group = njs
         """
 
-    spec = shared_spec + """
+    spec = (
+        shared_spec
+        + """
         [njs]
         request_memory = 2000M
         request_disk = 100GB
         """
+    )
 
-    _init_fail(catalog, StringIO(spec), None, IncorrectParamsException(
-        "Missing request_cpus key in job requirements from section 'njs' of the "
-        + "deployment configuration"))
+    _init_fail(
+        catalog,
+        StringIO(spec),
+        None,
+        IncorrectParamsException(
+            "Missing request_cpus key in job requirements from section 'njs' of the "
+            + "deployment configuration"
+        ),
+    )
 
-    spec = shared_spec + """
+    spec = (
+        shared_spec
+        + """
         [njs]
         request_cpus = 4
         request_disk = 100GB
         """
+    )
 
-    _init_fail(catalog, StringIO(spec), None, IncorrectParamsException(
-        "Missing request_memory key in job requirements from section 'njs' of the "
-        + "deployment configuration"))
+    _init_fail(
+        catalog,
+        StringIO(spec),
+        None,
+        IncorrectParamsException(
+            "Missing request_memory key in job requirements from section 'njs' of the "
+            + "deployment configuration"
+        ),
+    )
 
-    spec = shared_spec + """
+    spec = (
+        shared_spec
+        + """
         [njs]
         request_cpus = 4
         request_memory = 2000M
         """
+    )
 
-    _init_fail(catalog, StringIO(spec), None, IncorrectParamsException(
-        "Missing request_disk key in job requirements from section 'njs' of the "
-        + "deployment configuration"))
+    _init_fail(
+        catalog,
+        StringIO(spec),
+        None,
+        IncorrectParamsException(
+            "Missing request_disk key in job requirements from section 'njs' of the "
+            + "deployment configuration"
+        ),
+    )
 
 
 def _init_fail(catalog, spec, override, expected):
@@ -582,4 +642,6 @@ def test_get_configured_client_group_spec_fail():
 
     with raises(Exception) as got:
         jrr.get_configured_client_group_spec("cg4")
-    assert_exception_correct(got.value, ValueError("Client group 'cg4' is not configured"))
+    assert_exception_correct(
+        got.value, ValueError("Client group 'cg4' is not configured")
+    )

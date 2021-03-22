@@ -17,7 +17,7 @@ from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.sdk.EE2Constants import (
     EE2_CONFIG_SECTION,
     EE2_DEFAULT_SECTION,
-    EE2_DEFAULT_CLIENT_GROUP
+    EE2_DEFAULT_CLIENT_GROUP,
 )
 from execution_engine2.exceptions import IncorrectParamsException
 
@@ -165,17 +165,26 @@ class JobRequirementsResolver:
         config.read_file(_not_falsy(cfgfile, "cfgfile"))
         self._default_client_group = _check_string(
             config.get(
-                section=EE2_DEFAULT_SECTION, option=EE2_DEFAULT_CLIENT_GROUP, fallback=None),
-            f"value for {EE2_DEFAULT_SECTION}.{EE2_DEFAULT_CLIENT_GROUP} in deployment config file"
+                section=EE2_DEFAULT_SECTION,
+                option=EE2_DEFAULT_CLIENT_GROUP,
+                fallback=None,
+            ),
+            f"value for {EE2_DEFAULT_SECTION}.{EE2_DEFAULT_CLIENT_GROUP} in deployment config file",
         )
         self._clientgroup_default_configs = self._build_config(config)
         if self._default_client_group not in self._clientgroup_default_configs:
-            raise ValueError("No deployment configuration entry for default "
-                             + f"client group '{self._default_client_group}'")
-        if (self._override_client_group
-                and self._override_client_group not in self._clientgroup_default_configs):
-            raise ValueError("No deployment configuration entry for override "
-                             + f"client group '{self._override_client_group}'")
+            raise ValueError(
+                "No deployment configuration entry for default "
+                + f"client group '{self._default_client_group}'"
+            )
+        if (
+            self._override_client_group
+            and self._override_client_group not in self._clientgroup_default_configs
+        ):
+            raise ValueError(
+                "No deployment configuration entry for override "
+                + f"client group '{self._override_client_group}'"
+            )
 
     def _build_config(self, config):
         ret = {}
@@ -188,7 +197,7 @@ class JobRequirementsResolver:
                 ret[sec] = self.normalize_job_reqs(
                     reqspec,
                     f"section '{sec}' of the deployment configuration",
-                    require_all_resources=True
+                    require_all_resources=True,
                 )
         return ret
 
@@ -211,7 +220,9 @@ class JobRequirementsResolver:
         """
         return self._clientgroup_default_configs.keys()
 
-    def get_configured_client_group_spec(self, clientgroup: str) -> Dict[str, Union[int, str]]:
+    def get_configured_client_group_spec(
+        self, clientgroup: str
+    ) -> Dict[str, Union[int, str]]:
         f"""
         Get the client ground specification in normalized format. Includes the {CLIENT_GROUP},
         {REQUEST_CPUS}, {REQUEST_MEMORY}, and {REQUEST_DISK} keys. May, but usually will not,
