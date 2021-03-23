@@ -30,7 +30,8 @@ CLIENT_GROUP_REGEX = "client_group_regex"
 DEBUG_MODE = "debug_mode"
 _RESOURCES = set([CLIENT_GROUP, REQUEST_CPUS, REQUEST_MEMORY, REQUEST_DISK])
 _ALL_SPECIAL_KEYS = _RESOURCES | set(
-    [CLIENT_GROUP_REGEX, DEBUG_MODE, "bill_to_user", "ignore_concurrency_limits"])
+    [CLIENT_GROUP_REGEX, DEBUG_MODE, "bill_to_user", "ignore_concurrency_limits"]
+)
 
 _CLIENT_GROUPS = "client_groups"
 
@@ -416,7 +417,8 @@ class JobRequirementsResolver:
             f"catalog method {module_name}.{function_name}",
         )
         client_group = self._get_client_group(
-            args[3], cat_reqs.get(CLIENT_GROUP), module_name, function_name)
+            args[3], cat_reqs.get(CLIENT_GROUP), module_name, function_name
+        )
 
         # don't mutate the spec, make a copy
         reqs = dict(self._clientgroup_default_configs[client_group])
@@ -442,14 +444,22 @@ class JobRequirementsResolver:
         )
 
     def _get_client_group(self, user_cg, catalog_cg, module_name, function_name):
-        cg = next(i for i in [
-            self._override_client_group, user_cg, catalog_cg, self._default_client_group]
-            if i is not None)
+        cg = next(
+            i
+            for i in [
+                self._override_client_group,
+                user_cg,
+                catalog_cg,
+                self._default_client_group,
+            ]
+            if i is not None
+        )
         if cg not in self._clientgroup_default_configs:
             if cg == catalog_cg:
                 raise IncorrectParamsException(
                     f"Catalog specified illegal client group '{cg}' for method "
-                    + f"{module_name}.{function_name}")
+                    + f"{module_name}.{function_name}"
+                )
             raise IncorrectParamsException(f"No such clientgroup: {cg}")
         return cg
 
@@ -478,8 +488,10 @@ class JobRequirementsResolver:
             try:
                 rv = json.loads(", ".join(resources_request))
             except ValueError:
-                raise ValueError("Unable to parse JSON client group entry from catalog "
-                                 + f"for method {module_name}.{function_name}")
+                raise ValueError(
+                    "Unable to parse JSON client group entry from catalog "
+                    + f"for method {module_name}.{function_name}"
+                )
             return {k.strip(): rv[k] for k in rv}
         # CSV Format
         rv = {CLIENT_GROUP: resources_request.pop(0)}
