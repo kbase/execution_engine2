@@ -6,6 +6,7 @@ from enum import Enum
 from io import StringIO
 from pytest import raises
 from unittest.mock import create_autospec
+from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.utils.job_requirements_resolver import (
     JobRequirementsResolver,
     RequirementsType,
@@ -645,3 +646,355 @@ def test_get_configured_client_group_spec_fail():
     assert_exception_correct(
         got.value, ValueError("Client group 'cg4' is not configured")
     )
+
+
+# Note that resolve_requirements uses the normalization class method and an argument checking
+# method under the hood. As such, we don't duplicate the testing of those methods
+# here other than some spot checks. If the method changes significantly more
+# testing may be required.
+
+
+def test_resolve_requirements_from_spec():
+    """
+    Resolve requirements when no user input and no catalog record is available.
+    """
+    _resolve_requirements_from_spec([])
+    _resolve_requirements_from_spec([{}])
+    _resolve_requirements_from_spec([{'client_groups': []}])
+
+
+def _resolve_requirements_from_spec(catalog_return):
+    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+    catalog.list_client_group_configs.return_value = catalog_return
+
+    spec = _get_simple_deploy_spec_file_obj()
+
+    jrr = JobRequirementsResolver(catalog, spec)
+
+    assert jrr.resolve_requirements(" mod.meth  ") == JobRequirements(
+        8,
+        700,
+        32,
+        'cg2',
+        client_group_regex=False,
+        debug_mode=True,
+    )
+
+    catalog.list_client_group_configs.assert_called_once_with({
+        "module_name": "mod",
+        "function_name": "meth"
+    })
+
+
+def test_resolve_requirements_from_spec_with_override():
+    """
+    Test that an override ignores client group information from all other sources.
+    """
+    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+    catalog.list_client_group_configs.return_value = [{'client_groups': ["cg2"]}]
+
+    spec = _get_simple_deploy_spec_file_obj()
+
+    jrr = JobRequirementsResolver(catalog, spec, "    cg1    ")
+
+    assert jrr.resolve_requirements(
+        " module2. some_meth  ", client_group="cg2") == JobRequirements(
+            4,
+            2000,
+            100,
+            'cg1',
+    )
+
+    catalog.list_client_group_configs.assert_called_once_with({
+        "module_name": "module2",
+        "function_name": "some_meth"
+    })
+
+
+def test_resolve_requirements_from_catalog_full_CSV():
+    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+    catalog.list_client_group_configs.return_value = [{"client_groups": [
+        "cg1",
+        "request_cpus=  78",
+        "   request_memory   = 500MB",
+        "request_disk = 700GB",
+        "client_group_regex = False",
+        "debug_mode = true",
+        "foo=bar",
+        "baz=bat",
+    ]}]
+
+    spec = _get_simple_deploy_spec_file_obj()
+
+    jrr = JobRequirementsResolver(catalog, spec)
+
+    assert jrr.resolve_requirements(" module2. some_meth  ") == JobRequirements(
+        78,
+        500,
+        700,
+        'cg1',
+        False,
+        None,
+        False,
+        {"foo": "bar", "baz": "bat"},
+        True,
+    )
+
+    catalog.list_client_group_configs.assert_called_once_with({
+        "module_name": "module2",
+        "function_name": "some_meth"
+    })
+
+
+def test_resolve_requirements_from_catalog_partial_JSON():
+    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+    catalog.list_client_group_configs.return_value = [{"client_groups": [
+        '{"client_group": "  cg1  "',
+        '"    request_memory    ":  "  300M   "',
+        '"exactlythesameshape": "asathingy"',
+        '"request_disk": 100000}',
+    ]}]
+
+    spec = _get_simple_deploy_spec_file_obj()
+
+    jrr = JobRequirementsResolver(catalog, spec)
+
+    assert jrr.resolve_requirements(" module2. some_meth  ") == JobRequirements(
+        4,
+        300,
+        100000,
+        'cg1',
+        scheduler_requirements={"exactlythesameshape": "asathingy"}
+    )
+
+    catalog.list_client_group_configs.assert_called_once_with({
+        "module_name": "module2",
+        "function_name": "some_meth"
+    })
+
+
+def test_resolve_requirements_from_user_full():
+    _resolve_requirements_from_user_full(True)
+    _resolve_requirements_from_user_full(False)
+
+
+def _resolve_requirements_from_user_full(bool_val):
+    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+    catalog.list_client_group_configs.return_value = [{"client_groups": [
+        "cg2",
+        "request_cpus=  78",
+        "   request_memory   = 500MB",
+        "request_disk = 700GB",
+        "client_group_regex = False",
+        "debug_mode = true",
+        "foo=bar",
+        "baz=bat",
+    ]}]
+
+    spec = _get_simple_deploy_spec_file_obj()
+
+    jrr = JobRequirementsResolver(catalog, spec)
+
+    assert jrr.resolve_requirements(
+        " module2. some_meth  ",
+        42,
+        789,
+        1,
+        "cg1",
+        bool_val,
+        "some_poor_sucker",
+        bool_val,
+        {"foo": "Some of you may die", "bar": "but that is a sacrifice I am willing to make"},
+        bool_val,
+    ) == JobRequirements(
+        42,
+        789,
+        1,
+        'cg1',
+        bool_val,
+        "some_poor_sucker",
+        bool_val,
+        {"foo": "Some of you may die",
+         "bar": "but that is a sacrifice I am willing to make",
+         "baz": "bat"},
+        bool_val,
+    )
+
+    catalog.list_client_group_configs.assert_called_once_with({
+        "module_name": "module2",
+        "function_name": "some_meth"
+    })
+
+
+def test_resolve_requirements_from_user_partial():
+    """
+    Gets requirements from the user, catalog, and the ee2 deploy config.
+
+    Also tests that special keys are removed from the scheduler requirements.
+    """
+    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+    catalog.list_client_group_configs.return_value = [{"client_groups": [
+        "cg2",
+        "request_cpus=  78",
+        "request_disk = 700",
+        "client_group_regex = False",
+        "debug_mode = true",
+        "foo=bar",
+        "baz=bat",
+    ]}]
+
+    spec = _get_simple_deploy_spec_file_obj()
+
+    jrr = JobRequirementsResolver(catalog, spec)
+
+    assert jrr.resolve_requirements(
+        " module2. some_meth  ",
+        cpus=42,
+        client_group="cg1",
+        client_group_regex=True,
+        scheduler_requirements={
+            "client_group": "foo",
+            "request_cpus": "78",
+            "request_memory": "800",
+            "request_disk": "700",
+            "client_group_regex": "False",
+            "debug_mode": "True",
+            "bill_to_user": "foo",
+            "ignore_concurrency_limits": "true",
+            "whee": "whoo",
+        }
+    ) == JobRequirements(
+        42,
+        2000,
+        700,
+        'cg1',
+        client_group_regex=True,
+        scheduler_requirements={"foo": "bar", "baz": "bat", "whee": "whoo"},
+        debug_mode=True,
+    )
+
+    catalog.list_client_group_configs.assert_called_once_with({
+        "module_name": "module2",
+        "function_name": "some_meth"
+    })
+
+
+def test_resolve_requirements_fail_illegal_inputs():
+    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+    jrr = JobRequirementsResolver(catalog, _get_simple_deploy_spec_file_obj())
+
+    _resolve_requirements_fail(jrr, None, {}, IncorrectParamsException(
+        "Unrecognized method: 'None'. Please input module_name.function_name"))
+    _resolve_requirements_fail(jrr, "method", {}, IncorrectParamsException(
+        "Unrecognized method: 'method'. Please input module_name.function_name"))
+    _resolve_requirements_fail(jrr, "mod1.mod2.method", {}, IncorrectParamsException(
+        "Unrecognized method: 'mod1.mod2.method'. Please input module_name.function_name"))
+    _resolve_requirements_fail(jrr, "m.m", {"cpus": 0}, IncorrectParamsException(
+        "CPU count must be at least 1"))
+    _resolve_requirements_fail(jrr, "m.m", {"memory_MB": 0}, IncorrectParamsException(
+        "memory in MB must be at least 1"))
+    _resolve_requirements_fail(jrr, "m.m", {"disk_GB": 0}, IncorrectParamsException(
+        "disk space in GB must be at least 1"))
+    _resolve_requirements_fail(jrr, "m.m", {"client_group": "   \t   "}, IncorrectParamsException(
+        "Missing input parameter: client_group"))
+    _resolve_requirements_fail(jrr, "m.m", {"bill_to_user": "\b"}, IncorrectParamsException(
+        "bill_to_user contains control characters"))
+    _resolve_requirements_fail(
+        jrr, "m.m", {"scheduler_requirements": {"a": None}}, IncorrectParamsException(
+            "Missing input parameter: value for key 'a' in scheduler requirements structure"))
+
+
+def test_resolve_requirements_fail_catalog_multiple_entries():
+    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+    catalog.list_client_group_configs.return_value = [{'client_groups': ["cg2"]}, {}]
+
+    jrr = JobRequirementsResolver(catalog, _get_simple_deploy_spec_file_obj())
+    _resolve_requirements_fail(jrr, "m.m", {}, ValueError(
+        "Unexpected result from the Catalog service: more than one client group "
+        + "configuration found for method m.m"))
+
+    catalog.list_client_group_configs.assert_called_once_with({
+        "module_name": "m",
+        "function_name": "m"
+    })
+
+
+def test_resolve_requirements_fail_catalog_bad_JSON():
+    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+    catalog.list_client_group_configs.return_value = [{'client_groups': [
+        '{"foo": "bar", "baz":}']}]
+
+    jrr = JobRequirementsResolver(catalog, _get_simple_deploy_spec_file_obj())
+    _resolve_requirements_fail(jrr, "m.m", {}, ValueError(
+        "Unable to parse JSON client group entry from catalog for method m.m"))
+
+    catalog.list_client_group_configs.assert_called_once_with({
+        "module_name": "m",
+        "function_name": "m"
+    })
+
+
+def test_resolve_requirements_fail_catalog_bad_CSV():
+    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+    catalog.list_client_group_configs.return_value = [{'client_groups': [
+        "cg", "foo is bar"]}]
+
+    jrr = JobRequirementsResolver(catalog, _get_simple_deploy_spec_file_obj())
+    _resolve_requirements_fail(jrr, "m.m", {}, ValueError(
+        "Malformed requirement. Format is <key>=<value>. "
+        + "Item is 'foo is bar' for catalog method m.m"))
+
+    catalog.list_client_group_configs.assert_called_once_with({
+        "module_name": "m",
+        "function_name": "m"
+    })
+
+
+def test_resolve_requirements_fail_catalog_normalize():
+    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+    catalog.list_client_group_configs.return_value = [{'client_groups': [
+        "cg", "request_memory=72TB"]}]
+
+    jrr = JobRequirementsResolver(catalog, _get_simple_deploy_spec_file_obj())
+    _resolve_requirements_fail(jrr, " mod  . meth ", {}, IncorrectParamsException(
+        "Found illegal memory request '72TB' in job requirements from catalog method mod.meth"))
+
+    catalog.list_client_group_configs.assert_called_once_with({
+        "module_name": "mod",
+        "function_name": "meth"
+    })
+
+
+def test_resolve_requirements_fail_catalog_clientgroup():
+    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+    catalog.list_client_group_configs.return_value = [{'client_groups': [
+        "cg", "request_memory=72"]}]
+
+    jrr = JobRequirementsResolver(catalog, _get_simple_deploy_spec_file_obj())
+    _resolve_requirements_fail(jrr, " mod  . meth ", {}, IncorrectParamsException(
+        "Catalog specified illegal client group 'cg' for method mod.meth"))
+
+    catalog.list_client_group_configs.assert_called_once_with({
+        "module_name": "mod",
+        "function_name": "meth"
+    })
+
+
+def test_resolve_requirements_fail_input_clientgroup():
+    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+    catalog.list_client_group_configs.return_value = []
+
+    jrr = JobRequirementsResolver(catalog, _get_simple_deploy_spec_file_obj())
+    _resolve_requirements_fail(jrr, "m.m", {"client_group": "cb4"}, IncorrectParamsException(
+        "No such clientgroup: cb4"))
+
+    catalog.list_client_group_configs.assert_called_once_with({
+        "module_name": "m",
+        "function_name": "m"
+    })
+
+
+def _resolve_requirements_fail(jrr, method, kwargs, expected):
+    with raises(Exception) as got:
+        jrr.resolve_requirements(method, **kwargs)
+    assert_exception_correct(got.value, expected)

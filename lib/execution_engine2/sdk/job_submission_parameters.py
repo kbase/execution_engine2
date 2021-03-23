@@ -87,9 +87,9 @@ class JobRequirements:
         client_group: str = None,
         client_group_regex: Union[bool, None] = None,
         bill_to_user: str = None,
-        ignore_concurrency_limits: bool = False,
+        ignore_concurrency_limits: Union[bool, None] = None,
         scheduler_requirements: Dict[str, str] = None,
-        debug_mode: bool = False,
+        debug_mode: Union[bool, None] = None,
     ):
         """
         Test that a set of parameters are legal and returns normalized parmeters.
@@ -124,9 +124,9 @@ class JobRequirements:
             client_group,
             None if client_group_regex is None else bool(client_group_regex),
             _check_string(bill_to_user, "bill_to_user", optional=True),
-            bool(ignore_concurrency_limits),
+            None if ignore_concurrency_limits is None else bool(ignore_concurrency_limits),
             cls._check_scheduler_requirements(scheduler_requirements),
-            bool(debug_mode),
+            None if debug_mode is None else bool(debug_mode),
         )
 
     def _params(self):
@@ -141,6 +141,9 @@ class JobRequirements:
             self.scheduler_requirements,
             self.debug_mode,
         )
+
+    def __repr__(self):
+        return str(self._params())
 
     def __eq__(self, other):
         if type(self) == type(other):

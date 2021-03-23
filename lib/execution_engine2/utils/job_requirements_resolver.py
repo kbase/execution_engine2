@@ -2,6 +2,7 @@
 Contains resolvers for job requirements.
 """
 
+import json
 from configparser import ConfigParser
 from typing import Iterable, Dict, Union, Set
 from enum import Enum
@@ -28,6 +29,14 @@ REQUEST_DISK = "request_disk"
 CLIENT_GROUP_REGEX = "client_group_regex"
 DEBUG_MODE = "debug_mode"
 _RESOURCES = set([CLIENT_GROUP, REQUEST_CPUS, REQUEST_MEMORY, REQUEST_DISK])
+_ALL_SPECIAL_KEYS = _RESOURCES | set(
+    [CLIENT_GROUP_REGEX, DEBUG_MODE, "bill_to_user", "ignore_concurrency_limits"])
+
+_CLIENT_GROUPS = "client_groups"
+
+
+def _remove_special_keys(inc_dict):
+    return {k: inc_dict[k] for k in set(inc_dict) - _ALL_SPECIAL_KEYS}
 
 
 class RequirementsType(Enum):
@@ -290,7 +299,7 @@ class JobRequirementsResolver:
 
     @classmethod
     def normalize_job_reqs(
-        cls, reqs: Dict[str, str], source: str, require_all_resources=False
+        cls, reqs: Dict[str, Union[str, int]], source: str, require_all_resources=False
     ) -> Dict[str, Union[str, int]]:
         f"""
         Massage job requirements into a standard format. Does the following to specific keys of
@@ -344,3 +353,142 @@ class JobRequirementsResolver:
         if type(inc) == str and not inc.strip():
             return False
         return True
+
+    def resolve_requirements(
+        self,
+        method: str,
+        cpus: int = None,
+        memory_MB: int = None,
+        disk_GB: int = None,
+        client_group: str = None,
+        client_group_regex: Union[bool, None] = None,
+        bill_to_user: str = None,
+        ignore_concurrency_limits: bool = False,
+        scheduler_requirements: Dict[str, str] = None,
+        debug_mode: bool = None,
+    ) -> JobRequirements:
+        """
+        Resolve jobs requirements for a method.
+
+        All parameters are optional other than the method and supplying them will override
+        the catalog and ee2 settings for the job.
+
+        method - the method to be run in module.method format.
+        cpus - the number of CPUs required for the job.
+        memory_MB - the amount of memory, in MB, required for the job.
+        disk_GB - the amount of disk space, in GB, required for the job.
+        client_group - the client group in which the job will run.
+        client_group_regex - whether to treat the client group string as a regular expression
+            that can match multiple client groups. Pass None for no preference.
+        bill_to_user - bill the job to an alternate user; takes the user's username.
+        ignore_concurrency_limits - allow the user to run this job even if the user's maximum
+            job count has already been reached.
+        scheduler_requirements - arbitrary requirements for the scheduler passed as key/value
+            pairs. Requires knowledge of the scheduler API.
+        debug_mode - whether to run the job in debug mode.
+
+        Returns the job requirements.
+        """
+
+        if method is None or len(method.split(".")) != 2:
+            raise IncorrectParamsException(
+                f"Unrecognized method: '{method}'. Please input module_name.function_name"
+            )
+        module_name, function_name = [m.strip() for m in method.split(".")]
+
+        args = JobRequirements.check_parameters(
+            cpus,
+            memory_MB,
+            disk_GB,
+            client_group,
+            client_group_regex,
+            bill_to_user,
+            ignore_concurrency_limits,
+            scheduler_requirements,
+            debug_mode,
+        )
+
+        # the catalog could contain arbitrary scheduler requirements so we can't skip the
+        # call even if all the arguments are provided
+        cat_reqs_all = self._get_catalog_reqs(module_name, function_name)
+        cat_reqs = self.normalize_job_reqs(
+            cat_reqs_all,
+            f"catalog method {module_name}.{function_name}",
+        )
+        client_group = self._get_client_group(
+            args[3], cat_reqs.get(CLIENT_GROUP), module_name, function_name)
+
+        # don't mutate the spec, make a copy
+        reqs = dict(self._clientgroup_default_configs[client_group])
+        reqs.update(cat_reqs)
+
+        scheduler_requirements = _remove_special_keys(cat_reqs_all)
+        # don't mutate args, check_parameters doesn't make a copy of the incoming args
+        scheduler_requirements.update(_remove_special_keys(dict(args[7])))
+
+        cgr = args[4] if (args[4] is not None) else reqs.pop(CLIENT_GROUP_REGEX, None)
+        dm = args[8] if (args[8] is not None) else reqs.pop(DEBUG_MODE, None)
+
+        return JobRequirements(
+            args[0] or reqs[REQUEST_CPUS],
+            args[1] or reqs[REQUEST_MEMORY],
+            args[2] or reqs[REQUEST_DISK],
+            client_group,
+            client_group_regex=cgr,
+            bill_to_user=args[5],
+            ignore_concurrency_limits=args[6],
+            scheduler_requirements=scheduler_requirements,
+            debug_mode=dm,
+        )
+
+    def _get_client_group(self, user_cg, catalog_cg, module_name, function_name):
+        cg = next(i for i in [
+            self._override_client_group, user_cg, catalog_cg, self._default_client_group]
+            if i is not None)
+        if cg not in self._clientgroup_default_configs:
+            if cg == catalog_cg:
+                raise IncorrectParamsException(
+                    f"Catalog specified illegal client group '{cg}' for method "
+                    + f"{module_name}.{function_name}")
+            raise IncorrectParamsException(f"No such clientgroup: {cg}")
+        return cg
+
+    def _get_catalog_reqs(self, module_name, function_name):
+        # could cache results for 30s or so to speed things up... YAGNI
+        group_config = self._catalog.list_client_group_configs(
+            {"module_name": module_name, "function_name": function_name}
+        )
+        # If group_config is empty, that means there's no clientgroup entry in the catalog
+        # It'll return an empty list even for non-existent modules
+        if not group_config:
+            return {}
+        if len(group_config) > 1:
+            raise ValueError(
+                "Unexpected result from the Catalog service: more than one client group "
+                + f"configuration found for method {module_name}.{function_name}"
+            )
+
+        resources_request = group_config[0].get(_CLIENT_GROUPS, None)
+
+        # No client group provided
+        if not resources_request:
+            return {}
+        # JSON
+        if "{" in resources_request[0]:
+            try:
+                rv = json.loads(", ".join(resources_request))
+            except ValueError:
+                raise ValueError("Unable to parse JSON client group entry from catalog "
+                                 + f"for method {module_name}.{function_name}")
+            return {k.strip(): rv[k] for k in rv}
+        # CSV Format
+        rv = {CLIENT_GROUP: resources_request.pop(0)}
+        for item in resources_request:
+            if "=" not in item:
+                raise ValueError(
+                    f"Malformed requirement. Format is <key>=<value>. Item is '{item}' for "
+                    + f"catalog method {module_name}.{function_name}"
+                )
+            (key, value) = item.split("=")
+            rv[key.strip()] = value.strip()
+        return rv
