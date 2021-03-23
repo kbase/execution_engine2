@@ -33,7 +33,7 @@ class JobRequirements:
         disk_GB: int,
         client_group: str,
         client_group_regex: Union[bool, None] = None,
-        as_user: str = None,
+        bill_to_user: str = None,
         ignore_concurrency_limits: bool = False,
         scheduler_requirements: Dict[str, str] = None,
         debug_mode: bool = False,
@@ -47,7 +47,7 @@ class JobRequirements:
         client_group - the client group in which the job will run.
         client_group_regex - whether to treat the client group string as a regular expression
             that can match multiple client groups. Pass None for no preference.
-        as_user - run the job as an alternate user; take the user's username.
+        bill_to_user - bill the job to an alternate user; takes the user's username.
         ignore_concurrency_limits - allow the user to run this job even if the user's maximum
             job count has already been reached.
         scheduler_requirements - arbitrary requirements for the scheduler passed as key/value
@@ -58,17 +58,76 @@ class JobRequirements:
         self.memory_MB = _gt_zero(memory_MB, "memory in MB")
         self.disk_GB = _gt_zero(disk_GB, "disk space in GB")
         self.client_group = _check_string(client_group, "client_group")
-        self.client_group_regex = client_group_regex
-        self.as_user = _check_string(as_user, "as_user", optional=True)
-        self.ignore_concurrency_limits = ignore_concurrency_limits
-        sr = scheduler_requirements if scheduler_requirements else {}
+        self.client_group_regex = (
+            None if client_group_regex is None else bool(client_group_regex)
+        )
+        self.bill_to_user = _check_string(bill_to_user, "bill_to_user", optional=True)
+        self.ignore_concurrency_limits = bool(ignore_concurrency_limits)
+        self.scheduler_requirements = FrozenMap(
+            self._check_scheduler_requirements(scheduler_requirements)
+        )
+        self.debug_mode = bool(debug_mode)
+
+    @classmethod
+    def _check_scheduler_requirements(cls, schd_reqs):
+        sr = schd_reqs if schd_reqs else {}
         for key, value in sr.items():
             _check_string(key, "key in scheduler requirements structure")
             _check_string(
                 value, f"value for key '{key}' in scheduler requirements structure"
             )
-        self.scheduler_requirements = FrozenMap(sr)
-        self.debug_mode = debug_mode
+        return sr
+
+    @classmethod
+    def check_parameters(
+        cls,
+        cpus: int = None,
+        memory_MB: int = None,
+        disk_GB: int = None,
+        client_group: str = None,
+        client_group_regex: Union[bool, None] = None,
+        bill_to_user: str = None,
+        ignore_concurrency_limits: bool = False,
+        scheduler_requirements: Dict[str, str] = None,
+        debug_mode: bool = False,
+    ):
+        """
+        Test that a set of parameters are legal and returns normalized parmeters.
+        All arguments are optional - parameters required for initializing the class may be missing.
+
+        cpus - the number of CPUs required for the job.
+        memory_MB - the amount of memory, in MB, required for the job.
+        disk_GB - the amount of disk space, in GB, required for the job.
+        client_group - the client group in which the job will run.
+        client_group_regex - whether to treat the client group string as a regular expression
+            that can match multiple client groups.
+        bill_to_user - bill the job to an alternate user; takes the user's username.
+        ignore_concurrency_limits - allow the user to run this job even if the user's maximum
+            job count has already been reached.
+        scheduler_requirements - arbitrary requirements for the scheduler passed as key/value
+            pairs. Requires knowledge of the scheduler API.
+        """
+        # Could add a check_required_parameters bool if needed, but YAGNI for now. Any missing
+        # required paramaters will be looked up from the catalog or EE2 config file.
+        if cpus is not None:
+            _gt_zero(cpus, "CPU count")
+        if memory_MB is not None:
+            _gt_zero(memory_MB, "memory in MB")
+        if disk_GB is not None:
+            _gt_zero(disk_GB, "disk space in GB")
+        if client_group is not None:
+            client_group = _check_string(client_group, "client_group")
+        return (
+            cpus,
+            memory_MB,
+            disk_GB,
+            client_group,
+            None if client_group_regex is None else bool(client_group_regex),
+            _check_string(bill_to_user, "bill_to_user", optional=True),
+            bool(ignore_concurrency_limits),
+            cls._check_scheduler_requirements(scheduler_requirements),
+            bool(debug_mode),
+        )
 
     def _params(self):
         return (
@@ -77,7 +136,7 @@ class JobRequirements:
             self.disk_GB,
             self.client_group,
             self.client_group_regex,
-            self.as_user,
+            self.bill_to_user,
             self.ignore_concurrency_limits,
             self.scheduler_requirements,
             self.debug_mode,
@@ -91,7 +150,7 @@ class JobRequirements:
                 other.disk_GB,
                 other.client_group,
                 other.client_group_regex,
-                other.as_user,
+                other.bill_to_user,
                 other.ignore_concurrency_limits,
                 other.scheduler_requirements,
                 other.debug_mode,

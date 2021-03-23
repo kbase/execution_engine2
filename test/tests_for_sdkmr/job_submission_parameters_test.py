@@ -17,7 +17,7 @@ def test_job_req_init_minimal():
     assert jr.disk_GB == 1
     assert jr.client_group == "njs"
     assert jr.client_group_regex is None
-    assert jr.as_user is None
+    assert jr.bill_to_user is None
     assert jr.ignore_concurrency_limits is False
     assert jr.scheduler_requirements == {}
     assert jr.debug_mode is False
@@ -28,9 +28,9 @@ def test_job_req_init_maximal():
         6,
         7,
         8,
-        "bigmemlong",
+        "   bigmemlong  \t  ",
         True,
-        "someuser",
+        "\tsomeuser     ",
         True,
         {"proc": "x286", "maxmem": "640k"},
         True,
@@ -41,10 +41,50 @@ def test_job_req_init_maximal():
     assert jr.disk_GB == 8
     assert jr.client_group == "bigmemlong"
     assert jr.client_group_regex is True
-    assert jr.as_user == "someuser"
+    assert jr.bill_to_user == "someuser"
     assert jr.ignore_concurrency_limits is True
     assert jr.scheduler_requirements == {"proc": "x286", "maxmem": "640k"}
     assert jr.debug_mode is True
+
+
+def test_job_req_init_non_bools():
+    for inp, expected in {
+        1: True,
+        " ": True,
+        (1,): True,
+        0: False,
+        "": False,
+        tuple(): False,
+    }.items():
+        jr = JobRequirements(
+            6,
+            7,
+            8,
+            "cg",
+            client_group_regex=inp,
+            ignore_concurrency_limits=inp,
+            debug_mode=inp,
+        )
+
+        assert jr.client_group_regex is expected
+        assert jr.ignore_concurrency_limits is expected
+        assert jr.debug_mode is expected
+
+
+def test_job_req_init_None_for_bools():
+    jr = JobRequirements(
+        6,
+        7,
+        8,
+        "cg",
+        client_group_regex=None,
+        ignore_concurrency_limits=None,
+        debug_mode=None,
+    )
+
+    assert jr.client_group_regex is None
+    assert jr.ignore_concurrency_limits is False
+    assert jr.debug_mode is False
 
 
 def test_job_req_init_fail():
@@ -105,7 +145,7 @@ def test_job_req_init_fail():
         "f",
         "user\tname",
         n,
-        IncorrectParamsException("as_user contains control characters"),
+        IncorrectParamsException("bill_to_user contains control characters"),
     )
     _job_req_init_fail(
         1,
@@ -156,6 +196,150 @@ def test_job_req_init_fail():
 def _job_req_init_fail(cpus, mem, disk, cgroup, user, reqs, expected):
     with raises(Exception) as got:
         JobRequirements(cpus, mem, disk, cgroup, False, user, False, reqs)
+    assert_exception_correct(got.value, expected)
+
+
+def test_job_req_check_parameters_no_input():
+    n = None
+    f = False
+    assert JobRequirements.check_parameters() == (n, n, n, n, n, n, f, {}, f)
+    assert JobRequirements.check_parameters(n, n, n, n, n, n, n, n, n) == (
+        n,
+        n,
+        n,
+        n,
+        n,
+        n,
+        f,
+        {},
+        f,
+    )
+
+
+def test_job_req_check_parameters_full_input():
+    assert (
+        JobRequirements.check_parameters(
+            1,
+            1,
+            1,
+            "   b   ",
+            "x",
+            " user ",
+            890,
+            {"proc": "x286", "maxmem": "640k"},
+            [],
+        )
+        == (1, 1, 1, "b", True, "user", True, {"proc": "x286", "maxmem": "640k"}, False)
+    )
+
+
+def test_job_req_check_parameters_whitespace_as_user():
+    assert (
+        JobRequirements.check_parameters(
+            1,
+            1,
+            1,
+            "   b   ",
+            False,
+            " \t  ",
+            890,
+            {"proc": "x286", "maxmem": "640k"},
+            [],
+        )
+        == (1, 1, 1, "b", False, None, True, {"proc": "x286", "maxmem": "640k"}, False)
+    )
+
+
+def test_job_req_check_parameters_fail():
+    n = None
+    _job_req_check_parameters_fail(
+        0, 1, 1, "c", "u", n, IncorrectParamsException("CPU count must be at least 1")
+    )
+    _job_req_check_parameters_fail(
+        1,
+        0,
+        1,
+        "c",
+        "u",
+        n,
+        IncorrectParamsException("memory in MB must be at least 1"),
+    )
+    _job_req_check_parameters_fail(
+        1,
+        1,
+        0,
+        "c",
+        "u",
+        n,
+        IncorrectParamsException("disk space in GB must be at least 1"),
+    )
+    _job_req_check_parameters_fail(
+        1,
+        1,
+        1,
+        " \t ",
+        "u",
+        n,
+        IncorrectParamsException("Missing input parameter: client_group"),
+    )
+    _job_req_check_parameters_fail(
+        1,
+        1,
+        1,
+        "c",
+        "  j\bi  ",
+        n,
+        IncorrectParamsException("bill_to_user contains control characters"),
+    )
+    _job_req_check_parameters_fail(
+        1,
+        1,
+        1,
+        "c",
+        "u",
+        {None: 1},
+        IncorrectParamsException(
+            "Missing input parameter: key in scheduler requirements structure"
+        ),
+    )
+    _job_req_check_parameters_fail(
+        1,
+        1,
+        1,
+        "c",
+        "u",
+        {"a": None},
+        IncorrectParamsException(
+            "Missing input parameter: value for key 'a' in scheduler requirements structure"
+        ),
+    )
+    _job_req_check_parameters_fail(
+        1,
+        1,
+        1,
+        "c",
+        "u",
+        {" \t ": 1},
+        IncorrectParamsException(
+            "Missing input parameter: key in scheduler requirements structure"
+        ),
+    )
+    _job_req_check_parameters_fail(
+        1,
+        1,
+        1,
+        "c",
+        "u",
+        {"b": " \t "},
+        IncorrectParamsException(
+            "Missing input parameter: value for key 'b' in scheduler requirements structure"
+        ),
+    )
+
+
+def _job_req_check_parameters_fail(cpu, mem, disk, cgroup, user, reqs, expected):
+    with raises(Exception) as got:
+        JobRequirements(cpu, mem, disk, cgroup, True, user, True, reqs)
     assert_exception_correct(got.value, expected)
 
 
