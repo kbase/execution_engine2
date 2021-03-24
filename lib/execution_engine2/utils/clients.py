@@ -113,7 +113,9 @@ class ClientSet:
         self.auth_admin = _not_falsy(auth_admin, "auth_admin")
         self.condor = _not_falsy(condor, "condor")
         self.catalog = _not_falsy(catalog, "catalog")
-        self.requirements_resolver = _not_falsy(requirements_resolver, "requirements_resolver")
+        self.requirements_resolver = _not_falsy(
+            requirements_resolver, "requirements_resolver"
+        )
         self.catalog_utils = _not_falsy(catalog_utils, "catalog_utils")
         self.kafka_client = _not_falsy(kafka_client, "kafka_client")
         self.mongo_util = _not_falsy(mongo_util, "mongo_util")
@@ -126,7 +128,10 @@ class ClientSet:
 
 def get_clients(
     # TODO JRR remove cfg_path when Condor no longer needs it
-    cfg: Dict[str, str], cfg_path, cfg_file: Iterable[str], override_client_group: str = None
+    cfg: Dict[str, str],
+    cfg_path,
+    cfg_file: Iterable[str],
+    override_client_group: str = None,
 ) -> (
     KBaseAuth,
     AdminAuthUtil,
@@ -162,7 +167,9 @@ def get_clients(
     # token is needed for running log_exec_stats in EE2Status
     catalog = Catalog(cfg["catalog-url"], token=cfg["catalog-token"])
     # make a separate, hidden catalog instance
-    jrr = JobRequirementsResolver(Catalog(cfg["catalog-url"]), cfg_file, override_client_group)
+    jrr = JobRequirementsResolver(
+        Catalog(cfg["catalog-url"]), cfg_file, override_client_group
+    )
     catalog_utils = CatalogUtils(cfg["catalog-url"], cfg["catalog-token"])
     auth_url = cfg["auth-url"]
     auth = KBaseAuth(auth_url=auth_url + "/api/legacy/KBase/Sessions/Login")
@@ -195,11 +202,12 @@ def get_clients(
 
 
 def get_client_set(
-        cfg: Dict[str, str],
-        # TODO JRR remove cfg_path when Condor no longer needs it
-        cfg_path: str,
-        cfg_file: Iterable[str],
-        override_client_group: str = None) -> ClientSet:
+    cfg: Dict[str, str],
+    # TODO JRR remove cfg_path when Condor no longer needs it
+    cfg_path: str,
+    cfg_file: Iterable[str],
+    override_client_group: str = None,
+) -> ClientSet:
     """
     A helper method to create a ClientSet from a config dict rather than constructing and passing
     in clients individually.

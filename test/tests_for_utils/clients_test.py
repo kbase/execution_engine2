@@ -5,7 +5,11 @@ from pytest import raises
 from unittest.mock import create_autospec
 
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
-from execution_engine2.utils.clients import UserClientSet, get_user_client_set, ClientSet
+from execution_engine2.utils.clients import (
+    UserClientSet,
+    get_user_client_set,
+    ClientSet,
+)
 from utils_shared.test_utils import assert_exception_correct
 from utils_shared.mock_utils import get_client_mocks, ALL_CLIENTS
 from installed_clients.WorkspaceClient import Workspace
@@ -128,6 +132,15 @@ def _client_set_init_fail(
     expected: Exception,
 ):
     with raises(Exception) as got:
-        ClientSet(auth, auth_admin, condor, catalog, requirements_resolver, catalog_utils,
-                  kafka_client, mongo_util, slack_client)
+        ClientSet(
+            auth,
+            auth_admin,
+            condor,
+            catalog,
+            requirements_resolver,
+            catalog_utils,
+            kafka_client,
+            mongo_util,
+            slack_client,
+        )
     assert_exception_correct(got.value, expected)
