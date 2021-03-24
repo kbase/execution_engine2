@@ -447,8 +447,8 @@ class JobRequirementsResolver:
         cg = next(
             i
             for i in [
-                self._override_client_group,
                 user_cg,
+                self._override_client_group,
                 catalog_cg,
                 self._default_client_group,
             ]
