@@ -28,6 +28,7 @@ from lib.execution_engine2.sdk import (
 from lib.execution_engine2.sdk.EE2Constants import KBASE_CONCIERGE_USERNAME
 from lib.execution_engine2.utils.CatalogUtils import CatalogUtils
 from lib.execution_engine2.utils.Condor import Condor
+from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
 from execution_engine2.utils.clients import UserClientSet, ClientSet
 from lib.execution_engine2.utils.EE2Logger import get_logger as _get_logger
 from lib.execution_engine2.utils.KafkaUtils import KafkaClient
@@ -67,6 +68,7 @@ class SDKMethodRunner:
         self.mongo_util = clients.mongo_util
         self.condor = clients.condor
         self.catalog = clients.catalog
+        self.job_requirements_resolver = clients.requirements_resolver
         self.workspace = user_clients.workspace
         self.workspace_auth = user_clients.workspace_auth
         self.catalog_utils = clients.catalog_utils
@@ -152,6 +154,12 @@ class SDKMethodRunner:
         Get the catalog client for this instance of SDKMR.
         """
         return self.catalog
+
+    def get_job_requirements_resolver(self) -> JobRequirementsResolver:
+        """
+        Get the job requirements resolver for this instance of SDKMR.
+        """
+        return self.job_requirements_resolver
 
     def get_catalog_utils(self) -> CatalogUtils:
         """
