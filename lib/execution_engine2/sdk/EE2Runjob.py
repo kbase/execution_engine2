@@ -117,9 +117,8 @@ class EE2RunJob:
 
         self.logger.debug(f"Getting commit for {module_name} {service_ver}")
 
-        module_version = (
-            self.sdkmr.get_catalog()
-            .get_module_version({"module_name": module_name, "version": service_ver})
+        module_version = self.sdkmr.get_catalog().get_module_version(
+            {"module_name": module_name, "version": service_ver}
         )
 
         git_commit_hash = module_version.get("git_commit_hash")

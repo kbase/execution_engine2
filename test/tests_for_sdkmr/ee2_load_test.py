@@ -243,9 +243,7 @@ class ee2_server_load_test(unittest.TestCase):
 
     @patch.object(Condor, "run_job", return_value=si)
     @patch.object(WorkspaceAuth, "can_write", return_value=True)
-    @patch(
-        "installed_clients.CatalogClient.Catalog.get_module_version", autospec=True
-    )
+    @patch("installed_clients.CatalogClient.Catalog.get_module_version", autospec=True)
     @patch("installed_clients.CatalogClient.Catalog.log_exec_stats", autospec=True)
     def test_run_job_stress(self, ccles, cc, workspace, condor):
         """
