@@ -68,7 +68,7 @@ def test_run_as_admin():
     slack = create_autospec(SlackClient, spec_set=True, instance=True)
     ws = create_autospec(Workspace, spec_set=True, instance=True)
     # Set up basic getter calls
-    catutils.get_catalog.return_value = catalog
+    sdkmr.get_catalog.return_value = catalog
     sdkmr.get_catalog_utils.return_value = catutils
     sdkmr.get_condor.return_value = condor
     sdkmr.get_kafka_client.return_value = kafka

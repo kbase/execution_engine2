@@ -58,7 +58,7 @@ class EE2TestAdminMode(unittest.TestCase):
         :return:
         """
         self.catalog_patch = patch(
-            "lib.installed_clients.CatalogClient.Catalog.get_module_version"
+            "installed_clients.CatalogClient.Catalog.get_module_version"
         )
         self.catalog = self.catalog_patch.start()
         self.catalog.return_value = {"git_commit_hash": "moduleversiongoeshere"}
@@ -128,7 +128,8 @@ class EE2TestAdminMode(unittest.TestCase):
     def get_client_mocks(self, *to_be_mocked):
         return _get_client_mocks(self.cfg, self.config_file, *to_be_mocked)
 
-    @patch.object(Catalog, "get_module_version", return_value="module.version")
+    @patch.object(
+        Catalog, "get_module_version", return_value={"git_commit_hash": "moduleversiongoeshere"})
     def test_regular_user(self, catalog):
         # Regular User
         lowly_user = "Access Denied: You are not an administrator"
@@ -213,7 +214,8 @@ class EE2TestAdminMode(unittest.TestCase):
 
         # Start the job and get its status as an admin
 
-    @patch.object(Catalog, "get_module_version", return_value="module.version")
+    @patch.object(
+        Catalog, "get_module_version", return_value={"git_commit_hash": "moduleversiongoeshere"})
     @patch.object(WorkspaceAuth, "can_write", return_value=True)
     def test_admin_writer(self, workspace, catalog):
         # Admin User with WRITE

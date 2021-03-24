@@ -28,11 +28,12 @@ from lib.execution_engine2.sdk import (
 from lib.execution_engine2.sdk.EE2Constants import KBASE_CONCIERGE_USERNAME
 from lib.execution_engine2.utils.CatalogUtils import CatalogUtils
 from lib.execution_engine2.utils.Condor import Condor
+from execution_engine2.utils.clients import UserClientSet, ClientSet
 from lib.execution_engine2.utils.EE2Logger import get_logger as _get_logger
 from lib.execution_engine2.utils.KafkaUtils import KafkaClient
 from lib.execution_engine2.utils.SlackUtils import SlackClient
+from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
-from execution_engine2.utils.clients import UserClientSet, ClientSet
 
 
 class JobPermissions(Enum):
@@ -65,6 +66,7 @@ class SDKMethodRunner:
             raise ValueError("clients is required")
         self.mongo_util = clients.mongo_util
         self.condor = clients.condor
+        self.catalog = clients.catalog
         self.workspace = user_clients.workspace
         self.workspace_auth = user_clients.workspace_auth
         self.catalog_utils = clients.catalog_utils
@@ -144,6 +146,12 @@ class SDKMethodRunner:
         # There's not really any way to meaningfully test this method without passing in the
         # logger, which seems... overkill?
         return self.logger
+
+    def get_catalog(self) -> Catalog:
+        """
+        Get the catalog client for this instance of SDKMR.
+        """
+        return self.catalog
 
     def get_catalog_utils(self) -> CatalogUtils:
         """

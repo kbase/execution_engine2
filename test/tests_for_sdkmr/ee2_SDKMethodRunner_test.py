@@ -46,6 +46,7 @@ bootstrap()
 
 from lib.execution_engine2.sdk.EE2Runjob import EE2RunJob
 
+from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
 
 
@@ -167,6 +168,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         assert sdkmr.get_slack_client() is clients_and_mocks[SlackClient]
         assert sdkmr.get_catalog_utils() is clients_and_mocks[CatalogUtils]
         assert sdkmr.get_condor() is clients_and_mocks[Condor]
+        assert sdkmr.get_catalog() is clients_and_mocks[Catalog]
 
     def test_save_job(self):
         ws = Workspace("https://fake.com")
