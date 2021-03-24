@@ -3,19 +3,23 @@
 # Note on testing - this class is not generally unit-testable, and is only tested fully in
 # integration tests.
 
-from typing import Dict
+import os
+from typing import Dict, Iterable
 
 from execution_engine2.authorization.roles import AdminAuthUtil
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.MongoUtil import MongoUtil
+from execution_engine2.utils.arg_processing import not_falsy as _not_falsy
 from execution_engine2.utils.CatalogUtils import CatalogUtils
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
+from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
 from execution_engine2.utils.KafkaUtils import KafkaClient
 from execution_engine2.utils.SlackUtils import SlackClient
 from execution_engine2.utils.arg_processing import parse_bool
 
 from installed_clients.authclient import KBaseAuth
+from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
 
 
@@ -94,7 +98,9 @@ class ClientSet:
         auth: KBaseAuth,
         auth_admin: AdminAuthUtil,
         condor: Condor,
-        catalog_utils: CatalogUtils,
+        catalog: Catalog,
+        requirements_resolver: JobRequirementsResolver,
+        catalog_utils: CatalogUtils,  # TODO JRR remove after replaced by JRR
         kafka_client: KafkaClient,
         mongo_util: MongoUtil,
         slack_client: SlackClient,
@@ -103,14 +109,15 @@ class ClientSet:
         Initialize the client set from the individual clients.
         """
 
-        # TODO check no clients are None. Make a general method somewhere
-        self.auth = auth
-        self.auth_admin = auth_admin
-        self.condor = condor
-        self.catalog_utils = catalog_utils
-        self.kafka_client = kafka_client
-        self.mongo_util = mongo_util
-        self.slack_client = slack_client
+        self.auth = _not_falsy(auth, "auth")
+        self.auth_admin = _not_falsy(auth_admin, "auth_admin")
+        self.condor = _not_falsy(condor, "condor")
+        self.catalog = _not_falsy(catalog, "catalog")
+        self.requirements_resolver = _not_falsy(requirements_resolver, "requirements_resolver")
+        self.catalog_utils = _not_falsy(catalog_utils, "catalog_utils")
+        self.kafka_client = _not_falsy(kafka_client, "kafka_client")
+        self.mongo_util = _not_falsy(mongo_util, "mongo_util")
+        self.slack_client = _not_falsy(slack_client, "slack_client")
 
 
 # the constructor allows for mix and match of mocks and real implementations as needed
@@ -118,11 +125,14 @@ class ClientSet:
 
 
 def get_clients(
-    cfg: Dict[str, str], cfg_path: str
+    # TODO JRR remove cfg_path when Condor no longer needs it
+    cfg: Dict[str, str], cfg_path, cfg_file: Iterable[str], override_client_group: str = None
 ) -> (
     KBaseAuth,
     AdminAuthUtil,
     Condor,
+    Catalog,
+    JobRequirementsResolver,
     CatalogUtils,
     KafkaClient,
     MongoUtil,
@@ -134,6 +144,9 @@ def get_clients(
 
     cfg - the configuration dictionary
     cfg_path - the path to the configuration file
+    cfg_file - the full configuration file as a file like object or iterable.
+    override_client_group - a client group name to override any client groups provided by
+        users or the catalog service.
 
     Expected keys in config:
     auth-url - the root URL of the kbase auth service
@@ -143,9 +156,13 @@ def get_clients(
     slack-token - a token for contacting Slack
     """
     # Condor needs access to the entire deploy.cfg file, not just the ee2 section
-    condor = Condor(cfg_path)
+    condor = Condor(cfg_path)  # TODO JRR replace with cfg when JRR is used
     # Do a check to ensure the urls and tokens actually work correctly?
     # TODO check keys are present - make some general methods for dealing with this
+    # token is needed for running log_exec_stats in EE2Status
+    catalog = Catalog(cfg["catalog-url"], token=cfg["catalog-token"])
+    # make a separate, hidden catalog instance
+    jrr = JobRequirementsResolver(Catalog(cfg["catalog-url"]), cfg_file, override_client_group)
     catalog_utils = CatalogUtils(cfg["catalog-url"], cfg["catalog-token"])
     auth_url = cfg["auth-url"]
     auth = KBaseAuth(auth_url=auth_url + "/api/legacy/KBase/Sessions/Login")
@@ -168,6 +185,8 @@ def get_clients(
         auth,
         auth_admin,
         condor,
+        catalog,
+        jrr,
         catalog_utils,
         kafka_client,
         mongo_util,
@@ -175,13 +194,21 @@ def get_clients(
     )
 
 
-def get_client_set(cfg: Dict[str, str], cfg_path: str) -> ClientSet:
+def get_client_set(
+        cfg: Dict[str, str],
+        # TODO JRR remove cfg_path when Condor no longer needs it
+        cfg_path: str,
+        cfg_file: Iterable[str],
+        override_client_group: str = None) -> ClientSet:
     """
     A helper method to create a ClientSet from a config dict rather than constructing and passing
     in clients individually.
 
     cfg - the configuration dictionary
     cfg_path - the path to the configuration file
+    cfg_file - the full configuration file as a file like object or iterable.
+    override_client_group - a client group name to override any client groups provided by
+        users or the catalog service.
 
     Expected keys in config:
     auth-url - the root URL of the kbase auth service
@@ -191,4 +218,4 @@ def get_client_set(cfg: Dict[str, str], cfg_path: str) -> ClientSet:
     slack-token - a token for contacting Slack
     """
 
-    return ClientSet(*get_clients(cfg, cfg_path))
+    return ClientSet(*get_clients(cfg, cfg_path, cfg_file, override_client_group))

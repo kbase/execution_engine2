@@ -55,10 +55,11 @@ class ee2_server_load_test(unittest.TestCase):
 
     @classmethod
     def _getRunner(cls) -> SDKMethodRunner:
-        runner = SDKMethodRunner(
-            get_user_client_set(cls.cfg, cls.user_id, cls.token),
-            get_client_set(cls.cfg, cls.deploy),
-        )
+        with open(cls.deploy) as cf:
+            runner = SDKMethodRunner(
+                get_user_client_set(cls.cfg, cls.user_id, cls.token),
+                get_client_set(cls.cfg, cls.deploy, cf),
+            )
         # Initialize these clients from None
         status = runner.get_jobs_status()  # type: JobsStatus
         status._send_exec_stats_to_catalog = MagicMock(return_value=True)

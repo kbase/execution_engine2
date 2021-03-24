@@ -2,15 +2,23 @@ from unittest.mock import create_autospec
 
 from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.utils.CatalogUtils import CatalogUtils
+from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
 from execution_engine2.utils.KafkaUtils import KafkaClient
 from execution_engine2.utils.SlackUtils import SlackClient
 
 from installed_clients.authclient import KBaseAuth
+from installed_clients.CatalogClient import Catalog
 
 from execution_engine2.authorization.roles import AdminAuthUtil
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
 from execution_engine2.utils.clients import ClientSet
+
+
+def _build_job_reqs(config, cfgfile):
+    with open(cfgfile) as cf:
+        return JobRequirementsResolver(Catalog(config["catalog-url"]), cf)
+
 
 _CLASS_IMPLEMENTATION_BUILDERS = {
     KBaseAuth: lambda config, cfgfile: KBaseAuth(
@@ -20,6 +28,8 @@ _CLASS_IMPLEMENTATION_BUILDERS = {
         config["auth-url"], [ADMIN_READ_ROLE, ADMIN_WRITE_ROLE]
     ),
     Condor: lambda config, cfgfile: Condor(cfgfile),
+    Catalog: lambda config, cfgfile: Catalog(config["catalog-url"]),
+    JobRequirementsResolver: _build_job_reqs,
     CatalogUtils: lambda config, cfgfile: CatalogUtils(
         config["catalog-url"], config["catalog-token"]
     ),
@@ -55,6 +65,8 @@ def get_client_mocks(config, config_path, *to_be_mocked):
         ret[KBaseAuth],
         ret[AdminAuthUtil],
         ret[Condor],
+        ret[Catalog],
+        ret[JobRequirementsResolver],
         ret[CatalogUtils],
         ret[KafkaClient],
         ret[MongoUtil],
