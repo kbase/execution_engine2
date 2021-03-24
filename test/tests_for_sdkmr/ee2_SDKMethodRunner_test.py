@@ -170,7 +170,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         assert sdkmr.get_catalog_utils() is clients_and_mocks[CatalogUtils]
         assert sdkmr.get_condor() is clients_and_mocks[Condor]
         assert sdkmr.get_catalog() is clients_and_mocks[Catalog]
-        assert sdkmr.get_job_requirements_resolver() is clients_and_mocks[JobRequirementsResolver]
+        assert (
+            sdkmr.get_job_requirements_resolver()
+            is clients_and_mocks[JobRequirementsResolver]
+        )
 
     def test_save_job(self):
         ws = Workspace("https://fake.com")
