@@ -132,7 +132,7 @@ class JobRequirementsResolver:
             ({CLIENT_GROUP}, {REQUEST_CPUS}, {REQUEST_MEMORY}, {REQUEST_DISK}) aren't present
             with valid values.
 
-        Returns a a new dictionary with the altered keys. If any key is not present no action is
+        Returns a new dictionary with the altered keys. If any key is not present no action is
         taken for that key.
         """
         # TODO could support more units and convert as necessary (see checker funcs at start
