@@ -114,8 +114,8 @@ fields in common:
 * `request_cpus` - the number of CPUs to request
 * `request_memory` - the amount of memory, in MB, to request
 * `request_disk` - the amount of memory, in GB, to request
-* `client_group_regex` - treat the client group (see below) as a regular expression
-* `debug_mode` - run the job in debug mode
+* `client_group_regex` - boolean - treat the client group (see below) as a regular expression
+* `debug_mode` - boolean - run the job in debug mode
 
 The client group is handled differently for JSON and CSV:
 * The JSON format has the `clientgroup` field, which is optional.
