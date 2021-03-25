@@ -4,7 +4,10 @@ Unit tests for the job requirements resolver.
 
 from enum import Enum
 from pytest import raises
-from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
+from execution_engine2.utils.job_requirements_resolver import (
+    JobRequirementsResolver,
+    RequirementsType,
+)
 from execution_engine2.exceptions import IncorrectParamsException
 from utils_shared.test_utils import assert_exception_correct
 
@@ -301,4 +304,101 @@ def test_normalize_job_reqs_fail_require_all():
 def _normalize_job_reqs_fail(reqs, source, req_all_res, expected):
     with raises(Exception) as got:
         JobRequirementsResolver.normalize_job_reqs(reqs, source, req_all_res)
+    assert_exception_correct(got.value, expected)
+
+
+def test_get_requirements_type_standard():
+    grt = JobRequirementsResolver.get_requirements_type
+    assert grt() == RequirementsType.STANDARD
+    assert (
+        grt(None, None, None, None, None, None, None, None, None)
+        == RequirementsType.STANDARD
+    )
+    assert (
+        grt(None, None, None, None, None, None, False, {}, False)
+        == RequirementsType.STANDARD
+    )
+
+
+def test_get_requirements_type_processing():
+    grt = JobRequirementsResolver.get_requirements_type
+    assert grt(cpus=4) == RequirementsType.PROCESSING
+    assert grt(memory_MB=26) == RequirementsType.PROCESSING
+    assert grt(disk_GB=78) == RequirementsType.PROCESSING
+    assert grt(client_group="foo") == RequirementsType.PROCESSING
+    assert grt(client_group_regex=False) == RequirementsType.PROCESSING
+    assert grt(client_group_regex=True) == RequirementsType.PROCESSING
+    assert grt(ignore_concurrency_limits=True) == RequirementsType.PROCESSING
+    assert grt(scheduler_requirements={"a": "b"}) == RequirementsType.PROCESSING
+    assert grt(debug_mode=True) == RequirementsType.PROCESSING
+
+    assert (
+        grt(
+            cpus=4,
+            memory_MB=2,
+            disk_GB=8,
+            client_group="yay",
+            client_group_regex=True,
+            ignore_concurrency_limits=True,
+            debug_mode=True,
+        )
+        == RequirementsType.PROCESSING
+    )
+
+
+def test_get_requirements_type_billing():
+    grt = JobRequirementsResolver.get_requirements_type
+    assert grt(bill_to_user="foo") == RequirementsType.BILLING
+
+    assert (
+        grt(
+            cpus=4,
+            memory_MB=2,
+            disk_GB=8,
+            client_group="yay",
+            client_group_regex=True,
+            bill_to_user="can I buy you a drink?",
+            ignore_concurrency_limits=True,
+            debug_mode=True,
+        )
+        == RequirementsType.BILLING
+    )
+
+
+def test_get_requirements_type_fail():
+    # All the illegal requirements testing is delegated to a method outside the code
+    # unit under test, so we just do one test per input to be sure it's hooked up correctly
+    # and delegate more thorough testing to the unit tests for the called method.
+    n = None
+    _grtf = _get_requirements_type_fail
+    _grtf(0, n, n, n, n, IncorrectParamsException("CPU count must be at least 1"))
+    _grtf(n, 0, n, n, n, IncorrectParamsException("memory in MB must be at least 1"))
+    _grtf(
+        n, n, 0, n, n, IncorrectParamsException("disk space in GB must be at least 1")
+    )
+    _grtf(
+        n,
+        n,
+        n,
+        "    \t   ",
+        n,
+        IncorrectParamsException("Missing input parameter: client_group"),
+    )
+    _grtf(
+        n,
+        n,
+        n,
+        n,
+        "   \bfoo   ",
+        IncorrectParamsException("bill_to_user contains control characters"),
+    )
+    # note there are no invalid values for client_group_regex, ignore_concurrentcy_limits,
+    # and debug_mode
+
+
+def _get_requirements_type_fail(cpus, mem, disk, cg, btu, expected):
+    with raises(Exception) as got:
+        JobRequirementsResolver.get_requirements_type(
+            cpus, mem, disk, cg, False, btu, False, False
+        )
     assert_exception_correct(got.value, expected)
