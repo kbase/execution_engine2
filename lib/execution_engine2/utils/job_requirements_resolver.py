@@ -224,7 +224,7 @@ class JobRequirementsResolver:
         self, clientgroup: str
     ) -> Dict[str, Union[int, str]]:
         f"""
-        Get the client ground specification in normalized format. Includes the {CLIENT_GROUP},
+        Get the client group specification in normalized format. Includes the {CLIENT_GROUP},
         {REQUEST_CPUS}, {REQUEST_MEMORY}, and {REQUEST_DISK} keys. May, but usually will not,
         include the {DEBUG_MODE} and {CLIENT_GROUP_REGEX} keys.
         """
