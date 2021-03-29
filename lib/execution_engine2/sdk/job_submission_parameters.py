@@ -144,9 +144,6 @@ class JobRequirements:
             self.debug_mode,
         )
 
-    def __repr__(self):
-        return str(self._params())
-
     def __eq__(self, other):
         if type(self) == type(other):
             return self._params() == (
