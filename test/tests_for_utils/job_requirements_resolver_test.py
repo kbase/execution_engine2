@@ -687,7 +687,7 @@ def _resolve_requirements_from_spec(catalog_return):
 
 def test_resolve_requirements_from_spec_with_override():
     """
-    Test that an override ignores client group information from all other sources.
+    Test that an override ignores client group information from the catalog and deploy config.
     """
     catalog = create_autospec(Catalog, spec_set=True, instance=True)
     catalog.list_client_group_configs.return_value = [{"client_groups": ["cg2"]}]
@@ -696,8 +696,32 @@ def test_resolve_requirements_from_spec_with_override():
 
     jrr = JobRequirementsResolver(catalog, spec, "    cg1    ")
 
+    assert jrr.resolve_requirements(" module2. some_meth  ") == JobRequirements(
+        4,
+        2000,
+        100,
+        "cg1",
+    )
+
+    catalog.list_client_group_configs.assert_called_once_with(
+        {"module_name": "module2", "function_name": "some_meth"}
+    )
+
+
+def test_resolve_requirements_from_spec_with_override_and_user_client_group():
+    """
+    Test that a user providing a client group ignores client group information from all other
+    sources.
+    """
+    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+    catalog.list_client_group_configs.return_value = [{"client_groups": ["cg2"]}]
+
+    spec = _get_simple_deploy_spec_file_obj()
+
+    jrr = JobRequirementsResolver(catalog, spec, "    cg2    ")
+
     assert jrr.resolve_requirements(
-        " module2. some_meth  ", client_group="cg2"
+        " module2. some_meth  ", client_group="  cg1"
     ) == JobRequirements(
         4,
         2000,
