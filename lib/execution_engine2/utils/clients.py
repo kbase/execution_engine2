@@ -3,7 +3,6 @@
 # Note on testing - this class is not generally unit-testable, and is only tested fully in
 # integration tests.
 
-import os
 from typing import Dict, Iterable
 
 from execution_engine2.authorization.roles import AdminAuthUtil
