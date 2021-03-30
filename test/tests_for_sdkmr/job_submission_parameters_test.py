@@ -201,8 +201,7 @@ def _job_req_init_fail(cpus, mem, disk, cgroup, user, reqs, expected):
 
 def test_job_req_check_parameters_no_input():
     n = None
-    f = False
-    assert JobRequirements.check_parameters() == (n, n, n, n, n, n, f, {}, f)
+    assert JobRequirements.check_parameters() == (n, n, n, n, n, n, n, {}, n)
     assert JobRequirements.check_parameters(n, n, n, n, n, n, n, n, n) == (
         n,
         n,
@@ -210,9 +209,9 @@ def test_job_req_check_parameters_no_input():
         n,
         n,
         n,
-        f,
+        n,
         {},
-        f,
+        n,
     )
 
 
@@ -240,13 +239,13 @@ def test_job_req_check_parameters_whitespace_as_user():
             1,
             1,
             "   b   ",
-            False,
+            0,
             " \t  ",
             890,
             {"proc": "x286", "maxmem": "640k"},
-            [],
+            1,
         )
-        == (1, 1, 1, "b", False, None, True, {"proc": "x286", "maxmem": "640k"}, False)
+        == (1, 1, 1, "b", False, None, True, {"proc": "x286", "maxmem": "640k"}, True)
     )
 
 
