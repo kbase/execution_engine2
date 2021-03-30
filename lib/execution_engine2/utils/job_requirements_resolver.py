@@ -494,6 +494,11 @@ class JobRequirementsResolver:
                 )
             return {k.strip(): rv[k] for k in rv}
         # CSV Format
+        # This presents as CSV in the Catalog UI, e.g.
+        # clientgroup, key1=value1, key2=value2
+        # and so on
+        # The UI splits by comma before sending the data to the catalog, which is what we
+        # get when we pull the data
         rv = {CLIENT_GROUP: resources_request.pop(0)}
         for item in resources_request:
             if "=" not in item:
@@ -501,6 +506,6 @@ class JobRequirementsResolver:
                     f"Malformed requirement. Format is <key>=<value>. Item is '{item}' for "
                     + f"catalog method {module_name}.{function_name}"
                 )
-            (key, value) = item.split("=")
+            (key, value) = item.split("=", 1)
             rv[key.strip()] = value.strip()
         return rv

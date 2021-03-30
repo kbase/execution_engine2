@@ -721,7 +721,7 @@ def test_resolve_requirements_from_catalog_full_CSV():
                 "request_disk = 700GB",
                 "client_group_regex = False",
                 "debug_mode = true",
-                "foo=bar",
+                "foo=bar=whoop",  # test that only one split occurs
                 "baz=bat",
             ]
         }
@@ -739,7 +739,7 @@ def test_resolve_requirements_from_catalog_full_CSV():
         False,
         None,
         False,
-        {"foo": "bar", "baz": "bat"},
+        {"foo": "bar=whoop", "baz": "bat"},
         True,
     )
 
