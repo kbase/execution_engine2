@@ -289,15 +289,14 @@ class EE2RunJob:
             job_input.narrative_cell_info.cell_id = meta.get("cell_id")
             job_input.narrative_cell_info.status = meta.get("status")
 
-        with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            j = Job(
-                job_input=job_input,
-                batch_job=True,
-                status=Status.created.value,
-                wsid=wsid,
-                user=self.sdkmr.user_id,
-            )
-            j.save()
+        j = Job(
+            job_input=job_input,
+            batch_job=True,
+            status=Status.created.value,
+            wsid=wsid,
+            user=self.sdkmr.user_id,
+        )
+        j.save()
 
         # TODO Do we need a new kafka call?
         self.sdkmr.kafka_client.send_kafka_message(
@@ -319,9 +318,8 @@ class EE2RunJob:
                 self._abort_child_jobs(child_jobs)
                 raise e
 
-        with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            parent_job.child_jobs = child_jobs
-            parent_job.save()
+        parent_job.child_jobs = child_jobs
+        parent_job.save()
 
         return child_jobs
 
