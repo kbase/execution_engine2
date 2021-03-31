@@ -54,15 +54,9 @@ class EE2TestAdminMode(unittest.TestCase):
 
     def setUp(self) -> None:
         """
-        Patch out Catalog and Condor
+        Patch out Condor
         :return:
         """
-        self.catalog_patch = patch(
-            "installed_clients.CatalogClient.Catalog.get_module_version"
-        )
-        self.catalog = self.catalog_patch.start()
-        self.catalog.return_value = {"git_commit_hash": "moduleversiongoeshere"}
-
         si = SubmissionInfo(clusterid="123", submit={}, error=None)
         self.condor_patch = patch.object(
             target=Condor, attribute="run_job", return_value=si
@@ -86,7 +80,6 @@ class EE2TestAdminMode(unittest.TestCase):
         # self.good_job_id_user2 = setup_runner.run_job(params=job_params_1,as_admin=False)
 
     def tearDown(self) -> None:
-        self.catalog_patch.stop()
         self.condor_patch.stop()
         self.condor_patch2.start()
 
