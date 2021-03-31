@@ -353,9 +353,7 @@ class ee2_server_load_test(unittest.TestCase):
 
         threads = list()
 
-        def update_states(
-            index, job_ids_queued, job_ids_running, job_ids_completed
-        ):
+        def update_states(index, job_ids_queued, job_ids_running, job_ids_completed):
             """
             update jobs status in one thread
             """
@@ -471,12 +469,8 @@ class ee2_server_load_test(unittest.TestCase):
 
         # create jobs
         job_id_running = runner.get_runjob()._init_job_rec(self.user_id, job_params)
-        job_id_terminated = runner.get_runjob()._init_job_rec(
-            self.user_id, job_params
-        )
-        job_id_completed = runner.get_runjob()._init_job_rec(
-            self.user_id, job_params
-        )
+        job_id_terminated = runner.get_runjob()._init_job_rec(self.user_id, job_params)
+        job_id_completed = runner.get_runjob()._init_job_rec(self.user_id, job_params)
 
         self.impl.update_job_status(
             ctx=self.ctx, params={"job_id": job_id_running, "status": "running"}
@@ -582,9 +576,7 @@ class ee2_server_load_test(unittest.TestCase):
         # add one line to job
         ts = time.time()
         job_line = [{"line": "hello ee2", "is_error": 1, "ts": ts}]
-        self.impl.add_job_logs(
-            ctx=self.ctx, params={"job_id": job_id}, lines=job_line
-        )
+        self.impl.add_job_logs(ctx=self.ctx, params={"job_id": job_id}, lines=job_line)
 
         threads = list()
         job_lines = list()
@@ -660,9 +652,7 @@ class ee2_server_load_test(unittest.TestCase):
         for index, thread in enumerate(threads):
             thread.join()
 
-        job_lines = self.impl.get_job_logs(ctx=self.ctx, params={"job_id": job_id})[
-            0
-        ]
+        job_lines = self.impl.get_job_logs(ctx=self.ctx, params={"job_id": job_id})[0]
 
         self.assertEqual(
             job_lines["last_line_number"], thread_count - 1

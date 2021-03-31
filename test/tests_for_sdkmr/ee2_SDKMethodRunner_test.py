@@ -580,9 +580,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         runner = self.getRunner()
         runner._test_job_permissions = MagicMock(return_value=True)
-        runner.catalog_utils.get_catalog().log_exec_stats = MagicMock(
-            return_value=True
-        )
+        runner.catalog_utils.get_catalog().log_exec_stats = MagicMock(return_value=True)
 
         # test missing job_id input
         with self.assertRaises(ValueError) as context1:
@@ -619,9 +617,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             pass
         print("Job is now finished, status is")
         print(runner.get_job_status_field(job_id))
-        self.assertEqual(
-            {"status": "completed"}, runner.get_job_status_field(job_id)
-        )
+        self.assertEqual({"status": "completed"}, runner.get_job_status_field(job_id))
 
         job = self.mongo_util.get_job(job_id=job_id)
         self.assertEqual(job.status, Status.completed.value)
@@ -807,9 +803,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job_states_rl_0 = runner.check_jobs(
             [job_id, job_id_1, job_id_fake], return_list=0
         )
-        logging.info(
-            json.dumps(job_states_rl_0)
-        )  # make sure it's JSON serializable
+        logging.info(json.dumps(job_states_rl_0))  # make sure it's JSON serializable
         self.assertEqual(len(job_states_rl_0.keys()), 3)
         self.assertEqual(list(job_states_rl_0.keys())[0], job_id)
         self.assertEqual(list(job_states_rl_0.keys())[1], job_id_1)
@@ -839,9 +833,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         self.assertEqual(job_states_list_rl_t[0]["job_id"], job_id)
         self.assertEqual(job_states_list_rl_t[1]["job_id"], job_id_1)
         self.assertTrue(isinstance(job_states_list_rl_t, list))
-        self.assertCountEqual(
-            job_states_list_rl_t, list(job_states_rl_0.values())[:2]
-        )
+        self.assertCountEqual(job_states_list_rl_t, list(job_states_rl_0.values())[:2])
 
         # test check_jobs with exclude_fields
         job_states_rl0_exclude_wsid = runner.check_jobs(
@@ -852,10 +844,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         self.assertEqual(job_states_rl0_exclude_wsid[job_id]["status"], "created")
 
         # test check_workspace_jobs
-        job_states_from_workspace_check = (
-            runner.get_jobs_status().check_workspace_jobs(
-                self.ws_id, return_list="False"
-            )
+        job_states_from_workspace_check = runner.get_jobs_status().check_workspace_jobs(
+            self.ws_id, return_list="False"
         )
         for job_id_from_wsid in job_states_from_workspace_check:
             self.assertTrue(job_states_from_workspace_check[job_id_from_wsid])
@@ -869,30 +859,18 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                     job_states_rl_0[job],
                 )
 
-        json.dumps(
-            job_states_from_workspace_check
-        )  # make sure it's JSON serializable
+        json.dumps(job_states_from_workspace_check)  # make sure it's JSON serializable
         self.assertTrue(job_id in job_states_from_workspace_check)
-        self.assertEqual(
-            job_states_from_workspace_check[job_id]["status"], "created"
-        )
-        self.assertEqual(
-            job_states_from_workspace_check[job_id]["wsid"], self.ws_id
-        )
+        self.assertEqual(job_states_from_workspace_check[job_id]["status"], "created")
+        self.assertEqual(job_states_from_workspace_check[job_id]["wsid"], self.ws_id)
 
         self.assertTrue(job_id_1 in job_states_from_workspace_check)
-        self.assertEqual(
-            job_states_from_workspace_check[job_id_1]["status"], "created"
-        )
-        self.assertEqual(
-            job_states_from_workspace_check[job_id_1]["wsid"], self.ws_id
-        )
+        self.assertEqual(job_states_from_workspace_check[job_id_1]["status"], "created")
+        self.assertEqual(job_states_from_workspace_check[job_id_1]["wsid"], self.ws_id)
 
         # test check_workspace_jobs with exclude_fields
-        job_states_with_exclude_wsid = (
-            runner.get_jobs_status().check_workspace_jobs(
-                self.ws_id, exclude_fields=["wsid"], return_list=False
-            )
+        job_states_with_exclude_wsid = runner.get_jobs_status().check_workspace_jobs(
+            self.ws_id, exclude_fields=["wsid"], return_list=False
         )
 
         logging.info(
@@ -903,9 +881,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         self.assertEqual(job_states_with_exclude_wsid[job_id]["status"], "created")
         self.assertTrue(job_id_1 in job_states_with_exclude_wsid)
         self.assertFalse("wsid" in job_states_with_exclude_wsid[job_id_1].keys())
-        self.assertEqual(
-            job_states_with_exclude_wsid[job_id_1]["status"], "created"
-        )
+        self.assertEqual(job_states_with_exclude_wsid[job_id_1]["status"], "created")
 
         with self.assertRaises(PermissionError) as e:
             runner.get_jobs_status().check_workspace_jobs(1234)
@@ -1089,9 +1065,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
 
         job_state = runner.check_jobs_date_range_for_user(
-            creation_end_time=str(
-                tomorrow.timestamp()
-            ),  # test timestamp string input
+            creation_end_time=str(tomorrow.timestamp()),  # test timestamp string input
             creation_start_time=last_month_and_1_hour,  # test datetime input
             user="ALL",
         )
@@ -1277,9 +1251,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         self.assertTrue(len(job_state_limit["jobs"]) > 0)
 
-        print(
-            "Test 8, ascending and descending (maybe should verify jobs count > 2)"
-        )
+        print("Test 8, ascending and descending (maybe should verify jobs count > 2)")
         job_state_limit_asc = runner.check_jobs_date_range_for_user(
             creation_end_time=str(tomorrow),
             creation_start_time=str(last_month_and_1_hour),
