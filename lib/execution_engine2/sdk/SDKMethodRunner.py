@@ -248,12 +248,19 @@ class SDKMethodRunner:
     # at this point since MongoEngine creates a global connection to MongoDB
     # and makes it available to all the model objects.
 
-    def save_job(self, job: Job):
+    def save_job(self, job: Job) -> str:
         """
-        Save a job record to the Mongo database.
+        Save a job record to the Mongo database and return the job's ID as a string.
         """
         job.save()
         return str(job.id)
+
+    def save_and_return_job(self, job: Job) -> Job:
+        """
+        Save a job record to the Mongo database and return the updated job.
+        """
+        job.save()
+        return job
 
     def get_job_counts(self, job_filter):
         """
