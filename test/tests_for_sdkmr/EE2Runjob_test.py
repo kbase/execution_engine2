@@ -80,7 +80,9 @@ def _set_up_common_return_values(mocks):
     """
     Set up return values on mocks that are the same for several tests.
     """
-    mocks[Workspace].get_object_info3.return_value = {"paths": [[_WS_REF_1], [_WS_REF_2]]}
+    mocks[Workspace].get_object_info3.return_value = {
+        "paths": [[_WS_REF_1], [_WS_REF_2]]
+    }
     mocks[SDKMethodRunner].save_job.return_value = _JOB_ID
     mocks[Catalog].get_module_version.return_value = {"git_commit_hash": _GIT_COMMIT}
     mocks[Condor].run_job.return_value = SubmissionInfo(_CLUSTER, {}, None)
@@ -139,7 +141,9 @@ def _check_common_mock_calls(mocks, reqs, creqs, wsid):
         "token": _TOKEN,
         "cg_resources_requirements": reqs,
     }
-    mocks[Condor].run_job.assert_called_once_with(params=params_expected, concierge_params=None)
+    mocks[Condor].run_job.assert_called_once_with(
+        params=params_expected, concierge_params=None
+    )
 
     # updated job data save
     mocks[MongoUtil].get_job.assert_called_once_with(_JOB_ID)
