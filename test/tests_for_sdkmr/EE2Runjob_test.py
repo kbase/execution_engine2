@@ -4,28 +4,167 @@ Unit tests for the EE2Runjob class.
 
 # Incomplete by a long way. Will add more unit tests as they come up.
 
-from typing import List
+from typing import List, Dict, Any
 from bson.objectid import ObjectId
 from logging import Logger
 from unittest.mock import create_autospec
+from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.models.models import Job, JobInput, JobRequirements, Meta
 from execution_engine2.sdk.EE2Runjob import EE2RunJob, JobPermissions
-from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.utils.CatalogUtils import CatalogUtils
-from execution_engine2.utils.Condor import (
-    Condor,
-    CondorResources,
-    SubmissionInfo,
+from execution_engine2.utils.Condor import Condor, SubmissionInfo, CondorResources
+from execution_engine2.sdk.job_submission_parameters import (
+    JobRequirements as ResolvedRequirements,
 )
+from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.utils.KafkaUtils import (
     KafkaClient,
     KafkaQueueChange,
     KafkaCreateJob,
 )
+from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
 from execution_engine2.utils.SlackUtils import SlackClient
 from execution_engine2.db.MongoUtil import MongoUtil
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.CatalogClient import Catalog
+from utils_shared.mock_utils import get_client_mocks, ALL_CLIENTS
+
+# common variables
+_JOB_ID = "603051cfaf2e3401b0500982"
+_GIT_COMMIT = "git5678"
+_WS_REF_1 = "1/2/3"
+_WS_REF_2 = "4/5/6"
+_CLUSTER = "cluster42"
+_METHOD = "lolcats.lol_unto_death"
+_APP = "lolcats/itsmypartyilllolifiwantto"
+_USER = "someuser"
+_TOKEN = "tokentokentoken"
+_CREATED_STATE = "created"
+_QUEUED_STATE = "queued"
+
+
+def _set_up_mocks(user: str, token: str) -> Dict[Any, Any]:
+    """
+    Returns a dictionary of the class that is mocked to the mock of the class, and initializes
+    the SDKMR getters to return the mocks.
+    """
+    # Can't seem to find a mypy annotation for a class, so Any it is
+
+    # The amount of mocking required here implies the method should be broken up into smaller
+    # classes that are individually mockable. Or maybe it's just really complicated and this
+    # is the best we can do. Worth looking into at some point though.
+    mocks = get_client_mocks(None, None, *ALL_CLIENTS)
+    sdkmr = create_autospec(SDKMethodRunner, spec_set=True, instance=True)
+    mocks[SDKMethodRunner] = sdkmr
+    mocks[Logger] = create_autospec(Logger, spec_set=True, instance=True)
+    mocks[Workspace] = create_autospec(Workspace, spec_set=True, instance=True)
+    mocks[WorkspaceAuth] = create_autospec(WorkspaceAuth, spec_set=True, instance=True)
+    # Set up basic getter calls
+    sdkmr.get_catalog.return_value = mocks[Catalog]
+    sdkmr.get_catalog_utils.return_value = mocks[CatalogUtils]
+    sdkmr.get_condor.return_value = mocks[Condor]
+    sdkmr.get_kafka_client.return_value = mocks[KafkaClient]
+    sdkmr.get_logger.return_value = mocks[Logger]
+    sdkmr.get_mongo_util.return_value = mocks[MongoUtil]
+    sdkmr.get_job_requirements_resolver.return_value = mocks[JobRequirementsResolver]
+    sdkmr.get_slack_client.return_value = mocks[SlackClient]
+    sdkmr.get_token.return_value = token
+    sdkmr.get_user_id.return_value = user
+    sdkmr.get_workspace.return_value = mocks[Workspace]
+    sdkmr.get_workspace_auth.return_value = mocks[WorkspaceAuth]
+
+    return mocks
+
+
+def _set_up_common_return_values(mocks):
+    """
+    Set up return values on mocks that are the same for several tests.
+    """
+    mocks[Workspace].get_object_info3.return_value = {"paths": [[_WS_REF_1], [_WS_REF_2]]}
+    mocks[SDKMethodRunner].save_job.return_value = _JOB_ID
+    mocks[Catalog].get_module_version.return_value = {"git_commit_hash": _GIT_COMMIT}
+    mocks[Condor].run_job.return_value = SubmissionInfo(_CLUSTER, {}, None)
+    retjob = Job()
+    retjob.id = ObjectId(_JOB_ID)
+    retjob.status = _CREATED_STATE
+    mocks[MongoUtil].get_job.return_value = retjob
+
+
+def _check_common_mock_calls(mocks, reqs, creqs, wsid):
+    """
+    Check that mocks are called as expected when those calls are similar or the same for
+    several tests.
+    """
+    sdkmr = mocks[SDKMethodRunner]
+    kafka = mocks[KafkaClient]
+    mocks[Workspace].get_object_info3.assert_called_once_with(
+        {"objects": [{"ref": _WS_REF_1}, {"ref": _WS_REF_2}], "ignoreErrors": 1}
+    )
+    mocks[Catalog].get_module_version.assert_called_once_with(
+        {"module_name": "lolcats", "version": "release"}
+    )
+
+    # initial job data save
+    expected_job = Job()
+    expected_job.user = _USER
+    expected_job.status = _CREATED_STATE
+    expected_job.wsid = wsid
+    ji = JobInput()
+    ji.method = _METHOD
+    ji.app_id = _APP
+    ji.wsid = wsid
+    ji.service_ver = _GIT_COMMIT
+    ji.source_ws_objects = [_WS_REF_1, _WS_REF_2]
+    ji.parent_job_id = "None"
+    jr = JobRequirements()
+    jr.clientgroup = creqs.client_group
+    jr.cpu = creqs.request_cpus
+    jr.memory = creqs.request_memory
+    jr.disk = creqs.request_disk
+    ji.requirements = jr
+    ji.narrative_cell_info = Meta()
+    expected_job.job_input = ji
+    assert len(sdkmr.save_job.call_args_list) == 2
+    got_job = sdkmr.save_job.call_args_list[0][0][0]
+    assert_jobs_equal(got_job, expected_job)
+
+    kafka.send_kafka_message.assert_any_call(KafkaCreateJob(_USER, _JOB_ID))
+    params_expected = {
+        "method": _METHOD,
+        "app_id": _APP,
+        "source_ws_objects": [_WS_REF_1, _WS_REF_2],
+        "service_ver": _GIT_COMMIT,
+        "job_id": _JOB_ID,
+        "user_id": _USER,
+        "token": _TOKEN,
+        "cg_resources_requirements": reqs,
+    }
+    mocks[Condor].run_job.assert_called_once_with(params=params_expected, concierge_params=None)
+
+    # updated job data save
+    mocks[MongoUtil].get_job.assert_called_once_with(_JOB_ID)
+
+    # update to queued state
+    got_job = sdkmr.save_job.call_args_list[1][0][0]
+    expected_job = Job()
+    expected_job.id = ObjectId(_JOB_ID)
+    expected_job.status = _QUEUED_STATE
+    # no way to test this really without code refactoring
+    expected_job.queued = got_job.queued
+
+    expected_job.scheduler_type = "condor"
+    expected_job.scheduler_id = _CLUSTER
+    assert_jobs_equal(got_job, expected_job)
+
+    kafka.send_kafka_message.assert_called_with(  # update to queued state
+        KafkaQueueChange(
+            job_id=_JOB_ID,
+            new_status=_QUEUED_STATE,
+            previous_status=_CREATED_STATE,
+            scheduler_id=_CLUSTER,
+        )
+    )
+    mocks[SlackClient].run_job_message.assert_called_once_with(_JOB_ID, _CLUSTER, _USER)
 
 
 def test_run_as_admin():
@@ -38,51 +177,20 @@ def test_run_as_admin():
     """
 
     # Set up data variables
-    job_id = "603051cfaf2e3401b0500982"
-    git_commit = "git5678"
-    ws_obj1 = "1/2/3"
-    ws_obj2 = "4/5/6"
     client_group = "grotesquememlong"
-    cpus = "4"
+    cpus = 4
     mem = "32M"
-    cluster = "cluster42"
-    method = "lolcats.lol_unto_death"
-    user = "someuser"
-    token = "tokentokentoken"
-    created_state = "created"
-    queued_state = "queued"
 
-    # The amount of mocking required here implies the method should be broken up into smaller
-    # classes that are individually mockable. Or maybe it's just really complicated and this
-    # is the best we can do. Worth looking into at some point though.
-
+    # set up mocks
+    mocks = _set_up_mocks(_USER, _TOKEN)
+    sdkmr = mocks[SDKMethodRunner]
+    catutils = mocks[CatalogUtils]
+    condor = mocks[Condor]
     # We intentionally do not check the logger methods as there are a lot of them and this is
     # already a very large test. This may be something to be added later when needed.
-    sdkmr = create_autospec(SDKMethodRunner, spec_set=True, instance=True)
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
-    catutils = create_autospec(CatalogUtils, spec_set=True, instance=True)
-    condor = create_autospec(Condor, spec_set=True, instance=True)
-    kafka = create_autospec(KafkaClient, spec_set=True, instance=True)
-    logger = create_autospec(Logger, spec_set=True, instance=True)
-    mongo = create_autospec(MongoUtil, spec_set=True, instance=True)
-    slack = create_autospec(SlackClient, spec_set=True, instance=True)
-    ws = create_autospec(Workspace, spec_set=True, instance=True)
-    # Set up basic getter calls
-    sdkmr.get_catalog.return_value = catalog
-    sdkmr.get_catalog_utils.return_value = catutils
-    sdkmr.get_condor.return_value = condor
-    sdkmr.get_kafka_client.return_value = kafka
-    sdkmr.get_logger.return_value = logger
-    sdkmr.get_mongo_util.return_value = mongo
-    sdkmr.get_slack_client.return_value = slack
-    sdkmr.get_token.return_value = token
-    sdkmr.get_user_id.return_value = user
-    sdkmr.get_workspace.return_value = ws
 
     # Set up call returns. These calls are in the order they occur in the code
     sdkmr.check_as_admin.return_value = True
-    sdkmr.save_job.return_value = job_id
-    ws.get_object_info3.return_value = {"paths": [[ws_obj1], [ws_obj2]]}
     catalog_resources = {
         "client_group": client_group,
         "request_cpus": cpus,
@@ -92,95 +200,23 @@ def test_run_as_admin():
     condor.extract_resources.return_value = CondorResources(
         cpus, "2600GB", mem, client_group
     )
-    catalog.get_module_version.return_value = {"git_commit_hash": git_commit}
-    condor.run_job.return_value = SubmissionInfo(cluster, {}, None)
-    retjob = Job()
-    retjob.id = ObjectId(job_id)
-    retjob.status = created_state
-    mongo.get_job.return_value = retjob
+    _set_up_common_return_values(mocks)
 
     # set up the class to be tested and run the method
     rj = EE2RunJob(sdkmr)
     params = {
-        "method": method,
-        "source_ws_objects": [ws_obj1, ws_obj2],
+        "method": _METHOD,
+        "app_id": _APP,
+        "source_ws_objects": [_WS_REF_1, _WS_REF_2],
     }
-    assert rj.run(params, as_admin=True) == job_id
+    assert rj.run(params, as_admin=True) == _JOB_ID
 
     # check mocks called as expected. The order here is the order that they're called in the code.
     sdkmr.check_as_admin.assert_called_once_with(JobPermissions.WRITE)
-    ws.get_object_info3.assert_called_once_with(
-        {"objects": [{"ref": ws_obj1}, {"ref": ws_obj2}], "ignoreErrors": 1}
-    )
-    catutils.get_normalized_resources.assert_called_once_with(method)
+    catutils.get_normalized_resources.assert_called_once_with(_METHOD)
     condor.extract_resources.assert_called_once_with(catalog_resources)
-    catalog.get_module_version.assert_called_once_with(
-        {"module_name": "lolcats", "version": "release"}
-    )
-
-    # initial job data save
-    expected_job = Job()
-    expected_job.user = user
-    expected_job.status = created_state
-    ji = JobInput()
-    ji.method = method
-    ji.service_ver = git_commit
-    ji.source_ws_objects = [ws_obj1, ws_obj2]
-    ji.parent_job_id = "None"
-    jr = JobRequirements()
-    jr.clientgroup = client_group
-    jr.cpu = cpus
-    jr.memory = "32"
-    jr.disk = "2600"
-    ji.requirements = jr
-    ji.narrative_cell_info = Meta()
-    expected_job.job_input = ji
-    assert len(sdkmr.save_job.call_args_list) == 2
-    got_job = sdkmr.save_job.call_args_list[0][0][0]
-    assert_jobs_equal(got_job, expected_job)
-
-    kafka.send_kafka_message.assert_any_call(KafkaCreateJob(user, job_id))
-    condor.run_job.assert_called_once_with(
-        params={
-            "method": method,
-            "source_ws_objects": [ws_obj1, ws_obj2],
-            "service_ver": git_commit,
-            "job_id": job_id,
-            "user_id": user,
-            "token": token,
-            "cg_resources_requirements": {
-                "client_group": client_group,
-                "request_cpus": cpus,
-                "request_memory": mem,
-            },
-        },
-        concierge_params=None,
-    )
-
-    # updated job data save
-    mongo.get_job.assert_called_once_with(job_id)
-
-    # update to queued state
-    got_job = sdkmr.save_job.call_args_list[1][0][0]
-    expected_job = Job()
-    expected_job.id = ObjectId(job_id)
-    expected_job.status = queued_state
-    # no way to test this really without code refactoring
-    expected_job.queued = got_job.queued
-
-    expected_job.scheduler_type = "condor"
-    expected_job.scheduler_id = cluster
-    assert_jobs_equal(got_job, expected_job)
-
-    kafka.send_kafka_message.assert_called_with(  # update to queued state
-        KafkaQueueChange(
-            job_id=job_id,
-            new_status=queued_state,
-            previous_status=created_state,
-            scheduler_id=cluster,
-        )
-    )
-    slack.run_job_message.assert_called_once_with(job_id, cluster, user)
+    expected_condor_resources = CondorResources(4, "2600", "32", client_group)
+    _check_common_mock_calls(mocks, catalog_resources, expected_condor_resources, None)
 
 
 def assert_jobs_equal(got_job: Job, expected_job: Job):
