@@ -72,10 +72,11 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         cls.ws_id = 9999
         cls.token = "token"
 
-        cls.method_runner = SDKMethodRunner(
-            get_user_client_set(cls.cfg, cls.user_id, cls.token),
-            get_client_set(cls.cfg, cls.config_file),
-        )
+        with open(cls.config_file) as cf:
+            cls.method_runner = SDKMethodRunner(
+                get_user_client_set(cls.cfg, cls.user_id, cls.token),
+                get_client_set(cls.cfg, cls.config_file, cf),
+            )
         cls.mongo_util = MongoUtil(cls.cfg)
         cls.mongo_helper = MongoTestHelper(cls.cfg)
 
@@ -724,10 +725,11 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             self.assertEqual(job_states[job_id]["status"], "created")
 
             # now test with a different user
-            other_method_runner = SDKMethodRunner(
-                get_user_client_set(self.cfg, "some_other_user", "other_token"),
-                get_client_set(self.cfg, self.config_file),
-            )
+            with open(self.config_file) as cf:
+                other_method_runner = SDKMethodRunner(
+                    get_user_client_set(self.cfg, "some_other_user", "other_token"),
+                    get_client_set(self.cfg, self.config_file, cf),
+                )
             job_states = other_method_runner.get_jobs_status().check_workspace_jobs(
                 self.ws_id
             )

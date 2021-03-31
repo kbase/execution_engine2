@@ -95,7 +95,8 @@ class EE2TestAdminMode(unittest.TestCase):
         if not user_clients:
             user_clients = get_user_client_set(self.cfg, self.user_id, self.token)
         if not clients:
-            clients = get_client_set(self.cfg, self.config_file)
+            with open(self.config_file) as cf:
+                clients = get_client_set(self.cfg, self.config_file, cf)
         runner = SDKMethodRunner(user_clients, clients)  # type : SDKMethodRunner
         runner.get_jobs_status()
         runner.get_runjob()

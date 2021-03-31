@@ -63,7 +63,9 @@ class execution_engine2:
         self.gen_cfg = GenerateFromConfig(config)
         # move these into GFC? Since they're only generated once it doesn't seem necessary
         configpath = os.environ["KB_DEPLOYMENT_CONFIG"]
-        self.clients = get_client_set(config, configpath)
+        override = os.environ.get("OVERRIDE_CLIENT_GROUP")
+        with open(configpath) as cf:
+            self.clients = get_client_set(config, configpath, cf, override)
         #END_CONSTRUCTOR
         pass
 
