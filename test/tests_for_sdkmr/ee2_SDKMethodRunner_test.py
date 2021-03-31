@@ -162,6 +162,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         sdkmr = SDKMethodRunner(user_clients, clients_and_mocks[ClientSet])
 
         assert sdkmr.get_workspace() is ws
+        assert sdkmr.get_workspace_auth() is wsa
         assert sdkmr.get_user_id() == "user"
         assert sdkmr.get_token() == "token"
         assert sdkmr.get_kafka_client() is clients_and_mocks[KafkaClient]

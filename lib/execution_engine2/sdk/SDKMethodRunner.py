@@ -28,6 +28,7 @@ from lib.execution_engine2.sdk import (
 from lib.execution_engine2.sdk.EE2Constants import KBASE_CONCIERGE_USERNAME
 from lib.execution_engine2.utils.CatalogUtils import CatalogUtils
 from lib.execution_engine2.utils.Condor import Condor
+from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
 from execution_engine2.utils.clients import UserClientSet, ClientSet
 from lib.execution_engine2.utils.EE2Logger import get_logger as _get_logger
@@ -140,6 +141,12 @@ class SDKMethodRunner:
         Get the workspace client for this instance of SDKMR.
         """
         return self.workspace
+
+    def get_workspace_auth(self) -> WorkspaceAuth:
+        """
+        Get the workspace authorization client for this instance of SDKMR.
+        """
+        return self.workspace_auth
 
     def get_logger(self) -> Logger:
         """

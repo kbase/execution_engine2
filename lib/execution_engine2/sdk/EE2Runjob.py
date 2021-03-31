@@ -142,7 +142,7 @@ class EE2RunJob:
 
     def _check_workspace_permissions(self, wsid):
         if wsid:
-            if not self.sdkmr.workspace_auth.can_write(wsid):
+            if not self.sdkmr.get_workspace_auth().can_write(wsid):
                 self.logger.debug(
                     f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
                 )
@@ -151,7 +151,7 @@ class EE2RunJob:
                 )
 
     def _check_workspace_permissions_list(self, wsids):
-        perms = self.sdkmr.workspace_auth.can_write_list(wsids)
+        perms = self.sdkmr.get_workspace_auth().can_write_list(wsids)
         bad_ws = [key for key in perms.keys() if perms[key] is False]
         if bad_ws:
             self.logger.debug(
