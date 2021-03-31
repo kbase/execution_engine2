@@ -956,8 +956,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         # fixed_rj = RunJob(runner)
         # fixed_rj._get_module_git_commit = MagicMock(return_value='hash_goes_here')
 
-        runner._get_module_git_commit = MagicMock(return_value="git_commit_goes_here")
-
         runner.get_condor = MagicMock(return_value=condor_mock)
         # ctx = {"user_id": self.user_id, "wsid": self.ws_id, "token": self.token}
         job = get_example_job().to_mongo().to_dict()
