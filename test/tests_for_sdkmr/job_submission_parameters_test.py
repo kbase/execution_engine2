@@ -529,6 +529,18 @@ def test_job_sub_init_fail():
         u,
         n,
         n,
+        {"1/2/3": "5/6/7"},
+        IncorrectParamsException(
+            "source_ws_objects must be a list"
+        ),
+    )
+    _job_sub_init_fail(
+        j,
+        a,
+        r,
+        u,
+        n,
+        n,
         ["1/2/3", "   \t  "],
         IncorrectParamsException(
             "source_ws_objects index 1, '   \t  ', is not a valid Unique Permanent Address"
