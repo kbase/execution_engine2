@@ -90,8 +90,6 @@ class SDKMethodRunner:
             expire=self.JOB_PERMISSION_CACHE_EXPIRE_TIME,
         )
 
-        self.is_admin = False
-        # self.roles = self.roles_cache.get_roles(user_id,token) or list()
         self._ee2_runjob = None
         self._ee2_status = None
         self._ee2_logs = None

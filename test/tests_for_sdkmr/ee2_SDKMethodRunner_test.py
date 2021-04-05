@@ -263,8 +263,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner = self.getRunner()
         runner.workspace_auth = MagicMock()
         runner.auth.get_user = MagicMock(return_value=user_name)
-        runner.is_admin = True
-        runner._is_admin = MagicMock(return_value=True)
 
         runner.workspace_auth.can_read = MagicMock(return_value=True)
         runner.get_permissions_for_workspace = MagicMock(return_value=True)
@@ -946,7 +944,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         runner.workspace_auth = MagicMock()
         runner.auth.get_user = MagicMock(return_value=user_name)
-        runner.is_admin = True
         runner.check_is_admin = MagicMock(return_value=True)
 
         runner.workspace_auth.can_read = MagicMock(return_value=True)
@@ -958,8 +955,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         # fixed_rj = RunJob(runner)
         # fixed_rj._get_module_git_commit = MagicMock(return_value='hash_goes_here')
-
-        runner._get_module_git_commit = MagicMock(return_value="git_commit_goes_here")
 
         runner.get_condor = MagicMock(return_value=condor_mock)
         # ctx = {"user_id": self.user_id, "wsid": self.ws_id, "token": self.token}
@@ -1060,7 +1055,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             # runner.get_permissions_for_workspace = MagicMock(
             #     return_value=SDKMethodRunner.WorkspacePermissions.ADMINISTRATOR
             # )
-            runner.is_admin = MagicMock(return_value=True)
 
             print(
                 "Test case 1. Retrieving Jobs from last_week and tomorrow_max (yesterday and now jobs) "
@@ -1129,7 +1123,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 )
 
             print("Test case 2B. Same as above but with FAKE user (NO ADMIN) ")
-            runner.is_admin = False
             runner.check_is_admin = MagicMock(return_value=False)
             with self.assertRaisesRegex(
                 AuthError,
@@ -1143,7 +1136,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 print("Exception raised is", error)
 
             print("Test case 2C. Same as above but with FAKE_TEST_USER + ADMIN) ")
-            runner.is_admin = True
             runner.check_is_admin = MagicMock(return_value=True)
             job_state = runner.check_jobs_date_range_for_user(
                 creation_end_time=str(tomorrow),
