@@ -15,6 +15,7 @@ from execution_engine2.db.models.models import Job, Status
 from execution_engine2.execution_engine2Impl import execution_engine2
 from execution_engine2.sdk.EE2Status import JobsStatus
 from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
+from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.CondorTuples import SubmissionInfo
 from execution_engine2.utils.clients import get_user_client_set, get_client_set
@@ -58,7 +59,7 @@ class ee2_server_load_test(unittest.TestCase):
         with open(cls.deploy) as cf:
             runner = SDKMethodRunner(
                 get_user_client_set(cls.cfg, cls.user_id, cls.token),
-                get_client_set(cls.cfg, cls.deploy, cf),
+                get_client_set(cls.cfg, cf),
             )
         # Initialize these clients from None
         status = runner.get_jobs_status()  # type: JobsStatus
@@ -85,7 +86,9 @@ class ee2_server_load_test(unittest.TestCase):
         method_1 = "app_1.a_method"
         method_2 = "app_1.b_method"
         job_params_1 = get_sample_job_params(method=method_1)
+        job_params_1['job_reqs'] = JobRequirements(1, 1, 1, "njs")
         job_params_2 = get_sample_job_params(method=method_2)
+        job_params_2['job_reqs'] = JobRequirements(1, 1, 1, "njs")
 
         threads = list()
         job_ids = list()
@@ -141,6 +144,7 @@ class ee2_server_load_test(unittest.TestCase):
         runner = self.method_runner
 
         job_params = get_sample_job_params()
+        job_params['job_reqs'] = JobRequirements(1, 1, 1, "njs")
 
         thread_count = self.thread_count  # threads to test
 
@@ -258,9 +262,9 @@ class ee2_server_load_test(unittest.TestCase):
         method_2 = "app2.b_method"
         method_3 = "app3.c_method"
 
-        job_params_1 = get_sample_job_params(method=method_1)
-        job_params_2 = get_sample_job_params(method=method_2)
-        job_params_3 = get_sample_job_params(method=method_3)
+        job_params_1 = get_sample_job_params(method=method_1, app_id="app1/a")
+        job_params_2 = get_sample_job_params(method=method_2, app_id="app2/b")
+        job_params_3 = get_sample_job_params(method=method_3, app_id="app3/c")
 
         threads = list()
         job_ids = list()
@@ -325,6 +329,7 @@ class ee2_server_load_test(unittest.TestCase):
         runner = self.method_runner
 
         job_params = get_sample_job_params()
+        job_params['job_reqs'] = JobRequirements(1, 1, 1, "njs")
 
         thread_count = self.thread_count  # threads to test
 
@@ -415,7 +420,9 @@ class ee2_server_load_test(unittest.TestCase):
         method_1 = "a_method"
         method_2 = "b_method"
         job_params_1 = get_sample_job_params(method=method_1)
+        job_params_1['job_reqs'] = JobRequirements(1, 1, 1, "njs")
         job_params_2 = get_sample_job_params(method=method_2)
+        job_params_2['job_reqs'] = JobRequirements(1, 1, 1, "njs")
 
         # create jobs
         job_id_1 = runner.get_runjob()._init_job_rec(self.user_id, job_params_1)
@@ -466,6 +473,7 @@ class ee2_server_load_test(unittest.TestCase):
         runner = self.method_runner
 
         job_params = get_sample_job_params()
+        job_params['job_reqs'] = JobRequirements(1, 1, 1, "njs")
 
         # create jobs
         job_id_running = runner.get_runjob()._init_job_rec(self.user_id, job_params)
@@ -569,9 +577,9 @@ class ee2_server_load_test(unittest.TestCase):
         runner = self.method_runner
 
         # create job
-        job_id = runner.get_runjob()._init_job_rec(
-            self.user_id, get_sample_job_params()
-        )
+        params = get_sample_job_params()
+        params['job_reqs'] = JobRequirements(1, 1, 1, "njs")
+        job_id = runner.get_runjob()._init_job_rec(self.user_id, params)
 
         # add one line to job
         ts = time.time()
@@ -626,9 +634,9 @@ class ee2_server_load_test(unittest.TestCase):
         runner = self.method_runner
 
         # create job
-        job_id = runner.get_runjob()._init_job_rec(
-            self.user_id, get_sample_job_params()
-        )
+        params = get_sample_job_params()
+        params['job_reqs'] = JobRequirements(1, 1, 1, "njs")
+        job_id = runner.get_runjob()._init_job_rec(self.user_id, params)
 
         # job line to be added
         ts = time.time()

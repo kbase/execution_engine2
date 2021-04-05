@@ -16,7 +16,6 @@ from installed_clients.WorkspaceClient import Workspace
 
 from execution_engine2.authorization.roles import AdminAuthUtil
 from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.utils.CatalogUtils import CatalogUtils
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
 from execution_engine2.utils.KafkaUtils import KafkaClient
@@ -93,30 +92,27 @@ def test_client_set_init_fail():
     c = mocks[Condor]
     ca = mocks[Catalog]
     j = mocks[JobRequirementsResolver]
-    cu = mocks[CatalogUtils]
     k = mocks[KafkaClient]
     m = mocks[MongoUtil]
     s = mocks[SlackClient]
     n = None
 
     e = ValueError("auth cannot be a value that evaluates to false")
-    _client_set_init_fail(n, aa, c, ca, j, cu, k, m, s, e)
+    _client_set_init_fail(n, aa, c, ca, j, k, m, s, e)
     e = ValueError("auth_admin cannot be a value that evaluates to false")
-    _client_set_init_fail(a, n, c, ca, j, cu, k, m, s, e)
+    _client_set_init_fail(a, n, c, ca, j, k, m, s, e)
     e = ValueError("condor cannot be a value that evaluates to false")
-    _client_set_init_fail(a, aa, n, ca, j, cu, k, m, s, e)
+    _client_set_init_fail(a, aa, n, ca, j, k, m, s, e)
     e = ValueError("catalog cannot be a value that evaluates to false")
-    _client_set_init_fail(a, aa, c, n, j, cu, k, m, s, e)
+    _client_set_init_fail(a, aa, c, n, j, k, m, s, e)
     e = ValueError("requirements_resolver cannot be a value that evaluates to false")
-    _client_set_init_fail(a, aa, c, ca, n, cu, k, m, s, e)
-    e = ValueError("catalog_utils cannot be a value that evaluates to false")
-    _client_set_init_fail(a, aa, c, ca, j, n, k, m, s, e)
+    _client_set_init_fail(a, aa, c, ca, n, k, m, s, e)
     e = ValueError("kafka_client cannot be a value that evaluates to false")
-    _client_set_init_fail(a, aa, c, ca, j, cu, n, m, s, e)
+    _client_set_init_fail(a, aa, c, ca, j, n, m, s, e)
     e = ValueError("mongo_util cannot be a value that evaluates to false")
-    _client_set_init_fail(a, aa, c, ca, j, cu, k, n, s, e)
+    _client_set_init_fail(a, aa, c, ca, j, k, n, s, e)
     e = ValueError("slack_client cannot be a value that evaluates to false")
-    _client_set_init_fail(a, aa, c, ca, j, cu, k, m, n, e)
+    _client_set_init_fail(a, aa, c, ca, j, k, m, n, e)
 
 
 def _client_set_init_fail(
@@ -125,7 +121,6 @@ def _client_set_init_fail(
     condor: Condor,
     catalog: Catalog,
     requirements_resolver: JobRequirementsResolver,
-    catalog_utils: CatalogUtils,
     kafka_client: KafkaClient,
     mongo_util: MongoUtil,
     slack_client: SlackClient,
@@ -138,7 +133,6 @@ def _client_set_init_fail(
             condor,
             catalog,
             requirements_resolver,
-            catalog_utils,
             kafka_client,
             mongo_util,
             slack_client,

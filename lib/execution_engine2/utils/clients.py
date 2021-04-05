@@ -9,7 +9,6 @@ from execution_engine2.authorization.roles import AdminAuthUtil
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.utils.arg_processing import not_falsy as _not_falsy
-from execution_engine2.utils.CatalogUtils import CatalogUtils
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
 from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
@@ -99,7 +98,6 @@ class ClientSet:
         condor: Condor,
         catalog: Catalog,
         requirements_resolver: JobRequirementsResolver,
-        catalog_utils: CatalogUtils,  # TODO JRR remove after replaced by JRR
         kafka_client: KafkaClient,
         mongo_util: MongoUtil,
         slack_client: SlackClient,
@@ -115,7 +113,6 @@ class ClientSet:
         self.requirements_resolver = _not_falsy(
             requirements_resolver, "requirements_resolver"
         )
-        self.catalog_utils = _not_falsy(catalog_utils, "catalog_utils")
         self.kafka_client = _not_falsy(kafka_client, "kafka_client")
         self.mongo_util = _not_falsy(mongo_util, "mongo_util")
         self.slack_client = _not_falsy(slack_client, "slack_client")
@@ -126,9 +123,7 @@ class ClientSet:
 
 
 def get_clients(
-    # TODO JRR remove cfg_path when Condor no longer needs it
     cfg: Dict[str, str],
-    cfg_path,
     cfg_file: Iterable[str],
     override_client_group: str = None,
 ) -> (
@@ -137,7 +132,6 @@ def get_clients(
     Condor,
     Catalog,
     JobRequirementsResolver,
-    CatalogUtils,
     KafkaClient,
     MongoUtil,
     SlackClient,
@@ -147,7 +141,6 @@ def get_clients(
     reused from user to user.
 
     cfg - the configuration dictionary
-    cfg_path - the path to the configuration file
     cfg_file - the full configuration file as a file like object or iterable.
     override_client_group - a client group name to override any client groups provided by
         users or the catalog service.
@@ -160,7 +153,7 @@ def get_clients(
     slack-token - a token for contacting Slack
     """
     # Condor needs access to the entire deploy.cfg file, not just the ee2 section
-    condor = Condor(cfg_path)  # TODO JRR replace with cfg when JRR is used
+    condor = Condor(cfg)
     # Do a check to ensure the urls and tokens actually work correctly?
     # TODO check keys are present - make some general methods for dealing with this
     # token is needed for running log_exec_stats in EE2Status
@@ -169,7 +162,6 @@ def get_clients(
     jrr = JobRequirementsResolver(
         Catalog(cfg["catalog-url"]), cfg_file, override_client_group
     )
-    catalog_utils = CatalogUtils(cfg["catalog-url"], cfg["catalog-token"])
     auth_url = cfg["auth-url"]
     auth = KBaseAuth(auth_url=auth_url + "/api/legacy/KBase/Sessions/Login")
     # TODO using hardcoded roles for now to avoid possible bugs with mismatched cfg roles
@@ -193,7 +185,6 @@ def get_clients(
         condor,
         catalog,
         jrr,
-        catalog_utils,
         kafka_client,
         mongo_util,
         slack_client,
@@ -202,8 +193,6 @@ def get_clients(
 
 def get_client_set(
     cfg: Dict[str, str],
-    # TODO JRR remove cfg_path when Condor no longer needs it
-    cfg_path: str,
     cfg_file: Iterable[str],
     override_client_group: str = None,
 ) -> ClientSet:
@@ -212,7 +201,6 @@ def get_client_set(
     in clients individually.
 
     cfg - the configuration dictionary
-    cfg_path - the path to the configuration file
     cfg_file - the full configuration file as a file like object or iterable.
     override_client_group - a client group name to override any client groups provided by
         users or the catalog service.
@@ -225,4 +213,4 @@ def get_client_set(
     slack-token - a token for contacting Slack
     """
 
-    return ClientSet(*get_clients(cfg, cfg_path, cfg_file, override_client_group))
+    return ClientSet(*get_clients(cfg, cfg_file, override_client_group))

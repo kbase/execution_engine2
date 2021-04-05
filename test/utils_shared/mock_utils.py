@@ -1,7 +1,6 @@
 from unittest.mock import create_autospec
 
 from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.utils.CatalogUtils import CatalogUtils
 from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
 from execution_engine2.utils.KafkaUtils import KafkaClient
 from execution_engine2.utils.SlackUtils import SlackClient
@@ -27,12 +26,9 @@ _CLASS_IMPLEMENTATION_BUILDERS = {
     AdminAuthUtil: lambda config, cfgfile: AdminAuthUtil(
         config["auth-url"], [ADMIN_READ_ROLE, ADMIN_WRITE_ROLE]
     ),
-    Condor: lambda config, cfgfile: Condor(cfgfile),
+    Condor: lambda config, cfgfile: Condor(config),
     Catalog: lambda config, cfgfile: Catalog(config["catalog-url"]),
     JobRequirementsResolver: _build_job_reqs,
-    CatalogUtils: lambda config, cfgfile: CatalogUtils(
-        config["catalog-url"], config["catalog-token"]
-    ),
     KafkaClient: lambda config, cfgfile: KafkaClient(config["kafka-host"]),
     MongoUtil: lambda config, cfgfile: MongoUtil(config),
     SlackClient: lambda config, cfgfile: SlackClient(
@@ -67,7 +63,6 @@ def get_client_mocks(config, config_path, *to_be_mocked):
         ret[Condor],
         ret[Catalog],
         ret[JobRequirementsResolver],
-        ret[CatalogUtils],
         ret[KafkaClient],
         ret[MongoUtil],
         ret[SlackClient],
