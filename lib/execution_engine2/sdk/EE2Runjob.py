@@ -299,8 +299,7 @@ class EE2RunJob:
     def _run_batch(self, parent_job: Job, params):
         child_jobs = []
         for job_param in params:
-            if _PARENT_JOB_ID not in job_param:
-                job_param[_PARENT_JOB_ID] = str(parent_job.id)
+            job_param[_PARENT_JOB_ID] = str(parent_job.id)
             try:
                 child_jobs.append(str(self._run(params=job_param)))
             except Exception as e:
