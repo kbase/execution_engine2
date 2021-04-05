@@ -137,7 +137,8 @@ class EE2TestAdminMode(unittest.TestCase):
         runner = self.getRunner(user_client_set, clients_and_mocks[ClientSet])
         method_1 = "module_name.function_name"
         job_params_1 = get_sample_job_params(
-            method=method_1, wsid=self.ws_id, app_id="module_name/foo")
+            method=method_1, wsid=self.ws_id, app_id="module_name/foo"
+        )
 
         # Check Admin Status
         is_admin = runner.check_is_admin()
@@ -245,7 +246,8 @@ class EE2TestAdminMode(unittest.TestCase):
 
         method_1 = "module_name.function_name"
         job_params_1 = get_sample_job_params(
-            method=method_1, wsid=self.ws_id, app_id="module_name/foo")
+            method=method_1, wsid=self.ws_id, app_id="module_name/foo"
+        )
 
         # Check Admin Status
         is_admin = runner.check_is_admin()

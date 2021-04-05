@@ -362,7 +362,8 @@ def get_sample_condor_info(job=None, error=None):
 
 
 def get_sample_job_params(
-        method="MEGAHIT.default_method", wsid=123, app_id="MEGAHIT/run_megahit"):
+    method="MEGAHIT.default_method", wsid=123, app_id="MEGAHIT/run_megahit"
+):
     job_params = {
         "wsid": wsid,
         "method": method,

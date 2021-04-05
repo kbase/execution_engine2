@@ -46,7 +46,9 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
                 request_x.get("client_group", "defaultcg"),
                 request_x.get("client_group_regex", True),
                 bill_to_user=request_x.get("bill_to_user"),
-                ignore_concurrency_limits=request_x.get("ignore_concurrency_limits", False),
+                ignore_concurrency_limits=request_x.get(
+                    "ignore_concurrency_limits", False
+                ),
                 scheduler_requirements=sr,
             ),
             UserCreds(self.user, "test_token"),
@@ -82,7 +84,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
 
         params = self._create_sample_params(
             {"client_group": "njs", "request_cpus": 8, "request_memory": 10},
-            {"request_apples": "5"}
+            {"request_apples": "5"},
         )
 
         njs_sub = c._create_submit(params)
@@ -131,7 +133,8 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         logging.info("Testing with regex disabled, bigmem")
 
         params = self._create_sample_params(
-            {"client_group": "bigmem", "client_group_regex": False})
+            {"client_group": "bigmem", "client_group_regex": False}
+        )
 
         sub_with_regex_disabled_bigmem = c._create_submit(params)
         self.assertIn(
@@ -143,11 +146,13 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         logging.info("Testing with concierge clientgroup")
         c = self.condor
         params = self._create_sample_params(
-            {"client_group": "njs",
-             "request_cpus": 100,
-             "request_memory": 200,
-             "request_disk": 1000,
-             "ignore_concurrency_limits": True}
+            {
+                "client_group": "njs",
+                "request_cpus": 100,
+                "request_memory": 200,
+                "request_disk": 1000,
+                "ignore_concurrency_limits": True,
+            }
         )
         sub = c._create_submit(params=params)
         # Concurrency limits removed
@@ -159,10 +164,11 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
         self.assertEqual(sub["+KB_CLIENTGROUP"], '"njs"')
 
         params = self._create_sample_params(
-            {"client_group": "LeConcierge",
-             "bill_to_user": "LeCat",
-             "ignore_concurrency_limits": True,
-             }
+            {
+                "client_group": "LeConcierge",
+                "bill_to_user": "LeCat",
+                "ignore_concurrency_limits": True,
+            }
         )
         sub2 = c._create_submit(params=params)
         self.assertEqual(sub2["+KB_CLIENTGROUP"], '"LeConcierge"')

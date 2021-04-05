@@ -909,7 +909,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner = self.getRunner()
 
         # TODO redo this test with dependency injection & autospec vs. monkey patching
-        resolver = create_autospec(JobRequirementsResolver, spec_set=True, instance=True)
+        resolver = create_autospec(
+            JobRequirementsResolver, spec_set=True, instance=True
+        )
         runner.workspace_auth = MagicMock()
         runner.get_job_requirements_resolver = MagicMock(return_value=resolver)
         resolver.resolve_requirements.return_value = JobRequirements(

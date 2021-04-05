@@ -29,7 +29,7 @@ from execution_engine2.utils.job_requirements_resolver import (
     REQUEST_MEMORY,
     CLIENT_GROUP,
     CLIENT_GROUP_REGEX,
-    DEBUG_MODE
+    DEBUG_MODE,
 )
 from execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
 from execution_engine2.exceptions import IncorrectParamsException
@@ -210,7 +210,7 @@ class EE2RunJob:
             UserCreds(self.sdkmr.get_user_id(), self.sdkmr.get_token()),
             parent_job_id=params.get(_PARENT_JOB_ID),
             wsid=params.get(_WORKSPACE_ID),
-            source_ws_objects=params.get(_SOURCE_WS_OBJECTS)
+            source_ws_objects=params.get(_SOURCE_WS_OBJECTS),
         )
 
     def _run(self, params):
@@ -367,7 +367,7 @@ class EE2RunJob:
                 j[_JOB_REQUIREMENTS],
                 UserCreds(self.sdkmr.get_user_id(), self.sdkmr.get_token()),
                 wsid=j.get(_WORKSPACE_ID),
-                source_ws_objects=j.get(_SOURCE_WS_OBJECTS)
+                source_ws_objects=j.get(_SOURCE_WS_OBJECTS),
             )
             # This is also an opportunity for caching
             # although most likely jobs aren't operating on the same object
@@ -392,7 +392,8 @@ class EE2RunJob:
             self.sdkmr.check_as_concierge()
             # we don't check requirements type because the concierge can do what they like
             params[_JOB_REQUIREMENTS] = self._get_job_reqs_from_concierge_params(
-                params.get(_METHOD), concierge_params)
+                params.get(_METHOD), concierge_params
+            )
         else:
             self._add_job_requirements([params])
         self._check_job_arguments([params])
@@ -408,10 +409,11 @@ class EE2RunJob:
             if type(rl) != list:
                 raise IncorrectParamsException(f"{_REQUIREMENTS_LIST} must be a list")
             for s in rl:
-                if type(s) != str or '=' not in s:
+                if type(s) != str or "=" not in s:
                     raise IncorrectParamsException(
-                        f"Found illegal requirement in {_REQUIREMENTS_LIST}: {s}")
-                key, val = s.split('=')
+                        f"Found illegal requirement in {_REQUIREMENTS_LIST}: {s}"
+                    )
+                key, val = s.split("=")
                 schd_reqs[key.strip()] = val.strip()
 
         return jrr.resolve_requirements(
@@ -427,9 +429,11 @@ class EE2RunJob:
             # since it's admin only... YAGNI
             bill_to_user=concierge_params.get("account_group"),
             # default is to ignore concurrency limits for concierge
-            ignore_concurrency_limits=bool(concierge_params.get("ignore_concurrency_limits", 1)),
+            ignore_concurrency_limits=bool(
+                concierge_params.get("ignore_concurrency_limits", 1)
+            ),
             scheduler_requirements=schd_reqs,
-            debug_mode=norm.get(DEBUG_MODE)
+            debug_mode=norm.get(DEBUG_MODE),
         )
 
     def update_job_to_queued(self, job_id, scheduler_id):

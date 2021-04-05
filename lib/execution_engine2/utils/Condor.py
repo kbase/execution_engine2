@@ -48,7 +48,9 @@ class Condor:
         # TODO some nicer error messages for the required keys vs. just KeyError
         self.htcondor = htc
         self.ee_endpoint = config[self.EXTERNAL_URL]
-        self.python_executable = config.get(self.PYTHON_EXECUTABLE, "/miniconda/bin/python")
+        self.python_executable = config.get(
+            self.PYTHON_EXECUTABLE, "/miniconda/bin/python"
+        )
         self.initial_dir = config.get(self.INITIAL_DIR, "/condor_shared")
         self.executable = config[self.EXECUTABLE]
         if not pathlib.Path(self.executable).exists() and not pathlib.Path(
@@ -60,7 +62,8 @@ class Condor:
         self.pool_user = config.get(self.POOL_USER, "condor_pool")
         self.leave_job_in_queue = config.get(self.LEAVE_JOB_IN_QUEUE, "True")
         self.transfer_input_files = config.get(
-            self.TRANSFER_INPUT_FILES, "/condor_shared/JobRunner.tgz")
+            self.TRANSFER_INPUT_FILES, "/condor_shared/JobRunner.tgz"
+        )
         self.logger = logging.getLogger("ee2")
 
     def _setup_environment_vars(self, params: JobSubmissionParameters) -> str:
@@ -144,7 +147,7 @@ class Condor:
         return " && ".join(reqs)
 
     def _add_resources_and_special_attributes(
-            self, params: JobSubmissionParameters
+        self, params: JobSubmissionParameters
     ) -> Dict[str, str]:
         sub = dict()
         sub["JobBatchName"] = params.job_id
