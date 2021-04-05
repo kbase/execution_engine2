@@ -50,15 +50,13 @@ def test_finish_job_complete_minimal():
     logger = create_autospec(Logger, spec_set=True, instance=True)
     mongo = create_autospec(MongoUtil, spec_set=True, instance=True)
     kafka = create_autospec(KafkaClient, spec_set=True, instance=True)
-    catutil = create_autospec(CatalogUtils, spec_set=True, instance=True)
     catalog = create_autospec(Catalog, spec_set=True, instance=True)
     condor = create_autospec(Condor, spec_set=True, instance=True)
     sdkmr.get_mongo_util.return_value = mongo
     sdkmr.get_logger.return_value = logger
     sdkmr.get_kafka_client.return_value = kafka
     sdkmr.get_condor.return_value = condor
-    sdkmr.get_catalog_utils.return_value = catutil
-    catutil.get_catalog.return_value = catalog
+    sdkmr.get_catalog.return_value = catalog
 
     # set up return values for mocks. Ordered as per order of operations in code
     job1 = _finish_job_complete_minimal_get_test_job(

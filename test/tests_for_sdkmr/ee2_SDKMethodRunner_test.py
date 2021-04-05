@@ -23,6 +23,7 @@ from execution_engine2.utils.CatalogUtils import CatalogUtils
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.KafkaUtils import KafkaClient
 from execution_engine2.utils.SlackUtils import SlackClient
+from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
 from lib.execution_engine2.db.models.models import Job, Status, TerminatedCode
 from execution_engine2.exceptions import AuthError
 from lib.execution_engine2.exceptions import InvalidStatusTransitionException
@@ -46,6 +47,7 @@ bootstrap()
 
 from lib.execution_engine2.sdk.EE2Runjob import EE2RunJob
 
+from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
 
 
@@ -160,6 +162,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         sdkmr = SDKMethodRunner(user_clients, clients_and_mocks[ClientSet])
 
         assert sdkmr.get_workspace() is ws
+        assert sdkmr.get_workspace_auth() is wsa
         assert sdkmr.get_user_id() == "user"
         assert sdkmr.get_token() == "token"
         assert sdkmr.get_kafka_client() is clients_and_mocks[KafkaClient]
@@ -167,6 +170,11 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         assert sdkmr.get_slack_client() is clients_and_mocks[SlackClient]
         assert sdkmr.get_catalog_utils() is clients_and_mocks[CatalogUtils]
         assert sdkmr.get_condor() is clients_and_mocks[Condor]
+        assert sdkmr.get_catalog() is clients_and_mocks[Catalog]
+        assert (
+            sdkmr.get_job_requirements_resolver()
+            is clients_and_mocks[JobRequirementsResolver]
+        )
 
     def test_save_job(self):
         ws = Workspace("https://fake.com")
