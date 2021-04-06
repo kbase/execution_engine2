@@ -530,9 +530,7 @@ def test_job_sub_init_fail():
         n,
         n,
         {"1/2/3": "5/6/7"},
-        IncorrectParamsException(
-            "source_ws_objects must be a list"
-        ),
+        IncorrectParamsException("source_ws_objects must be a list"),
     )
     _job_sub_init_fail(
         j,
