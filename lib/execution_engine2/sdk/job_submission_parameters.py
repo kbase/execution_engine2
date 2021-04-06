@@ -214,6 +214,8 @@ class JobSubmissionParameters:
         )
         self.wsid = _gt_zero(wsid, "wsid", optional=True)
         source_ws_objects = source_ws_objects if source_ws_objects else []
+        if type(source_ws_objects) != list:
+            raise IncorrectParamsException("source_ws_objects must be a list")
         for i, ref in enumerate(source_ws_objects):
             upa, is_valid = _is_valid_UPA(ref)
             if not is_valid:
