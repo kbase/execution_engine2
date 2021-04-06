@@ -195,6 +195,18 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         j.save.assert_called_once_with()
 
+    def test_save_and_return_job(self):
+        ws = Workspace("https://fake.com")
+        wsa = WorkspaceAuth("user", ws)
+        cliset = UserClientSet("user", "token", ws, wsa)
+        clients_and_mocks = get_client_mocks(self.cfg, self.config_file, *ALL_CLIENTS)
+        sdkmr = SDKMethodRunner(cliset, clients_and_mocks[ClientSet])
+
+        j = create_autospec(Job, spec_set=True, instance=True)
+        assert sdkmr.save_and_return_job(j) == j
+
+        j.save.assert_called_once_with()
+
     # Status
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_cancel_job(self, condor):
