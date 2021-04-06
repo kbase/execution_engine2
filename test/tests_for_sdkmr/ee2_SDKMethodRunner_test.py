@@ -214,12 +214,11 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         sdk = self.getRunner()
         sdk.condor = condor
 
-        with sdk.get_mongo_util().mongo_engine_connection():
-            job = get_example_job()
-            job.user = self.user_id
-            job.wsid = self.ws_id
-            job.save()
-            job_id = job.id
+        job = get_example_job()
+        job.user = self.user_id
+        job.wsid = self.ws_id
+        job.save()
+        job_id = job.id
 
         logging.info(
             f"Created job in wsid={job.wsid} status={job.status} scheduler={job.scheduler_id}. About to cancel {job_id}"
@@ -236,11 +235,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             TerminatedCode.terminated_by_user,
         )
 
-        with sdk.get_mongo_util().mongo_engine_connection():
-            job = get_example_job()
-            job.user = self.user_id
-            job.wsid = self.ws_id
-            job_id = job.save().id
+        job = get_example_job()
+        job.user = self.user_id
+        job.wsid = self.ws_id
+        job_id = job.save().id
 
         logging.info(
             f"Created job {job_id} in {job.wsid} status {job.status}. About to cancel"
@@ -371,50 +369,49 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         #
         #
         runner = self.getRunner()
-        with self.mongo_util.mongo_engine_connection():
-            job_id = self.create_job_rec()
+        job_id = self.create_job_rec()
 
-            call_count = 0
-            rv = runner.check_job_canceled(job_id)
-            self.assertFalse(rv["canceled"])
-            self.assertFalse(rv["finished"])
-            call_count += 1
-            # estimating
-            runner.update_job_status(job_id=job_id, status=Status.estimating.value)
-            rv = runner.check_job_canceled(job_id)
-            self.assertFalse(rv["canceled"])
-            self.assertFalse(rv["finished"])
-            call_count += 1
+        call_count = 0
+        rv = runner.check_job_canceled(job_id)
+        self.assertFalse(rv["canceled"])
+        self.assertFalse(rv["finished"])
+        call_count += 1
+        # estimating
+        runner.update_job_status(job_id=job_id, status=Status.estimating.value)
+        rv = runner.check_job_canceled(job_id)
+        self.assertFalse(rv["canceled"])
+        self.assertFalse(rv["finished"])
+        call_count += 1
 
-            runner.update_job_status(job_id=job_id, status=Status.queued.value)
-            rv = runner.check_job_canceled(job_id)
-            self.assertFalse(rv["canceled"])
-            self.assertFalse(rv["finished"])
-            call_count += 1
+        runner.update_job_status(job_id=job_id, status=Status.queued.value)
+        rv = runner.check_job_canceled(job_id)
+        self.assertFalse(rv["canceled"])
+        self.assertFalse(rv["finished"])
+        call_count += 1
 
-            runner.update_job_status(job_id=job_id, status=Status.running.value)
-            rv = runner.check_job_canceled(job_id)
-            self.assertFalse(rv["canceled"])
-            self.assertFalse(rv["finished"])
-            call_count += 1
+        runner.update_job_status(job_id=job_id, status=Status.running.value)
+        rv = runner.check_job_canceled(job_id)
+        self.assertFalse(rv["canceled"])
+        self.assertFalse(rv["finished"])
+        call_count += 1
 
-            runner.update_job_status(job_id=job_id, status=Status.completed.value)
-            rv = runner.check_job_canceled(job_id)
-            self.assertFalse(rv["canceled"])
-            self.assertTrue(rv["finished"])
-            call_count += 1
+        runner.update_job_status(job_id=job_id, status=Status.completed.value)
+        rv = runner.check_job_canceled(job_id)
+        self.assertFalse(rv["canceled"])
+        self.assertTrue(rv["finished"])
+        call_count += 1
 
-            runner.update_job_status(job_id=job_id, status=Status.error.value)
-            rv = runner.check_job_canceled(job_id)
-            self.assertFalse(rv["canceled"])
-            self.assertTrue(rv["finished"])
-            call_count += 1
+        runner.update_job_status(job_id=job_id, status=Status.error.value)
+        rv = runner.check_job_canceled(job_id)
+        self.assertFalse(rv["canceled"])
+        self.assertTrue(rv["finished"])
+        call_count += 1
 
-            runner.update_job_status(job_id=job_id, status=Status.terminated.value)
-            rv = runner.check_job_canceled(job_id)
-            self.assertTrue(rv["canceled"])
-            self.assertTrue(rv["finished"])
-            call_count += 1
+        runner.update_job_status(job_id=job_id, status=Status.terminated.value)
+        rv = runner.check_job_canceled(job_id)
+        self.assertTrue(rv["canceled"])
+        self.assertTrue(rv["finished"])
+        call_count += 1
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
@@ -573,85 +570,79 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_finish_job(self, condor):
 
-        with self.mongo_util.mongo_engine_connection():
-            ori_job_count = Job.objects.count()
-            job_id = self.create_job_rec()
-            self.assertEqual(ori_job_count, Job.objects.count() - 1)
+        ori_job_count = Job.objects.count()
+        job_id = self.create_job_rec()
+        self.assertEqual(ori_job_count, Job.objects.count() - 1)
 
-            job = self.mongo_util.get_job(job_id=job_id)
-            self.assertEqual(job.status, "created")
-            self.assertFalse(job.finished)
+        job = self.mongo_util.get_job(job_id=job_id)
+        self.assertEqual(job.status, "created")
+        self.assertFalse(job.finished)
 
-            runner = self.getRunner()
-            runner._test_job_permissions = MagicMock(return_value=True)
-            runner.catalog_utils.get_catalog().log_exec_stats = MagicMock(
-                return_value=True
+        runner = self.getRunner()
+        runner._test_job_permissions = MagicMock(return_value=True)
+        runner.catalog_utils.get_catalog().log_exec_stats = MagicMock(return_value=True)
+
+        # test missing job_id input
+        with self.assertRaises(ValueError) as context1:
+            logging.info("Finish Job Case 0 Raises Error")
+            runner.finish_job(job_id=None)
+        self.assertEqual("Please provide a valid job id", str(context1.exception))
+
+        # test finish job with invalid status (This was removed)
+        # with self.assertRaises(ValueError) as context2:
+        #     logging.info("Finish Job Case 1 Raises Error")
+        #     runner.finish_job(job_id=job_id)
+        # self.assertIn("Unexpected job status", str(context2.exception))
+
+        # update job status to running
+
+        runner.start_job(job_id=job_id, skip_estimation=True)
+
+        # self.mongo_util.update_job_status(job_id=job_id, status=Status.running.value)
+        # job.running = datetime.datetime.utcnow()
+        # job.save()
+
+        # test finish job without error
+        job_output = dict()
+        job_output["version"] = "1"
+        job_output["id"] = "5d54bdcb9b402d15271b3208"  # A valid objectid
+        job_output["result"] = {"output": "output"}
+        logging.info("Case2 : Finish a running job")
+
+        print(f"About to finish job {job_id}. The job status is currently")
+        print(runner.get_job_status_field(job_id))
+        try:
+            runner.finish_job(job_id=job_id, job_output=job_output)
+        except:
+            pass
+        print("Job is now finished, status is")
+        print(runner.get_job_status_field(job_id))
+        self.assertEqual({"status": "completed"}, runner.get_job_status_field(job_id))
+
+        job = self.mongo_util.get_job(job_id=job_id)
+        self.assertEqual(job.status, Status.completed.value)
+        self.assertFalse(job.errormsg)
+        self.assertTrue(job.finished)
+        # if job_output not a dict#
+        # job_output2 = job.job_output.to_mongo().to_dict()
+        job_output2 = job.job_output
+        self.assertEqual(job_output2["version"], "1")
+        self.assertEqual(str(job_output2["id"]), job_output["id"])
+
+        # update finished status to running
+        with self.assertRaises(InvalidStatusTransitionException):
+            self.mongo_util.update_job_status(
+                job_id=job_id, status=Status.running.value
             )
-
-            # test missing job_id input
-            with self.assertRaises(ValueError) as context1:
-                logging.info("Finish Job Case 0 Raises Error")
-                runner.finish_job(job_id=None)
-            self.assertEqual("Please provide a valid job id", str(context1.exception))
-
-            # test finish job with invalid status (This was removed)
-            # with self.assertRaises(ValueError) as context2:
-            #     logging.info("Finish Job Case 1 Raises Error")
-            #     runner.finish_job(job_id=job_id)
-            # self.assertIn("Unexpected job status", str(context2.exception))
-
-            # update job status to running
-
-            runner.start_job(job_id=job_id, skip_estimation=True)
-
-            # self.mongo_util.update_job_status(job_id=job_id, status=Status.running.value)
-            # job.running = datetime.datetime.utcnow()
-            # job.save()
-
-            # test finish job without error
-            job_output = dict()
-            job_output["version"] = "1"
-            job_output["id"] = "5d54bdcb9b402d15271b3208"  # A valid objectid
-            job_output["result"] = {"output": "output"}
-            logging.info("Case2 : Finish a running job")
-
-            print(f"About to finish job {job_id}. The job status is currently")
-            print(runner.get_job_status_field(job_id))
-            try:
-                runner.finish_job(job_id=job_id, job_output=job_output)
-            except:
-                pass
-            print("Job is now finished, status is")
-            print(runner.get_job_status_field(job_id))
-            self.assertEqual(
-                {"status": "completed"}, runner.get_job_status_field(job_id)
-            )
-
-            job = self.mongo_util.get_job(job_id=job_id)
-            self.assertEqual(job.status, Status.completed.value)
-            self.assertFalse(job.errormsg)
-            self.assertTrue(job.finished)
-            # if job_output not a dict#
-            # job_output2 = job.job_output.to_mongo().to_dict()
-            job_output2 = job.job_output
-            self.assertEqual(job_output2["version"], "1")
-            self.assertEqual(str(job_output2["id"]), job_output["id"])
-
-            # update finished status to running
-            with self.assertRaises(InvalidStatusTransitionException):
-                self.mongo_util.update_job_status(
-                    job_id=job_id, status=Status.running.value
-                )
 
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_finish_job_with_error_message(self, condor):
 
-        with self.mongo_util.mongo_engine_connection():
-            ori_job_count = Job.objects.count()
-            job_id = self.create_job_rec()
-            job = self.mongo_util.get_job(job_id=job_id)
-            new_count = Job.objects.count()
-            self.assertEqual(ori_job_count, new_count - 1)
+        ori_job_count = Job.objects.count()
+        job_id = self.create_job_rec()
+        job = self.mongo_util.get_job(job_id=job_id)
+        new_count = Job.objects.count()
+        self.assertEqual(ori_job_count, new_count - 1)
 
         runner = self.getRunner()
         condor._get_job_info = MagicMock(return_value={})
@@ -679,10 +670,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         self.assertIsNone(job.error)
         self.assertTrue(job.finished)
 
-        with self.mongo_util.mongo_engine_connection():
-            job_id = runner.update_job_status(
-                job_id, "running"
-            )  # put job back to running status
+        # put job back to running status
+        job_id = runner.update_job_status(job_id, "running")
 
         error = {
             "message": "error message",
@@ -714,45 +703,44 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 user_roles=[],
             )
         )
-        with self.mongo_util.mongo_engine_connection():
-            ori_job_count = Job.objects.count()
-            job_id = self.create_job_rec()
-            self.assertEqual(ori_job_count, Job.objects.count() - 1)
+        ori_job_count = Job.objects.count()
+        job_id = self.create_job_rec()
+        self.assertEqual(ori_job_count, Job.objects.count() - 1)
 
-            job = self.mongo_util.get_job(job_id=job_id)
-            self.assertEqual(job.status, "created")
-            self.assertFalse(job.finished)
-            self.assertFalse(job.running)
-            self.assertFalse(job.estimating)
+        job = self.mongo_util.get_job(job_id=job_id)
+        self.assertEqual(job.status, "created")
+        self.assertFalse(job.finished)
+        self.assertFalse(job.running)
+        self.assertFalse(job.estimating)
 
-            # test check_job
-            runner = self.getRunner()
-            job_state = runner.check_job(job_id)
-            json.dumps(job_state)  # make sure it's JSON serializable
-            self.assertTrue(validate_job_state(job_state))
-            self.assertEqual(job_state["status"], "created")
-            self.assertEqual(job_state["wsid"], self.ws_id)
+        # test check_job
+        runner = self.getRunner()
+        job_state = runner.check_job(job_id)
+        json.dumps(job_state)  # make sure it's JSON serializable
+        self.assertTrue(validate_job_state(job_state))
+        self.assertEqual(job_state["status"], "created")
+        self.assertEqual(job_state["wsid"], self.ws_id)
 
-            self.assertAlmostEqual(
-                job_state["created"] / 1000.0, job_state["updated"] / 1000.0, places=-1
+        self.assertAlmostEqual(
+            job_state["created"] / 1000.0, job_state["updated"] / 1000.0, places=-1
+        )
+
+        # test globally
+        job_states = runner.get_jobs_status().check_workspace_jobs(self.ws_id)
+        self.assertTrue(job_id in job_states)
+        self.assertEqual(job_states[job_id]["status"], "created")
+
+        # now test with a different user
+        with open(self.config_file) as cf:
+            other_method_runner = SDKMethodRunner(
+                get_user_client_set(self.cfg, "some_other_user", "other_token"),
+                get_client_set(self.cfg, self.config_file, cf),
             )
-
-            # test globally
-            job_states = runner.get_jobs_status().check_workspace_jobs(self.ws_id)
-            self.assertTrue(job_id in job_states)
-            self.assertEqual(job_states[job_id]["status"], "created")
-
-            # now test with a different user
-            with open(self.config_file) as cf:
-                other_method_runner = SDKMethodRunner(
-                    get_user_client_set(self.cfg, "some_other_user", "other_token"),
-                    get_client_set(self.cfg, self.config_file, cf),
-                )
-            job_states = other_method_runner.get_jobs_status().check_workspace_jobs(
-                self.ws_id
-            )
-            self.assertTrue(job_id in job_states)
-            self.assertEqual(job_states[job_id]["status"], "created")
+        job_states = other_method_runner.get_jobs_status().check_workspace_jobs(
+            self.ws_id
+        )
+        self.assertTrue(job_id in job_states)
+        self.assertEqual(job_states[job_id]["status"], "created")
 
     @requests_mock.Mocker()
     def test_check_job_ok(self, rq_mock):
@@ -763,165 +751,144 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             )
         )
 
-        with self.mongo_util.mongo_engine_connection():
-            ori_job_count = Job.objects.count()
-            job_id = self.create_job_rec()
-            job_id_1 = self.create_job_rec()
-            job_id_fake = str(bson.objectid.ObjectId())
-            print(f"Saved job_id {job_id}")
-            print(f"Saved job_id_1 {job_id_1}")
-            print(f"Created fake {job_id_fake}")
+        ori_job_count = Job.objects.count()
+        job_id = self.create_job_rec()
+        job_id_1 = self.create_job_rec()
+        job_id_fake = str(bson.objectid.ObjectId())
+        print(f"Saved job_id {job_id}")
+        print(f"Saved job_id_1 {job_id_1}")
+        print(f"Created fake {job_id_fake}")
 
-            new_count = Job.objects.count()
-            self.assertEqual(ori_job_count, new_count - 2)
+        new_count = Job.objects.count()
+        self.assertEqual(ori_job_count, new_count - 2)
 
-            job = self.mongo_util.get_job(job_id=job_id)
-            self.assertEqual(job.status, "created")
-            self.assertFalse(job.finished)
-            self.assertFalse(job.running)
-            self.assertFalse(job.estimating)
+        job = self.mongo_util.get_job(job_id=job_id)
+        self.assertEqual(job.status, "created")
+        self.assertFalse(job.finished)
+        self.assertFalse(job.running)
+        self.assertFalse(job.estimating)
 
-            runner = self.getRunner()
-            runner._test_job_permissions = MagicMock(return_value=True)
+        runner = self.getRunner()
+        runner._test_job_permissions = MagicMock(return_value=True)
 
-            # test missing job_id input
-            with self.assertRaises(ValueError) as context:
-                runner.check_job(None)
-                self.assertEqual("Please provide valid job_id", str(context.exception))
+        # test missing job_id input
+        with self.assertRaises(ValueError) as context:
+            runner.check_job(None)
+            self.assertEqual("Please provide valid job_id", str(context.exception))
 
-            # test check_job in a regular way
-            job_state = runner.check_job(job_id)
-            json.dumps(job_state)  # make sure it's JSON serializable
-            self.assertTrue(validate_job_state(job_state))
-            self.assertEqual(job_state["status"], "created")
-            self.assertEqual(job_state["wsid"], self.ws_id)
-            # Test both
-            job_state1 = runner.check_job(job_id_1)
-            self.assertEqual(job_state1["status"], "created")
+        # test check_job in a regular way
+        job_state = runner.check_job(job_id)
+        json.dumps(job_state)  # make sure it's JSON serializable
+        self.assertTrue(validate_job_state(job_state))
+        self.assertEqual(job_state["status"], "created")
+        self.assertEqual(job_state["wsid"], self.ws_id)
+        # Test both
+        job_state1 = runner.check_job(job_id_1)
+        self.assertEqual(job_state1["status"], "created")
 
-            print(f'Job status of {job_id}={job_state["status"]}')
-            print(f'Job status of {job_id_1}={job_state1["status"]}')
+        print(f'Job status of {job_id}={job_state["status"]}')
+        print(f'Job status of {job_id_1}={job_state1["status"]}')
 
-            # test check_job with exclude_fields
-            job_state_exclude = runner.check_job(job_id, exclude_fields=["status"])
-            self.assertFalse("status" in job_state_exclude.keys())
-            self.assertEqual(job_state_exclude["wsid"], self.ws_id)
+        # test check_job with exclude_fields
+        job_state_exclude = runner.check_job(job_id, exclude_fields=["status"])
+        self.assertFalse("status" in job_state_exclude.keys())
+        self.assertEqual(job_state_exclude["wsid"], self.ws_id)
 
-            # test check_job with exclude_fields
-            job_state_exclude2 = runner.check_job(job_id, exclude_fields=["status"])
-            self.assertFalse("status" in job_state_exclude2.keys())
-            self.assertEqual(job_state_exclude2["wsid"], self.ws_id)
+        # test check_job with exclude_fields
+        job_state_exclude2 = runner.check_job(job_id, exclude_fields=["status"])
+        self.assertFalse("status" in job_state_exclude2.keys())
+        self.assertEqual(job_state_exclude2["wsid"], self.ws_id)
 
-            # test check_jobs
-            job_states_rl_0 = runner.check_jobs(
-                [job_id, job_id_1, job_id_fake], return_list=0
-            )
-            logging.info(
-                json.dumps(job_states_rl_0)
-            )  # make sure it's JSON serializable
-            self.assertEqual(len(job_states_rl_0.keys()), 3)
-            self.assertEqual(list(job_states_rl_0.keys())[0], job_id)
-            self.assertEqual(list(job_states_rl_0.keys())[1], job_id_1)
-            self.assertEqual(list(job_states_rl_0.keys())[2], job_id_fake)
-            self.assertTrue(validate_job_state(job_states_rl_0[job_id]))
-            self.assertTrue(job_id in job_states_rl_0)
-            self.assertEqual(job_states_rl_0[job_id]["status"], "created")
-            self.assertEqual(job_states_rl_0[job_id]["wsid"], self.ws_id)
+        # test check_jobs
+        job_states_rl_0 = runner.check_jobs(
+            [job_id, job_id_1, job_id_fake], return_list=0
+        )
+        logging.info(json.dumps(job_states_rl_0))  # make sure it's JSON serializable
+        self.assertEqual(len(job_states_rl_0.keys()), 3)
+        self.assertEqual(list(job_states_rl_0.keys())[0], job_id)
+        self.assertEqual(list(job_states_rl_0.keys())[1], job_id_1)
+        self.assertEqual(list(job_states_rl_0.keys())[2], job_id_fake)
+        self.assertTrue(validate_job_state(job_states_rl_0[job_id]))
+        self.assertTrue(job_id in job_states_rl_0)
+        self.assertEqual(job_states_rl_0[job_id]["status"], "created")
+        self.assertEqual(job_states_rl_0[job_id]["wsid"], self.ws_id)
 
-            # test check_jobs return list
-            job_states_rl_1 = runner.check_jobs(
-                [job_id, job_id_1, job_id_fake], return_list=1
-            )["job_states"]
-            json.dumps(job_states_rl_1)  # make sure it's JSON serializable
-            self.assertEqual(len(job_states_rl_1), 3)
-            self.assertEqual(job_states_rl_1[0]["job_id"], job_id)
-            self.assertEqual(job_states_rl_1[1]["job_id"], job_id_1)
-            self.assertEqual(job_states_rl_1[2], [])
-            self.assertTrue(isinstance(job_states_rl_1, list))
-            print(type(job_states_rl_1))
-            self.assertCountEqual(job_states_rl_1, list(job_states_rl_0.values()))
+        # test check_jobs return list
+        job_states_rl_1 = runner.check_jobs(
+            [job_id, job_id_1, job_id_fake], return_list=1
+        )["job_states"]
+        json.dumps(job_states_rl_1)  # make sure it's JSON serializable
+        self.assertEqual(len(job_states_rl_1), 3)
+        self.assertEqual(job_states_rl_1[0]["job_id"], job_id)
+        self.assertEqual(job_states_rl_1[1]["job_id"], job_id_1)
+        self.assertEqual(job_states_rl_1[2], [])
+        self.assertTrue(isinstance(job_states_rl_1, list))
+        print(type(job_states_rl_1))
+        self.assertCountEqual(job_states_rl_1, list(job_states_rl_0.values()))
 
-            job_states_list_rl_t = runner.check_jobs(
-                [job_id, job_id_1], return_list="True"
-            )["job_states"]
-            json.dumps(job_states_list_rl_t)  # make sure it's JSON serializable
-            self.assertEqual(job_states_list_rl_t[0]["job_id"], job_id)
-            self.assertEqual(job_states_list_rl_t[1]["job_id"], job_id_1)
-            self.assertTrue(isinstance(job_states_list_rl_t, list))
-            self.assertCountEqual(
-                job_states_list_rl_t, list(job_states_rl_0.values())[:2]
-            )
+        job_states_list_rl_t = runner.check_jobs(
+            [job_id, job_id_1], return_list="True"
+        )["job_states"]
+        json.dumps(job_states_list_rl_t)  # make sure it's JSON serializable
+        self.assertEqual(job_states_list_rl_t[0]["job_id"], job_id)
+        self.assertEqual(job_states_list_rl_t[1]["job_id"], job_id_1)
+        self.assertTrue(isinstance(job_states_list_rl_t, list))
+        self.assertCountEqual(job_states_list_rl_t, list(job_states_rl_0.values())[:2])
 
-            # test check_jobs with exclude_fields
-            job_states_rl0_exclude_wsid = runner.check_jobs(
-                [job_id], exclude_fields=["wsid"], return_list=0
-            )
-            self.assertTrue(job_id in job_states_rl0_exclude_wsid)
-            self.assertFalse("wsid" in job_states_rl0_exclude_wsid[job_id].keys())
-            self.assertEqual(job_states_rl0_exclude_wsid[job_id]["status"], "created")
+        # test check_jobs with exclude_fields
+        job_states_rl0_exclude_wsid = runner.check_jobs(
+            [job_id], exclude_fields=["wsid"], return_list=0
+        )
+        self.assertTrue(job_id in job_states_rl0_exclude_wsid)
+        self.assertFalse("wsid" in job_states_rl0_exclude_wsid[job_id].keys())
+        self.assertEqual(job_states_rl0_exclude_wsid[job_id]["status"], "created")
 
-            # test check_workspace_jobs
-            job_states_from_workspace_check = (
-                runner.get_jobs_status().check_workspace_jobs(
-                    self.ws_id, return_list="False"
+        # test check_workspace_jobs
+        job_states_from_workspace_check = runner.get_jobs_status().check_workspace_jobs(
+            self.ws_id, return_list="False"
+        )
+        for job_id_from_wsid in job_states_from_workspace_check:
+            self.assertTrue(job_states_from_workspace_check[job_id_from_wsid])
+        print("Job States are")
+        for job_key in job_states_from_workspace_check:
+            if job_key in job_states_rl_1:
+                print(
+                    job_key,
+                    job_states_from_workspace_check[job_key]["status"],
+                    runner.check_job(job_id=job_key)["status"],
+                    job_states_rl_0[job],
                 )
-            )
-            for job_id_from_wsid in job_states_from_workspace_check:
-                self.assertTrue(job_states_from_workspace_check[job_id_from_wsid])
-            print("Job States are")
-            for job_key in job_states_from_workspace_check:
-                if job_key in job_states_rl_1:
-                    print(
-                        job_key,
-                        job_states_from_workspace_check[job_key]["status"],
-                        runner.check_job(job_id=job_key)["status"],
-                        job_states_rl_0[job],
-                    )
 
-            json.dumps(
-                job_states_from_workspace_check
-            )  # make sure it's JSON serializable
-            self.assertTrue(job_id in job_states_from_workspace_check)
-            self.assertEqual(
-                job_states_from_workspace_check[job_id]["status"], "created"
-            )
-            self.assertEqual(
-                job_states_from_workspace_check[job_id]["wsid"], self.ws_id
-            )
+        json.dumps(job_states_from_workspace_check)  # make sure it's JSON serializable
+        self.assertTrue(job_id in job_states_from_workspace_check)
+        self.assertEqual(job_states_from_workspace_check[job_id]["status"], "created")
+        self.assertEqual(job_states_from_workspace_check[job_id]["wsid"], self.ws_id)
 
-            self.assertTrue(job_id_1 in job_states_from_workspace_check)
-            self.assertEqual(
-                job_states_from_workspace_check[job_id_1]["status"], "created"
-            )
-            self.assertEqual(
-                job_states_from_workspace_check[job_id_1]["wsid"], self.ws_id
-            )
+        self.assertTrue(job_id_1 in job_states_from_workspace_check)
+        self.assertEqual(job_states_from_workspace_check[job_id_1]["status"], "created")
+        self.assertEqual(job_states_from_workspace_check[job_id_1]["wsid"], self.ws_id)
 
-            # test check_workspace_jobs with exclude_fields
-            job_states_with_exclude_wsid = (
-                runner.get_jobs_status().check_workspace_jobs(
-                    self.ws_id, exclude_fields=["wsid"], return_list=False
-                )
-            )
+        # test check_workspace_jobs with exclude_fields
+        job_states_with_exclude_wsid = runner.get_jobs_status().check_workspace_jobs(
+            self.ws_id, exclude_fields=["wsid"], return_list=False
+        )
 
-            logging.info(
-                json.dumps(job_states_with_exclude_wsid)
-            )  # make sure it's JSON serializable
-            self.assertTrue(job_id in job_states_with_exclude_wsid)
-            self.assertFalse("wsid" in job_states_with_exclude_wsid[job_id].keys())
-            self.assertEqual(job_states_with_exclude_wsid[job_id]["status"], "created")
-            self.assertTrue(job_id_1 in job_states_with_exclude_wsid)
-            self.assertFalse("wsid" in job_states_with_exclude_wsid[job_id_1].keys())
-            self.assertEqual(
-                job_states_with_exclude_wsid[job_id_1]["status"], "created"
-            )
+        logging.info(
+            json.dumps(job_states_with_exclude_wsid)
+        )  # make sure it's JSON serializable
+        self.assertTrue(job_id in job_states_with_exclude_wsid)
+        self.assertFalse("wsid" in job_states_with_exclude_wsid[job_id].keys())
+        self.assertEqual(job_states_with_exclude_wsid[job_id]["status"], "created")
+        self.assertTrue(job_id_1 in job_states_with_exclude_wsid)
+        self.assertFalse("wsid" in job_states_with_exclude_wsid[job_id_1].keys())
+        self.assertEqual(job_states_with_exclude_wsid[job_id_1]["status"], "created")
 
-            with self.assertRaises(PermissionError) as e:
-                runner.get_jobs_status().check_workspace_jobs(1234)
-            self.assertIn(
-                f"User {self.user_id} does not have permission to read jobs in workspace {1234}",
-                str(e.exception),
-            )
+        with self.assertRaises(PermissionError) as e:
+            runner.get_jobs_status().check_workspace_jobs(1234)
+        self.assertIn(
+            f"User {self.user_id} does not have permission to read jobs in workspace {1234}",
+            str(e.exception),
+        )
 
     @staticmethod
     def create_job_from_job(job, new_job_id):
@@ -936,16 +903,15 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         return j
 
     def replace_job_id(self, job1, new_id):
-        with self.mongo_util.mongo_engine_connection():
-            job2 = self.create_job_from_job(job1, new_id)
-            job2.save()
-            print(
-                "Saved job with id",
-                job2.id,
-                job2.id.generation_time,
-                job2.id.generation_time.timestamp(),
-            )
-            job1.delete()
+        job2 = self.create_job_from_job(job1, new_id)
+        job2.save()
+        print(
+            "Saved job with id",
+            job2.id,
+            job2.id.generation_time,
+            job2.id.generation_time.timestamp(),
+        )
+        job1.delete()
 
     # flake8: noqa: C901
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
@@ -1009,340 +975,334 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         print(f"Tomorrow:            {tomorrow} ts: {tomorrow.timestamp()}")
         print(f"Day after:           {day_after} ts: {day_after.timestamp()}")
 
-        with self.mongo_util.mongo_engine_connection():
-            # Last Month
-            job = Job.objects.with_id(job_id1)  # type : Job
-            new_id_last_month = ObjectId.from_datetime(last_month)
-            print(last_month, new_id_last_month, new_id_last_month.generation_time)
+        # Last Month
+        job = Job.objects.with_id(job_id1)  # type : Job
+        new_id_last_month = ObjectId.from_datetime(last_month)
+        print(last_month, new_id_last_month, new_id_last_month.generation_time)
 
-            print("About to replace job id")
-            print(job)
-            print(new_id_last_month)
-            self.replace_job_id(job, new_id_last_month)
-            new_job_ids.append(str(new_id_last_month))
+        print("About to replace job id")
+        print(job)
+        print(new_id_last_month)
+        self.replace_job_id(job, new_id_last_month)
+        new_job_ids.append(str(new_id_last_month))
 
-            # Last week
-            job = Job.objects.with_id(job_id2)  # type : Job
-            new_id_last_week = ObjectId.from_datetime(last_week)
-            self.replace_job_id(job, new_id_last_week)
-            new_job_ids.append(str(new_id_last_week))
+        # Last week
+        job = Job.objects.with_id(job_id2)  # type : Job
+        new_id_last_week = ObjectId.from_datetime(last_week)
+        self.replace_job_id(job, new_id_last_week)
+        new_job_ids.append(str(new_id_last_week))
 
-            # Yesterday
-            job = Job.objects.with_id(job_id3)  # type : Job
-            new_id_yesterday = ObjectId.from_datetime(yesterday)
-            self.replace_job_id(job, new_id_yesterday)
-            new_job_ids.append(str(new_id_yesterday))
+        # Yesterday
+        job = Job.objects.with_id(job_id3)  # type : Job
+        new_id_yesterday = ObjectId.from_datetime(yesterday)
+        self.replace_job_id(job, new_id_yesterday)
+        new_job_ids.append(str(new_id_yesterday))
 
-            # Now
-            job = Job.objects.with_id(job_id4)  # type : Job
-            new_id_now = ObjectId.from_datetime(now)
-            self.replace_job_id(job, new_id_now)
-            new_job_ids.append(str(new_id_now))
+        # Now
+        job = Job.objects.with_id(job_id4)  # type : Job
+        new_id_now = ObjectId.from_datetime(now)
+        self.replace_job_id(job, new_id_now)
+        new_job_ids.append(str(new_id_now))
 
-            # Tomorrow
-            job = Job.objects.with_id(job_id5)  # type : Job
-            new_id_tomorrow = ObjectId.from_datetime(tomorrow)
-            self.replace_job_id(job, new_id_tomorrow)
-            new_job_ids.append(str(new_id_tomorrow))
+        # Tomorrow
+        job = Job.objects.with_id(job_id5)  # type : Job
+        new_id_tomorrow = ObjectId.from_datetime(tomorrow)
+        self.replace_job_id(job, new_id_tomorrow)
+        new_job_ids.append(str(new_id_tomorrow))
 
-            # Day After
-            job = Job.objects.with_id(job_id6)  # type : Job
-            new_id_day_after = ObjectId.from_datetime(day_after)
-            self.replace_job_id(job, new_id_day_after)
-            new_job_ids.append(str(new_id_day_after))
+        # Day After
+        job = Job.objects.with_id(job_id6)  # type : Job
+        new_id_day_after = ObjectId.from_datetime(day_after)
+        self.replace_job_id(job, new_id_day_after)
+        new_job_ids.append(str(new_id_day_after))
 
         # JOB ID GETS GENERATED HERE
-        with self.mongo_util.mongo_engine_connection():
-            ori_job_count = Job.objects.count()
-            job_id = self.create_job_rec()
-            self.assertEqual(ori_job_count, Job.objects.count() - 1)
+        ori_job_count = Job.objects.count()
+        job_id = self.create_job_rec()
+        self.assertEqual(ori_job_count, Job.objects.count() - 1)
 
-            job = self.mongo_util.get_job(job_id=job_id)
-            self.assertEqual(job.status, "created")
-            self.assertFalse(job.finished)
-            self.false = self.assertFalse(job.running)
-            self.assertFalse(job.estimating)
+        job = self.mongo_util.get_job(job_id=job_id)
+        self.assertEqual(job.status, "created")
+        self.assertFalse(job.finished)
+        self.false = self.assertFalse(job.running)
+        self.assertFalse(job.estimating)
 
-            runner.check_permission_for_job = MagicMock(return_value=True)
-            # runner.get_permissions_for_workspace = MagicMock(
-            #     return_value=SDKMethodRunner.WorkspacePermissions.ADMINISTRATOR
-            # )
+        runner.check_permission_for_job = MagicMock(return_value=True)
+        # runner.get_permissions_for_workspace = MagicMock(
+        #     return_value=SDKMethodRunner.WorkspacePermissions.ADMINISTRATOR
+        # )
 
-            print(
-                "Test case 1. Retrieving Jobs from last_week and tomorrow_max (yesterday and now jobs) "
-            )
+        print(
+            "Test case 1. Retrieving Jobs from last_week and tomorrow_max (yesterday and now jobs) "
+        )
+        job_state = runner.check_jobs_date_range_for_user(
+            creation_end_time=str(tomorrow),
+            creation_start_time=last_week.timestamp(),  # test timestamp input
+            user="ALL",
+        )
+        count = 0
+        for js in job_state["jobs"]:
+            job_id = js["job_id"]
+            print("Job is id", job_id)
+            if job_id in new_job_ids:
+                count += 1
+                self.assertIn(js["status"], ["created", "queued"])
+                print(js["created"])
+                print(type(js["created"]))
+                date = SDKMethodRunner.check_and_convert_time(js["created"])
+                ts = date
+                print(
+                    f"Creation date {date}, LastWeek:{last_week}, Tomorrow{tomorrow})"
+                )
+                print(ts, last_week.timestamp())
+                self.assertTrue(float(ts) >= last_week.timestamp())
+                print(ts, tomorrow.timestamp())
+                self.assertTrue(float(ts) <= tomorrow.timestamp())
+        self.assertEqual(2, count)
+
+        print(
+            "Test case 2A. Retrieving Jobs from last_month and tomorrow_max (last_month, last_week, yesterday and now jobs) "
+        )
+
+        job_state = runner.check_jobs_date_range_for_user(
+            creation_end_time=str(tomorrow.timestamp()),  # test timestamp string input
+            creation_start_time=last_month_and_1_hour,  # test datetime input
+            user="ALL",
+        )
+
+        count = 0
+        for js in job_state["jobs"]:
+            job_id = js["job_id"]
+            print("Job is id", job_id)
+            if job_id in new_job_ids:
+                count += 1
+                self.assertIn(js["status"], ["created", "queued"])
+                ts = SDKMethodRunner.check_and_convert_time(js["created"])
+                print(f"Timestamp: {ts}")
+                self.assertTrue(ts > last_month_and_1_hour.timestamp())
+                self.assertTrue(ts < tomorrow.timestamp())
+        self.assertEqual(4, count)
+
+        print("Found all of the jobs", len(new_job_ids))
+
+        with self.assertRaises(Exception) as context:
             job_state = runner.check_jobs_date_range_for_user(
-                creation_end_time=str(tomorrow),
-                creation_start_time=last_week.timestamp(),  # test timestamp input
+                creation_end_time=str(yesterday),
+                creation_start_time=str(tomorrow),
                 user="ALL",
             )
-            count = 0
-            for js in job_state["jobs"]:
-                job_id = js["job_id"]
-                print("Job is id", job_id)
-                if job_id in new_job_ids:
-                    count += 1
-                    self.assertIn(js["status"], ["created", "queued"])
-                    print(js["created"])
-                    print(type(js["created"]))
-                    date = SDKMethodRunner.check_and_convert_time(js["created"])
-                    ts = date
-                    print(
-                        f"Creation date {date}, LastWeek:{last_week}, Tomorrow{tomorrow})"
-                    )
-                    print(ts, last_week.timestamp())
-                    self.assertTrue(float(ts) >= last_week.timestamp())
-                    print(ts, tomorrow.timestamp())
-                    self.assertTrue(float(ts) <= tomorrow.timestamp())
-            self.assertEqual(2, count)
-
-            print(
-                "Test case 2A. Retrieving Jobs from last_month and tomorrow_max (last_month, last_week, yesterday and now jobs) "
+            self.assertEqual(
+                "The start date cannot be greater than the end date.",
+                str(context.exception),
             )
 
+        print("Test case 2B. Same as above but with FAKE user (NO ADMIN) ")
+        runner.check_is_admin = MagicMock(return_value=False)
+        with self.assertRaisesRegex(
+            AuthError,
+            "You are not authorized to view all records or records for others.",
+        ) as error:
             job_state = runner.check_jobs_date_range_for_user(
-                creation_end_time=str(
-                    tomorrow.timestamp()
-                ),  # test timestamp string input
-                creation_start_time=last_month_and_1_hour,  # test datetime input
+                creation_end_time=str(tomorrow),
+                creation_start_time=str(last_month_and_1_hour),
+                user="FAKE",
+            )
+            print("Exception raised is", error)
+
+        print("Test case 2C. Same as above but with FAKE_TEST_USER + ADMIN) ")
+        runner.check_is_admin = MagicMock(return_value=True)
+        job_state = runner.check_jobs_date_range_for_user(
+            creation_end_time=str(tomorrow),
+            creation_start_time=str(last_month_and_1_hour),
+            user=user_name,
+        )
+
+        count = 0
+        for js in job_state["jobs"]:
+            job_id = js["job_id"]
+            print("Job is id", job_id)
+            if job_id in new_job_ids:
+                count += 1
+                self.assertIn(js["status"], ["created", "queued"])
+                ts = SDKMethodRunner.check_and_convert_time(js["created"])
+                print(f"Timestamp: {ts}")
+                self.assertTrue(ts > last_month_and_1_hour.timestamp())
+                self.assertTrue(ts < tomorrow.timestamp())
+
+        # May need to change this if other db entries get added
+        self.assertEqual(4, count)
+
+        print("Found all of the jobs", len(new_job_ids))
+
+        print("Test case 3. Assert Raises error")
+
+        with self.assertRaises(Exception) as context:
+            job_state = runner.check_jobs_date_range_for_user(
+                creation_end_time=str(yesterday),
+                creation_start_time=str(tomorrow),
                 user="ALL",
             )
-
-            count = 0
-            for js in job_state["jobs"]:
-                job_id = js["job_id"]
-                print("Job is id", job_id)
-                if job_id in new_job_ids:
-                    count += 1
-                    self.assertIn(js["status"], ["created", "queued"])
-                    ts = SDKMethodRunner.check_and_convert_time(js["created"])
-                    print(f"Timestamp: {ts}")
-                    self.assertTrue(ts > last_month_and_1_hour.timestamp())
-                    self.assertTrue(ts < tomorrow.timestamp())
-            self.assertEqual(4, count)
-
-            print("Found all of the jobs", len(new_job_ids))
-
-            with self.assertRaises(Exception) as context:
-                job_state = runner.check_jobs_date_range_for_user(
-                    creation_end_time=str(yesterday),
-                    creation_start_time=str(tomorrow),
-                    user="ALL",
-                )
-                self.assertEqual(
-                    "The start date cannot be greater than the end date.",
-                    str(context.exception),
-                )
-
-            print("Test case 2B. Same as above but with FAKE user (NO ADMIN) ")
-            runner.check_is_admin = MagicMock(return_value=False)
-            with self.assertRaisesRegex(
-                AuthError,
-                "You are not authorized to view all records or records for others.",
-            ) as error:
-                job_state = runner.check_jobs_date_range_for_user(
-                    creation_end_time=str(tomorrow),
-                    creation_start_time=str(last_month_and_1_hour),
-                    user="FAKE",
-                )
-                print("Exception raised is", error)
-
-            print("Test case 2C. Same as above but with FAKE_TEST_USER + ADMIN) ")
-            runner.check_is_admin = MagicMock(return_value=True)
-            job_state = runner.check_jobs_date_range_for_user(
-                creation_end_time=str(tomorrow),
-                creation_start_time=str(last_month_and_1_hour),
-                user=user_name,
+            self.assertEqual(
+                "The start date cannot be greater than the end date.",
+                str(context.exception),
             )
 
-            count = 0
-            for js in job_state["jobs"]:
-                job_id = js["job_id"]
-                print("Job is id", job_id)
-                if job_id in new_job_ids:
-                    count += 1
-                    self.assertIn(js["status"], ["created", "queued"])
-                    ts = SDKMethodRunner.check_and_convert_time(js["created"])
-                    print(f"Timestamp: {ts}")
-                    self.assertTrue(ts > last_month_and_1_hour.timestamp())
-                    self.assertTrue(ts < tomorrow.timestamp())
+        print("Test case 4, find the original job")
+        job_state = runner.check_jobs_date_range_for_user(
+            creation_end_time=str(tomorrow),
+            creation_start_time=str(last_month_and_1_hour),
+            user=user_name,
+        )
+        self.assertTrue(len(job_state["jobs"][0].keys()) > 0)
+        print(f"Checking {job_id}")
 
-            # May need to change this if other db entries get added
-            self.assertEqual(4, count)
+        found = False
+        for job in job_state["jobs"]:
+            if job_id == job["job_id"]:
+                found = True
 
-            print("Found all of the jobs", len(new_job_ids))
+        if found is False:
+            raise Exception("Didn't find the original job")
 
-            print("Test case 3. Assert Raises error")
+        print(job_state)
 
-            with self.assertRaises(Exception) as context:
-                job_state = runner.check_jobs_date_range_for_user(
-                    creation_end_time=str(yesterday),
-                    creation_start_time=str(tomorrow),
-                    user="ALL",
-                )
-                self.assertEqual(
-                    "The start date cannot be greater than the end date.",
-                    str(context.exception),
-                )
+        print("Test 5, find the original job, but with projections")
+        job_states = runner.check_jobs_date_range_for_user(
+            creation_end_time=str(tomorrow),
+            creation_start_time=str(last_month_and_1_hour),
+            user=user_name,
+            job_projection=["wsid"],
+        )
+        job_state_with_proj = None
+        for job in job_states["jobs"]:
+            if job_id == job["job_id"]:
+                job_state_with_proj = job
 
-            print("Test case 4, find the original job")
-            job_state = runner.check_jobs_date_range_for_user(
-                creation_end_time=str(tomorrow),
-                creation_start_time=str(last_month_and_1_hour),
-                user=user_name,
-            )
-            self.assertTrue(len(job_state["jobs"][0].keys()) > 0)
-            print(f"Checking {job_id}")
+        example_job_stat = {
+            "_id": "5d892ede9ea3d7d3b824dbff",
+            "authstrat": "kbaseworkspace",
+            "wsid": 9999,
+            "updated": "2019-09-23 20:45:19.468032",
+            "job_id": "5d892ede9ea3d7d3b824dbff",
+            "created": "2019-09-23 20:45:18+00:00",
+        }
 
-            found = False
-            for job in job_state["jobs"]:
-                if job_id == job["job_id"]:
-                    found = True
+        required_headers = list(example_job_stat.keys())
+        required_headers.append("wsid")
 
-            if found is False:
-                raise Exception("Didn't find the original job")
+        for member in required_headers:
+            self.assertIn(member, job_state_with_proj)
+        self.assertNotIn("status", job_state_with_proj)
 
-            print(job_state)
+        print("Test 6a, find the original job, but with projections and filters")
+        job_state = runner.check_jobs_date_range_for_user(
+            creation_end_time=str(tomorrow),
+            creation_start_time=str(last_month_and_1_hour),
+            user="ALL",
+            job_projection=["wsid", "status"],
+            job_filter={"wsid": 9999},
+        )
 
-            print("Test 5, find the original job, but with projections")
-            job_states = runner.check_jobs_date_range_for_user(
-                creation_end_time=str(tomorrow),
-                creation_start_time=str(last_month_and_1_hour),
-                user=user_name,
-                job_projection=["wsid"],
-            )
-            job_state_with_proj = None
-            for job in job_states["jobs"]:
-                if job_id == job["job_id"]:
-                    job_state_with_proj = job
+        for record in job_state["jobs"]:
 
-            example_job_stat = {
-                "_id": "5d892ede9ea3d7d3b824dbff",
-                "authstrat": "kbaseworkspace",
-                "wsid": 9999,
-                "updated": "2019-09-23 20:45:19.468032",
-                "job_id": "5d892ede9ea3d7d3b824dbff",
-                "created": "2019-09-23 20:45:18+00:00",
-            }
+            print(record)
+            if record["wsid"] != 9999:
+                raise Exception("Only records with wsid 9999 should be allowed")
+            self.assertIn("wsid", record)
+            self.assertIn("status", record)
+            self.assertNotIn("service_ver", record)
+        print("job state is", "len is", len(job_state["jobs"]))
 
-            required_headers = list(example_job_stat.keys())
-            required_headers.append("wsid")
+        self.assertTrue(len(job_state["jobs"]) >= 1)
 
-            for member in required_headers:
-                self.assertIn(member, job_state_with_proj)
-            self.assertNotIn("status", job_state_with_proj)
+        print("Test 6b, find the original job, but with projections and filters")
+        job_state2 = runner.check_jobs_date_range_for_user(
+            creation_end_time=str(tomorrow),
+            creation_start_time=str(last_month_and_1_hour),
+            user="ALL",
+            job_projection=["wsid", "status"],
+            job_filter=["wsid=123"],
+        )
 
-            print("Test 6a, find the original job, but with projections and filters")
-            job_state = runner.check_jobs_date_range_for_user(
-                creation_end_time=str(tomorrow),
-                creation_start_time=str(last_month_and_1_hour),
-                user="ALL",
-                job_projection=["wsid", "status"],
-                job_filter={"wsid": 9999},
-            )
+        for record in job_state2["jobs"]:
 
-            for record in job_state["jobs"]:
-
+            if record["wsid"] != 123:
                 print(record)
-                if record["wsid"] != 9999:
-                    raise Exception("Only records with wsid 9999 should be allowed")
-                self.assertIn("wsid", record)
-                self.assertIn("status", record)
-                self.assertNotIn("service_ver", record)
-            print("job state is", "len is", len(job_state["jobs"]))
+                print("ID IS", record["wsid"])
+                raise Exception("Only records with wsid 123 should be allowed")
+            self.assertIn("wsid", record)
+            self.assertIn("status", record)
+            self.assertNotIn("service_ver", record)
 
-            self.assertTrue(len(job_state["jobs"]) >= 1)
+        print(len(job_state2["jobs"]))
+        self.assertTrue(len(job_state2["jobs"]) > 0)
 
-            print("Test 6b, find the original job, but with projections and filters")
-            job_state2 = runner.check_jobs_date_range_for_user(
-                creation_end_time=str(tomorrow),
-                creation_start_time=str(last_month_and_1_hour),
-                user="ALL",
-                job_projection=["wsid", "status"],
-                job_filter=["wsid=123"],
-            )
+        print(
+            "Test 7, find same jobs as test 2 or 3, but also filter, project, and limit"
+        )
+        job_state_limit = runner.check_jobs_date_range_for_user(
+            creation_end_time=str(tomorrow),
+            creation_start_time=str(last_month_and_1_hour),
+            user="ALL",
+            job_projection=["wsid", "status"],
+            job_filter=["wsid=123"],
+            limit=2,
+        )
 
-            for record in job_state2["jobs"]:
+        self.assertTrue(len(job_state_limit["jobs"]) > 0)
 
-                if record["wsid"] != 123:
-                    print(record)
-                    print("ID IS", record["wsid"])
-                    raise Exception("Only records with wsid 123 should be allowed")
-                self.assertIn("wsid", record)
-                self.assertIn("status", record)
-                self.assertNotIn("service_ver", record)
+        print("Test 8, ascending and descending (maybe should verify jobs count > 2)")
+        job_state_limit_asc = runner.check_jobs_date_range_for_user(
+            creation_end_time=str(tomorrow),
+            creation_start_time=str(last_month_and_1_hour),
+            user="ALL",
+            job_projection=["wsid", "status"],
+            ascending="True",
+        )
 
-            print(len(job_state2["jobs"]))
-            self.assertTrue(len(job_state2["jobs"]) > 0)
+        epoch = datetime.utcfromtimestamp(0)
 
-            print(
-                "Test 7, find same jobs as test 2 or 3, but also filter, project, and limit"
-            )
-            job_state_limit = runner.check_jobs_date_range_for_user(
-                creation_end_time=str(tomorrow),
-                creation_start_time=str(last_month_and_1_hour),
-                user="ALL",
-                job_projection=["wsid", "status"],
-                job_filter=["wsid=123"],
-                limit=2,
-            )
+        job_id_temp = str(ObjectId.from_datetime(epoch))
+        for item in job_state_limit_asc["jobs"]:
+            job_id = item["job_id"]
+            if ObjectId(job_id) > ObjectId(job_id_temp):
+                job_id_temp = job_id
+            else:
+                raise Exception(
+                    "Not ascending"
+                    + "JobIdPrev"
+                    + str(job_id_temp)
+                    + "JobIdNext"
+                    + str(job_id)
+                )
 
-            self.assertTrue(len(job_state_limit["jobs"]) > 0)
+        job_state_limit_desc = runner.check_jobs_date_range_for_user(
+            creation_end_time=str(tomorrow),
+            creation_start_time=str(last_month_and_1_hour),
+            user="ALL",
+            job_projection=["wsid", "status"],
+            ascending="False",
+        )
 
-            print(
-                "Test 8, ascending and descending (maybe should verify jobs count > 2)"
-            )
-            job_state_limit_asc = runner.check_jobs_date_range_for_user(
-                creation_end_time=str(tomorrow),
-                creation_start_time=str(last_month_and_1_hour),
-                user="ALL",
-                job_projection=["wsid", "status"],
-                ascending="True",
-            )
+        # TimeDelta Over 9999 days
+        job_id_temp = str(ObjectId.from_datetime(now + timedelta(days=9999)))
 
-            epoch = datetime.utcfromtimestamp(0)
+        for item in job_state_limit_desc["jobs"]:
+            job_id = item["job_id"]
+            if ObjectId(job_id) < ObjectId(job_id_temp):
+                job_id_temp = job_id
+            else:
+                raise Exception(
+                    "Not Descending"
+                    + "JobIdPrev:"
+                    + str(job_id_temp)
+                    + "JobIdNext:"
+                    + str(job_id)
+                )
 
-            job_id_temp = str(ObjectId.from_datetime(epoch))
-            for item in job_state_limit_asc["jobs"]:
-                job_id = item["job_id"]
-                if ObjectId(job_id) > ObjectId(job_id_temp):
-                    job_id_temp = job_id
-                else:
-                    raise Exception(
-                        "Not ascending"
-                        + "JobIdPrev"
-                        + str(job_id_temp)
-                        + "JobIdNext"
-                        + str(job_id)
-                    )
-
-            job_state_limit_desc = runner.check_jobs_date_range_for_user(
-                creation_end_time=str(tomorrow),
-                creation_start_time=str(last_month_and_1_hour),
-                user="ALL",
-                job_projection=["wsid", "status"],
-                ascending="False",
-            )
-
-            # TimeDelta Over 9999 days
-            job_id_temp = str(ObjectId.from_datetime(now + timedelta(days=9999)))
-
-            for item in job_state_limit_desc["jobs"]:
-                job_id = item["job_id"]
-                if ObjectId(job_id) < ObjectId(job_id_temp):
-                    job_id_temp = job_id
-                else:
-                    raise Exception(
-                        "Not Descending"
-                        + "JobIdPrev:"
-                        + str(job_id_temp)
-                        + "JobIdNext:"
-                        + str(job_id)
-                    )
-
-            for key in job_state_limit_desc.keys():
-                print(key)
-                print(job_state_limit_desc[key])
+        for key in job_state_limit_desc.keys():
+            print(key)
+            print(job_state_limit_desc[key])
 
 
 # TODO  TEST _finish_job_with_success, TEST finish_job_with_error
