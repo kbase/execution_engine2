@@ -10,10 +10,6 @@ from typing import Dict, Optional, Any
 
 import htcondor
 
-from lib.execution_engine2.exceptions import (
-    MissingCondorRequirementsException,
-    MissingRunJobParamsException,
-)
 from execution_engine2.sdk.job_submission_parameters import (
     JobSubmissionParameters,
     JobRequirements,
@@ -129,10 +125,9 @@ class Condor:
         sub["request_cpus"] = job_reqs.cpus
         sub["request_memory"] = f"{job_reqs.memory_MB}MB"
         sub["request_disk"] = f"{job_reqs.disk_GB}GB"
-        client_group = job_reqs.client_group
         # Set requirements statement
         sub["requirements"] = self._create_requirements_statement(job_reqs)
-        sub["+KB_CLIENTGROUP"] = f'"{client_group}"'
+        sub["+KB_CLIENTGROUP"] = f'"{job_reqs.client_group}"'
         return sub
 
     def _create_requirements_statement(self, job_reqs: JobRequirements):

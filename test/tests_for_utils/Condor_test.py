@@ -5,7 +5,7 @@ Unit tests for the Condor wrapper.
 # TODO Add tests for get_job_resource_info and cancel_job
 
 import htcondor
-from unittest.mock import create_autospec, Mock
+from unittest.mock import create_autospec
 
 from execution_engine2.sdk.job_submission_parameters import (
     JobSubmissionParameters,

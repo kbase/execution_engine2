@@ -5,7 +5,6 @@ Tests for the Condor scheduler.
 """
 
 import logging
-import os
 import unittest
 
 from lib.execution_engine2.utils.Condor import Condor

@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from typing import Optional, NamedTuple
+from typing import NamedTuple
 
 # May want to make this configurable. Hardcoded for now as we want concierge data to be owned
 # by this user.
