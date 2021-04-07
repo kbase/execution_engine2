@@ -487,7 +487,7 @@ def _run_and_run_batch_fail_illegal_arguments(params, expected):
     _run_and_run_batch_fail(sdkmr, params, expected)
 
 
-def test_run_and_run_bath_fail_workspace_objects_check():
+def test_run_and_run_batch_fail_workspace_objects_check():
     mocks = _set_up_mocks(_USER, _TOKEN)
     sdkmr = mocks[SDKMethodRunner]
     jrr = mocks[JobRequirementsResolver]

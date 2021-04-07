@@ -16,10 +16,10 @@ from execution_engine2.utils.user_info import UserCreds
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.CondorTuples import SubmissionInfo
 
-# TODO JRR fix this bug
-# note the file existence code in the constructor appears to be buggy and will never throw an error.
-# If it checks for existence of initial-dir/executable as well as just executable
-# that makes testing a bit ungainly as executable will have to exist in the current # directory.
+# Note the executable existence code in the constructor appears to be buggy and will never
+# throw an error. If it checks for existence of initial-dir/executable as well as just executable
+# that makes testing a bit ungainly as executable will have to exist in the current directory.
+# TODO fix the executable existence bug in the Condor constructor
 
 
 def _mock_htc():
