@@ -14,7 +14,7 @@ from dotenv import load_dotenv
 from lib.execution_engine2.db.models.models import Job, JobInput, Meta
 from lib.execution_engine2.db.models.models import Status
 from lib.execution_engine2.exceptions import MalformedTimestampException
-from lib.execution_engine2.utils.CondorTuples import CondorResources, JobInfo
+from lib.execution_engine2.utils.CondorTuples import JobInfo
 
 
 EE2_CONFIG_SECTION = "execution_engine2"
@@ -47,7 +47,7 @@ def get_example_job_as_dict(
         .to_mongo()
         .to_dict()
     )
-    job["method"] = job["job_input"]["app_id"]
+    job["method"] = job["job_input"]["method"]
     job["app_id"] = job["job_input"]["app_id"]
     job["service_ver"] = job["job_input"]["service_ver"]
     return job
@@ -65,11 +65,11 @@ def get_example_job(
     job_input = JobInput()
     job_input.wsid = j.wsid
 
-    job_input.method = "method"
+    job_input.method = "module.method"
     job_input.requested_release = "requested_release"
     job_input.params = {}
     job_input.service_ver = "dev"
-    job_input.app_id = "super_module.super_function"
+    job_input.app_id = "module/super_function"
 
     m = Meta()
     m.cell_id = "ApplePie"
@@ -93,7 +93,7 @@ def get_example_job_as_dict_for_runjob(
         user=user, wsid=wsid, authstrat=authstrat, scheduler_id=scheduler_id
     )
     job_dict = job.to_mongo().to_dict()
-    job_dict["method"] = job["job_input"]["app_id"]
+    job_dict["method"] = job["job_input"]["method"]
     job_dict["app_id"] = job["job_input"]["app_id"]
     job_dict["service_ver"] = job["job_input"]["service_ver"]
     return job_dict
@@ -361,14 +361,13 @@ def get_sample_condor_info(job=None, error=None):
     return JobInfo(info=job, error=error)
 
 
-def get_sample_job_params(method=None, wsid="123"):
-    if not method:
-        method = "default_method"
-
+def get_sample_job_params(
+    method="MEGAHIT.default_method", wsid=123, app_id="MEGAHIT/run_megahit"
+):
     job_params = {
         "wsid": wsid,
         "method": method,
-        "app_id": "MEGAHIT/run_megahit",
+        "app_id": app_id,
         "service_ver": "2.2.1",
         "params": [
             {

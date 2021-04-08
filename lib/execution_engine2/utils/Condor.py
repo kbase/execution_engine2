@@ -6,31 +6,24 @@ import logging
 import os
 import pathlib
 import pwd
-from configparser import ConfigParser
-from typing import Dict, Optional, Any, Tuple
+from typing import Dict, Optional, Any
 
 import htcondor
 
-from lib.execution_engine2.exceptions import (
-    MissingCondorRequirementsException,
-    MissingRunJobParamsException,
+from execution_engine2.sdk.job_submission_parameters import (
+    JobSubmissionParameters,
+    JobRequirements,
 )
-from lib.execution_engine2.sdk.EE2Runjob import ConciergeParams
 from lib.execution_engine2.utils.CondorTuples import (
-    CondorResources,
     SubmissionInfo,
     JobInfo,
 )
+from execution_engine2.utils.arg_processing import not_falsy as _not_falsy
 
 
 class Condor:
     # TODO: Should these be outside of the class?
-    REQUEST_CPUS = "request_cpus"
-    REQUEST_MEMORY = "request_memory"
-    REQUEST_DISK = "request_disk"
     CG = "+CLIENTGROUP"
-    EE2 = "execution_engine2"
-    ENDPOINT = "kbase-endpoint"
     EXTERNAL_URL = "external-url"
     EXECUTABLE = "executable"
     CATALOG_TOKEN = "catalog-token"
@@ -40,71 +33,48 @@ class Condor:
     LEAVE_JOB_IN_QUEUE = "leavejobinqueue"
     TRANSFER_INPUT_FILES = "transfer_input_files"
     PYTHON_EXECUTABLE = "PYTHON_EXECUTABLE"
-    DEFAULT_CLIENT_GROUP = "default_client_group"
 
-    def __init__(self, config_filepath, htc=htcondor):
+    def __init__(self, config: Dict[str, str], htc=htcondor):
         """
         Create the condor wrapper.
 
-        config_filepath - the path to the execution_engine2 configuration file.
+        config - the execution_engine2 configuration.
         htc - the htcondor module, or an alternate implementation or mock.
         """
+        # TODO some nicer error messages for the required keys vs. just KeyError
         self.htcondor = htc
-        self.config = ConfigParser()
-        self.override_clientgroup = os.environ.get("OVERRIDE_CLIENT_GROUP", None)
-        self.config.read(config_filepath)
-        self.ee_endpoint = self.config.get(section=self.EE2, option=self.EXTERNAL_URL)
-        self.python_executable = self.config.get(
-            section=self.EE2,
-            option=self.PYTHON_EXECUTABLE,
-            fallback="/miniconda/bin/python",
+        self.ee_endpoint = config[self.EXTERNAL_URL]
+        self.python_executable = config.get(
+            self.PYTHON_EXECUTABLE, "/miniconda/bin/python"
         )
-        self.initial_dir = self.config.get(
-            section=self.EE2, option=self.INITIAL_DIR, fallback="/condor_shared"
-        )
-        executable = self.config.get(section=self.EE2, option=self.EXECUTABLE)
-        if not pathlib.Path(executable).exists() and not pathlib.Path(
-            self.initial_dir + "/" + executable
+        self.initial_dir = config.get(self.INITIAL_DIR, "/condor_shared")
+        self.executable = config[self.EXECUTABLE]
+        if not pathlib.Path(self.executable).exists() and not pathlib.Path(
+            self.initial_dir + "/" + self.executable
         ):
-            raise FileNotFoundError(executable)
-        self.executable = executable
-        self.catalog_token = self.config.get(
-            section=self.EE2, option=self.CATALOG_TOKEN
-        )
-        self.docker_timeout = self.config.get(
-            section=self.EE2, option=self.DOCKER_TIMEOUT, fallback="604801"
-        )
-        self.pool_user = self.config.get(
-            section=self.EE2, option=self.POOL_USER, fallback="condor_pool"
-        )
-        self.leave_job_in_queue = self.config.get(
-            section=self.EE2, option=self.LEAVE_JOB_IN_QUEUE, fallback="True"
-        )
-        self.transfer_input_files = self.config.get(
-            section=self.EE2,
-            option=self.TRANSFER_INPUT_FILES,
-            fallback="/condor_shared/JobRunner.tgz",
+            raise FileNotFoundError(self.executable)
+        self.catalog_token = config[self.CATALOG_TOKEN]
+        self.docker_timeout = config.get(self.DOCKER_TIMEOUT, "604801")
+        self.pool_user = config.get(self.POOL_USER, "condor_pool")
+        self.leave_job_in_queue = config.get(self.LEAVE_JOB_IN_QUEUE, "True")
+        self.transfer_input_files = config.get(
+            self.TRANSFER_INPUT_FILES, "/condor_shared/JobRunner.tgz"
         )
         self.logger = logging.getLogger("ee2")
 
-    def _setup_environment_vars(self, params: Dict, client_group: str) -> str:
+    def _setup_environment_vars(self, params: JobSubmissionParameters) -> str:
         # 7 day docker job timeout default, Catalog token used to get access to volume mounts
-        dm = (
-            str(params["cg_resources_requirements"].get("debug_mode", "")).lower()
-            == "true"
-        )
-
         environment_vars = {
             "DOCKER_JOB_TIMEOUT": self.docker_timeout,
             "KB_ADMIN_AUTH_TOKEN": self.catalog_token,
-            "KB_AUTH_TOKEN": params.get("token"),
-            "CLIENTGROUP": client_group,
-            "JOB_ID": params.get("job_id"),
+            "KB_AUTH_TOKEN": params.user_creds.token,
+            "CLIENTGROUP": params.job_reqs.client_group,
+            "JOB_ID": params.job_id,
             # "WORKDIR": f"{config.get('WORKDIR')}/{params.get('USER')}/{params.get('JOB_ID')}",
             "CONDOR_ID": "$(Cluster).$(Process)",
             "PYTHON_EXECUTABLE": self.python_executable,
-            "DEBUG_MODE": str(dm),
-            "PARENT_JOB_ID": params.get("parent_job_id", ""),
+            "DEBUG_MODE": str(params.job_reqs.debug_mode),
+            "PARENT_JOB_ID": params.parent_job_id or "",
         }
 
         environment = ""
@@ -112,89 +82,6 @@ class Condor:
             environment += f"{key}={val} "
 
         return f'"{environment}"'
-
-    @staticmethod
-    def _check_for_missing_runjob_params(params: Dict[str, str]) -> None:
-        """
-        Check for missing runjob parameters
-        :param params: Params saved when the job was created
-        """
-        for item in ("token", "user_id", "job_id", "cg_resources_requirements"):
-            if item not in params:
-                raise MissingRunJobParamsException(f"{item} not found in params")
-
-    def extract_resources(self, cgrr: Dict[str, str]) -> CondorResources:
-        """
-        # TODO Validate MB/GB from both config and catalog.
-        Checks to see if request_cpus/memory/disk is available
-        If not, it sets them based on defaults from the config
-        :param cgrr:
-        :return:
-        """
-        self.logger.debug(f"About to extract from {cgrr}")
-
-        client_group = cgrr.get("client_group", "")
-        if client_group is None or client_group == "":
-            client_group = self.config.get(
-                section="DEFAULT", option=self.DEFAULT_CLIENT_GROUP
-            )
-
-        if client_group not in self.config.sections():
-            raise ValueError(f"{client_group} not found in {self.config.sections()}")
-
-        # TODO Validate that they are a resource followed by a unit
-        for key in [self.REQUEST_DISK, self.REQUEST_CPUS, self.REQUEST_MEMORY]:
-            if key not in cgrr or cgrr[key] in ["", None]:
-                cgrr[key] = self.config.get(section=client_group, option=key)
-
-        if self.override_clientgroup:
-            client_group = self.override_clientgroup
-
-        cr = CondorResources(
-            str(cgrr.get(self.REQUEST_CPUS)),
-            str(cgrr.get(self.REQUEST_DISK)),
-            str(cgrr.get(self.REQUEST_MEMORY)),
-            client_group,
-        )
-
-        return cr
-
-    def _extract_requirements(
-        self, cgrr: Optional[dict] = None, client_group: Optional[str] = None
-    ):
-        """
-
-        :param cgrr: Client Groups and Resource Requirements
-        :param client_group: Client Group
-        :return: A list of condor submit file requirements in (key == value) format
-        """
-        if cgrr is None or client_group is None:
-            raise MissingCondorRequirementsException(
-                "Please provide normalized cgrr and client_group"
-            )
-
-        requirements_statement = []
-
-        # Default to using a regex
-        if str(cgrr.get("client_group_regex", True)).lower() == "true":
-            requirements_statement.append(f'regexp("{client_group}",CLIENTGROUP)')
-        else:
-            requirements_statement.append(f'(CLIENTGROUP == "{client_group}")')
-
-        restricted_requirements = [
-            "client_group",
-            "client_group_regex",
-            self.REQUEST_MEMORY,
-            self.REQUEST_DISK,
-            self.REQUEST_CPUS,
-            "debug_mode",
-        ]
-
-        for key, value in cgrr.items():
-            if key.lower() not in restricted_requirements:
-                requirements_statement.append(f'({key} == "{value}")')
-
-        return requirements_statement
 
     @staticmethod
     def _add_hardcoded_attributes(sub, job_id):
@@ -232,78 +119,54 @@ class Condor:
         return sub
 
     def _extract_resources_and_requirements(
-        self, sub: Dict[str, Any], cgrr: Dict[str, str]
-    ) -> Tuple[Dict[str, Any], str]:
+        self, sub: Dict[str, Any], job_reqs: JobRequirements
+    ) -> Dict[str, Any]:
         # Extract minimum condor resource requirements and client_group
-        resources = self.extract_resources(cgrr)
-        sub["request_cpus"] = resources.request_cpus
-        sub["request_memory"] = resources.request_memory
-        sub["request_disk"] = resources.request_disk
-        client_group = resources.client_group
+        sub["request_cpus"] = job_reqs.cpus
+        sub["request_memory"] = f"{job_reqs.memory_MB}MB"
+        sub["request_disk"] = f"{job_reqs.disk_GB}GB"
         # Set requirements statement
-        requirements = self._extract_requirements(cgrr=cgrr, client_group=client_group)
-        sub["requirements"] = " && ".join(requirements)
-        sub["+KB_CLIENTGROUP"] = f'"{client_group}"'
-        return (sub, client_group)
-
-    @staticmethod
-    def _modify_with_concierge(sub, concierge_params):
-        # Remove Concurrency Limits for this Job
-        del sub["Concurrency_Limits"]
-        # Override Clientgroup
-        sub["+KB_CLIENTGROUP"] = f'"{concierge_params.client_group}"'
-        if concierge_params.account_group:
-            sub["+AccountingGroup"] = concierge_params.account_group
-            # Override Resource Requirements
-        sub["request_cpus"] = concierge_params.request_cpus
-        sub["request_memory"] = concierge_params.request_memory
-        sub["request_disk"] = concierge_params.request_disk
-        # Build up requirements w/ custom requirements
-        sub["requirements"] = f'(CLIENTGROUP == "{concierge_params.client_group}")'
-        requirements = []
-        if concierge_params.requirements_list:
-            for item in concierge_params.requirements_list:
-                key, value = item.split("=")
-                requirements.append(f'({key} == "{value}")')
-        sub["requirements"] += " && ".join(requirements)
-
+        sub["requirements"] = self._create_requirements_statement(job_reqs)
+        sub["+KB_CLIENTGROUP"] = f'"{job_reqs.client_group}"'
         return sub
+
+    def _create_requirements_statement(self, job_reqs: JobRequirements) -> str:
+        reqs = []
+        if job_reqs.client_group_regex is not False:
+            # Default is True, so a value of None means True
+            reqs = [f'regexp("{job_reqs.client_group}",CLIENTGROUP)']
+        else:
+            reqs = [f'(CLIENTGROUP == "{job_reqs.client_group}")']
+        for key, value in job_reqs.scheduler_requirements.items():
+            reqs.append(f'({key} == "{value}")')
+        return " && ".join(reqs)
 
     def _add_resources_and_special_attributes(
-        self, params: Dict, concierge_params: ConciergeParams = None
-    ) -> Dict:
+        self, params: JobSubmissionParameters
+    ) -> Dict[str, str]:
         sub = dict()
-        sub["JobBatchName"] = params.get("job_id")
-        sub["arguments"] = f"{params['job_id']} {self.ee_endpoint}"
+        sub["JobBatchName"] = params.job_id
+        sub["arguments"] = f"{params.job_id} {self.ee_endpoint}"
         sub = self._add_job_labels(sub=sub, params=params)
         # Extract special requirements
-        (sub, client_group) = self._extract_resources_and_requirements(
-            sub, params["cg_resources_requirements"]
-        )
+        sub = self._extract_resources_and_requirements(sub, params.job_reqs)
 
-        sub["+AccountingGroup"] = params.get("user_id")
-        sub["Concurrency_Limits"] = params.get("user_id")
-        if concierge_params:
-            sub = self._modify_with_concierge(sub, concierge_params)
-            client_group = concierge_params.client_group
-        sub["+AccountingGroup"] = f'"{sub["+AccountingGroup"]}"'
+        btu = params.job_reqs.bill_to_user
+        user = btu if btu else params.user_creds.username
+        if not params.job_reqs.ignore_concurrency_limits:
+            sub["Concurrency_Limits"] = user
+        sub["+AccountingGroup"] = f'"{user}"'
 
-        sub["environment"] = self._setup_environment_vars(
-            params, client_group=client_group
-        )
+        sub["environment"] = self._setup_environment_vars(params)
 
         return sub
 
-    # TODO Copy stuff from Concierge Params into #AcctGroup/Clientgroup/JobPrio, CPu/MEMORY/DISK/
-    def _create_submit(
-        self, params: Dict, concierge_params: ConciergeParams = None
-    ) -> Dict:
+    def _create_submit(self, params: JobSubmissionParameters) -> Dict[str, str]:
         # note some tests call this function directly and will need to be updated if the
         # signature is changed
-        self._check_for_missing_runjob_params(params)
 
-        sub = self._add_resources_and_special_attributes(params, concierge_params)
-        sub = self._add_hardcoded_attributes(sub=sub, job_id=params["job_id"])
+        sub = self._add_resources_and_special_attributes(params)
+        sub = self._add_hardcoded_attributes(sub=sub, job_id=params.job_id)
         sub = self._add_configurable_attributes(sub)
         # Ensure all values are a string
         for item in sub.keys():
@@ -311,14 +174,14 @@ class Condor:
         return sub
 
     @staticmethod
-    def _add_job_labels(sub: Dict, params: Dict[str, str]):
-        sub["+KB_PARENT_JOB_ID"] = params.get("parent_job_id", "")
-        sub["+KB_MODULE_NAME"] = params.get("method", "").split(".")[0]
-        sub["+KB_FUNCTION_NAME"] = params.get("method", "").split(".")[-1]
-        sub["+KB_APP_ID"] = params.get("app_id", "")
-        sub["+KB_APP_MODULE_NAME"] = params.get("app_id", "").split("/")[0]
-        sub["+KB_WSID"] = params.get("wsid", "")
-        sub["+KB_SOURCE_WS_OBJECTS"] = ",".join(params.get("source_ws_objects", list()))
+    def _add_job_labels(sub: Dict, params: JobSubmissionParameters):
+        sub["+KB_PARENT_JOB_ID"] = params.parent_job_id or ""
+        sub["+KB_MODULE_NAME"] = params.app_info.module
+        sub["+KB_FUNCTION_NAME"] = params.app_info.method
+        sub["+KB_APP_ID"] = params.app_info.get_application_id()
+        sub["+KB_APP_MODULE_NAME"] = params.app_info.application_module
+        sub["+KB_WSID"] = params.wsid or ""
+        sub["+KB_SOURCE_WS_OBJECTS"] = ",".join(params.source_ws_objects)
 
         # Ensure double quoted user inputs
         for key in sub.keys():
@@ -329,19 +192,14 @@ class Condor:
 
         return sub
 
-    def run_job(
-        self,
-        params: Dict[str, str],
-        concierge_params: Dict[str, str] = None,
-    ) -> SubmissionInfo:
+    def run_job(self, params: JobSubmissionParameters) -> SubmissionInfo:
         """
         TODO: Add a retry
         TODO: Add list of required params
-        :param params:  Params to run the job, such as the username, job_id, token, client_group_and_requirements
-        :param concierge_params: Concierge Options for Submit Files
+        :param params:  Params to run the job.
         :return:
         """
-        submit = self._create_submit(params, concierge_params)
+        submit = self._create_submit(_not_falsy(params, "params"))
 
         sub = self.htcondor.Submit(submit)
         try:

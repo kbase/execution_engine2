@@ -11,7 +11,6 @@ from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.sdk.EE2Status import JobsStatus, JobPermissions
 from execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.utils.KafkaUtils import KafkaClient, KafkaFinishJob
-from lib.execution_engine2.utils.CatalogUtils import CatalogUtils
 from lib.execution_engine2.utils.Condor import Condor
 from installed_clients.CatalogClient import Catalog
 

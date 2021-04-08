@@ -19,7 +19,6 @@ from mock import MagicMock
 
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.utils.CatalogUtils import CatalogUtils
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.KafkaUtils import KafkaClient
 from execution_engine2.utils.SlackUtils import SlackClient
@@ -28,7 +27,8 @@ from lib.execution_engine2.db.models.models import Job, Status, TerminatedCode
 from execution_engine2.exceptions import AuthError
 from lib.execution_engine2.exceptions import InvalidStatusTransitionException
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
+from execution_engine2.sdk.job_submission_parameters import JobRequirements
+from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
 from execution_engine2.utils.clients import UserClientSet, ClientSet
 from execution_engine2.utils.clients import get_user_client_set, get_client_set
 from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
@@ -77,7 +77,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         with open(cls.config_file) as cf:
             cls.method_runner = SDKMethodRunner(
                 get_user_client_set(cls.cfg, cls.user_id, cls.token),
-                get_client_set(cls.cfg, cls.config_file, cf),
+                get_client_set(cls.cfg, cf),
             )
         cls.mongo_util = MongoUtil(cls.cfg)
         cls.mongo_helper = MongoTestHelper(cls.cfg)
@@ -86,12 +86,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             db=cls.cfg["mongo-database"], col=cls.cfg["mongo-jobs-collection"]
         )
 
-        cls.cr = CondorResources(
-            request_cpus="1",
-            request_disk="1GB",
-            request_memory="100M",
-            client_group="njs",
-        )
         cls.sdkmr_test_helper = ee2_sdkmr_test_helper(cls.user_id)
 
     def getRunner(self) -> SDKMethodRunner:
@@ -168,7 +162,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         assert sdkmr.get_kafka_client() is clients_and_mocks[KafkaClient]
         assert sdkmr.get_mongo_util() is clients_and_mocks[MongoUtil]
         assert sdkmr.get_slack_client() is clients_and_mocks[SlackClient]
-        assert sdkmr.get_catalog_utils() is clients_and_mocks[CatalogUtils]
         assert sdkmr.get_condor() is clients_and_mocks[Condor]
         assert sdkmr.get_catalog() is clients_and_mocks[Catalog]
         assert (
@@ -283,22 +276,18 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner.get_condor = MagicMock(return_value=condor_mock)
         fixed_rj = EE2RunJob(runner)
         fixed_rj._get_module_git_commit = MagicMock(return_value="hash_goes_here")
-        fixed_rj.sdkmr.catalog_utils.list_client_group_configs = MagicMock(
-            return_value="cg goes her"
-        )
 
         runner.get_runjob = MagicMock(return_value=fixed_rj)
 
         # ctx = {"user_id": self.user_id, "wsid": self.ws_id, "token": self.token}
         job = get_example_job().to_mongo().to_dict()
-        job["method"] = job["job_input"]["app_id"]
+        job["method"] = job["job_input"]["method"]
         job["app_id"] = job["job_input"]["app_id"]
         job["service_ver"] = job["job_input"]["service_ver"]
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
 
         condor_mock.run_job = MagicMock(return_value=si)
-        condor_mock.extract_resources = MagicMock(return_value=self.cr)
         print("About to run job with params")
         pprint(job)
         job_id0 = runner.run_job(params=job)
@@ -430,13 +419,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
         runner.get_condor = MagicMock(return_value=condor_mock)
         job = get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
-        job["method"] = job["job_input"]["app_id"]
+        job["method"] = job["job_input"]["method"]
         job["app_id"] = job["job_input"]["app_id"]
         job["service_ver"] = job["job_input"]["service_ver"]
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
         job_id = runner.run_job(params=job)
         logging.info(f"Job id is {job_id} ")
@@ -580,7 +568,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         runner = self.getRunner()
         runner._test_job_permissions = MagicMock(return_value=True)
-        runner.catalog_utils.get_catalog().log_exec_stats = MagicMock(return_value=True)
+        runner.get_catalog().log_exec_stats = MagicMock(return_value=True)
 
         # test missing job_id input
         with self.assertRaises(ValueError) as context1:
@@ -734,7 +722,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         with open(self.config_file) as cf:
             other_method_runner = SDKMethodRunner(
                 get_user_client_set(self.cfg, "some_other_user", "other_token"),
-                get_client_set(self.cfg, self.config_file, cf),
+                get_client_set(self.cfg, cf),
             )
         job_states = other_method_runner.get_jobs_status().check_workspace_jobs(
             self.ws_id
@@ -920,7 +908,18 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         runner = self.getRunner()
 
+        # TODO redo this test with dependency injection & autospec vs. monkey patching
+        resolver = create_autospec(
+            JobRequirementsResolver, spec_set=True, instance=True
+        )
         runner.workspace_auth = MagicMock()
+        runner.get_job_requirements_resolver = MagicMock(return_value=resolver)
+        resolver.resolve_requirements.return_value = JobRequirements(
+            cpus=1,
+            memory_MB=100,
+            disk_GB=1,
+            client_group="njs",
+        )
         runner.auth.get_user = MagicMock(return_value=user_name)
         runner.check_is_admin = MagicMock(return_value=True)
 
@@ -937,13 +936,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner.get_condor = MagicMock(return_value=condor_mock)
         # ctx = {"user_id": self.user_id, "wsid": self.ws_id, "token": self.token}
         job = get_example_job().to_mongo().to_dict()
-        job["method"] = job["job_input"]["app_id"]
+        job["method"] = job["job_input"]["method"]
         job["app_id"] = job["job_input"]["app_id"]
         job["service_ver"] = job["job_input"]["service_ver"]
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
         job_id1 = runner.run_job(params=job)
         job_id2 = runner.run_job(params=job)

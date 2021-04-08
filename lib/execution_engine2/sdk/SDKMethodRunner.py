@@ -26,7 +26,6 @@ from lib.execution_engine2.sdk import (
     EE2Logs,
 )
 from lib.execution_engine2.sdk.EE2Constants import KBASE_CONCIERGE_USERNAME
-from lib.execution_engine2.utils.CatalogUtils import CatalogUtils
 from lib.execution_engine2.utils.Condor import Condor
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
@@ -72,7 +71,6 @@ class SDKMethodRunner:
         self.job_requirements_resolver = clients.requirements_resolver
         self.workspace = user_clients.workspace
         self.workspace_auth = user_clients.workspace_auth
-        self.catalog_utils = clients.catalog_utils
         self.auth = clients.auth
         self.auth_admin = clients.auth_admin
         self.user_id = user_clients.user_id
@@ -165,12 +163,6 @@ class SDKMethodRunner:
         Get the job requirements resolver for this instance of SDKMR.
         """
         return self.job_requirements_resolver
-
-    def get_catalog_utils(self) -> CatalogUtils:
-        """
-        Get the catalog utilities for this instance of SDKMR.
-        """
-        return self.catalog_utils
 
     def get_kafka_client(self) -> KafkaClient:
         """

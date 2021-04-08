@@ -12,11 +12,12 @@ from mock import MagicMock
 from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.db.models.models import Job
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
+from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
 from execution_engine2.utils.clients import (
     get_client_set,
     get_user_client_set,
 )
+from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from test.utils_shared.test_utils import (
     bootstrap,
     get_example_job,
@@ -56,7 +57,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         with open(config_file) as cf:
             cls.method_runner = SDKMethodRunner(
                 get_user_client_set(cls.cfg, cls.user_id, cls.token),
-                get_client_set(cls.cfg, config_file, cf),
+                get_client_set(cls.cfg, cf),
             )
 
         cls.mongo_util = MongoUtil(cls.cfg)
@@ -66,12 +67,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             db=cls.cfg["mongo-database"], col=cls.cfg["mongo-jobs-collection"]
         )
 
-        cls.cr = CondorResources(
-            request_cpus="1",
-            request_disk="1GB",
-            request_memory="100M",
-            client_group="njs",
-        )
         cls.sdkmr_test_helper = ee2_sdkmr_test_helper(cls.user_id)
 
     def getRunner(self) -> SDKMethodRunner:
@@ -86,7 +81,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         return self.sdkmr_test_helper.create_job_rec()
 
     def test_init_ok(self):
-        class_attri = ["catalog_utils", "workspace", "mongo_util", "condor"]
+        class_attri = ["workspace", "mongo_util", "condor"]
         runner = self.getRunner()
         self.assertTrue(set(class_attri) <= set(runner.__dict__.keys()))
 
@@ -110,6 +105,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                     "min_contig_len": None,
                 }
             ],
+            "job_reqs": JobRequirements(1, 1, 1, "njs"),
             "source_ws_objects": ["a/b/c", "e/d"],
             "parent_job_id": "9998",
             "meta": {"tag": "dev", "token_id": "12345"},
@@ -237,7 +233,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
         job_id = runner.run_job(params=job)
         print(f"Job id is {job_id} ")
@@ -259,7 +254,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
         jobs = [job, job, job]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
@@ -291,7 +285,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
         with self.assertRaises(expected_exception=RuntimeError):
             runner.run_job(params=job)

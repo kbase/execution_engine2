@@ -167,21 +167,32 @@
         /* EE2Constants Concierge Params are
             request_cpus: int
             request_memory: int in MB
-            request_disk: int in MB
+            request_disk: int in GB
             job_priority: int = None  range from -20 to +20, with higher values meaning better priority.
+                Note: job_priority is currently not implemented.
             account_group: str = None # Someone elses account
+            ignore_concurrency_limits: ignore any limits on simultaneous job runs.
+                Default 1 (True).
             requirements_list: list = None ['machine=worker102','color=red']
             client_group: Optional[str] = CONCIERGE_CLIENTGROUP # You can leave default or specify a clientgroup
+            client_group_regex: Whether to treat the client group string, whether provided here,
+                from the catalog, or as a default, as a regular expression when matching
+                clientgroups. Default True for HTC, but the default depends on the scheduler.
+                Omit to use the default.
+            debug_mode: Whether to run the job in debug mode. Default 0 (False).
         */
 
         typedef structure {
             int request_cpu;
-            int request_memory_mb;
-            int request_disk_mb;
+            int request_memory;
+            int request_disk;
             int job_priority;
             string account_group;
+            boolean ignore_concurrency_limits;
             list<string> requirements_list;
             string client_group;
+            boolean client_group_regex;
+            boolean debug_mode;
         } ConciergeParams;
 
 

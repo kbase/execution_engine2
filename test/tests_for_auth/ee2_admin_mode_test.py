@@ -89,7 +89,7 @@ class EE2TestAdminMode(unittest.TestCase):
             user_clients = get_user_client_set(self.cfg, self.user_id, self.token)
         if not clients:
             with open(self.config_file) as cf:
-                clients = get_client_set(self.cfg, self.config_file, cf)
+                clients = get_client_set(self.cfg, cf)
         runner = SDKMethodRunner(user_clients, clients)  # type : SDKMethodRunner
         runner.get_jobs_status()
         runner.get_runjob()
@@ -136,7 +136,9 @@ class EE2TestAdminMode(unittest.TestCase):
         ws_auth.can_write.return_value = True
         runner = self.getRunner(user_client_set, clients_and_mocks[ClientSet])
         method_1 = "module_name.function_name"
-        job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
+        job_params_1 = get_sample_job_params(
+            method=method_1, wsid=self.ws_id, app_id="module_name/foo"
+        )
 
         # Check Admin Status
         is_admin = runner.check_is_admin()
@@ -243,7 +245,9 @@ class EE2TestAdminMode(unittest.TestCase):
         adminauth.get_admin_role.return_value = ADMIN_WRITE_ROLE
 
         method_1 = "module_name.function_name"
-        job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
+        job_params_1 = get_sample_job_params(
+            method=method_1, wsid=self.ws_id, app_id="module_name/foo"
+        )
 
         # Check Admin Status
         is_admin = runner.check_is_admin()

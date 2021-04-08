@@ -38,7 +38,7 @@ class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
         with open(deploy) as cf:
             cls.method_runner = SDKMethodRunner(
                 get_user_client_set(cls.cfg, cls.user_id, cls.token),
-                get_client_set(cls.cfg, deploy, cf),
+                get_client_set(cls.cfg, cf),
             )
         cls.mongo_util = MongoUtil(cls.cfg)
         cls.mongo_helper = MongoTestHelper(cls.cfg)

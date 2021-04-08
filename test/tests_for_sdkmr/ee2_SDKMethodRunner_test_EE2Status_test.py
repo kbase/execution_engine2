@@ -12,7 +12,7 @@ from mongoengine import ValidationError
 
 from lib.execution_engine2.db.models.models import Job
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
+from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
 from execution_engine2.utils.clients import get_user_client_set, get_client_set
 from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 from test.utils_shared.test_utils import bootstrap, get_example_job
@@ -48,14 +48,8 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         with open(config_file) as cf:
             cls.method_runner = SDKMethodRunner(
                 get_user_client_set(cls.cfg, cls.user_id, cls.token),
-                get_client_set(cls.cfg, config_file, cf),
+                get_client_set(cls.cfg, cf),
             )
-        cls.cr = CondorResources(
-            request_cpus="1",
-            request_disk="1GB",
-            request_memory="100M",
-            client_group="njs",
-        )
         cls.fake_used_resources = {
             "RemoteUserCpu": "1",
             "DiskUsage_RAW": "1",
@@ -96,7 +90,6 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-        condor_mock.extract_resources = MagicMock(return_value=self.cr)
         condor_mock.get_job_resource_info = MagicMock(
             return_value=self.fake_used_resources
         )
@@ -184,7 +177,6 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
         jobs = [job, job, job]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
@@ -213,7 +205,6 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
         jobs = [job, job, job]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
@@ -250,7 +241,6 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
         jobs = [job, job, job]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})

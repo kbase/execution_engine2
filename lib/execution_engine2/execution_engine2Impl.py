@@ -65,7 +65,7 @@ class execution_engine2:
         configpath = os.environ["KB_DEPLOYMENT_CONFIG"]
         override = os.environ.get("OVERRIDE_CLIENT_GROUP")
         with open(configpath) as cf:
-            self.clients = get_client_set(config, configpath, cf, override)
+            self.clients = get_client_set(config, cf, override)
         #END_CONSTRUCTOR
         pass
 
