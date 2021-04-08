@@ -7,7 +7,7 @@ the logic to retrieve info needed by the runnner to start the job
 import os
 import time
 from enum import Enum
-from typing import Optional, Dict, NamedTuple, Union, List
+from typing import Optional, Dict, NamedTuple, Union, List, Any
 
 from execution_engine2.db.models.models import (
     Job,
@@ -20,6 +20,7 @@ from execution_engine2.db.models.models import (
 )
 from execution_engine2.sdk.job_submission_parameters import (
     JobSubmissionParameters,
+    JobRequirements as ResolvedRequirements,
     AppInfo,
     UserCreds,
 )
@@ -346,7 +347,13 @@ class EE2RunJob:
         return {_PARENT_JOB_ID: str(parent_job.id), "child_job_ids": children_jobs}
 
     # modifies the jobs in place
-    def _add_job_requirements(self, jobs):
+    def _add_job_requirements(self, jobs: List[Dict[str, Any]]):
+        f"""
+        Adds the job requirements, generated from the job requirements resolver,
+        to the provided RunJobParams dicts. Expects the required field {_METHOD} in the param
+        dicts. Adds the {_JOB_REQUIREMENTS} field to the param dicts, which holds the value of the
+        job requirements object.
+        """
         # could add a cache in the job requirements resolver to avoid making the same
         # catalog call over and over if all the jobs have the same method
         jrr = self.sdkmr.get_job_requirements_resolver()
@@ -400,7 +407,9 @@ class EE2RunJob:
 
         return self._run(params=params)
 
-    def _get_job_reqs_from_concierge_params(self, method, concierge_params):
+    def _get_job_reqs_from_concierge_params(
+        self, method: str, concierge_params: Dict[str, Any]
+    ) -> ResolvedRequirements:
         jrr = self.sdkmr.get_job_requirements_resolver()
         norm = jrr.normalize_job_reqs(concierge_params, "concierge parameters")
         rl = concierge_params.get(_REQUIREMENTS_LIST)

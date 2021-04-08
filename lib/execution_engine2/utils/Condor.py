@@ -130,7 +130,7 @@ class Condor:
         sub["+KB_CLIENTGROUP"] = f'"{job_reqs.client_group}"'
         return sub
 
-    def _create_requirements_statement(self, job_reqs: JobRequirements):
+    def _create_requirements_statement(self, job_reqs: JobRequirements) -> str:
         reqs = []
         if job_reqs.client_group_regex is not False:
             # Default is True, so a value of None means True
