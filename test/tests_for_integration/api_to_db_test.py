@@ -89,9 +89,7 @@ def _clean_db(mongo_client, db, db_user):
 
 
 def _create_db_user(mongo_client, db, db_user, password):
-    mongo_client[db].command(
-        "createUser", db_user, pwd=password, roles=["readWrite"]
-    )
+    mongo_client[db].command("createUser", db_user, pwd=password, roles=["readWrite"])
 
 
 def _set_up_auth_users(auth_url):
@@ -208,9 +206,7 @@ def _update_config_and_create_config_file(full_config, auth_url, ws_controller):
 
 
 def _clear_dbs(
-    mc: pymongo.MongoClient,
-    config: Dict[str, str],
-    ws_controller: WorkspaceController
+    mc: pymongo.MongoClient, config: Dict[str, str], ws_controller: WorkspaceController
 ):
     ee2 = mc[config["mongo-database"]]
     for name in ee2.list_collection_names():
@@ -224,7 +220,9 @@ def _clear_dbs(
 def service(full_config, auth_url, mongo_client, config, ws_controller):
     # also updates the config in place so it contains the correct auth urls for any other
     # methods that use the config fixture
-    cfgpath = _update_config_and_create_config_file(full_config, auth_url, ws_controller)
+    cfgpath = _update_config_and_create_config_file(
+        full_config, auth_url, ws_controller
+    )
     print(f"created test deploy at {cfgpath}")
     _clear_dbs(mongo_client, config, ws_controller)
 
@@ -290,4 +288,4 @@ def test_get_admin_permission_success(ee2_port):
 def test_temporary_check_ws(ee2_port, ws_controller):
     wsc = Workspace(ws_controller.get_url(), token=TOKEN_NO_ADMIN)
     ws = wsc.create_workspace({"workspace": "foo"})
-    assert ws[1] == 'foo'
+    assert ws[1] == "foo"
