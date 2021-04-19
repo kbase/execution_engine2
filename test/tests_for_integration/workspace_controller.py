@@ -66,24 +66,16 @@ class WorkspaceController:
             to be a user in the provided databases with readWrite permission.
         :param mongo_pwd: The password for the Mongo accont if, provided.
         """
-        if not jars_dir or not _os.access(jars_dir, _os.X_OK):
-            raise _TestException(
-                "jars_dir {} does not exist or is not executable.".format(jars_dir)
-            )
-        if not mongo_host:
-            raise _TestException("mongo_controller must be provided")
-        if not mongo_db:
-            raise _TestException("mongo_db must be provided")
-        if not mongo_type_db:
-            raise _TestException("mongo_type_db must be provided")
-        if not auth_url:
-            raise _TestException("auth_url must be provided")
-        if not root_temp_dir:
-            raise _TestException("root_temp_dir is None")
-        if bool(mongo_user) ^ bool(mongo_pwd):  # xor
-            raise _TestException(
-                "Neither or both of mongo_user and mongo_pwd is required"
-            )
+        self._check_params(
+            jars_dir,
+            mongo_host,
+            mongo_db,
+            mongo_type_db,
+            auth_url,
+            root_temp_dir,
+            mongo_user,
+            mongo_pwd,
+        )
 
         self._db = mongo_db
         jars_dir = jars_dir.resolve()
@@ -122,31 +114,40 @@ class WorkspaceController:
             command, stdout=self._outfile, stderr=_subprocess.STDOUT, env=newenv
         )
 
-        ws = _Workspace(f"http://localhost:{self.port}")
-        for count in range(40):
-            err = None
-            _time.sleep(1)  # wait for server to start
-            try:
-                self.version = ws.ver()
-                break
-            except (_ServerError, _requests.exceptions.ConnectionError) as se:
-                err = _TestException(se.args[0])
-                err.__cause__ = se
-        if err:
-            print("Error starting workspace service. Dumping logs and throwing error")
-            self._print_ws_logs()
-            raise err
-        self.startup_count = count + 1
-        if mongo_user:
-            self._mongo_client = MongoClient(
-                mongo_host, username=mongo_user, password=mongo_pwd, authSource=mongo_db
+        self.version, self.startup_count = self._wait_for_service()
+        self._mongo_client = self._get_mongo_client(
+            mongo_host, mongo_db, mongo_user, mongo_pwd
+        )
+
+    def _check_params(
+        self,
+        jars_dir: _Path,
+        mongo_host: str,
+        mongo_db: str,
+        mongo_type_db: str,
+        auth_url: str,
+        root_temp_dir: _Path,
+        mongo_user: str,
+        mongo_pwd: str,
+    ):
+        if not jars_dir or not _os.access(jars_dir, _os.X_OK):
+            raise _TestException(
+                "jars_dir {} does not exist or is not executable.".format(jars_dir)
             )
-        else:
-            self._mongo_client = MongoClient(mongo_host)
-        # check that the client is correctly connected. See
-        # https://api.mongodb.com/python/3.7.0/api/pymongo/mongo_client.html
-        #    #pymongo.mongo_client.MongoClient
-        self._mongo_client.admin.command("ismaster")
+        if not mongo_host:
+            raise _TestException("mongo_controller must be provided")
+        if not mongo_db:
+            raise _TestException("mongo_db must be provided")
+        if not mongo_type_db:
+            raise _TestException("mongo_type_db must be provided")
+        if not auth_url:
+            raise _TestException("auth_url must be provided")
+        if not root_temp_dir:
+            raise _TestException("root_temp_dir is None")
+        if bool(mongo_user) ^ bool(mongo_pwd):  # xor
+            raise _TestException(
+                "Neither or both of mongo_user and mongo_pwd is required"
+            )
 
     def _get_class_path(self, jars_dir: _Path):
         cp = []
@@ -193,6 +194,36 @@ class WorkspaceController:
         with open(f, "w") as inifile:
             cp.write(inifile)
         return f
+
+    def _wait_for_service(self):
+        ws = _Workspace(f"http://localhost:{self.port}")
+        for count in range(40):
+            err = None
+            _time.sleep(1)  # wait for server to start
+            try:
+                version = ws.ver()
+                break
+            except (_ServerError, _requests.exceptions.ConnectionError) as se:
+                err = _TestException(se.args[0])
+                err.__cause__ = se
+        if err:
+            print("Error starting workspace service. Dumping logs and throwing error")
+            self._print_ws_logs()
+            raise err
+        return version, count + 1
+
+    def _get_mongo_client(self, mongo_host, mongo_db, mongo_user, mongo_pwd):
+        if mongo_user:
+            mongo_client = MongoClient(
+                mongo_host, username=mongo_user, password=mongo_pwd, authSource=mongo_db
+            )
+        else:
+            mongo_client = MongoClient(mongo_host)
+        # check that the client is correctly connected. See
+        # https://api.mongodb.com/python/3.7.0/api/pymongo/mongo_client.html
+        #    #pymongo.mongo_client.MongoClient
+        mongo_client.admin.command("ismaster")
+        return mongo_client
 
     def get_url(self):
         """
