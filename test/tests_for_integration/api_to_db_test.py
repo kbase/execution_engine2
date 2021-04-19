@@ -40,10 +40,6 @@ from installed_clients.execution_engine2Client import execution_engine2 as ee2cl
 from installed_clients.WorkspaceClient import Workspace
 
 KEEP_TEMP_FILES = False
-AUTH_DB = "api_to_db_auth_test"
-AUTH_MONGO_USER = "auth"
-WS_DB = "api_to_db_ws_test"
-WS_MONGO_USER = "workspace"
 TEMP_DIR = Path("test_temp_can_delete")
 
 # may need to make this configurable
@@ -113,18 +109,20 @@ def _set_up_auth_users(auth_url):
 
 @fixture(scope="module")
 def auth_url(config, mongo_client):
+    auth_db = "api_to_db_auth_test"
+    auth_mongo_user = "auth"
     # clean up from any previously failed test runs that left the db in place
-    _clean_db(mongo_client, AUTH_DB, AUTH_MONGO_USER)
+    _clean_db(mongo_client, auth_db, auth_mongo_user)
 
     # make a user for the auth db
-    _create_db_user(mongo_client, AUTH_DB, AUTH_MONGO_USER, "authpwd")
+    _create_db_user(mongo_client, auth_db, auth_mongo_user, "authpwd")
 
     auth = AuthController(
         JARS_DIR,
         config["mongo-host"],
-        AUTH_DB,
+        auth_db,
         TEMP_DIR,
-        mongo_user=AUTH_MONGO_USER,
+        mongo_user=auth_mongo_user,
         mongo_pwd="authpwd",
     )
     print(
@@ -142,26 +140,29 @@ def auth_url(config, mongo_client):
 
     # Because the tests are run with mongo in a persistent docker container via docker-compose,
     # we need to clean up after ourselves.
-    _clean_db(mongo_client, AUTH_DB, AUTH_MONGO_USER)
+    _clean_db(mongo_client, auth_db, auth_mongo_user)
 
 
 @fixture(scope="module")
 def ws_controller(config, mongo_client, auth_url):
+    ws_db = "api_to_db_ws_test"
+    ws_types_db = "api_to_db_ws_types_test"
+    ws_mongo_user = "workspace"
     # clean up from any previously failed test runs that left the db in place
-    _clean_db(mongo_client, WS_DB, WS_MONGO_USER)
+    _clean_db(mongo_client, ws_db, ws_mongo_user)
 
     # make a user for the ws dbs
-    _create_db_user(mongo_client, WS_DB, WS_MONGO_USER, "wspwd")
-    _create_db_user(mongo_client, "api_to_db_ws_types_test", WS_MONGO_USER, "wspwd")
+    _create_db_user(mongo_client, ws_db, ws_mongo_user, "wspwd")
+    _create_db_user(mongo_client, ws_types_db, ws_mongo_user, "wspwd")
 
     ws = WorkspaceController(
         JARS_DIR,
         config["mongo-host"],
-        WS_DB,
-        "api_to_db_ws_types_test",
+        ws_db,
+        ws_types_db,
         auth_url + "/testmode/",
         TEMP_DIR,
-        mongo_user=WS_MONGO_USER,
+        mongo_user=ws_mongo_user,
         mongo_pwd="wspwd",
     )
     print(
@@ -175,8 +176,8 @@ def ws_controller(config, mongo_client, auth_url):
 
     # Because the tests are run with mongo in a persistent docker container via docker-compose,
     # we need to clean up after ourselves.
-    _clean_db(mongo_client, WS_DB, WS_MONGO_USER)
-    _clean_db(mongo_client, "api_to_db_ws_types_test", WS_MONGO_USER)
+    _clean_db(mongo_client, ws_db, ws_mongo_user)
+    _clean_db(mongo_client, ws_types_db, ws_mongo_user)
 
 
 def _update_config_and_create_config_file(full_config, auth_url, ws_controller):
