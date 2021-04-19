@@ -1,7 +1,7 @@
 """
 Integration tests that cover the entire codebase from API to database.
 
-NOTE 1: These tests are designed to only be runnable after running docker-compose up
+NOTE 1: These tests are designed to only be runnable after running docker-compose up.
 
 NOTE 2: These tests were set up quickly in order to debug a problem with administration related
 calls. As such, the auth server was set up to run in test mode locally. If more integrations
@@ -12,7 +12,15 @@ docker containers or exposed to other containers.
 NOTE 3: Although this is supposed to be an integration test, the catalog service and htcondor
 are still mocked out as bringing them up would take a large amount of effort. Someday...
 
-NOTE 4: EE2 posting to Slack always fails silently. Currently slack calls are not tested.
+NOTE 4: Kafka notes
+    a) Currently nothing listens to the kafka feed.
+    b) When running the tests, the kafka producer logs that kafka cannot be reached. However,
+        this error is silent otherwise.
+    c) I wasn't able to contact the docker kafka service with the kafka-python client either.
+    d) As such, Kafka is not tested. Once tests are added, at least one test should check that
+        something sensible happens if a kafka message cannot be sent.
+
+NOTE 5: EE2 posting to Slack always fails silently in tests. Currently slack calls are not tested.
 """
 
 # TODO add more integration tests, these are not necessarily exhaustive
@@ -430,5 +438,3 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
             'scheduler_type': 'condor'
         }
         assert job == expected_job
-
-        # TODO check kafka
