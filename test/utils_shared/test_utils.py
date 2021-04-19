@@ -402,6 +402,7 @@ def assert_close_to_now(time_):
     assert now_ms + 1 > time_
     assert now_ms - 1 < time_
 
+
 def find_free_port() -> int:
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
         s.bind(("", 0))

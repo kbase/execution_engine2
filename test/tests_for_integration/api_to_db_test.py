@@ -75,7 +75,9 @@ USER_WRITE_ADMIN = "writeuser"
 TOKEN_WRITE_ADMIN = None
 
 CAT_GET_MODULE_VERSION = "installed_clients.CatalogClient.Catalog.get_module_version"
-CAT_LIST_CLIENT_GROUPS = "installed_clients.CatalogClient.Catalog.list_client_group_configs"
+CAT_LIST_CLIENT_GROUPS = (
+    "installed_clients.CatalogClient.Catalog.list_client_group_configs"
+)
 
 # from test/deploy.cfg
 MONGO_EE2_DB = "ee2"
@@ -315,6 +317,7 @@ def test_get_admin_permission_success(ee2_port):
     assert ee2cli_no.get_admin_permission() == {"permission": "n"}
     assert ee2cli_write.get_admin_permission() == {"permission": "w"}
 
+
 ######## run_job tests ########
 
 
@@ -351,27 +354,28 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
     # need to get the mock objects first so spec_set can do its magic before we mock out
     # the classes in the context manager
     sub, schedd, txn = _get_htc_mocks()
-    with patch('htcondor.Submit', spec_set=True, autospec=True) as sub_init, \
-            patch('htcondor.Schedd', spec_set=True, autospec=True) as schedd_init, \
-            patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups, \
-            patch(CAT_GET_MODULE_VERSION, spec_set=True, autospec=True) as get_mod_ver:
+    with patch("htcondor.Submit", spec_set=True, autospec=True) as sub_init, patch(
+        "htcondor.Schedd", spec_set=True, autospec=True
+    ) as schedd_init, patch(
+        CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True
+    ) as list_cgroups, patch(
+        CAT_GET_MODULE_VERSION, spec_set=True, autospec=True
+    ) as get_mod_ver:
         _finish_htc_mocks(sub_init, schedd_init, sub, schedd, txn)
         sub.queue.return_value = 123
         list_cgroups.return_value = []
-        get_mod_ver.return_value = {'git_commit_hash': 'somehash'}
+        get_mod_ver.return_value = {"git_commit_hash": "somehash"}
 
         ee2 = ee2client(f"http://localhost:{ee2_port}", token=TOKEN_NO_ADMIN)
-        job_id = ee2.run_job(
-            {
-                "method": "mod.meth",
-                "app_id": "mod/app",
-                "wsid": 1
-            }
-        )
+        job_id = ee2.run_job({"method": "mod.meth", "app_id": "mod/app", "wsid": 1})
 
         # Since these are class methods, the first argument is self, which we ignore
-        get_mod_ver.assert_called_once_with(ANY, {'module_name': "mod", "version": "release"})
-        list_cgroups.assert_called_once_with(ANY, {"module_name": "mod", "function_name": "meth"})
+        get_mod_ver.assert_called_once_with(
+            ANY, {"module_name": "mod", "version": "release"}
+        )
+        list_cgroups.assert_called_once_with(
+            ANY, {"module_name": "mod", "function_name": "meth"}
+        )
 
         expected_sub = _get_common_sub(job_id)
         expected_sub.update(
@@ -394,7 +398,7 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
                 "+AccountingGroup": f'"{USER_NO_ADMIN}"',
                 "environment": (
                     '"DOCKER_JOB_TIMEOUT=604805 KB_ADMIN_AUTH_TOKEN=test_auth_token '
-                    + f'KB_AUTH_TOKEN={TOKEN_NO_ADMIN} '
+                    + f"KB_AUTH_TOKEN={TOKEN_NO_ADMIN} "
                     + f"CLIENTGROUP=njs JOB_ID={job_id} CONDOR_ID=$(Cluster).$(Process) "
                     + 'PYTHON_EXECUTABLE=/miniconda/bin/python DEBUG_MODE=False PARENT_JOB_ID= "'
                 ),
@@ -408,33 +412,35 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
 
         _check_htc_calls(sub_init, sub, schedd_init, schedd, txn, expected_sub)
 
-        job = mongo_client[MONGO_EE2_DB][MONGO_EE2_JOBS_COL].find_one({"_id": ObjectId(job_id)})
-        assert_close_to_now(job.pop('updated'))
-        assert_close_to_now(job.pop('queued'))
+        job = mongo_client[MONGO_EE2_DB][MONGO_EE2_JOBS_COL].find_one(
+            {"_id": ObjectId(job_id)}
+        )
+        assert_close_to_now(job.pop("updated"))
+        assert_close_to_now(job.pop("queued"))
         expected_job = {
-            '_id': ObjectId(job_id),
-            'user': USER_NO_ADMIN,
-            'authstrat': 'kbaseworkspace',
-            'wsid': 1,
-            'status': 'queued',
-            'job_input': {
-                'wsid': 1,
-                'method': 'mod.meth',
-                'service_ver': 'somehash',
-                'app_id': 'mod/app',
-                'source_ws_objects': [],
-                'parent_job_id': 'None',
-                'requirements': {
-                    'clientgroup': 'njs',
-                    'cpu': 4,
-                    'memory': 2000,
-                    'disk': 30
+            "_id": ObjectId(job_id),
+            "user": USER_NO_ADMIN,
+            "authstrat": "kbaseworkspace",
+            "wsid": 1,
+            "status": "queued",
+            "job_input": {
+                "wsid": 1,
+                "method": "mod.meth",
+                "service_ver": "somehash",
+                "app_id": "mod/app",
+                "source_ws_objects": [],
+                "parent_job_id": "None",
+                "requirements": {
+                    "clientgroup": "njs",
+                    "cpu": 4,
+                    "memory": 2000,
+                    "disk": 30,
                 },
-                'narrative_cell_info': {}
+                "narrative_cell_info": {},
             },
-            'child_jobs': [],
-            'batch_job': False,
-            'scheduler_id': "123",
-            'scheduler_type': 'condor'
+            "child_jobs": [],
+            "batch_job": False,
+            "scheduler_id": "123",
+            "scheduler_type": "condor",
         }
         assert job == expected_job
