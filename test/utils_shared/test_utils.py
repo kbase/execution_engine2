@@ -3,6 +3,7 @@ import os.path
 import uuid
 import logging
 import socket
+import time
 from configparser import ConfigParser
 from contextlib import closing
 from datetime import datetime
@@ -392,6 +393,14 @@ def assert_exception_correct(got: Exception, expected: Exception):
     assert got.args == expected.args
     assert type(got) == type(expected)
 
+
+def assert_close_to_now(time_):
+    """
+    Checks that a timestamp in seconds since the epoch is within a second of the current time.
+    """
+    now_ms = time.time()
+    assert now_ms + 1 > time_
+    assert now_ms - 1 < time_
 
 def find_free_port() -> int:
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
