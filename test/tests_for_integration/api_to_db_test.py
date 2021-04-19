@@ -150,6 +150,7 @@ def ws_controller(config, mongo_client, auth_url):
     ws_mongo_user = "workspace"
     # clean up from any previously failed test runs that left the db in place
     _clean_db(mongo_client, ws_db, ws_mongo_user)
+    _clean_db(mongo_client, ws_types_db, ws_mongo_user)
 
     # make a user for the ws dbs
     _create_db_user(mongo_client, ws_db, ws_mongo_user, "wspwd")
