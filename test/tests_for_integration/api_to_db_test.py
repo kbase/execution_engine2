@@ -35,7 +35,7 @@ from configparser import ConfigParser
 from threading import Thread
 from pathlib import Path
 import pymongo
-from pytest import fixture
+from pytest import fixture, raises
 from typing import Dict
 from unittest.mock import patch, create_autospec, ANY
 
@@ -52,8 +52,10 @@ from utils_shared.test_utils import (
     create_auth_role,
     set_custom_roles,
     assert_close_to_now,
+    assert_exception_correct
 )
 from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
+from installed_clients.baseclient import ServerError
 from installed_clients.execution_engine2Client import execution_engine2 as ee2client
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
@@ -531,3 +533,64 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
             "scheduler_type": "condor",
         }
         assert job == expected_job
+
+
+def test_run_job_fail_no_workspace_access(ee2_port):
+    params = {"method": "mod.meth", "app_id": "mod/app", "wsid": 1}
+    # this error could probably use some cleanup
+    err = ("('An error occurred while fetching user permissions from the Workspace', "
+           + "ServerError('No workspace with id 1 exists'))")
+    _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
+
+
+def test_run_job_fail_bad_method(ee2_port):
+    params = {"method": "mod.meth.moke", "app_id": "mod/app"}
+    # TODO the Server.py file is quoting strings for some reason it seems
+    # see https://github.com/kbase/sample_service/blob/master/lib/SampleService/SampleServiceServer.py#L119-L127
+    err = '"Unrecognized method: \'mod.meth.moke\'. Please input module_name.function_name"'
+    _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
+
+
+def test_run_job_fail_bad_app(ee2_port):
+    params = {"method": "mod.meth", "app_id": "mod.app"}
+    # TODO the Server.py file is quoting strings for some reason it seems
+    # see https://github.com/kbase/sample_service/blob/master/lib/SampleService/SampleServiceServer.py#L119-L127
+    err = '"Application ID \'mod.app\' contains a \'.\'"'
+    _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
+
+
+def test_run_job_fail_bad_upa(ee2_port):
+    params = {"method": "mod.meth", "app_id": "mod/app", "source_ws_objects": ["ws/obj/1"]}
+    # TODO the Server.py file is quoting strings for some reason it seems
+    # see https://github.com/kbase/sample_service/blob/master/lib/SampleService/SampleServiceServer.py#L119-L127
+    err = '"source_ws_objects index 0, \'ws/obj/1\', is not a valid Unique Permanent Address"'
+    _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
+
+
+def test_run_job_fail_no_such_object(ee2_port, ws_controller):
+    # Set up workspace and objects
+    wsc = Workspace(ws_controller.get_url(), token=TOKEN_NO_ADMIN)
+    wsc.create_workspace({"workspace": "foo"})
+    wsc.save_objects(
+        {
+            "id": 1,
+            "objects": [
+                {"name": "one", "type": "Trivial.Object-1.0", "data": {}},
+            ],
+        }
+    )
+    params = {"method": "mod.meth", "app_id": "mod/app", "source_ws_objects": ["1/2/1"]}
+    # TODO the Server.py file is quoting strings for some reason it seems
+    # see https://github.com/kbase/sample_service/blob/master/lib/SampleService/SampleServiceServer.py#L119-L127
+    err = "'Some workspace object is inaccessible'"
+    _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
+
+
+def _run_job_fail(ee2_port, token, params, expected, throw_exception=False):
+    client = ee2client(f"http://localhost:{ee2_port}", token=token)
+    if throw_exception:
+        client.run_job(params)
+    else:
+        with raises(ServerError) as got:
+            client.run_job(params)
+        assert_exception_correct(got.value, ServerError("name", 1, expected))
