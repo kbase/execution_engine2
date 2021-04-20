@@ -74,12 +74,12 @@ TOKEN_NO_ADMIN = None
 USER_WRITE_ADMIN = "writeuser"
 TOKEN_WRITE_ADMIN = None
 
-USER_WS_READ_ADMIN = 'wsreadadmin'
+USER_WS_READ_ADMIN = "wsreadadmin"
 TOKEN_WS_READ_ADMIN = None
-USER_WS_FULL_ADMIN = 'wsfulladmin'
+USER_WS_FULL_ADMIN = "wsfulladmin"
 TOKEN_WS_FULL_ADMIN = None
-WS_READ_ADMIN = 'WS_READ_ADMIN'
-WS_FULL_ADMIN = 'WS_FULL_ADMIN'
+WS_READ_ADMIN = "WS_READ_ADMIN"
+WS_FULL_ADMIN = "WS_FULL_ADMIN"
 
 CAT_GET_MODULE_VERSION = "installed_clients.CatalogClient.Catalog.get_module_version"
 CAT_LIST_CLIENT_GROUPS = (
@@ -136,27 +136,31 @@ def _set_up_auth_user(auth_url, user, display, roles=None):
 def _set_up_auth_users(auth_url):
     create_auth_role(auth_url, ADMIN_READ_ROLE, "ee2 admin read doohickey")
     create_auth_role(auth_url, ADMIN_WRITE_ROLE, "ee2 admin write thinger")
-    create_auth_role(auth_url, WS_READ_ADMIN, 'wsr')
-    create_auth_role(auth_url, WS_FULL_ADMIN, 'wsf')
+    create_auth_role(auth_url, WS_READ_ADMIN, "wsr")
+    create_auth_role(auth_url, WS_FULL_ADMIN, "wsf")
 
     global TOKEN_READ_ADMIN
     TOKEN_READ_ADMIN = _set_up_auth_user(
-        auth_url, USER_READ_ADMIN, "display1", [ADMIN_READ_ROLE])
+        auth_url, USER_READ_ADMIN, "display1", [ADMIN_READ_ROLE]
+    )
 
     global TOKEN_NO_ADMIN
     TOKEN_NO_ADMIN = _set_up_auth_user(auth_url, USER_NO_ADMIN, "display2")
 
     global TOKEN_WRITE_ADMIN
     TOKEN_WRITE_ADMIN = _set_up_auth_user(
-        auth_url, USER_WRITE_ADMIN, "display3", [ADMIN_WRITE_ROLE])
+        auth_url, USER_WRITE_ADMIN, "display3", [ADMIN_WRITE_ROLE]
+    )
 
     global TOKEN_WS_READ_ADMIN
     TOKEN_WS_READ_ADMIN = _set_up_auth_user(
-        auth_url, USER_WS_READ_ADMIN, "wsra", [WS_READ_ADMIN])
+        auth_url, USER_WS_READ_ADMIN, "wsra", [WS_READ_ADMIN]
+    )
 
     global TOKEN_WS_FULL_ADMIN
     TOKEN_WS_FULL_ADMIN = _set_up_auth_user(
-        auth_url, USER_WS_FULL_ADMIN, "wsrf", [WS_FULL_ADMIN])
+        auth_url, USER_WS_FULL_ADMIN, "wsrf", [WS_FULL_ADMIN]
+    )
 
 
 @fixture(scope="module")
@@ -196,22 +200,24 @@ def auth_url(config, mongo_client):
 
 
 def _add_ws_types(ws_controller):
-    wsc = Workspace(f'http://localhost:{ws_controller.port}', token=TOKEN_WS_FULL_ADMIN)
-    wsc.request_module_ownership('Trivial')
-    wsc.administer({'command': 'approveModRequest', 'module': 'Trivial'})
-    wsc.register_typespec({
-        'spec': '''
+    wsc = Workspace(f"http://localhost:{ws_controller.port}", token=TOKEN_WS_FULL_ADMIN)
+    wsc.request_module_ownership("Trivial")
+    wsc.administer({"command": "approveModRequest", "module": "Trivial"})
+    wsc.register_typespec(
+        {
+            "spec": """
                 module Trivial {
                     /* @optional dontusethisfieldorifyoudomakesureitsastring */
                     typedef structure {
                         string dontusethisfieldorifyoudomakesureitsastring;
                     } Object;
                 };
-                ''',
-        'dryrun': 0,
-        'new_types': ['Object']
-    })
-    wsc.release_module('Trivial')
+                """,
+            "dryrun": 0,
+            "new_types": ["Object"],
+        }
+    )
+    wsc.release_module("Trivial")
 
 
 @fixture(scope="module")
@@ -393,10 +399,15 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
     # Set up workspace and objects
     wsc = Workspace(ws_controller.get_url(), token=TOKEN_NO_ADMIN)
     wsc.create_workspace({"workspace": "foo"})
-    wsc.save_objects({'id': 1, 'objects': [
-        {'name': 'one', 'type': 'Trivial.Object-1.0', 'data': {}},
-        {'name': 'two', 'type': 'Trivial.Object-1.0', 'data': {}}
-    ]})
+    wsc.save_objects(
+        {
+            "id": 1,
+            "objects": [
+                {"name": "one", "type": "Trivial.Object-1.0", "data": {}},
+                {"name": "two", "type": "Trivial.Object-1.0", "data": {}},
+            ],
+        }
+    )
 
     # need to get the mock objects first so spec_set can do its magic before we mock out
     # the classes in the context manager
@@ -417,12 +428,14 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
 
         # run the method
         ee2 = ee2client(f"http://localhost:{ee2_port}", token=TOKEN_NO_ADMIN)
-        job_id = ee2.run_job({
-            "method": "mod.meth",
-            "app_id": "mod/app",
-            "wsid": 1,
-            "source_ws_objects": ["1/1/1", "1/2/1"]
-        })
+        job_id = ee2.run_job(
+            {
+                "method": "mod.meth",
+                "app_id": "mod/app",
+                "wsid": 1,
+                "source_ws_objects": ["1/1/1", "1/2/1"],
+            }
+        )
 
         # check that mocks were called correctly
         # Since these are class methods, the first argument is self, which we ignore
@@ -444,7 +457,7 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
                 "+KB_APP_ID": '"mod/app"',
                 "+KB_APP_MODULE_NAME": '"mod"',
                 "+KB_WSID": '"1"',
-                '+KB_SOURCE_WS_OBJECTS': '"1/1/1,1/2/1"',
+                "+KB_SOURCE_WS_OBJECTS": '"1/1/1,1/2/1"',
                 "request_cpus": "4",
                 "request_memory": "2000MB",
                 "request_disk": "30GB",
@@ -485,7 +498,7 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
                 "method": "mod.meth",
                 "service_ver": "somehash",
                 "app_id": "mod/app",
-                'source_ws_objects': ['1/1/1', '1/2/1'],
+                "source_ws_objects": ["1/1/1", "1/2/1"],
                 "parent_job_id": "None",
                 "requirements": {
                     "clientgroup": "njs",
