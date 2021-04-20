@@ -434,6 +434,14 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
                 "app_id": "mod/app",
                 "wsid": 1,
                 "source_ws_objects": ["1/1/1", "1/2/1"],
+                "params": [{"foo": "bar"}, 42],
+                "meta": {"run_id": "rid",
+                         "token_id": "tid",
+                         "tag": "yourit",
+                         "cell_id": "cid",
+                         "status": "totally wasted bro",
+                         "thiskey": "getssilentlydropped",
+                         }
             }
         )
 
@@ -496,6 +504,7 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
             "job_input": {
                 "wsid": 1,
                 "method": "mod.meth",
+                'params': [{'foo': 'bar'}, 42],
                 "service_ver": "somehash",
                 "app_id": "mod/app",
                 "source_ws_objects": ["1/1/1", "1/2/1"],
@@ -506,7 +515,13 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
                     "memory": 2000,
                     "disk": 30,
                 },
-                "narrative_cell_info": {},
+                "narrative_cell_info": {
+                    "run_id": "rid",
+                    "token_id": "tid",
+                    "tag": "yourit",
+                    "cell_id": "cid",
+                    "status": "totally wasted bro",
+                }
             },
             "child_jobs": [],
             "batch_job": False,
