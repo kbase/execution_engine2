@@ -52,7 +52,7 @@ from utils_shared.test_utils import (
     create_auth_role,
     set_custom_roles,
     assert_close_to_now,
-    assert_exception_correct
+    assert_exception_correct,
 )
 from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
 from installed_clients.baseclient import ServerError
@@ -425,7 +425,9 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
         # set up the rest of the mocks
         _finish_htc_mocks(sub_init, schedd_init, sub, schedd, txn)
         sub.queue.return_value = 123
-        list_cgroups.return_value = [{"client_groups": ['{"request_cpus":8,"request_memory":5}']}]
+        list_cgroups.return_value = [
+            {"client_groups": ['{"request_cpus":8,"request_memory":5}']}
+        ]
         get_mod_ver.return_value = {"git_commit_hash": "somehash"}
 
         # run the method
@@ -439,13 +441,14 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
                 "params": [{"foo": "bar"}, 42],
                 "service_ver": "beta",
                 "parent_job_id": "totallywrongid",
-                "meta": {"run_id": "rid",
-                         "token_id": "tid",
-                         "tag": "yourit",
-                         "cell_id": "cid",
-                         "status": "totally wasted bro",
-                         "thiskey": "getssilentlydropped",
-                         }
+                "meta": {
+                    "run_id": "rid",
+                    "token_id": "tid",
+                    "tag": "yourit",
+                    "cell_id": "cid",
+                    "status": "totally wasted bro",
+                    "thiskey": "getssilentlydropped",
+                },
             }
         )
 
@@ -508,7 +511,7 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
             "job_input": {
                 "wsid": 1,
                 "method": "mod.meth",
-                'params': [{'foo': 'bar'}, 42],
+                "params": [{"foo": "bar"}, 42],
                 "service_ver": "somehash",
                 "app_id": "mod/app",
                 "source_ws_objects": ["1/1/1", "1/2/1"],
@@ -525,7 +528,7 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
                     "tag": "yourit",
                     "cell_id": "cid",
                     "status": "totally wasted bro",
-                }
+                },
             },
             "child_jobs": [],
             "batch_job": False,
@@ -538,8 +541,10 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
 def test_run_job_fail_no_workspace_access(ee2_port):
     params = {"method": "mod.meth", "app_id": "mod/app", "wsid": 1}
     # this error could probably use some cleanup
-    err = ("('An error occurred while fetching user permissions from the Workspace', "
-           + "ServerError('No workspace with id 1 exists'))")
+    err = (
+        "('An error occurred while fetching user permissions from the Workspace', "
+        + "ServerError('No workspace with id 1 exists'))"
+    )
     _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
 
@@ -547,7 +552,7 @@ def test_run_job_fail_bad_method(ee2_port):
     params = {"method": "mod.meth.moke", "app_id": "mod/app"}
     # TODO the Server.py file is quoting strings for some reason it seems
     # see https://github.com/kbase/sample_service/blob/master/lib/SampleService/SampleServiceServer.py#L119-L127
-    err = '"Unrecognized method: \'mod.meth.moke\'. Please input module_name.function_name"'
+    err = "\"Unrecognized method: 'mod.meth.moke'. Please input module_name.function_name\""
     _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
 
@@ -555,15 +560,19 @@ def test_run_job_fail_bad_app(ee2_port):
     params = {"method": "mod.meth", "app_id": "mod.app"}
     # TODO the Server.py file is quoting strings for some reason it seems
     # see https://github.com/kbase/sample_service/blob/master/lib/SampleService/SampleServiceServer.py#L119-L127
-    err = '"Application ID \'mod.app\' contains a \'.\'"'
+    err = "\"Application ID 'mod.app' contains a '.'\""
     _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
 
 def test_run_job_fail_bad_upa(ee2_port):
-    params = {"method": "mod.meth", "app_id": "mod/app", "source_ws_objects": ["ws/obj/1"]}
+    params = {
+        "method": "mod.meth",
+        "app_id": "mod/app",
+        "source_ws_objects": ["ws/obj/1"],
+    }
     # TODO the Server.py file is quoting strings for some reason it seems
     # see https://github.com/kbase/sample_service/blob/master/lib/SampleService/SampleServiceServer.py#L119-L127
-    err = '"source_ws_objects index 0, \'ws/obj/1\', is not a valid Unique Permanent Address"'
+    err = "\"source_ws_objects index 0, 'ws/obj/1', is not a valid Unique Permanent Address\""
     _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
 
