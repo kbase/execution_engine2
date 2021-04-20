@@ -435,6 +435,7 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
                 "wsid": 1,
                 "source_ws_objects": ["1/1/1", "1/2/1"],
                 "params": [{"foo": "bar"}, 42],
+                "service_ver": "beta",
                 "meta": {"run_id": "rid",
                          "token_id": "tid",
                          "tag": "yourit",
@@ -448,7 +449,7 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
         # check that mocks were called correctly
         # Since these are class methods, the first argument is self, which we ignore
         get_mod_ver.assert_called_once_with(
-            ANY, {"module_name": "mod", "version": "release"}
+            ANY, {"module_name": "mod", "version": "beta"}
         )
         list_cgroups.assert_called_once_with(
             ANY, {"module_name": "mod", "function_name": "meth"}
