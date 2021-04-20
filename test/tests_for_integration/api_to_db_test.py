@@ -74,6 +74,13 @@ TOKEN_NO_ADMIN = None
 USER_WRITE_ADMIN = "writeuser"
 TOKEN_WRITE_ADMIN = None
 
+USER_WS_READ_ADMIN = 'wsreadadmin'
+TOKEN_WS_READ_ADMIN = None
+USER_WS_FULL_ADMIN = 'wsfulladmin'
+TOKEN_WS_FULL_ADMIN = None
+WS_READ_ADMIN = 'WS_READ_ADMIN'
+WS_FULL_ADMIN = 'WS_FULL_ADMIN'
+
 CAT_GET_MODULE_VERSION = "installed_clients.CatalogClient.Catalog.get_module_version"
 CAT_LIST_CLIENT_GROUPS = (
     "installed_clients.CatalogClient.Catalog.list_client_group_configs"
@@ -119,23 +126,37 @@ def _create_db_user(mongo_client, db, db_user, password):
     mongo_client[db].command("createUser", db_user, pwd=password, roles=["readWrite"])
 
 
+def _set_up_auth_user(auth_url, user, display, roles=None):
+    create_auth_user(auth_url, user, display)
+    if roles:
+        set_custom_roles(auth_url, user, roles)
+    return create_auth_login_token(auth_url, user)
+
+
 def _set_up_auth_users(auth_url):
     create_auth_role(auth_url, ADMIN_READ_ROLE, "ee2 admin read doohickey")
     create_auth_role(auth_url, ADMIN_WRITE_ROLE, "ee2 admin write thinger")
+    create_auth_role(auth_url, WS_READ_ADMIN, 'wsr')
+    create_auth_role(auth_url, WS_FULL_ADMIN, 'wsf')
 
     global TOKEN_READ_ADMIN
-    create_auth_user(auth_url, USER_READ_ADMIN, "display1")
-    TOKEN_READ_ADMIN = create_auth_login_token(auth_url, USER_READ_ADMIN)
-    set_custom_roles(auth_url, USER_READ_ADMIN, [ADMIN_READ_ROLE])
+    TOKEN_READ_ADMIN = _set_up_auth_user(
+        auth_url, USER_READ_ADMIN, "display1", [ADMIN_READ_ROLE])
 
     global TOKEN_NO_ADMIN
-    create_auth_user(auth_url, USER_NO_ADMIN, "display2")
-    TOKEN_NO_ADMIN = create_auth_login_token(auth_url, USER_NO_ADMIN)
+    TOKEN_NO_ADMIN = _set_up_auth_user(auth_url, USER_NO_ADMIN, "display2")
 
     global TOKEN_WRITE_ADMIN
-    create_auth_user(auth_url, USER_WRITE_ADMIN, "display3")
-    TOKEN_WRITE_ADMIN = create_auth_login_token(auth_url, USER_WRITE_ADMIN)
-    set_custom_roles(auth_url, USER_WRITE_ADMIN, [ADMIN_WRITE_ROLE])
+    TOKEN_WRITE_ADMIN = _set_up_auth_user(
+        auth_url, USER_WRITE_ADMIN, "display3", [ADMIN_WRITE_ROLE])
+
+    global TOKEN_WS_READ_ADMIN
+    TOKEN_WS_READ_ADMIN = _set_up_auth_user(
+        auth_url, USER_WS_READ_ADMIN, "wsra", [WS_READ_ADMIN])
+
+    global TOKEN_WS_FULL_ADMIN
+    TOKEN_WS_FULL_ADMIN = _set_up_auth_user(
+        auth_url, USER_WS_FULL_ADMIN, "wsrf", [WS_FULL_ADMIN])
 
 
 @fixture(scope="module")
@@ -174,6 +195,25 @@ def auth_url(config, mongo_client):
     _clean_db(mongo_client, auth_db, auth_mongo_user)
 
 
+def _add_ws_types(ws_controller):
+    wsc = Workspace(f'http://localhost:{ws_controller.port}', token=TOKEN_WS_FULL_ADMIN)
+    wsc.request_module_ownership('Trivial')
+    wsc.administer({'command': 'approveModRequest', 'module': 'Trivial'})
+    wsc.register_typespec({
+        'spec': '''
+                module Trivial {
+                    /* @optional dontusethisfieldorifyoudomakesureitsastring */
+                    typedef structure {
+                        string dontusethisfieldorifyoudomakesureitsastring;
+                    } Object;
+                };
+                ''',
+        'dryrun': 0,
+        'new_types': ['Object']
+    })
+    wsc.release_module('Trivial')
+
+
 @fixture(scope="module")
 def ws_controller(config, mongo_client, auth_url):
     ws_db = "api_to_db_ws_test"
@@ -201,6 +241,8 @@ def ws_controller(config, mongo_client, auth_url):
         f"Started KBase Workspace {ws.version} on port {ws.port} "
         + f"in dir {ws.temp_dir} in {ws.startup_count}s"
     )
+    _add_ws_types(ws)
+
     yield ws
 
     print(f"shutting down workspace, KEEP_TEMP_FILES={KEEP_TEMP_FILES}")
@@ -348,12 +390,18 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
     """
     A simple test of the run_job method.
     """
+    # Set up workspace and objects
     wsc = Workspace(ws_controller.get_url(), token=TOKEN_NO_ADMIN)
     wsc.create_workspace({"workspace": "foo"})
+    wsc.save_objects({'id': 1, 'objects': [
+        {'name': 'one', 'type': 'Trivial.Object-1.0', 'data': {}},
+        {'name': 'two', 'type': 'Trivial.Object-1.0', 'data': {}}
+    ]})
 
     # need to get the mock objects first so spec_set can do its magic before we mock out
     # the classes in the context manager
     sub, schedd, txn = _get_htc_mocks()
+    # seriously black you're killing me here. This is readable?
     with patch("htcondor.Submit", spec_set=True, autospec=True) as sub_init, patch(
         "htcondor.Schedd", spec_set=True, autospec=True
     ) as schedd_init, patch(
@@ -361,14 +409,22 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
     ) as list_cgroups, patch(
         CAT_GET_MODULE_VERSION, spec_set=True, autospec=True
     ) as get_mod_ver:
+        # set up the rest of the mocks
         _finish_htc_mocks(sub_init, schedd_init, sub, schedd, txn)
         sub.queue.return_value = 123
         list_cgroups.return_value = []
         get_mod_ver.return_value = {"git_commit_hash": "somehash"}
 
+        # run the method
         ee2 = ee2client(f"http://localhost:{ee2_port}", token=TOKEN_NO_ADMIN)
-        job_id = ee2.run_job({"method": "mod.meth", "app_id": "mod/app", "wsid": 1})
+        job_id = ee2.run_job({
+            "method": "mod.meth",
+            "app_id": "mod/app",
+            "wsid": 1,
+            "source_ws_objects": ["1/1/1", "1/2/1"]
+        })
 
+        # check that mocks were called correctly
         # Since these are class methods, the first argument is self, which we ignore
         get_mod_ver.assert_called_once_with(
             ANY, {"module_name": "mod", "version": "release"}
@@ -388,7 +444,7 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
                 "+KB_APP_ID": '"mod/app"',
                 "+KB_APP_MODULE_NAME": '"mod"',
                 "+KB_WSID": '"1"',
-                "+KB_SOURCE_WS_OBJECTS": "",
+                '+KB_SOURCE_WS_OBJECTS': '"1/1/1,1/2/1"',
                 "request_cpus": "4",
                 "request_memory": "2000MB",
                 "request_disk": "30GB",
@@ -412,6 +468,7 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
 
         _check_htc_calls(sub_init, sub, schedd_init, schedd, txn, expected_sub)
 
+        # check the mongo record is correct
         job = mongo_client[MONGO_EE2_DB][MONGO_EE2_JOBS_COL].find_one(
             {"_id": ObjectId(job_id)}
         )
@@ -428,7 +485,7 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
                 "method": "mod.meth",
                 "service_ver": "somehash",
                 "app_id": "mod/app",
-                "source_ws_objects": [],
+                'source_ws_objects': ['1/1/1', '1/2/1'],
                 "parent_job_id": "None",
                 "requirements": {
                     "clientgroup": "njs",
