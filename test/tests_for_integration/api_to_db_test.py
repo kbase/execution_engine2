@@ -436,6 +436,7 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
                 "source_ws_objects": ["1/1/1", "1/2/1"],
                 "params": [{"foo": "bar"}, 42],
                 "service_ver": "beta",
+                "parent_job_id": "totallywrongid",
                 "meta": {"run_id": "rid",
                          "token_id": "tid",
                          "tag": "yourit",
@@ -460,7 +461,7 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
             {
                 "JobBatchName": job_id,
                 "arguments": f"{job_id} https://ci.kbase.us/services/ee2",
-                "+KB_PARENT_JOB_ID": "",
+                "+KB_PARENT_JOB_ID": '"totallywrongid"',
                 "+KB_MODULE_NAME": '"mod"',
                 "+KB_FUNCTION_NAME": '"meth"',
                 "+KB_APP_ID": '"mod/app"',
@@ -476,9 +477,9 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
                 "+AccountingGroup": f'"{USER_NO_ADMIN}"',
                 "environment": (
                     '"DOCKER_JOB_TIMEOUT=604805 KB_ADMIN_AUTH_TOKEN=test_auth_token '
-                    + f"KB_AUTH_TOKEN={TOKEN_NO_ADMIN} "
-                    + f"CLIENTGROUP=njs JOB_ID={job_id} CONDOR_ID=$(Cluster).$(Process) "
-                    + 'PYTHON_EXECUTABLE=/miniconda/bin/python DEBUG_MODE=False PARENT_JOB_ID= "'
+                    + f"KB_AUTH_TOKEN={TOKEN_NO_ADMIN} CLIENTGROUP=njs JOB_ID={job_id} "
+                    + "CONDOR_ID=$(Cluster).$(Process) PYTHON_EXECUTABLE=/miniconda/bin/python "
+                    + 'DEBUG_MODE=False PARENT_JOB_ID=totallywrongid "'
                 ),
                 "leavejobinqueue": "true",
                 "initial_dir": "../scripts/",
@@ -509,7 +510,7 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
                 "service_ver": "somehash",
                 "app_id": "mod/app",
                 "source_ws_objects": ["1/1/1", "1/2/1"],
-                "parent_job_id": "None",
+                "parent_job_id": "totallywrongid",
                 "requirements": {
                     "clientgroup": "njs",
                     "cpu": 8,
