@@ -394,7 +394,7 @@ def _check_htc_calls(sub_init, sub, schedd_init, schedd, txn, expected_sub):
 
 def test_run_job(ee2_port, ws_controller, mongo_client):
     """
-    A simple test of the run_job method.
+    A test of the run_job method.
     """
     # Set up workspace and objects
     wsc = Workspace(ws_controller.get_url(), token=TOKEN_NO_ADMIN)
@@ -423,7 +423,7 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
         # set up the rest of the mocks
         _finish_htc_mocks(sub_init, schedd_init, sub, schedd, txn)
         sub.queue.return_value = 123
-        list_cgroups.return_value = []
+        list_cgroups.return_value = [{"client_groups": ['{"request_cpus":8,"request_memory":5}']}]
         get_mod_ver.return_value = {"git_commit_hash": "somehash"}
 
         # run the method
@@ -466,8 +466,8 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
                 "+KB_APP_MODULE_NAME": '"mod"',
                 "+KB_WSID": '"1"',
                 "+KB_SOURCE_WS_OBJECTS": '"1/1/1,1/2/1"',
-                "request_cpus": "4",
-                "request_memory": "2000MB",
+                "request_cpus": "8",
+                "request_memory": "5MB",
                 "request_disk": "30GB",
                 "requirements": 'regexp("njs",CLIENTGROUP)',
                 "+KB_CLIENTGROUP": '"njs"',
@@ -511,8 +511,8 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
                 "parent_job_id": "None",
                 "requirements": {
                     "clientgroup": "njs",
-                    "cpu": 4,
-                    "memory": 2000,
+                    "cpu": 8,
+                    "memory": 5,
                     "disk": 30,
                 },
                 "narrative_cell_info": {
