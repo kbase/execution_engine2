@@ -362,7 +362,7 @@ def test_run_as_concierge_sched_reqs_empty_list_as_admin():
 def _run_as_concierge_empty_as_admin(concierge_params):
 
     # Set up data variables
-    client_group = "somegroup"
+    client_group = "kbase_concierge"  # hardcoded default for run_as_concierge
     cpus = 1
     mem = 1
     disk = 1
@@ -406,7 +406,7 @@ def _run_as_concierge_empty_as_admin(concierge_params):
         cpus=None,
         memory_MB=None,
         disk_GB=None,
-        client_group=None,
+        client_group=client_group,
         client_group_regex=None,
         ignore_concurrency_limits=True,
         bill_to_user=None,

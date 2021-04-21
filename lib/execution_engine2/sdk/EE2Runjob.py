@@ -24,6 +24,7 @@ from execution_engine2.sdk.job_submission_parameters import (
     AppInfo,
     UserCreds,
 )
+from execution_engine2.sdk.EE2Constants import CONCIERGE_CLIENTGROUP
 from execution_engine2.utils.job_requirements_resolver import (
     REQUEST_CPUS,
     REQUEST_DISK,
@@ -433,7 +434,7 @@ class EE2RunJob:
             cpus=norm.get(REQUEST_CPUS),
             memory_MB=norm.get(REQUEST_MEMORY),
             disk_GB=norm.get(REQUEST_DISK),
-            client_group=norm.get(CLIENT_GROUP),
+            client_group=norm.get(CLIENT_GROUP) or CONCIERGE_CLIENTGROUP,
             client_group_regex=norm.get(CLIENT_GROUP_REGEX),
             # error messaging here is for 'bill_to_user' vs 'account_group' but almost impossible
             # to screw up so YAGNI
