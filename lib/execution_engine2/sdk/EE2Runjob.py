@@ -376,7 +376,9 @@ class EE2RunJob:
             )
             if has_parent_job and job.get(_PARENT_JOB_ID):
                 pre = f"Job #{i + 1}: b" if len(jobs) > 1 else "B"
-                raise IncorrectParamsException(f"{pre}atch jobs may not specify a parent job ID")
+                raise IncorrectParamsException(
+                    f"{pre}atch jobs may not specify a parent job ID"
+                )
             # This is also an opportunity for caching
             # although most likely jobs aren't operating on the same object
             self._check_ws_objects(source_objects=job.get(_SOURCE_WS_OBJECTS))

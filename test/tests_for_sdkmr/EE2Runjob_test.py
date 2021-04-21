@@ -808,7 +808,9 @@ def test_run_batch_fail_params_not_list():
         "a",
         8,
     ]:
-        _run_batch_fail(rj, params, {}, True, IncorrectParamsException("params must be a list"))
+        _run_batch_fail(
+            rj, params, {}, True, IncorrectParamsException("params must be a list")
+        )
 
 
 def test_run_batch_fail_parent_id_included():
@@ -821,16 +823,18 @@ def test_run_batch_fail_parent_id_included():
         [{"method": "foo.bar", "app_id": "foo/bat", "parent_job_id": "a"}],
         {},
         True,
-        IncorrectParamsException("Batch jobs may not specify a parent job ID")
+        IncorrectParamsException("Batch jobs may not specify a parent job ID"),
     )
 
     _run_batch_fail(
         rj,
-        [{"method": "foo.bar", "app_id": "foo/bat"},
-         {"method": "foo.bar", "app_id": "foo/bat", "parent_job_id": "a"}],
+        [
+            {"method": "foo.bar", "app_id": "foo/bat"},
+            {"method": "foo.bar", "app_id": "foo/bat", "parent_job_id": "a"},
+        ],
         {},
         True,
-        IncorrectParamsException("Job #2: batch jobs may not specify a parent job ID")
+        IncorrectParamsException("Job #2: batch jobs may not specify a parent job ID"),
     )
 
 
