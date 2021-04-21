@@ -576,7 +576,9 @@ def test_run_job_fail_bad_upa(ee2_port):
         "app_id": "mod/app",
         "source_ws_objects": ["ws/obj/1"],
     }
-    err = "source_ws_objects index 0, 'ws/obj/1', is not a valid Unique Permanent Address"
+    err = (
+        "source_ws_objects index 0, 'ws/obj/1', is not a valid Unique Permanent Address"
+    )
     _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
 
