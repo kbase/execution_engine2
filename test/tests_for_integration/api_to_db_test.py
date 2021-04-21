@@ -393,12 +393,8 @@ def _check_htc_calls(sub_init, sub, schedd_init, schedd, txn, expected_sub):
     sub.queue.assert_called_once_with(txn, 1)
 
 
-def test_run_job(ee2_port, ws_controller, mongo_client):
-    """
-    A test of the run_job method.
-    """
-    # Set up workspace and objects
-    wsc = Workspace(ws_controller.get_url(), token=TOKEN_NO_ADMIN)
+def _set_up_workspace_objects(ws_controller, token):
+    wsc = Workspace(ws_controller.get_url(), token=token)
     wsc.create_workspace({"workspace": "foo"})
     wsc.save_objects(
         {
@@ -410,6 +406,108 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
         }
     )
 
+
+def _get_run_job_param_set():
+    return {
+        "method": "mod.meth",
+        "app_id": "mod/app",
+        "wsid": 1,
+        "source_ws_objects": ["1/1/1", "1/2/1"],
+        "params": [{"foo": "bar"}, 42],
+        "service_ver": "beta",
+        "parent_job_id": "totallywrongid",
+        "meta": {
+            "run_id": "rid",
+            "token_id": "tid",
+            "tag": "yourit",
+            "cell_id": "cid",
+            "thiskey": "getssilentlydropped",
+        },
+    }
+
+
+def _get_condor_sub_for_rj_param_set(job_id, user, token, cpu, mem):
+    expected_sub = _get_common_sub(job_id)
+    expected_sub.update(
+        {
+            "JobBatchName": job_id,
+            "arguments": f"{job_id} https://ci.kbase.us/services/ee2",
+            "+KB_PARENT_JOB_ID": '"totallywrongid"',
+            "+KB_MODULE_NAME": '"mod"',
+            "+KB_FUNCTION_NAME": '"meth"',
+            "+KB_APP_ID": '"mod/app"',
+            "+KB_APP_MODULE_NAME": '"mod"',
+            "+KB_WSID": '"1"',
+            "+KB_SOURCE_WS_OBJECTS": '"1/1/1,1/2/1"',
+            "request_cpus": f"{cpu}",
+            "request_memory": f"{mem}MB",
+            "request_disk": "30GB",
+            "requirements": 'regexp("njs",CLIENTGROUP)',
+            "+KB_CLIENTGROUP": '"njs"',
+            "Concurrency_Limits": f"{user}",
+            "+AccountingGroup": f'"{user}"',
+            "environment": (
+                '"DOCKER_JOB_TIMEOUT=604805 KB_ADMIN_AUTH_TOKEN=test_auth_token '
+                + f"KB_AUTH_TOKEN={token} CLIENTGROUP=njs JOB_ID={job_id} "
+                + "CONDOR_ID=$(Cluster).$(Process) PYTHON_EXECUTABLE=/miniconda/bin/python "
+                + 'DEBUG_MODE=False PARENT_JOB_ID=totallywrongid "'
+            ),
+            "leavejobinqueue": "true",
+            "initial_dir": "../scripts/",
+            "+Owner": '"condor_pool"',
+            "executable": "../scripts//../scripts/execute_runner.sh",
+            "transfer_input_files": "../scripts/JobRunner.tgz",
+        }
+    )
+    return expected_sub
+
+
+def _check_mongo_job(mongo_client, job_id, user, cpu, mem, githash):
+    job = mongo_client[MONGO_EE2_DB][MONGO_EE2_JOBS_COL].find_one(
+        {"_id": ObjectId(job_id)}
+    )
+    assert_close_to_now(job.pop("updated"))
+    assert_close_to_now(job.pop("queued"))
+    expected_job = {
+        "_id": ObjectId(job_id),
+        "user": user,
+        "authstrat": "kbaseworkspace",
+        "wsid": 1,
+        "status": "queued",
+        "job_input": {
+            "wsid": 1,
+            "method": "mod.meth",
+            "params": [{"foo": "bar"}, 42],
+            "service_ver": githash,
+            "app_id": "mod/app",
+            "source_ws_objects": ["1/1/1", "1/2/1"],
+            "parent_job_id": "totallywrongid",
+            "requirements": {
+                "clientgroup": "njs",
+                "cpu": cpu,
+                "memory": mem,
+                "disk": 30,
+            },
+            "narrative_cell_info": {
+                "run_id": "rid",
+                "token_id": "tid",
+                "tag": "yourit",
+                "cell_id": "cid",
+            },
+        },
+        "child_jobs": [],
+        "batch_job": False,
+        "scheduler_id": "123",
+        "scheduler_type": "condor",
+    }
+    assert job == expected_job
+
+
+def test_run_job(ee2_port, ws_controller, mongo_client):
+    """
+    A test of the run_job method.
+    """
+    _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
     # need to get the mock objects first so spec_set can do its magic before we mock out
     # the classes in the context manager
     sub, schedd, txn = _get_htc_mocks()
@@ -431,24 +529,7 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
 
         # run the method
         ee2 = ee2client(f"http://localhost:{ee2_port}", token=TOKEN_NO_ADMIN)
-        job_id = ee2.run_job(
-            {
-                "method": "mod.meth",
-                "app_id": "mod/app",
-                "wsid": 1,
-                "source_ws_objects": ["1/1/1", "1/2/1"],
-                "params": [{"foo": "bar"}, 42],
-                "service_ver": "beta",
-                "parent_job_id": "totallywrongid",
-                "meta": {
-                    "run_id": "rid",
-                    "token_id": "tid",
-                    "tag": "yourit",
-                    "cell_id": "cid",
-                    "thiskey": "getssilentlydropped",
-                },
-            }
-        )
+        job_id = ee2.run_job(_get_run_job_param_set())
 
         # check that mocks were called correctly
         # Since these are class methods, the first argument is self, which we ignore
@@ -459,80 +540,12 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
             ANY, {"module_name": "mod", "function_name": "meth"}
         )
 
-        expected_sub = _get_common_sub(job_id)
-        expected_sub.update(
-            {
-                "JobBatchName": job_id,
-                "arguments": f"{job_id} https://ci.kbase.us/services/ee2",
-                "+KB_PARENT_JOB_ID": '"totallywrongid"',
-                "+KB_MODULE_NAME": '"mod"',
-                "+KB_FUNCTION_NAME": '"meth"',
-                "+KB_APP_ID": '"mod/app"',
-                "+KB_APP_MODULE_NAME": '"mod"',
-                "+KB_WSID": '"1"',
-                "+KB_SOURCE_WS_OBJECTS": '"1/1/1,1/2/1"',
-                "request_cpus": "8",
-                "request_memory": "5MB",
-                "request_disk": "30GB",
-                "requirements": 'regexp("njs",CLIENTGROUP)',
-                "+KB_CLIENTGROUP": '"njs"',
-                "Concurrency_Limits": f"{USER_NO_ADMIN}",
-                "+AccountingGroup": f'"{USER_NO_ADMIN}"',
-                "environment": (
-                    '"DOCKER_JOB_TIMEOUT=604805 KB_ADMIN_AUTH_TOKEN=test_auth_token '
-                    + f"KB_AUTH_TOKEN={TOKEN_NO_ADMIN} CLIENTGROUP=njs JOB_ID={job_id} "
-                    + "CONDOR_ID=$(Cluster).$(Process) PYTHON_EXECUTABLE=/miniconda/bin/python "
-                    + 'DEBUG_MODE=False PARENT_JOB_ID=totallywrongid "'
-                ),
-                "leavejobinqueue": "true",
-                "initial_dir": "../scripts/",
-                "+Owner": '"condor_pool"',
-                "executable": "../scripts//../scripts/execute_runner.sh",
-                "transfer_input_files": "../scripts/JobRunner.tgz",
-            }
+        expected_sub = _get_condor_sub_for_rj_param_set(
+            job_id, USER_NO_ADMIN, TOKEN_NO_ADMIN, 8, 5
         )
-
         _check_htc_calls(sub_init, sub, schedd_init, schedd, txn, expected_sub)
 
-        # check the mongo record is correct
-        job = mongo_client[MONGO_EE2_DB][MONGO_EE2_JOBS_COL].find_one(
-            {"_id": ObjectId(job_id)}
-        )
-        assert_close_to_now(job.pop("updated"))
-        assert_close_to_now(job.pop("queued"))
-        expected_job = {
-            "_id": ObjectId(job_id),
-            "user": USER_NO_ADMIN,
-            "authstrat": "kbaseworkspace",
-            "wsid": 1,
-            "status": "queued",
-            "job_input": {
-                "wsid": 1,
-                "method": "mod.meth",
-                "params": [{"foo": "bar"}, 42],
-                "service_ver": "somehash",
-                "app_id": "mod/app",
-                "source_ws_objects": ["1/1/1", "1/2/1"],
-                "parent_job_id": "totallywrongid",
-                "requirements": {
-                    "clientgroup": "njs",
-                    "cpu": 8,
-                    "memory": 5,
-                    "disk": 30,
-                },
-                "narrative_cell_info": {
-                    "run_id": "rid",
-                    "token_id": "tid",
-                    "tag": "yourit",
-                    "cell_id": "cid",
-                },
-            },
-            "child_jobs": [],
-            "batch_job": False,
-            "scheduler_id": "123",
-            "scheduler_type": "condor",
-        }
-        assert job == expected_job
+        _check_mongo_job(mongo_client, job_id, USER_NO_ADMIN, 8, 5, "somehash")
 
 
 def test_run_job_fail_no_workspace_access(ee2_port):
