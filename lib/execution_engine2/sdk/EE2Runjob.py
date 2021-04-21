@@ -338,7 +338,7 @@ class EE2RunJob:
             self._check_workspace_permissions_list(wsids)
 
         self._add_job_requirements(params)
-        self._check_job_arguments(params)
+        self._check_job_arguments(params, has_parent_job=True)
 
         parent_job = self._create_parent_job(wsid=wsid, meta=meta)
         children_jobs = self._run_batch(parent_job=parent_job, params=params)
@@ -360,23 +360,26 @@ class EE2RunJob:
             # TODO JRR actually process the requirements once added to the spec
             j[_JOB_REQUIREMENTS] = jrr.resolve_requirements(j.get(_METHOD))
 
-    def _check_job_arguments(self, jobs):
-        # perform sanity checks before creating job or parent job
-        for j in jobs:
+    def _check_job_arguments(self, jobs, has_parent_job=False):
+        # perform sanity checks before creating any jobs, including the parent job for batch jobs
+        for i, job in enumerate(jobs):
             # Could make an argument checker method, or a class that doesn't require a job id.
             # Seems like more code & work for no real benefit though.
             # Just create the class for checks, don't use yet
             JobSubmissionParameters(
                 "fakejobid",
-                AppInfo(j.get(_METHOD), j.get(_APP_ID)),
-                j[_JOB_REQUIREMENTS],
+                AppInfo(job.get(_METHOD), job.get(_APP_ID)),
+                job[_JOB_REQUIREMENTS],
                 UserCreds(self.sdkmr.get_user_id(), self.sdkmr.get_token()),
-                wsid=j.get(_WORKSPACE_ID),
-                source_ws_objects=j.get(_SOURCE_WS_OBJECTS),
+                wsid=job.get(_WORKSPACE_ID),
+                source_ws_objects=job.get(_SOURCE_WS_OBJECTS),
             )
+            if has_parent_job and job.get(_PARENT_JOB_ID):
+                pre = f"Job #{i + 1}: b" if len(jobs) > 1 else "B"
+                raise IncorrectParamsException(f"{pre}atch jobs may not specify a parent job ID")
             # This is also an opportunity for caching
             # although most likely jobs aren't operating on the same object
-            self._check_ws_objects(source_objects=j.get(_SOURCE_WS_OBJECTS))
+            self._check_ws_objects(source_objects=job.get(_SOURCE_WS_OBJECTS))
 
     def run(
         self, params=None, as_admin=False, concierge_params: Dict = None
