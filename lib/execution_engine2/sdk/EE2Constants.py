@@ -6,7 +6,7 @@ from typing import NamedTuple
 # specify an auth2 role that allows users to replace their token with the kbaseconcierge token
 # when running jobs. Needs more thought.
 KBASE_CONCIERGE_USERNAME = "kbaseconcierge"
-CONCIERGE_CLIENTGROUP = "kbase_concierge"
+CONCIERGE_CLIENTGROUP = "concierge"
 
 EE2_CONFIG_SECTION = "execution_engine2"
 EE2_DEFAULT_SECTION = "DEFAULT"
