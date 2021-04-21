@@ -109,7 +109,6 @@ class Meta(EmbeddedDocument):
     token_id = StringField()
     tag = StringField()
     cell_id = StringField()
-    status = StringField()
 
     def __repr__(self):
         return self.to_json()

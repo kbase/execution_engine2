@@ -445,7 +445,6 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
                     "token_id": "tid",
                     "tag": "yourit",
                     "cell_id": "cid",
-                    "status": "totally wasted bro",
                     "thiskey": "getssilentlydropped",
                 },
             }
@@ -526,7 +525,6 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
                     "token_id": "tid",
                     "tag": "yourit",
                     "cell_id": "cid",
-                    "status": "totally wasted bro",
                 },
             },
             "child_jobs": [],
