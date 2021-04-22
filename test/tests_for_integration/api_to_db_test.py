@@ -57,7 +57,6 @@ from utils_shared.test_utils import (
 from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
 from installed_clients.baseclient import ServerError
 from installed_clients.execution_engine2Client import execution_engine2 as ee2client
-from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
 
 # in the future remove this
