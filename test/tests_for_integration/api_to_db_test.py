@@ -157,7 +157,9 @@ def _set_up_auth_users(auth_url):
     )
 
     global TOKEN_KBASE_CONCIERGE
-    TOKEN_KBASE_CONCIERGE = _set_up_auth_user(auth_url, USER_KBASE_CONCIERGE, "concierge")
+    TOKEN_KBASE_CONCIERGE = _set_up_auth_user(
+        auth_url, USER_KBASE_CONCIERGE, "concierge"
+    )
 
     global TOKEN_WS_READ_ADMIN
     TOKEN_WS_READ_ADMIN = _set_up_auth_user(
@@ -551,7 +553,9 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
         )
         _check_htc_calls(sub_init, sub, schedd_init, schedd, txn, expected_sub)
 
-        _check_mongo_job(mongo_client, job_id, USER_NO_ADMIN, "njs", 8, 5, 30, "somehash")
+        _check_mongo_job(
+            mongo_client, job_id, USER_NO_ADMIN, "njs", 8, 5, 30, "somehash"
+        )
 
 
 def test_run_job_fail_no_workspace_access(ee2_port):
@@ -632,13 +636,15 @@ def test_run_job_concierge_minimal(ee2_port, ws_controller, mongo_client):
         "concierge",
         4,
         23000,
-        100)
+        100,
+    )
 
 
 def test_run_job_concierge_mixed(ee2_port, ws_controller, mongo_client):
     """
     Gets cpu from the input, memory from deploy.cfg, and disk from the catalog.
     """
+
     def modify_sub(sub):
         del sub["Concurrency_Limits"]
 
@@ -652,36 +658,42 @@ def test_run_job_concierge_mixed(ee2_port, ws_controller, mongo_client):
         76,
         250000,
         7,
-        [{"client_groups": ['{"request_cpus":8,"request_disk":7}']}]
+        [{"client_groups": ['{"request_cpus":8,"request_disk":7}']}],
     )
 
 
 def test_run_job_concierge_maximal(ee2_port, ws_controller, mongo_client):
     def modify_sub(sub):
-        sub["requirements"] = '(CLIENTGROUP == "bigmem") && (baz == "bat") && (foo == "bar")'
+        sub[
+            "requirements"
+        ] = '(CLIENTGROUP == "bigmem") && (baz == "bat") && (foo == "bar")'
         sub["Concurrency_Limits"] = "some_sucker"
         sub["+AccountingGroup"] = '"some_sucker"'
-        sub["environment"] = sub["environment"].replace("DEBUG_MODE=False", "DEBUG_MODE=True")
+        sub["environment"] = sub["environment"].replace(
+            "DEBUG_MODE=False", "DEBUG_MODE=True"
+        )
 
     _run_job_concierge(
         ee2_port,
         ws_controller,
         mongo_client,
-        {"client_group": "bigmem",
-         "request_cpus": 42,
-         "request_memory": 56,
-         "request_disk": 89,
-         "client_group_regex": False,
-         "account_group": "some_sucker",
-         "ignore_concurrency_limits": False,
-         "requirements_list": ['foo=bar', "baz=bat"],
-         "debug_mode": "true",
-         },
+        {
+            "client_group": "bigmem",
+            "request_cpus": 42,
+            "request_memory": 56,
+            "request_disk": 89,
+            "client_group_regex": False,
+            "account_group": "some_sucker",
+            "ignore_concurrency_limits": False,
+            "requirements_list": ["foo=bar", "baz=bat"],
+            "debug_mode": "true",
+        },
         modify_sub,
         "bigmem",
         42,
         56,
-        89)
+        89,
+    )
 
 
 def _run_job_concierge(
@@ -729,11 +741,25 @@ def _run_job_concierge(
         )
 
         expected_sub = _get_condor_sub_for_rj_param_set(
-            job_id, USER_KBASE_CONCIERGE, TOKEN_KBASE_CONCIERGE, clientgroup, cpu, mem, disk
+            job_id,
+            USER_KBASE_CONCIERGE,
+            TOKEN_KBASE_CONCIERGE,
+            clientgroup,
+            cpu,
+            mem,
+            disk,
         )
         modify_sub(expected_sub)
 
         _check_htc_calls(sub_init, sub, schedd_init, schedd, txn, expected_sub)
 
         _check_mongo_job(
-            mongo_client, job_id, USER_KBASE_CONCIERGE, clientgroup, cpu, mem, disk, "somehash")
+            mongo_client,
+            job_id,
+            USER_KBASE_CONCIERGE,
+            clientgroup,
+            cpu,
+            mem,
+            disk,
+            "somehash",
+        )
