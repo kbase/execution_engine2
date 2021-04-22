@@ -763,3 +763,149 @@ def _run_job_concierge(
             disk,
             "somehash",
         )
+
+
+def test_run_job_concierge_fail_no_workspace_access(ee2_port):
+    params = {"method": "mod.meth", "app_id": "mod/app", "wsid": 1}
+    # this error could probably use some cleanup
+    err = (
+        "('An error occurred while fetching user permissions from the Workspace', "
+        + "ServerError('No workspace with id 1 exists'))"
+    )
+    _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
+
+
+def test_run_job_concierge_fail_not_concierge(ee2_port):
+    params = {"method": "mod.meth", "app_id": "mod/app"}
+    err = "You are not the concierge user. This method is not for you"
+    _run_job_concierge_fail(ee2_port, TOKEN_NO_ADMIN, params, {"a": "b"}, err)
+
+
+def test_run_job_concierge_fail_bad_method(ee2_port):
+    params = {"method": "mod.meth.moke", "app_id": "mod/app"}
+    err = "Unrecognized method: 'mod.meth.moke'. Please input module_name.function_name"
+    _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
+
+
+def test_run_job_concierge_fail_reqs_list_not_list(ee2_port):
+    params = {"method": "mod.meth", "app_id": "mod/app"}
+    conc_params = {"requirements_list": {"a": "b"}}
+    err = "requirements_list must be a list"
+    _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
+
+
+def test_run_job_concierge_fail_reqs_list_bad_req(ee2_port):
+    params = {"method": "mod.meth", "app_id": "mod/app"}
+    conc_params = {"requirements_list": ["a=b", "touchmymonkey"]}
+    err = "Found illegal requirement in requirements_list: touchmymonkey"
+    _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
+
+
+def test_run_job_concierge_fail_bad_cpu(ee2_port):
+    params = {"method": "mod.meth", "app_id": "mod/app"}
+    conc_params = {"request_cpus": [2]}
+    err = "Found illegal cpu request '[2]' in job requirements from concierge parameters"
+    _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
+
+
+def test_run_job_concierge_fail_bad_mem(ee2_port):
+    params = {"method": "mod.meth", "app_id": "mod/app"}
+    conc_params = {"request_memory": "-3"}
+    err = "memory in MB must be at least 1"
+    _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
+
+
+def test_run_job_concierge_fail_bad_disk(ee2_port):
+    params = {"method": "mod.meth", "app_id": "mod/app"}
+    conc_params = {"request_disk": 4.5}
+    err = "Found illegal disk request '4.5' in job requirements from concierge parameters"
+    _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
+
+
+def test_run_job_concierge_fail_bad_clientgroup(ee2_port):
+    params = {"method": "mod.meth", "app_id": "mod/app"}
+    conc_params = {"client_group": "fakefakefake"}
+    err = "No such clientgroup: fakefakefake"
+    _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
+
+
+def test_run_job_concierge_fail_bad_clientgroup_regex(ee2_port):
+    params = {"method": "mod.meth", "app_id": "mod/app"}
+    conc_params = {"client_group_regex": "now I have 2 problems"}
+    err = ("Found illegal client group regex 'now I have 2 problems' in job requirements "
+           + "from concierge parameters")
+    _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
+
+
+def test_run_job_concierge_fail_bad_catalog_data(ee2_port):
+    with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
+        list_cgroups.return_value = [{"client_groups": ['{"request_cpus":-8}']}]
+
+        params = {"method": "mod.meth", "app_id": "mod/app"}
+        conc_params = {"request_memory": 9}
+        # TODO this is not a useful error for the user. Need to change the job reqs resolver
+        # However, getting this wrong in the catalog is not super likely so not urgent
+        err = "CPU count must be at least 1"
+        _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
+
+
+def test_run_job_concierge_fail_bad_reqs_item(ee2_port):
+    params = {"method": "mod.meth", "app_id": "mod/app"}
+    conc_params = {"requirements_list": ["a=b", "=c"]}
+    # this error isn't the greatest but as I understand it the concierge endpoint is going
+    # to become redundant so don't worry about it for now
+    err = "Missing input parameter: key in scheduler requirements structure"
+    _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
+
+
+def test_run_job_concierge_fail_bad_debug_mode(ee2_port):
+    params = {"method": "mod.meth", "app_id": "mod/app"}
+    conc_params = {"debug_mode": "debug debug debug"}
+    err = ("Found illegal debug mode 'debug debug debug' in job requirements from "
+           + "concierge parameters")
+    _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
+
+
+def test_run_job_concierge_fail_bad_app(ee2_port):
+    params = {"method": "mod.meth", "app_id": "mod.app"}
+    err = "Application ID 'mod.app' contains a '.'"
+    _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
+
+
+def test_run_job_concierge_fail_bad_upa(ee2_port):
+    params = {
+        "method": "mod.meth",
+        "app_id": "mod/app",
+        "source_ws_objects": ["ws/obj/1"],
+    }
+    err = "source_ws_objects index 0, 'ws/obj/1', is not a valid Unique Permanent Address"
+    _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
+
+
+def test_run_job_concierge_fail_no_such_object(ee2_port, ws_controller):
+    # Set up workspace and objects
+    wsc = Workspace(ws_controller.get_url(), token=TOKEN_NO_ADMIN)
+    wsc.create_workspace({"workspace": "foo"})
+    wsc.save_objects(
+        {
+            "id": 1,
+            "objects": [
+                {"name": "one", "type": "Trivial.Object-1.0", "data": {}},
+            ],
+        }
+    )
+    params = {"method": "mod.meth", "app_id": "mod/app", "source_ws_objects": ["1/2/1"]}
+    err = "Some workspace object is inaccessible"
+    _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
+
+
+def _run_job_concierge_fail(
+    ee2_port, token, params, conc_params, expected, throw_exception=False
+):
+    client = ee2client(f"http://localhost:{ee2_port}", token=token)
+    if throw_exception:
+        client.run_job_concierge(params, conc_params)
+    else:
+        with raises(ServerError) as got:
+            client.run_job_concierge(params, conc_params)
+        assert_exception_correct(got.value, ServerError("name", 1, expected))
