@@ -589,7 +589,9 @@ def test_run_job_fail_bad_method(ee2_port):
 def test_run_job_fail_bad_app(ee2_port):
     params = {"method": _MOD, "app_id": "mod.app"}
     err = "Application ID 'mod.app' contains a '.'"
-    _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
+    with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
+        list_cgroups.return_value = []
+        _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
 
 def test_run_job_fail_bad_upa(ee2_port):
@@ -601,7 +603,9 @@ def test_run_job_fail_bad_upa(ee2_port):
     err = (
         "source_ws_objects index 0, 'ws/obj/1', is not a valid Unique Permanent Address"
     )
-    _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
+    with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
+        list_cgroups.return_value = []
+        _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
 
 def test_run_job_fail_no_such_object(ee2_port, ws_controller):
@@ -618,7 +622,9 @@ def test_run_job_fail_no_such_object(ee2_port, ws_controller):
     )
     params = {"method": _MOD, "app_id": _APP, "source_ws_objects": ["1/2/1"]}
     err = "Some workspace object is inaccessible"
-    _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
+    with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
+        list_cgroups.return_value = []
+        _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
 
 def _run_job_fail(ee2_port, token, params, expected, throw_exception=False):
@@ -842,7 +848,9 @@ def test_run_job_concierge_fail_bad_clientgroup(ee2_port):
     params = {"method": _MOD, "app_id": _APP}
     conc_params = {"client_group": "fakefakefake"}
     err = "No such clientgroup: fakefakefake"
-    _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
+    with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
+        list_cgroups.return_value = []
+        _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
 
 
 def test_run_job_concierge_fail_bad_clientgroup_regex(ee2_port):
@@ -891,7 +899,9 @@ def test_run_job_concierge_fail_bad_debug_mode(ee2_port):
 def test_run_job_concierge_fail_bad_app(ee2_port):
     params = {"method": _MOD, "app_id": "mod.app"}
     err = "Application ID 'mod.app' contains a '.'"
-    _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
+    with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
+        list_cgroups.return_value = []
+        _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
 
 
 def test_run_job_concierge_fail_bad_upa(ee2_port):
@@ -900,10 +910,10 @@ def test_run_job_concierge_fail_bad_upa(ee2_port):
         "app_id": _APP,
         "source_ws_objects": ["ws/obj/1"],
     }
-    err = (
-        "source_ws_objects index 0, 'ws/obj/1', is not a valid Unique Permanent Address"
-    )
-    _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
+    err = "source_ws_objects index 0, 'ws/obj/1', is not a valid Unique Permanent Address"
+    with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
+        list_cgroups.return_value = []
+        _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
 
 
 def test_run_job_concierge_fail_no_such_object(ee2_port, ws_controller):
@@ -920,7 +930,9 @@ def test_run_job_concierge_fail_no_such_object(ee2_port, ws_controller):
     )
     params = {"method": _MOD, "app_id": _APP, "source_ws_objects": ["1/2/1"]}
     err = "Some workspace object is inaccessible"
-    _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
+    with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
+        list_cgroups.return_value = []
+        _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
 
 
 def _run_job_concierge_fail(
@@ -1198,14 +1210,18 @@ def test_run_job_batch_fail_bad_method(ee2_port, ws_controller):
     err = "Unrecognized method: 'mod.meth.moke'. Please input module_name.function_name"
     # TODO this test surfaced a bug - if a batch wsid is not supplied and any job does not have
     # a wsid an error occurs
-    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+    with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
+        list_cgroups.return_value = []
+        _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
 
 
 def test_run_job_batch_fail_bad_app(ee2_port, ws_controller):
     _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
     params = [{"method": _MOD, "app_id": "mod.app"}]
     err = "Application ID 'mod.app' contains a '.'"
-    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+    with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
+        list_cgroups.return_value = []
+        _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
 
 
 def test_run_job_batch_fail_bad_upa(ee2_port, ws_controller):
@@ -1220,7 +1236,9 @@ def test_run_job_batch_fail_bad_upa(ee2_port, ws_controller):
     err = (
         "source_ws_objects index 0, 'ws/obj/1', is not a valid Unique Permanent Address"
     )
-    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+    with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
+        list_cgroups.return_value = []
+        _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
 
 
 def test_run_job_batch_fail_parent_id(ee2_port, ws_controller):
@@ -1228,14 +1246,18 @@ def test_run_job_batch_fail_parent_id(ee2_port, ws_controller):
 
     params = [{"method": _MOD, "app_id": _APP, "parent_job_id": "ae"}]
     err = "Batch jobs may not specify a parent job ID"
-    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+    with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
+        list_cgroups.return_value = []
+        _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
 
     params = [
         {"method": _MOD, "app_id": _APP},
         {"method": _MOD, "app_id": _APP, "parent_job_id": "ae"},
     ]
     err = "Job #2: batch jobs may not specify a parent job ID"
-    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+    with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
+        list_cgroups.return_value = []
+        _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
 
 
 def test_run_job_batch_fail_no_such_object(ee2_port, ws_controller):
@@ -1252,7 +1274,9 @@ def test_run_job_batch_fail_no_such_object(ee2_port, ws_controller):
     )
     params = [{"method": _MOD, "app_id": _APP, "source_ws_objects": ["1/2/1"]}]
     err = "Some workspace object is inaccessible"
-    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+    with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
+        list_cgroups.return_value = []
+        _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
 
 
 def _run_job_batch_fail(
