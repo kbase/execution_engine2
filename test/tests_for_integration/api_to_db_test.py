@@ -1131,3 +1131,109 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
         # and again
         # schedd.transaction.assert_has_calls([call(), call()])
         sub.queue.assert_has_calls([call(txn, 1), call(txn, 1)])
+
+
+def test_run_job_batch_fail_no_workspace_access_for_batch(ee2_port, ws_controller):
+    _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
+    params = [{"method": "mod.meth", "app_id": "mod/app"}]
+    # this error could probably use some cleanup
+    err = (
+        "('An error occurred while fetching user permissions from the Workspace', "
+        + "ServerError('No workspace with id 2 exists'))"
+    )
+    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 2}, err)
+
+
+def test_run_job_batch_fail_no_workspace_access_for_job(ee2_port):
+    params = [{"method": "mod.meth", "app_id": "mod/app"},
+              {"method": "mod.meth", "app_id": "mod/app", "wsid": 1}]
+    # this error could probably use some cleanup
+    err = (
+        "('An error occurred while fetching user permissions from the Workspace', "
+        + "ServerError('No workspace with id 1 exists'))"
+    )
+    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+
+
+def test_run_job_batch_fail_bad_catalog_data(ee2_port, ws_controller):
+    _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
+    with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
+        list_cgroups.return_value = [{"client_groups": ['{"request_cpus":-8}']}]
+
+        params = [{"method": "mod.meth", "app_id": "mod/app"}]
+        # TODO this is not a useful error for the user. Need to change the job reqs resolver
+        # However, getting this wrong in the catalog is not super likely so not urgent
+        err = "CPU count must be at least 1"
+        _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+
+
+def test_run_job_batch_fail_bad_method(ee2_port, ws_controller):
+    _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
+    params = [{"method": "mod.meth", "app_id": "mod/app"},
+              {"method": "mod.meth.moke", "app_id": "mod/app"}]
+    err = "Unrecognized method: 'mod.meth.moke'. Please input module_name.function_name"
+    # TODO this test surfaced a bug - if a batch wsid is not supplied and any job does not have
+    # a wsid an error occurs
+    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+
+
+def test_run_job_batch_fail_bad_app(ee2_port, ws_controller):
+    _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
+    params = [{"method": "mod.meth", "app_id": "mod.app"}]
+    err = "Application ID 'mod.app' contains a '.'"
+    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+
+
+def test_run_job_batch_fail_bad_upa(ee2_port, ws_controller):
+    _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
+    params = [{
+        "method": "mod.meth",
+        "app_id": "mod/app",
+        "source_ws_objects": ["ws/obj/1"],
+    }]
+    err = (
+        "source_ws_objects index 0, 'ws/obj/1', is not a valid Unique Permanent Address"
+    )
+    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+
+
+def test_run_job_batch_fail_parent_id(ee2_port, ws_controller):
+    _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
+    
+    params = [{"method": "mod.meth", "app_id": "mod/app", "parent_job_id": "ae"}]
+    err = "Batch jobs may not specify a parent job ID"
+    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+
+    params = [
+        {"method": "mod.meth", "app_id": "mod/app"},
+        {"method": "mod.meth", "app_id": "mod/app", "parent_job_id": "ae"}
+    ]
+    err = "Job #2: batch jobs may not specify a parent job ID"
+    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+
+
+def test_run_job_batch_fail_no_such_object(ee2_port, ws_controller):
+    # Set up workspace and objects
+    wsc = Workspace(ws_controller.get_url(), token=TOKEN_NO_ADMIN)
+    wsc.create_workspace({"workspace": "foo"})
+    wsc.save_objects(
+        {
+            "id": 1,
+            "objects": [
+                {"name": "one", "type": "Trivial.Object-1.0", "data": {}},
+            ],
+        }
+    )
+    params = [{"method": "mod.meth", "app_id": "mod/app", "source_ws_objects": ["1/2/1"]}]
+    err = "Some workspace object is inaccessible"
+    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+
+
+def _run_job_batch_fail(ee2_port, token, params, batch_params, expected, throw_exception=False):
+    client = ee2client(f"http://localhost:{ee2_port}", token=token)
+    if throw_exception:
+        client.run_job_batch(params, batch_params)
+    else:
+        with raises(ServerError) as got:
+            client.run_job_batch(params, batch_params)
+        assert_exception_correct(got.value, ServerError("name", 1, expected))
