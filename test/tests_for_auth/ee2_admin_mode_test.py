@@ -32,6 +32,11 @@ from test.utils_shared.test_utils import (
 from test.utils_shared.mock_utils import get_client_mocks as _get_client_mocks
 
 
+# Cause any tests that contact external services (e.g. KBASE CI auth) as part of the test to
+# pass automatically.
+SKIP_TESTS_WITH_EXTERNALITIES = False
+
+
 class EE2TestAdminMode(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -121,17 +126,16 @@ class EE2TestAdminMode(unittest.TestCase):
     def get_client_mocks(self, *to_be_mocked):
         return _get_client_mocks(self.cfg, self.config_file, *to_be_mocked)
 
-    @patch.object(
-        Catalog,
-        "get_module_version",
-        return_value={"git_commit_hash": "moduleversiongoeshere"},
-    )
-    def test_regular_user(self, catalog):
+    def test_regular_user(self):
         # Regular User
         lowly_user = "Access Denied: You are not an administrator"
         user_client_set, _, ws_auth = self.get_user_mocks()
-        clients_and_mocks = self.get_client_mocks(AdminAuthUtil)
+        clients_and_mocks = self.get_client_mocks(AdminAuthUtil, Catalog)
         aau = clients_and_mocks[AdminAuthUtil]
+        catalog = clients_and_mocks[Catalog]
+        # TODO check catalog called as expected
+        catalog.get_module_version.return_value = {"git_commit_hash": "moduleversiongoeshere"}
+        catalog.list_client_group_configs.return_value = []
         aau.get_admin_role.return_value = None
         ws_auth.can_write.return_value = True
         runner = self.getRunner(user_client_set, clients_and_mocks[ClientSet])
@@ -212,18 +216,17 @@ class EE2TestAdminMode(unittest.TestCase):
 
         # Start the job and get its status as an admin
 
-    @patch.object(
-        Catalog,
-        "get_module_version",
-        return_value={"git_commit_hash": "moduleversiongoeshere"},
-    )
     @patch.object(WorkspaceAuth, "can_write", return_value=True)
-    def test_admin_writer(self, workspace, catalog):
+    def test_admin_writer(self, workspace):
         # Admin User with WRITE
 
-        clients_and_mocks = self.get_client_mocks(AdminAuthUtil)
+        clients_and_mocks = self.get_client_mocks(AdminAuthUtil, Catalog)
         clients = clients_and_mocks[ClientSet]
         adminauth = clients_and_mocks[AdminAuthUtil]
+        catalog = clients_and_mocks[Catalog]
+        # TODO check catalog called as expected
+        catalog.get_module_version.return_value = {"git_commit_hash": "moduleversiongoeshere"}
+        catalog.list_client_group_configs.return_value = []
 
         runner = self.getRunner(None, clients)
         adminauth.get_admin_role.return_value = ADMIN_READ_ROLE
@@ -274,7 +277,12 @@ class EE2TestAdminMode(unittest.TestCase):
     # These tests should throw the most errors
 
     def test_no_user(self):
-        # No Token
+        if SKIP_TESTS_WITH_EXTERNALITIES:
+            return
+        # Passes a fake token to the auth server, guaranteed to fail.
+        # Auth is *not mocked*, hits the real auth service. Will fail if CI is down.
+        # Not sure of the value of this test - if a client actually passes a bad token to the
+        # server it'll get caught in the Server.py file before the Impl file is reached.
         runner = self.getRunner()
         method_1 = "module_name.function_name"
         job_params_1 = get_sample_job_params(method=method_1, wsid=self.ws_id)
