@@ -109,7 +109,8 @@
                 the parent job of the job being created.
                 Warning: No checking is done on the validity of the job ID, and the parent job
                 record is not altered.
-                run_job_batch ignores this parameter when starting a job batch.
+                Submitting a job with a parent ID to run_job_batch will cause an error to be
+                returned.
 
         */
         typedef structure {
