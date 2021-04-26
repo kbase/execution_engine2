@@ -96,7 +96,7 @@ class EE2RunJob:
         meta = params.get("meta")
 
         if meta:
-            for meta_attr in ["run_id", "token_id", "tag", "cell_id", "status"]:
+            for meta_attr in ["run_id", "token_id", "tag", "cell_id"]:
                 inputs.narrative_cell_info[meta_attr] = meta.get(meta_attr)
 
         jr = JobRequirements()
@@ -279,7 +279,6 @@ class EE2RunJob:
             job_input.narrative_cell_info.token_id = meta.get("token_id")
             job_input.narrative_cell_info.tag = meta.get("tag")
             job_input.narrative_cell_info.cell_id = meta.get("cell_id")
-            job_input.narrative_cell_info.status = meta.get("status")
 
         j = Job(
             job_input=job_input,

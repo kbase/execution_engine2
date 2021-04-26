@@ -69,7 +69,7 @@ class EE2Logs:
         return AddLogResult(success=True, stored_line_count=log.stored_line_count)
 
     def _add_subsequent_logs(self, job_log, log_lines):
-        """ Add logs to an existing log entry """
+        """Add logs to an existing log entry"""
         formatted_logs = self._format_job_logs(
             record_position=job_log["stored_line_count"] - 1, log_lines=log_lines
         )

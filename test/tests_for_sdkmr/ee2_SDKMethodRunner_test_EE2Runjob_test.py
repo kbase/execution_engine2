@@ -138,7 +138,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         narrative_cell_info = job_input.narrative_cell_info
         self.assertEqual(narrative_cell_info.tag, "dev")
         self.assertEqual(narrative_cell_info.token_id, "12345")
-        self.assertFalse(narrative_cell_info.status)
 
         self.assertFalse(job.job_output)
 
