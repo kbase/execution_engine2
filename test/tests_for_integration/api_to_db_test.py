@@ -804,7 +804,9 @@ def test_run_job_concierge_fail_reqs_list_bad_req(ee2_port):
 def test_run_job_concierge_fail_bad_cpu(ee2_port):
     params = {"method": "mod.meth", "app_id": "mod/app"}
     conc_params = {"request_cpus": [2]}
-    err = "Found illegal cpu request '[2]' in job requirements from concierge parameters"
+    err = (
+        "Found illegal cpu request '[2]' in job requirements from concierge parameters"
+    )
     _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
 
 
@@ -818,7 +820,9 @@ def test_run_job_concierge_fail_bad_mem(ee2_port):
 def test_run_job_concierge_fail_bad_disk(ee2_port):
     params = {"method": "mod.meth", "app_id": "mod/app"}
     conc_params = {"request_disk": 4.5}
-    err = "Found illegal disk request '4.5' in job requirements from concierge parameters"
+    err = (
+        "Found illegal disk request '4.5' in job requirements from concierge parameters"
+    )
     _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
 
 
@@ -832,8 +836,10 @@ def test_run_job_concierge_fail_bad_clientgroup(ee2_port):
 def test_run_job_concierge_fail_bad_clientgroup_regex(ee2_port):
     params = {"method": "mod.meth", "app_id": "mod/app"}
     conc_params = {"client_group_regex": "now I have 2 problems"}
-    err = ("Found illegal client group regex 'now I have 2 problems' in job requirements "
-           + "from concierge parameters")
+    err = (
+        "Found illegal client group regex 'now I have 2 problems' in job requirements "
+        + "from concierge parameters"
+    )
     _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
 
 
@@ -846,7 +852,9 @@ def test_run_job_concierge_fail_bad_catalog_data(ee2_port):
         # TODO this is not a useful error for the user. Need to change the job reqs resolver
         # However, getting this wrong in the catalog is not super likely so not urgent
         err = "CPU count must be at least 1"
-        _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
+        _run_job_concierge_fail(
+            ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err
+        )
 
 
 def test_run_job_concierge_fail_bad_reqs_item(ee2_port):
@@ -861,8 +869,10 @@ def test_run_job_concierge_fail_bad_reqs_item(ee2_port):
 def test_run_job_concierge_fail_bad_debug_mode(ee2_port):
     params = {"method": "mod.meth", "app_id": "mod/app"}
     conc_params = {"debug_mode": "debug debug debug"}
-    err = ("Found illegal debug mode 'debug debug debug' in job requirements from "
-           + "concierge parameters")
+    err = (
+        "Found illegal debug mode 'debug debug debug' in job requirements from "
+        + "concierge parameters"
+    )
     _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
 
 
@@ -878,7 +888,9 @@ def test_run_job_concierge_fail_bad_upa(ee2_port):
         "app_id": "mod/app",
         "source_ws_objects": ["ws/obj/1"],
     }
-    err = "source_ws_objects index 0, 'ws/obj/1', is not a valid Unique Permanent Address"
+    err = (
+        "source_ws_objects index 0, 'ws/obj/1', is not a valid Unique Permanent Address"
+    )
     _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
 
 
