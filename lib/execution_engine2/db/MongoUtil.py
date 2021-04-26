@@ -42,7 +42,7 @@ class MongoUtil:
             authMechanism=self.mongo_authmechanism,
         )
 
-    def _get_mongoengine_client(self):
+    def _get_mongoengine_client(self) -> connection:
         return connect(
             db=self.mongo_database,
             host=self.mongo_host,

@@ -66,7 +66,7 @@
         /*================================================================================*/
         /*  Running long running methods through Docker images of services from Registry  */
         /*================================================================================*/
-        /* A workspace object reference of the form X/Y or X/Y/Z, where
+        /* A workspace object reference of the form X/Y/Z, where
            X is the workspace id,
            Y is the object id,
            Z is the version.

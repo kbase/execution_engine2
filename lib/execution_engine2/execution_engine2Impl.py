@@ -30,7 +30,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.5"
     GIT_URL = "https://github.com/mrcreosote/execution_engine2.git"
-    GIT_COMMIT_HASH = "c2d1d1a4258a4c19fc437285064c58497d03c6eb"
+    GIT_COMMIT_HASH = "462a6110e5837e67e574e6db169a79a4d67fa8b4"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -197,19 +197,19 @@ class execution_engine2:
            the job parent_job_id - EE2 job id for the parent of the current
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
-           Warning: No checking it done on the validity of the job ID, and
-           the parent job is not altered. run_job_batch ignores this
+           Warning: No checking is done on the validity of the job ID, and
+           the parent job record is not altered. run_job_batch ignores this
            parameter when starting a job batch.) -> structure: parameter
            "method" of String, parameter "app_id" of String, parameter
            "params" of list of unspecified object, parameter "service_ver" of
            String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
+           workspace object reference of the form X/Y/Z, where X is the
+           workspace id, Y is the object id, Z is the version.), parameter
+           "meta" of type "Meta" (Narrative metadata for a job. All fields
+           are optional. run_id - the Narrative-assigned ID of the job run.
+           1:1 with a job ID. token_id - the ID of the token used to run the
+           method. tag - the release tag, e.g. dev/beta/release. cell_id -
+           the ID of the narrative cell from which the job was run.) ->
            structure: parameter "run_id" of String, parameter "token_id" of
            String, parameter "tag" of String, parameter "cell_id" of String,
            parameter "wsid" of Long, parameter "parent_job_id" of String
@@ -253,19 +253,19 @@ class execution_engine2:
            the job parent_job_id - EE2 job id for the parent of the current
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
-           Warning: No checking it done on the validity of the job ID, and
-           the parent job is not altered. run_job_batch ignores this
+           Warning: No checking is done on the validity of the job ID, and
+           the parent job record is not altered. run_job_batch ignores this
            parameter when starting a job batch.) -> structure: parameter
            "method" of String, parameter "app_id" of String, parameter
            "params" of list of unspecified object, parameter "service_ver" of
            String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
+           workspace object reference of the form X/Y/Z, where X is the
+           workspace id, Y is the object id, Z is the version.), parameter
+           "meta" of type "Meta" (Narrative metadata for a job. All fields
+           are optional. run_id - the Narrative-assigned ID of the job run.
+           1:1 with a job ID. token_id - the ID of the token used to run the
+           method. tag - the release tag, e.g. dev/beta/release. cell_id -
+           the ID of the narrative cell from which the job was run.) ->
            structure: parameter "run_id" of String, parameter "token_id" of
            String, parameter "tag" of String, parameter "cell_id" of String,
            parameter "wsid" of Long, parameter "parent_job_id" of String
@@ -344,19 +344,19 @@ class execution_engine2:
            the job parent_job_id - EE2 job id for the parent of the current
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
-           Warning: No checking it done on the validity of the job ID, and
-           the parent job is not altered. run_job_batch ignores this
+           Warning: No checking is done on the validity of the job ID, and
+           the parent job record is not altered. run_job_batch ignores this
            parameter when starting a job batch.) -> structure: parameter
            "method" of String, parameter "app_id" of String, parameter
            "params" of list of unspecified object, parameter "service_ver" of
            String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
+           workspace object reference of the form X/Y/Z, where X is the
+           workspace id, Y is the object id, Z is the version.), parameter
+           "meta" of type "Meta" (Narrative metadata for a job. All fields
+           are optional. run_id - the Narrative-assigned ID of the job run.
+           1:1 with a job ID. token_id - the ID of the token used to run the
+           method. tag - the release tag, e.g. dev/beta/release. cell_id -
+           the ID of the narrative cell from which the job was run.) ->
            structure: parameter "run_id" of String, parameter "token_id" of
            String, parameter "tag" of String, parameter "cell_id" of String,
            parameter "wsid" of Long, parameter "parent_job_id" of String
@@ -425,19 +425,19 @@ class execution_engine2:
            the job parent_job_id - EE2 job id for the parent of the current
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
-           Warning: No checking it done on the validity of the job ID, and
-           the parent job is not altered. run_job_batch ignores this
+           Warning: No checking is done on the validity of the job ID, and
+           the parent job record is not altered. run_job_batch ignores this
            parameter when starting a job batch.) -> structure: parameter
            "method" of String, parameter "app_id" of String, parameter
            "params" of list of unspecified object, parameter "service_ver" of
            String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
+           workspace object reference of the form X/Y/Z, where X is the
+           workspace id, Y is the object id, Z is the version.), parameter
+           "meta" of type "Meta" (Narrative metadata for a job. All fields
+           are optional. run_id - the Narrative-assigned ID of the job run.
+           1:1 with a job ID. token_id - the ID of the token used to run the
+           method. tag - the release tag, e.g. dev/beta/release. cell_id -
+           the ID of the narrative cell from which the job was run.) ->
            structure: parameter "run_id" of String, parameter "token_id" of
            String, parameter "tag" of String, parameter "cell_id" of String,
            parameter "wsid" of Long, parameter "parent_job_id" of String
@@ -700,19 +700,19 @@ class execution_engine2:
            the job parent_job_id - EE2 job id for the parent of the current
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
-           Warning: No checking it done on the validity of the job ID, and
-           the parent job is not altered. run_job_batch ignores this
+           Warning: No checking is done on the validity of the job ID, and
+           the parent job record is not altered. run_job_batch ignores this
            parameter when starting a job batch.) -> structure: parameter
            "method" of String, parameter "app_id" of String, parameter
            "params" of list of unspecified object, parameter "service_ver" of
            String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
+           workspace object reference of the form X/Y/Z, where X is the
+           workspace id, Y is the object id, Z is the version.), parameter
+           "meta" of type "Meta" (Narrative metadata for a job. All fields
+           are optional. run_id - the Narrative-assigned ID of the job run.
+           1:1 with a job ID. token_id - the ID of the token used to run the
+           method. tag - the release tag, e.g. dev/beta/release. cell_id -
+           the ID of the narrative cell from which the job was run.) ->
            structure: parameter "run_id" of String, parameter "token_id" of
            String, parameter "tag" of String, parameter "cell_id" of String,
            parameter "wsid" of Long, parameter "parent_job_id" of String,
@@ -808,19 +808,19 @@ class execution_engine2:
            the job parent_job_id - EE2 job id for the parent of the current
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
-           Warning: No checking it done on the validity of the job ID, and
-           the parent job is not altered. run_job_batch ignores this
+           Warning: No checking is done on the validity of the job ID, and
+           the parent job record is not altered. run_job_batch ignores this
            parameter when starting a job batch.) -> structure: parameter
            "method" of String, parameter "app_id" of String, parameter
            "params" of list of unspecified object, parameter "service_ver" of
            String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
+           workspace object reference of the form X/Y/Z, where X is the
+           workspace id, Y is the object id, Z is the version.), parameter
+           "meta" of type "Meta" (Narrative metadata for a job. All fields
+           are optional. run_id - the Narrative-assigned ID of the job run.
+           1:1 with a job ID. token_id - the ID of the token used to run the
+           method. tag - the release tag, e.g. dev/beta/release. cell_id -
+           the ID of the narrative cell from which the job was run.) ->
            structure: parameter "run_id" of String, parameter "token_id" of
            String, parameter "tag" of String, parameter "cell_id" of String,
            parameter "wsid" of Long, parameter "parent_job_id" of String,
@@ -881,19 +881,19 @@ class execution_engine2:
            the job parent_job_id - EE2 job id for the parent of the current
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
-           Warning: No checking it done on the validity of the job ID, and
-           the parent job is not altered. run_job_batch ignores this
+           Warning: No checking is done on the validity of the job ID, and
+           the parent job record is not altered. run_job_batch ignores this
            parameter when starting a job batch.) -> structure: parameter
            "method" of String, parameter "app_id" of String, parameter
            "params" of list of unspecified object, parameter "service_ver" of
            String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
+           workspace object reference of the form X/Y/Z, where X is the
+           workspace id, Y is the object id, Z is the version.), parameter
+           "meta" of type "Meta" (Narrative metadata for a job. All fields
+           are optional. run_id - the Narrative-assigned ID of the job run.
+           1:1 with a job ID. token_id - the ID of the token used to run the
+           method. tag - the release tag, e.g. dev/beta/release. cell_id -
+           the ID of the narrative cell from which the job was run.) ->
            structure: parameter "run_id" of String, parameter "token_id" of
            String, parameter "tag" of String, parameter "cell_id" of String,
            parameter "wsid" of Long, parameter "parent_job_id" of String,
@@ -987,19 +987,19 @@ class execution_engine2:
            the job parent_job_id - EE2 job id for the parent of the current
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
-           Warning: No checking it done on the validity of the job ID, and
-           the parent job is not altered. run_job_batch ignores this
+           Warning: No checking is done on the validity of the job ID, and
+           the parent job record is not altered. run_job_batch ignores this
            parameter when starting a job batch.) -> structure: parameter
            "method" of String, parameter "app_id" of String, parameter
            "params" of list of unspecified object, parameter "service_ver" of
            String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
+           workspace object reference of the form X/Y/Z, where X is the
+           workspace id, Y is the object id, Z is the version.), parameter
+           "meta" of type "Meta" (Narrative metadata for a job. All fields
+           are optional. run_id - the Narrative-assigned ID of the job run.
+           1:1 with a job ID. token_id - the ID of the token used to run the
+           method. tag - the release tag, e.g. dev/beta/release. cell_id -
+           the ID of the narrative cell from which the job was run.) ->
            structure: parameter "run_id" of String, parameter "token_id" of
            String, parameter "tag" of String, parameter "cell_id" of String,
            parameter "wsid" of Long, parameter "parent_job_id" of String,
@@ -1096,19 +1096,19 @@ class execution_engine2:
            the job parent_job_id - EE2 job id for the parent of the current
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
-           Warning: No checking it done on the validity of the job ID, and
-           the parent job is not altered. run_job_batch ignores this
+           Warning: No checking is done on the validity of the job ID, and
+           the parent job record is not altered. run_job_batch ignores this
            parameter when starting a job batch.) -> structure: parameter
            "method" of String, parameter "app_id" of String, parameter
            "params" of list of unspecified object, parameter "service_ver" of
            String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
+           workspace object reference of the form X/Y/Z, where X is the
+           workspace id, Y is the object id, Z is the version.), parameter
+           "meta" of type "Meta" (Narrative metadata for a job. All fields
+           are optional. run_id - the Narrative-assigned ID of the job run.
+           1:1 with a job ID. token_id - the ID of the token used to run the
+           method. tag - the release tag, e.g. dev/beta/release. cell_id -
+           the ID of the narrative cell from which the job was run.) ->
            structure: parameter "run_id" of String, parameter "token_id" of
            String, parameter "tag" of String, parameter "cell_id" of String,
            parameter "wsid" of Long, parameter "parent_job_id" of String,
@@ -1349,19 +1349,19 @@ class execution_engine2:
            the job parent_job_id - EE2 job id for the parent of the current
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
-           Warning: No checking it done on the validity of the job ID, and
-           the parent job is not altered. run_job_batch ignores this
+           Warning: No checking is done on the validity of the job ID, and
+           the parent job record is not altered. run_job_batch ignores this
            parameter when starting a job batch.) -> structure: parameter
            "method" of String, parameter "app_id" of String, parameter
            "params" of list of unspecified object, parameter "service_ver" of
            String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
+           workspace object reference of the form X/Y/Z, where X is the
+           workspace id, Y is the object id, Z is the version.), parameter
+           "meta" of type "Meta" (Narrative metadata for a job. All fields
+           are optional. run_id - the Narrative-assigned ID of the job run.
+           1:1 with a job ID. token_id - the ID of the token used to run the
+           method. tag - the release tag, e.g. dev/beta/release. cell_id -
+           the ID of the narrative cell from which the job was run.) ->
            structure: parameter "run_id" of String, parameter "token_id" of
            String, parameter "tag" of String, parameter "cell_id" of String,
            parameter "wsid" of Long, parameter "parent_job_id" of String,
@@ -1517,19 +1517,19 @@ class execution_engine2:
            the job parent_job_id - EE2 job id for the parent of the current
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
-           Warning: No checking it done on the validity of the job ID, and
-           the parent job is not altered. run_job_batch ignores this
+           Warning: No checking is done on the validity of the job ID, and
+           the parent job record is not altered. run_job_batch ignores this
            parameter when starting a job batch.) -> structure: parameter
            "method" of String, parameter "app_id" of String, parameter
            "params" of list of unspecified object, parameter "service_ver" of
            String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
+           workspace object reference of the form X/Y/Z, where X is the
+           workspace id, Y is the object id, Z is the version.), parameter
+           "meta" of type "Meta" (Narrative metadata for a job. All fields
+           are optional. run_id - the Narrative-assigned ID of the job run.
+           1:1 with a job ID. token_id - the ID of the token used to run the
+           method. tag - the release tag, e.g. dev/beta/release. cell_id -
+           the ID of the narrative cell from which the job was run.) ->
            structure: parameter "run_id" of String, parameter "token_id" of
            String, parameter "tag" of String, parameter "cell_id" of String,
            parameter "wsid" of Long, parameter "parent_job_id" of String,
