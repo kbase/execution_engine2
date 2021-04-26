@@ -3,6 +3,7 @@ import subprocess
 import time
 import traceback
 from contextlib import contextmanager
+from typing import Dict
 
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
@@ -17,7 +18,7 @@ from lib.execution_engine2.exceptions import (
 
 
 class MongoUtil:
-    def __init__(self, config: dict):
+    def __init__(self, config: Dict):
         self.config = config
         self.mongo_host = config["mongo-host"]
         self.mongo_port = int(config["mongo-port"])
@@ -50,7 +51,7 @@ class MongoUtil:
             password=self.mongo_pass,
             authentication_source=self.mongo_database,
             authentication_mechanism=self.mongo_authmechanism,
-        )  # type: connection
+        )
 
     def _start_local_service(self):
         try:
@@ -442,7 +443,7 @@ class MongoUtil:
         return rec.inserted_id
 
     def _push_job_logs(self, log_lines: JobLog, job_id: str, record_count: int):
-        """ append a list of job logs, and update the record count  """
+        """append a list of job logs, and update the record count"""
 
         update_filter = {"_id": ObjectId(job_id)}
         push_op = {"lines": {"$each": log_lines}}
