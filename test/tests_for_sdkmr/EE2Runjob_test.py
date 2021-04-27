@@ -808,11 +808,40 @@ def test_run_batch_fail_params_not_list():
         "a",
         8,
     ]:
-        with raises(Exception) as got:
-            rj.run_batch(params, {}, as_admin=True)
-        assert_exception_correct(
-            got.value, IncorrectParamsException("params must be a list")
+        _run_batch_fail(
+            rj, params, {}, True, IncorrectParamsException("params must be a list")
         )
+
+
+def test_run_batch_fail_parent_id_included():
+    mocks = _set_up_mocks(_USER, _TOKEN)
+    sdkmr = mocks[SDKMethodRunner]
+    rj = EE2RunJob(sdkmr)
+
+    _run_batch_fail(
+        rj,
+        [{"method": "foo.bar", "app_id": "foo/bat", "parent_job_id": "a"}],
+        {},
+        True,
+        IncorrectParamsException("Batch jobs may not specify a parent job ID"),
+    )
+
+    _run_batch_fail(
+        rj,
+        [
+            {"method": "foo.bar", "app_id": "foo/bat"},
+            {"method": "foo.bar", "app_id": "foo/bat", "parent_job_id": "a"},
+        ],
+        {},
+        True,
+        IncorrectParamsException("Job #2: batch jobs may not specify a parent job ID"),
+    )
+
+
+def _run_batch_fail(run_job, params, batch_params, as_admin, expected):
+    with raises(Exception) as got:
+        run_job.run_batch(params, batch_params, as_admin=as_admin)
+    assert_exception_correct(got.value, expected)
 
 
 def assert_jobs_equal(got_job: Job, expected_job: Job):
