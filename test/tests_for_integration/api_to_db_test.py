@@ -560,17 +560,13 @@ def test_run_job_fail_no_workspace_access(ee2_port):
 
 def test_run_job_fail_bad_method(ee2_port):
     params = {"method": "mod.meth.moke", "app_id": "mod/app"}
-    # TODO the Server.py file is quoting strings for some reason it seems
-    # see https://github.com/kbase/sample_service/blob/master/lib/SampleService/SampleServiceServer.py#L119-L127
-    err = "\"Unrecognized method: 'mod.meth.moke'. Please input module_name.function_name\""
+    err = "Unrecognized method: 'mod.meth.moke'. Please input module_name.function_name"
     _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
 
 def test_run_job_fail_bad_app(ee2_port):
     params = {"method": "mod.meth", "app_id": "mod.app"}
-    # TODO the Server.py file is quoting strings for some reason it seems
-    # see https://github.com/kbase/sample_service/blob/master/lib/SampleService/SampleServiceServer.py#L119-L127
-    err = "\"Application ID 'mod.app' contains a '.'\""
+    err = "Application ID 'mod.app' contains a '.'"
     _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
 
@@ -580,9 +576,9 @@ def test_run_job_fail_bad_upa(ee2_port):
         "app_id": "mod/app",
         "source_ws_objects": ["ws/obj/1"],
     }
-    # TODO the Server.py file is quoting strings for some reason it seems
-    # see https://github.com/kbase/sample_service/blob/master/lib/SampleService/SampleServiceServer.py#L119-L127
-    err = "\"source_ws_objects index 0, 'ws/obj/1', is not a valid Unique Permanent Address\""
+    err = (
+        "source_ws_objects index 0, 'ws/obj/1', is not a valid Unique Permanent Address"
+    )
     _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
 
@@ -599,9 +595,7 @@ def test_run_job_fail_no_such_object(ee2_port, ws_controller):
         }
     )
     params = {"method": "mod.meth", "app_id": "mod/app", "source_ws_objects": ["1/2/1"]}
-    # TODO the Server.py file is quoting strings for some reason it seems
-    # see https://github.com/kbase/sample_service/blob/master/lib/SampleService/SampleServiceServer.py#L119-L127
-    err = "'Some workspace object is inaccessible'"
+    err = "Some workspace object is inaccessible"
     _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
 
