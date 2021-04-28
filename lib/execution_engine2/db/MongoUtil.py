@@ -373,8 +373,6 @@ class MongoUtil:
                     f"Cannot change already finished/terminated/errored job.  {j.status} to {status}"
                 )
 
-            self.logger.debug(f"job status is {j.status}. going to update to {status}")
-
             #  A job in status running can only be terminated/error/finished
             if j.status == Status.running.value:
                 if status not in [

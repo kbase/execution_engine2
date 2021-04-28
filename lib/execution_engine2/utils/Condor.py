@@ -197,18 +197,14 @@ class Condor:
         TODO: Add a retry
         TODO: Add list of required params
         :param params:  Params to run the job.
-        :return:
+        :return: ClusterID, Submit File, and Info about Errors
         """
+        # Contains sensitive information to be sent to condor
         submit = self._create_submit(_not_falsy(params, "params"))
 
         sub = self.htcondor.Submit(submit)
         try:
             schedd = self.htcondor.Schedd()
-            self.logger.debug(schedd)
-            self.logger.debug(submit)
-            self.logger.debug(os.getuid())
-            self.logger.debug(pwd.getpwuid(os.getuid()).pw_name)
-            self.logger.debug(submit)
             with schedd.transaction() as txn:
                 return SubmissionInfo(str(sub.queue(txn, 1)), sub, None)
         except Exception as e:
@@ -315,8 +311,6 @@ class Condor:
             cancel_jobs = self.htcondor.Schedd().act(
                 action=self.htcondor.JobAction.Remove, job_spec=scheduler_ids
             )
-            self.logger.info(f"Cancel job message for {scheduler_ids} is")
-            self.logger.debug(f"{cancel_jobs}")
             return cancel_jobs
         except Exception:
             self.logger.error(

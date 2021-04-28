@@ -108,9 +108,6 @@ class EE2RunJob:
         inputs.requirements = jr
 
         job.job_input = inputs
-        self.logger.debug(job.job_input.to_mongo().to_dict())
-
-        self.logger.debug(job.to_mongo().to_dict())
         job_id = self.sdkmr.save_job(job)
 
         self.sdkmr.get_kafka_client().send_kafka_message(
@@ -237,10 +234,6 @@ class EE2RunJob:
             error_msg = "Condor job not ran, and error not found. Something went wrong"
             self._finish_created_job(job_id=job_id, exception=RuntimeError(error_msg))
             raise RuntimeError(error_msg)
-
-        self.logger.debug(
-            f"Attempting to update job to queued  {job_id} {condor_job_id} {submission_info}"
-        )
 
         self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
         self.sdkmr.get_slack_client().run_job_message(
