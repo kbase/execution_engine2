@@ -627,16 +627,16 @@ def test_run_job_concierge_minimal(ee2_port, ws_controller, mongo_client):
         del sub["Concurrency_Limits"]
 
     _run_job_concierge(
-        ee2_port,
-        ws_controller,
-        mongo_client,
+        ee2_port=ee2_port,
+        ws_controller=ws_controller,
+        mongo_client=mongo_client,
         # if the concierge dict is empty, regular old run_job gets run
-        {"trigger": "concierge"},  # contents are ignored
-        modify_sub,
-        "concierge",
-        4,
-        23000,
-        100,
+        conc_params={"trigger": "concierge"},  # contents are ignored
+        modify_sub=modify_sub,
+        clientgroup="concierge",
+        cpu=4,
+        mem=23000,
+        disk=100,
     )
 
 
@@ -649,16 +649,16 @@ def test_run_job_concierge_mixed(ee2_port, ws_controller, mongo_client):
         del sub["Concurrency_Limits"]
 
     _run_job_concierge(
-        ee2_port,
-        ws_controller,
-        mongo_client,
-        {"client_group": "extreme", "request_cpus": 76},
-        modify_sub,
-        "extreme",
-        76,
-        250000,
-        7,
-        [{"client_groups": ['{"request_cpus":8,"request_disk":7}']}],
+        ee2_port=ee2_port,
+        ws_controller=ws_controller,
+        mongo_client=mongo_client,
+        conc_params={"client_group": "extreme", "request_cpus": 76},
+        modify_sub=modify_sub,
+        clientgroup="extreme",
+        cpu=76,
+        mem=250000,
+        disk=7,
+        catalog_return=[{"client_groups": ['{"request_cpus":8,"request_disk":7}']}],
     )
 
 
@@ -674,10 +674,10 @@ def test_run_job_concierge_maximal(ee2_port, ws_controller, mongo_client):
         )
 
     _run_job_concierge(
-        ee2_port,
-        ws_controller,
-        mongo_client,
-        {
+        ee2_port=ee2_port,
+        ws_controller=ws_controller,
+        mongo_client=mongo_client,
+        conc_params={
             "client_group": "bigmem",
             "request_cpus": 42,
             "request_memory": 56,
@@ -688,11 +688,11 @@ def test_run_job_concierge_maximal(ee2_port, ws_controller, mongo_client):
             "requirements_list": ["foo=bar", "baz=bat"],
             "debug_mode": "true",
         },
-        modify_sub,
-        "bigmem",
-        42,
-        56,
-        89,
+        modify_sub=modify_sub,
+        clientgroup="bigmem",
+        cpu=42,
+        mem=56,
+        disk=89,
     )
 
 
