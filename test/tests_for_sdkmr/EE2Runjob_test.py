@@ -362,7 +362,7 @@ def test_run_as_concierge_sched_reqs_empty_list_as_admin():
 def _run_as_concierge_empty_as_admin(concierge_params):
 
     # Set up data variables
-    client_group = "somegroup"
+    client_group = "concierge"  # hardcoded default for run_as_concierge
     cpus = 1
     mem = 1
     disk = 1
@@ -406,7 +406,7 @@ def _run_as_concierge_empty_as_admin(concierge_params):
         cpus=None,
         memory_MB=None,
         disk_GB=None,
-        client_group=None,
+        client_group=client_group,
         client_group_regex=None,
         ignore_concurrency_limits=True,
         bill_to_user=None,
@@ -808,11 +808,40 @@ def test_run_batch_fail_params_not_list():
         "a",
         8,
     ]:
-        with raises(Exception) as got:
-            rj.run_batch(params, {}, as_admin=True)
-        assert_exception_correct(
-            got.value, IncorrectParamsException("params must be a list")
+        _run_batch_fail(
+            rj, params, {}, True, IncorrectParamsException("params must be a list")
         )
+
+
+def test_run_batch_fail_parent_id_included():
+    mocks = _set_up_mocks(_USER, _TOKEN)
+    sdkmr = mocks[SDKMethodRunner]
+    rj = EE2RunJob(sdkmr)
+
+    _run_batch_fail(
+        rj,
+        [{"method": "foo.bar", "app_id": "foo/bat", "parent_job_id": "a"}],
+        {},
+        True,
+        IncorrectParamsException("Batch jobs may not specify a parent job ID"),
+    )
+
+    _run_batch_fail(
+        rj,
+        [
+            {"method": "foo.bar", "app_id": "foo/bat"},
+            {"method": "foo.bar", "app_id": "foo/bat", "parent_job_id": "a"},
+        ],
+        {},
+        True,
+        IncorrectParamsException("Job #2: batch jobs may not specify a parent job ID"),
+    )
+
+
+def _run_batch_fail(run_job, params, batch_params, as_admin, expected):
+    with raises(Exception) as got:
+        run_job.run_batch(params, batch_params, as_admin=as_admin)
+    assert_exception_correct(got.value, expected)
 
 
 def assert_jobs_equal(got_job: Job, expected_job: Job):

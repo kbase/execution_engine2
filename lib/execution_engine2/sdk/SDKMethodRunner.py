@@ -288,7 +288,7 @@ class SDKMethodRunner:
 
     # ENDPOINTS: Admin Related Endpoints
     def check_is_admin(self):
-        """ Authorization Required Read """
+        """Authorization Required Read"""
         # Check whether if at minimum, a read only admin"
         try:
             return self.check_as_admin(requested_perm=JobPermissions.READ)
@@ -300,66 +300,66 @@ class SDKMethodRunner:
 
     # ENDPOINTS: Running jobs and getting job input params
     def run_job(self, params, as_admin=False):
-        """ Authorization Required Read/Write """
+        """Authorization Required Read/Write"""
         return self.get_runjob().run(params=params, as_admin=as_admin)
 
     def run_job_batch(self, params, batch_params, as_admin=False):
-        """ Authorization Required Read/Write """
+        """Authorization Required Read/Write"""
         return self.get_runjob().run_batch(
             params=params, batch_params=batch_params, as_admin=as_admin
         )
 
     def run_job_concierge(self, params, concierge_params):
-        """ Authorization Required : Be the kbaseconcierge user """
+        """Authorization Required : Be the kbaseconcierge user"""
         return self.get_runjob().run(params=params, concierge_params=concierge_params)
 
     def get_job_params(self, job_id, as_admin=False):
-        """ Authorization Required: Read """
+        """Authorization Required: Read"""
         return self.get_runjob().get_job_params(job_id=job_id, as_admin=as_admin)
 
     # ENDPOINTS: Adding and retrieving Logs
     def add_job_logs(self, job_id, log_lines, as_admin=False):
-        """ Authorization Required Read/Write """
+        """Authorization Required Read/Write"""
         return self.get_job_logs().add_job_logs(
             job_id=job_id, log_lines=log_lines, as_admin=as_admin
         )
 
     def view_job_logs(self, job_id, skip_lines=None, as_admin=False, limit=None):
-        """ Authorization Required Read """
+        """Authorization Required Read"""
         return self.get_job_logs().view_job_logs(
             job_id=job_id, skip_lines=skip_lines, as_admin=as_admin, limit=limit
         )
 
     # Endpoints: Changing a job's status
     def start_job(self, job_id, skip_estimation=True, as_admin=False):
-        """ Authorization Required Read/Write """
+        """Authorization Required Read/Write"""
         return self.get_jobs_status().start_job(
             job_id=job_id, skip_estimation=skip_estimation, as_admin=as_admin
         )
 
     # Endpoints: Changing a job's status
     def abandon_children(self, parent_job_id, child_job_ids, as_admin=False):
-        """ Authorization Required Read/Write """
+        """Authorization Required Read/Write"""
         return self.get_jobs_status().abandon_children(
             parent_job_id=parent_job_id, child_job_ids=child_job_ids, as_admin=as_admin
         )
 
     def update_job_status(self, job_id, status, as_admin=False):
         # TODO: Make this an ADMIN ONLY function? Why would anyone need to call this who is not an admin?
-        """ Authorization Required: Read/Write """
+        """Authorization Required: Read/Write"""
         return self.get_jobs_status().force_update_job_status(
             job_id=job_id, status=status, as_admin=as_admin
         )
 
     def cancel_job(self, job_id, terminated_code=None, as_admin=False):
         # TODO: Cancel Child Jobs as well
-        """ Authorization Required Read/Write """
+        """Authorization Required Read/Write"""
         return self.get_jobs_status().cancel_job(
             job_id=job_id, terminated_code=terminated_code, as_admin=as_admin
         )
 
     def handle_held_job(self, cluster_id):
-        """ Authorization Required Read/Write """
+        """Authorization Required Read/Write"""
         if self.check_as_admin(requested_perm=JobPermissions.WRITE):
             return self.get_jobs_status().handle_held_job(
                 cluster_id=cluster_id, as_admin=True
@@ -374,7 +374,7 @@ class SDKMethodRunner:
         job_output=None,
         as_admin=False,
     ):
-        """ Authorization Required Read/Write """
+        """Authorization Required Read/Write"""
 
         return self.get_jobs_status().finish_job(
             job_id=job_id,
@@ -388,7 +388,7 @@ class SDKMethodRunner:
     # Endpoints: Checking a job's status
 
     def check_job(self, job_id, exclude_fields=None, as_admin=False):
-        """ Authorization Required: Read """
+        """Authorization Required: Read"""
         check_permission = True
 
         if as_admin is True:
@@ -402,13 +402,13 @@ class SDKMethodRunner:
         )
 
     def check_job_canceled(self, job_id, as_admin=False):
-        """ Authorization Required: Read """
+        """Authorization Required: Read"""
         return self.get_jobs_status().check_job_canceled(
             job_id=job_id, as_admin=as_admin
         )
 
     def get_job_status_field(self, job_id, as_admin=False):
-        """ Authorization Required: Read """
+        """Authorization Required: Read"""
         return self.get_jobs_status().get_job_status(job_id=job_id, as_admin=as_admin)
 
     def check_job_batch(
@@ -418,7 +418,7 @@ class SDKMethodRunner:
         exclude_fields=None,
         as_admin=False,
     ):
-        """ Authorization Required: Read """
+        """Authorization Required: Read"""
 
         if as_admin is True:
             self.check_as_admin(requested_perm=JobPermissions.READ)
@@ -454,7 +454,7 @@ class SDKMethodRunner:
         return_list=1,
         as_admin=False,
     ):
-        """ Authorization Required: Read """
+        """Authorization Required: Read"""
         if as_admin:
             self.check_as_admin(requested_perm=JobPermissions.READ)
             check_permission = False
@@ -478,7 +478,7 @@ class SDKMethodRunner:
         ascending=None,
         as_admin=False,
     ):
-        """ Authorization Required: Read """
+        """Authorization Required: Read"""
         if as_admin:
             self.check_as_admin(requested_perm=JobPermissions.READ)
 
