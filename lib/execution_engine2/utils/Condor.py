@@ -311,8 +311,6 @@ class Condor:
             cancel_jobs = self.htcondor.Schedd().act(
                 action=self.htcondor.JobAction.Remove, job_spec=scheduler_ids
             )
-            self.logger.info(f"Cancel job message for {scheduler_ids} is")
-            self.logger.debug(f"{cancel_jobs}")
             return cancel_jobs
         except Exception:
             self.logger.error(

@@ -108,9 +108,6 @@ class EE2RunJob:
         inputs.requirements = jr
 
         job.job_input = inputs
-        self.logger.debug(job.job_input.to_mongo().to_dict())
-
-        self.logger.debug(job.to_mongo().to_dict())
         job_id = self.sdkmr.save_job(job)
 
         self.sdkmr.get_kafka_client().send_kafka_message(
