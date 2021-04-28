@@ -83,4 +83,4 @@ Pending decision
 * `+` Decrease coupling between `run_job` and retry functionality, possibly making testing and development easier
 * `+` Increase DRYNESS of the code
 * `+` Allows retry to benefit from changes to `run_job` 
-* `-` Slower development than a full refactor, but decreases technical debt
+* `-` Slower development for a full refactor, but decreases technical debt
