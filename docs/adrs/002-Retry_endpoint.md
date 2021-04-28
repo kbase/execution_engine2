@@ -7,7 +7,12 @@ The current requirement for the Batch/Bulk UI is to be able to retry jobs. Using
 The current implementation of retry is to run jobs using the `run_job` or `run_job_batch` endpoint. This is not adequate due to the following deficiencies:
 
 
-* Lack of book-keeping for the parent job and the child job relationship: Launching a new job will not update the relationship between those jobs
+* Lack of book-keeping for the parent job and the child job relationship: 
+* 1) Launching a new job will not update the relationship between those jobs. 
+* 2) e.g. the child job can specify a parent_job_id, but the parent_job will not know about the child_job
+* 3) e.g. the parent will not know about new retried jobs
+* 4) e.g. the child will not know how many times it was retried
+
 * Lack of book-keeping for number of retries for a particular job / set of job inputs
 * Lack of ability to launch multiple jobs using the `run_job_batch` endpoint without creating a new parent job
 * Lack of ability to ensure that the proper catalog version /git commit of an app is used from the front end based on a tag, such as "beta/dev/release"
