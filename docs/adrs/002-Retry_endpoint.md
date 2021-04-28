@@ -52,7 +52,7 @@ Pending decision
 * `+` Less api endpoints to manage
 * `-` Issues on re-rendering/regenerating a cell based on just the job record
 * `-` Loss of information about job runs, and ability to infer relationships between parents and child jobs. 
-* `-` Loss of control of jobs, such as the ability to restrict a job's running
+* `-` Loss of control of jobs, such as the ability to restrict a job's running based on number of retries/failures.
 * `-` Wrong version of app will run if the app was updated after job completion, and a version tag rather than a git commit was provided
 * `-` Increase complexity of `run_job*` methods
  
