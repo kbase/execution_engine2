@@ -204,7 +204,7 @@ class EE2RunJob:
 
         return JobSubmissionParameters(
             job_id,
-            AppInfo(params[_METHOD], params[_APP_ID]),
+            AppInfo(params[_METHOD], params.get(_APP_ID)),
             params[_JOB_REQUIREMENTS],
             UserCreds(self.sdkmr.get_user_id(), self.sdkmr.get_token()),
             parent_job_id=params.get(_PARENT_JOB_ID),
