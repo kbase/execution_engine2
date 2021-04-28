@@ -177,6 +177,14 @@ def test_normalize_job_reqs_fail_cpu():
             "Found illegal cpu request '26M' in job requirements from src4"
         ),
     )
+    _normalize_job_reqs_fail(
+        {"request_cpus": ["26M"]},
+        "src4.5",
+        False,
+        IncorrectParamsException(
+            "Found illegal cpu request '['26M']' in job requirements from src4.5"
+        ),
+    )
 
 
 def test_normalize_job_reqs_fail_mem():

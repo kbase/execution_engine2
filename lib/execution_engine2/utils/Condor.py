@@ -3,9 +3,7 @@ Authors @bsadkhin
 Functions to call condor to manage jobs and extract resource requirements
 """
 import logging
-import os
 import pathlib
-import pwd
 from typing import Dict, Optional, Any
 
 import htcondor
