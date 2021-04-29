@@ -850,7 +850,9 @@ def test_run_job_concierge_fail_bad_clientgroup(ee2_port):
     err = "No such clientgroup: fakefakefake"
     with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
         list_cgroups.return_value = []
-        _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
+        _run_job_concierge_fail(
+            ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err
+        )
 
 
 def test_run_job_concierge_fail_bad_clientgroup_regex(ee2_port):
@@ -901,7 +903,9 @@ def test_run_job_concierge_fail_bad_app(ee2_port):
     err = "Application ID 'mod.app' contains a '.'"
     with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
         list_cgroups.return_value = []
-        _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
+        _run_job_concierge_fail(
+            ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err
+        )
 
 
 def test_run_job_concierge_fail_bad_upa(ee2_port):
@@ -910,10 +914,14 @@ def test_run_job_concierge_fail_bad_upa(ee2_port):
         "app_id": _APP,
         "source_ws_objects": ["ws/obj/1"],
     }
-    err = "source_ws_objects index 0, 'ws/obj/1', is not a valid Unique Permanent Address"
+    err = (
+        "source_ws_objects index 0, 'ws/obj/1', is not a valid Unique Permanent Address"
+    )
     with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
         list_cgroups.return_value = []
-        _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
+        _run_job_concierge_fail(
+            ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err
+        )
 
 
 def test_run_job_concierge_fail_no_such_object(ee2_port, ws_controller):
@@ -932,7 +940,9 @@ def test_run_job_concierge_fail_no_such_object(ee2_port, ws_controller):
     err = "Some workspace object is inaccessible"
     with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
         list_cgroups.return_value = []
-        _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
+        _run_job_concierge_fail(
+            ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err
+        )
 
 
 def _run_job_concierge_fail(

@@ -134,7 +134,9 @@ class EE2TestAdminMode(unittest.TestCase):
         aau = clients_and_mocks[AdminAuthUtil]
         catalog = clients_and_mocks[Catalog]
         # TODO check catalog called as expected
-        catalog.get_module_version.return_value = {"git_commit_hash": "moduleversiongoeshere"}
+        catalog.get_module_version.return_value = {
+            "git_commit_hash": "moduleversiongoeshere"
+        }
         catalog.list_client_group_configs.return_value = []
         aau.get_admin_role.return_value = None
         ws_auth.can_write.return_value = True
@@ -225,7 +227,9 @@ class EE2TestAdminMode(unittest.TestCase):
         adminauth = clients_and_mocks[AdminAuthUtil]
         catalog = clients_and_mocks[Catalog]
         # TODO check catalog called as expected
-        catalog.get_module_version.return_value = {"git_commit_hash": "moduleversiongoeshere"}
+        catalog.get_module_version.return_value = {
+            "git_commit_hash": "moduleversiongoeshere"
+        }
         catalog.list_client_group_configs.return_value = []
 
         runner = self.getRunner(None, clients)

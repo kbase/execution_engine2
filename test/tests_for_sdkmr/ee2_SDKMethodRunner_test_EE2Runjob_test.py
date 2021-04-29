@@ -114,11 +114,15 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             "meta": {"tag": "dev", "token_id": "12345"},
         }
 
-        get_mod_ver.return_value = {"git_commit_hash": "048baf3c2b76cb923b3b4c52008ed77dbe20292d"}
+        get_mod_ver.return_value = {
+            "git_commit_hash": "048baf3c2b76cb923b3b4c52008ed77dbe20292d"
+        }
 
         job_id = runner.get_runjob()._init_job_rec(self.user_id, job_params)
 
-        get_mod_ver.assert_called_once_with({"module_name": "MEGAHIT", "version": "2.2.1"})
+        get_mod_ver.assert_called_once_with(
+            {"module_name": "MEGAHIT", "version": "2.2.1"}
+        )
 
         self.assertEqual(ori_job_count, Job.objects.count() - 1)
 
