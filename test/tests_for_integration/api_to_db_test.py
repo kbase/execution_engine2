@@ -94,6 +94,9 @@ CAT_LIST_CLIENT_GROUPS = (
 MONGO_EE2_DB = "ee2"
 MONGO_EE2_JOBS_COL = "ee2_jobs"
 
+_MOD = "mod.meth"
+_APP = "mod.app"
+
 
 @fixture(scope="module")
 def config() -> Dict[str, str]:
@@ -417,8 +420,8 @@ def _set_up_workspace_objects(ws_controller, token):
 
 def _get_run_job_param_set():
     return {
-        "method": "mod.meth",
-        "app_id": "mod/app",
+        "method": _MOD,
+        "app_id": _APP,
         "wsid": 1,
         "source_ws_objects": ["1/1/1", "1/2/1"],
         "params": [{"foo": "bar"}, 42],
@@ -443,7 +446,7 @@ def _get_condor_sub_for_rj_param_set(job_id, user, token, clientgroup, cpu, mem,
             "+KB_PARENT_JOB_ID": '"totallywrongid"',
             "+KB_MODULE_NAME": '"mod"',
             "+KB_FUNCTION_NAME": '"meth"',
-            "+KB_APP_ID": '"mod/app"',
+            "+KB_APP_ID": f'"{_APP}"',
             "+KB_APP_MODULE_NAME": '"mod"',
             "+KB_WSID": '"1"',
             "+KB_SOURCE_WS_OBJECTS": '"1/1/1,1/2/1"',
@@ -484,10 +487,10 @@ def _check_mongo_job(mongo_client, job_id, user, clientgroup, cpu, mem, disk, gi
         "status": "queued",
         "job_input": {
             "wsid": 1,
-            "method": "mod.meth",
+            "method": _MOD,
             "params": [{"foo": "bar"}, 42],
             "service_ver": githash,
-            "app_id": "mod/app",
+            "app_id": _APP,
             "source_ws_objects": ["1/1/1", "1/2/1"],
             "parent_job_id": "totallywrongid",
             "requirements": {
@@ -559,7 +562,7 @@ def test_run_job(ee2_port, ws_controller, mongo_client):
 
 
 def test_run_job_fail_no_workspace_access(ee2_port):
-    params = {"method": "mod.meth", "app_id": "mod/app", "wsid": 1}
+    params = {"method": _MOD, "app_id": _APP, "wsid": 1}
     # this error could probably use some cleanup
     err = (
         "('An error occurred while fetching user permissions from the Workspace', "
@@ -569,21 +572,21 @@ def test_run_job_fail_no_workspace_access(ee2_port):
 
 
 def test_run_job_fail_bad_method(ee2_port):
-    params = {"method": "mod.meth.moke", "app_id": "mod/app"}
+    params = {"method": "mod.meth.moke", "app_id": _APP}
     err = "Unrecognized method: 'mod.meth.moke'. Please input module_name.function_name"
     _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
 
 def test_run_job_fail_bad_app(ee2_port):
-    params = {"method": "mod.meth", "app_id": "mod.app"}
+    params = {"method": _MOD, "app_id": "mod.app"}
     err = "Application ID 'mod.app' contains a '.'"
     _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
 
 def test_run_job_fail_bad_upa(ee2_port):
     params = {
-        "method": "mod.meth",
-        "app_id": "mod/app",
+        "method": _MOD,
+        "app_id": _APP,
         "source_ws_objects": ["ws/obj/1"],
     }
     err = (
@@ -604,7 +607,7 @@ def test_run_job_fail_no_such_object(ee2_port, ws_controller):
             ],
         }
     )
-    params = {"method": "mod.meth", "app_id": "mod/app", "source_ws_objects": ["1/2/1"]}
+    params = {"method": _MOD, "app_id": _APP, "source_ws_objects": ["1/2/1"]}
     err = "Some workspace object is inaccessible"
     _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
@@ -766,7 +769,7 @@ def _run_job_concierge(
 
 
 def test_run_job_concierge_fail_no_workspace_access(ee2_port):
-    params = {"method": "mod.meth", "app_id": "mod/app", "wsid": 1}
+    params = {"method": _MOD, "app_id": _APP, "wsid": 1}
     # this error could probably use some cleanup
     err = (
         "('An error occurred while fetching user permissions from the Workspace', "
@@ -776,33 +779,33 @@ def test_run_job_concierge_fail_no_workspace_access(ee2_port):
 
 
 def test_run_job_concierge_fail_not_concierge(ee2_port):
-    params = {"method": "mod.meth", "app_id": "mod/app"}
+    params = {"method": _MOD, "app_id": _APP}
     err = "You are not the concierge user. This method is not for you"
     _run_job_concierge_fail(ee2_port, TOKEN_NO_ADMIN, params, {"a": "b"}, err)
 
 
 def test_run_job_concierge_fail_bad_method(ee2_port):
-    params = {"method": "mod.meth.moke", "app_id": "mod/app"}
+    params = {"method": "mod.meth.moke", "app_id": _APP}
     err = "Unrecognized method: 'mod.meth.moke'. Please input module_name.function_name"
     _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
 
 
 def test_run_job_concierge_fail_reqs_list_not_list(ee2_port):
-    params = {"method": "mod.meth", "app_id": "mod/app"}
+    params = {"method": _MOD, "app_id": _APP}
     conc_params = {"requirements_list": {"a": "b"}}
     err = "requirements_list must be a list"
     _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
 
 
 def test_run_job_concierge_fail_reqs_list_bad_req(ee2_port):
-    params = {"method": "mod.meth", "app_id": "mod/app"}
+    params = {"method": _MOD, "app_id": _APP}
     conc_params = {"requirements_list": ["a=b", "touchmymonkey"]}
     err = "Found illegal requirement in requirements_list: touchmymonkey"
     _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
 
 
 def test_run_job_concierge_fail_bad_cpu(ee2_port):
-    params = {"method": "mod.meth", "app_id": "mod/app"}
+    params = {"method": _MOD, "app_id": _APP}
     conc_params = {"request_cpus": [2]}
     err = (
         "Found illegal cpu request '[2]' in job requirements from concierge parameters"
@@ -811,14 +814,14 @@ def test_run_job_concierge_fail_bad_cpu(ee2_port):
 
 
 def test_run_job_concierge_fail_bad_mem(ee2_port):
-    params = {"method": "mod.meth", "app_id": "mod/app"}
+    params = {"method": _MOD, "app_id": _APP}
     conc_params = {"request_memory": "-3"}
     err = "memory in MB must be at least 1"
     _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
 
 
 def test_run_job_concierge_fail_bad_disk(ee2_port):
-    params = {"method": "mod.meth", "app_id": "mod/app"}
+    params = {"method": _MOD, "app_id": _APP}
     conc_params = {"request_disk": 4.5}
     err = (
         "Found illegal disk request '4.5' in job requirements from concierge parameters"
@@ -827,14 +830,14 @@ def test_run_job_concierge_fail_bad_disk(ee2_port):
 
 
 def test_run_job_concierge_fail_bad_clientgroup(ee2_port):
-    params = {"method": "mod.meth", "app_id": "mod/app"}
+    params = {"method": _MOD, "app_id": _APP}
     conc_params = {"client_group": "fakefakefake"}
     err = "No such clientgroup: fakefakefake"
     _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
 
 
 def test_run_job_concierge_fail_bad_clientgroup_regex(ee2_port):
-    params = {"method": "mod.meth", "app_id": "mod/app"}
+    params = {"method": _MOD, "app_id": _APP}
     conc_params = {"client_group_regex": "now I have 2 problems"}
     err = (
         "Found illegal client group regex 'now I have 2 problems' in job requirements "
@@ -847,7 +850,7 @@ def test_run_job_concierge_fail_bad_catalog_data(ee2_port):
     with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
         list_cgroups.return_value = [{"client_groups": ['{"request_cpus":-8}']}]
 
-        params = {"method": "mod.meth", "app_id": "mod/app"}
+        params = {"method": _MOD, "app_id": _APP}
         conc_params = {"request_memory": 9}
         # TODO this is not a useful error for the user. Need to change the job reqs resolver
         # However, getting this wrong in the catalog is not super likely so not urgent
@@ -858,7 +861,7 @@ def test_run_job_concierge_fail_bad_catalog_data(ee2_port):
 
 
 def test_run_job_concierge_fail_bad_reqs_item(ee2_port):
-    params = {"method": "mod.meth", "app_id": "mod/app"}
+    params = {"method": _MOD, "app_id": _APP}
     conc_params = {"requirements_list": ["a=b", "=c"]}
     # this error isn't the greatest but as I understand it the concierge endpoint is going
     # to become redundant so don't worry about it for now
@@ -867,7 +870,7 @@ def test_run_job_concierge_fail_bad_reqs_item(ee2_port):
 
 
 def test_run_job_concierge_fail_bad_debug_mode(ee2_port):
-    params = {"method": "mod.meth", "app_id": "mod/app"}
+    params = {"method": _MOD, "app_id": _APP}
     conc_params = {"debug_mode": "debug debug debug"}
     err = (
         "Found illegal debug mode 'debug debug debug' in job requirements from "
@@ -877,15 +880,15 @@ def test_run_job_concierge_fail_bad_debug_mode(ee2_port):
 
 
 def test_run_job_concierge_fail_bad_app(ee2_port):
-    params = {"method": "mod.meth", "app_id": "mod.app"}
+    params = {"method": _MOD, "app_id": "mod.app"}
     err = "Application ID 'mod.app' contains a '.'"
     _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
 
 
 def test_run_job_concierge_fail_bad_upa(ee2_port):
     params = {
-        "method": "mod.meth",
-        "app_id": "mod/app",
+        "method": _MOD,
+        "app_id": _APP,
         "source_ws_objects": ["ws/obj/1"],
     }
     err = (
@@ -906,7 +909,7 @@ def test_run_job_concierge_fail_no_such_object(ee2_port, ws_controller):
             ],
         }
     )
-    params = {"method": "mod.meth", "app_id": "mod/app", "source_ws_objects": ["1/2/1"]}
+    params = {"method": _MOD, "app_id": _APP, "source_ws_objects": ["1/2/1"]}
     err = "Some workspace object is inaccessible"
     _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
 
