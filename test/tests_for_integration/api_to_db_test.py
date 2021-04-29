@@ -1107,18 +1107,25 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
         assert parent_job == expected_parent_job
 
         expected_sub_1 = _get_condor_sub_for_rj_param_set(
-            job_id_1, USER_NO_ADMIN, TOKEN_NO_ADMIN, "njs", 8, 5, 30, parent_job_id
+            job_id_1,
+            USER_NO_ADMIN,
+            TOKEN_NO_ADMIN,
+            clientgroup="njs",
+            cpu=8,
+            mem=5,
+            disk=30,
+            parent_job_id=parent_job_id
         )
         expected_sub_1["+KB_WSID"] = ""
         expected_sub_2 = _get_condor_sub_for_rj_param_set(
             job_id_2,
             USER_NO_ADMIN,
             TOKEN_NO_ADMIN,
-            "bigmem",
-            4,
-            2000,
-            100,
-            parent_job_id,
+            clientgroup="bigmem",
+            cpu=4,
+            mem=2000,
+            disk=100,
+            parent_job_id=parent_job_id,
         )
         expected_sub_2.update(
             {
