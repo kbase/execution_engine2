@@ -969,8 +969,8 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
 
         # run the method
         job1_params = {
-            "method": "mod.meth",
-            "app_id": "mod/app",
+            "method": _MOD,
+            "app_id": _APP,
             "source_ws_objects": ["1/1/1", "1/2/1"],
             "params": [{"foo": "bar"}, 42],
             "service_ver": "beta",
@@ -1023,10 +1023,10 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             "authstrat": "kbaseworkspace",
             "status": "queued",
             "job_input": {
-                "method": "mod.meth",
+                "method": _MOD,
                 "params": [{"foo": "bar"}, 42],
                 "service_ver": "somehash",
-                "app_id": "mod/app",
+                "app_id": _APP,
                 "source_ws_objects": ["1/1/1", "1/2/1"],
                 "parent_job_id": parent_job_id,
                 "requirements": {
@@ -1135,7 +1135,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
 
 def test_run_job_batch_fail_no_workspace_access_for_batch(ee2_port, ws_controller):
     _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
-    params = [{"method": "mod.meth", "app_id": "mod/app"}]
+    params = [{"method": _MOD, "app_id": _APP}]
     # this error could probably use some cleanup
     err = (
         "('An error occurred while fetching user permissions from the Workspace', "
@@ -1145,8 +1145,8 @@ def test_run_job_batch_fail_no_workspace_access_for_batch(ee2_port, ws_controlle
 
 
 def test_run_job_batch_fail_no_workspace_access_for_job(ee2_port):
-    params = [{"method": "mod.meth", "app_id": "mod/app"},
-              {"method": "mod.meth", "app_id": "mod/app", "wsid": 1}]
+    params = [{"method": _MOD, "app_id": _APP},
+              {"method": _MOD, "app_id": _APP, "wsid": 1}]
     # this error could probably use some cleanup
     err = (
         "('An error occurred while fetching user permissions from the Workspace', "
@@ -1160,7 +1160,7 @@ def test_run_job_batch_fail_bad_catalog_data(ee2_port, ws_controller):
     with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
         list_cgroups.return_value = [{"client_groups": ['{"request_cpus":-8}']}]
 
-        params = [{"method": "mod.meth", "app_id": "mod/app"}]
+        params = [{"method": _MOD, "app_id": _APP}]
         # TODO this is not a useful error for the user. Need to change the job reqs resolver
         # However, getting this wrong in the catalog is not super likely so not urgent
         err = "CPU count must be at least 1"
@@ -1169,8 +1169,8 @@ def test_run_job_batch_fail_bad_catalog_data(ee2_port, ws_controller):
 
 def test_run_job_batch_fail_bad_method(ee2_port, ws_controller):
     _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
-    params = [{"method": "mod.meth", "app_id": "mod/app"},
-              {"method": "mod.meth.moke", "app_id": "mod/app"}]
+    params = [{"method": _MOD, "app_id": _APP},
+              {"method": "mod.meth.moke", "app_id": _APP}]
     err = "Unrecognized method: 'mod.meth.moke'. Please input module_name.function_name"
     # TODO this test surfaced a bug - if a batch wsid is not supplied and any job does not have
     # a wsid an error occurs
@@ -1179,7 +1179,7 @@ def test_run_job_batch_fail_bad_method(ee2_port, ws_controller):
 
 def test_run_job_batch_fail_bad_app(ee2_port, ws_controller):
     _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
-    params = [{"method": "mod.meth", "app_id": "mod.app"}]
+    params = [{"method": _MOD, "app_id": "mod.app"}]
     err = "Application ID 'mod.app' contains a '.'"
     _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
 
@@ -1187,8 +1187,8 @@ def test_run_job_batch_fail_bad_app(ee2_port, ws_controller):
 def test_run_job_batch_fail_bad_upa(ee2_port, ws_controller):
     _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
     params = [{
-        "method": "mod.meth",
-        "app_id": "mod/app",
+        "method": _MOD,
+        "app_id": _APP,
         "source_ws_objects": ["ws/obj/1"],
     }]
     err = (
@@ -1200,13 +1200,13 @@ def test_run_job_batch_fail_bad_upa(ee2_port, ws_controller):
 def test_run_job_batch_fail_parent_id(ee2_port, ws_controller):
     _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
     
-    params = [{"method": "mod.meth", "app_id": "mod/app", "parent_job_id": "ae"}]
+    params = [{"method": _MOD, "app_id": _APP, "parent_job_id": "ae"}]
     err = "Batch jobs may not specify a parent job ID"
     _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
 
     params = [
-        {"method": "mod.meth", "app_id": "mod/app"},
-        {"method": "mod.meth", "app_id": "mod/app", "parent_job_id": "ae"}
+        {"method": _MOD, "app_id": _APP},
+        {"method": _MOD, "app_id": _APP, "parent_job_id": "ae"}
     ]
     err = "Job #2: batch jobs may not specify a parent job ID"
     _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
@@ -1224,7 +1224,7 @@ def test_run_job_batch_fail_no_such_object(ee2_port, ws_controller):
             ],
         }
     )
-    params = [{"method": "mod.meth", "app_id": "mod/app", "source_ws_objects": ["1/2/1"]}]
+    params = [{"method": _MOD, "app_id": _APP, "source_ws_objects": ["1/2/1"]}]
     err = "Some workspace object is inaccessible"
     _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
 
