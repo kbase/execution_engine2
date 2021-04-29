@@ -2,11 +2,13 @@
 
 Date: 2021-04-27
 
+
+For discussion on this ADR, see the following PR https://github.com/kbase/execution_engine2/pull/367
+
 The current requirement for the Batch/Bulk UI is to be able to retry jobs. Using a job id, it should be possible to get information from the database.
 
 The current implementation of retry is to run jobs using the `run_job` or `run_job_batch` endpoint. This is not adequate due to the following deficiencies:
 
-For discussion on this ADR, see the following PR https://github.com/kbase/execution_engine2/pull/367
 
 * Lack of book-keeping for the parent job and the child job relationship: 
 * 1) Launching a new job will not update the relationship between those jobs. 
