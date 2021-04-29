@@ -3,7 +3,7 @@
 Date: 2021-04-27
 
 
-For discussion on this ADR, see the following PR https://github.com/kbase/execution_engine2/pull/367
+## For discussion on this ADR, see the following PR https://github.com/kbase/execution_engine2/pull/367
 
 The current requirement for the Batch/Bulk UI is to be able to retry jobs. Using a job id, it should be possible to get information from the database.
 
