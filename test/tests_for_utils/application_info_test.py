@@ -68,7 +68,10 @@ def test_app_info_init_success_non_strict():
 def test_app_info_init_fail():
     m = "m.n"
     _app_info_init_fail(
-        None, None, False, IncorrectParamsException("Missing input parameter: method ID")
+        None,
+        None,
+        False,
+        IncorrectParamsException("Missing input parameter: method ID"),
     )
     _app_info_init_fail(
         "   \t    ",
@@ -110,9 +113,7 @@ def test_app_info_init_fail():
         m,
         "mod / me\tth ",
         False,
-        IncorrectParamsException(
-            "application ID contains control characters"
-        ),
+        IncorrectParamsException("application ID contains control characters"),
     )
     _app_info_init_fail(
         m,
@@ -189,9 +190,9 @@ def _app_info_init_fail(meth, app, strict, expected):
 
 def test_equals():
     assert AppInfo("m.n") == AppInfo("m.n")
-    assert AppInfo("m.n", "m") == AppInfo("m.n", 'm')
+    assert AppInfo("m.n", "m") == AppInfo("m.n", "m")
     assert AppInfo("m.n", "m/p") == AppInfo("m.n", "m/p")
-    assert AppInfo("m.n", "m.p") == AppInfo("m.n", 'm.p')
+    assert AppInfo("m.n", "m.p") == AppInfo("m.n", "m.p")
     assert AppInfo("m.n", "p/p", False) == AppInfo("m.n", "p/p", False)
     assert AppInfo("m.n", "p.p", False) == AppInfo("m.n", "p.p", False)
 
@@ -208,9 +209,9 @@ def test_hashcode():
     # tests can't be written that directly test the hash value. See
     # https://docs.python.org/3/reference/datamodel.html#object.__hash__
     assert hash(AppInfo("m.n")) == hash(AppInfo("m.n"))
-    assert hash(AppInfo("m.n", "m")) == hash(AppInfo("m.n", 'm'))
+    assert hash(AppInfo("m.n", "m")) == hash(AppInfo("m.n", "m"))
     assert hash(AppInfo("m.n", "m/p")) == hash(AppInfo("m.n", "m/p"))
-    assert hash(AppInfo("m.n", "m.p")) == hash(AppInfo("m.n", 'm.p'))
+    assert hash(AppInfo("m.n", "m.p")) == hash(AppInfo("m.n", "m.p"))
     assert hash(AppInfo("m.n", "p/p", False)) == hash(AppInfo("m.n", "p/p", False))
     assert hash(AppInfo("m.n", "p.p", False)) == hash(AppInfo("m.n", "p.p", False))
 

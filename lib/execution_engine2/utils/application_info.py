@@ -11,7 +11,9 @@ def _get2part_string(s, sep, name, err_pt1, err_pt2, desired_sep=None):
     desired_sep = desired_sep if desired_sep else sep
     parts = s.split(sep)
     if len(parts) != 2:
-        raise IncorrectParamsException(f"Expected exactly one '{desired_sep}' in {name} '{s}'")
+        raise IncorrectParamsException(
+            f"Expected exactly one '{desired_sep}' in {name} '{s}'"
+        )
     return _check_string(parts[0], err_pt1), _check_string(parts[1], err_pt2)
 
 
@@ -66,7 +68,7 @@ class AppInfo:
             ".",
             "method ID",
             "module portion of method ID",
-            "method portion of method ID"
+            "method portion of method ID",
         )
         app_id = _check_string(app_id, "application ID", optional=True)
         app = None
@@ -83,7 +85,9 @@ class AppInfo:
                 mod, app = _get2part_string(app_id, "/", "application ID", err1, err2)
                 sep = "/"
             elif "." in app_id:
-                mod, app = _get2part_string(app_id, ".", "application ID", err1, err2, '/')
+                mod, app = _get2part_string(
+                    app_id, ".", "application ID", err1, err2, "/"
+                )
                 sep = "."
             else:
                 mod = app_id
@@ -130,5 +134,11 @@ class AppInfo:
 
     def __hash__(self):
         return hash(
-            (self.module, self.method, self.application_module, self.application, self._sep)
+            (
+                self.module,
+                self.method,
+                self.application_module,
+                self.application,
+                self._sep,
+            )
         )

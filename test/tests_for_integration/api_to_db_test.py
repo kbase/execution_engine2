@@ -457,8 +457,8 @@ def _get_condor_sub_for_rj_param_set(
             "+KB_PARENT_JOB_ID": f'"{parent_job_id}"',
             "+KB_MODULE_NAME": '"mod"',
             "+KB_FUNCTION_NAME": '"meth"',
-            "+KB_APP_ID": f'"{app_id}"' if app_id else '',
-            "+KB_APP_MODULE_NAME": f'"{app_module}"' if app_module else '',
+            "+KB_APP_ID": f'"{app_id}"' if app_id else "",
+            "+KB_APP_MODULE_NAME": f'"{app_module}"' if app_module else "",
             "+KB_WSID": '"1"',
             "+KB_SOURCE_WS_OBJECTS": '"1/1/1,1/2/1"',
             "request_cpus": f"{cpu}",
@@ -495,7 +495,9 @@ def _get_mongo_job(mongo_client, job_id, has_queued=True):
     return job
 
 
-def _check_mongo_job(mongo_client, job_id, user, app_id, clientgroup, cpu, mem, disk, githash):
+def _check_mongo_job(
+    mongo_client, job_id, user, app_id, clientgroup, cpu, mem, disk, githash
+):
     job = _get_mongo_job(mongo_client, job_id)
     expected_job = {
         "_id": ObjectId(job_id),
@@ -585,7 +587,7 @@ def _run_job(ee2_port, ws_controller, mongo_client, app_id, app_mod):
             mem=5,
             disk=30,
             app_id=app_id,
-            app_module=app_mod
+            app_module=app_mod,
         )
         _check_htc_calls(sub_init, sub, schedd_init, schedd, txn, expected_sub)
 
@@ -1167,7 +1169,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             disk=30,
             parent_job_id=parent_job_id,
             app_id=None,
-            app_module=None
+            app_module=None,
         )
         expected_sub_1["+KB_WSID"] = ""
         expected_sub_2 = _get_condor_sub_for_rj_param_set(

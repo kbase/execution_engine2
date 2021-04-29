@@ -356,8 +356,8 @@ def test_run_as_concierge_sched_reqs_None_as_admin():
     Also provides an app ID with a . instead of a /
     """
     _run_as_concierge_empty_as_admin(
-        {"requirements_list": None},
-        "lolcats.itsmypartyilllolifiwantto")
+        {"requirements_list": None}, "lolcats.itsmypartyilllolifiwantto"
+    )
 
 
 def test_run_as_concierge_sched_reqs_empty_list_as_admin():
