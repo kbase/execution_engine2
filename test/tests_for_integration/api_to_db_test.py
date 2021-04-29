@@ -603,7 +603,7 @@ def _run_job(ee2_port, ws_controller, mongo_client, app_id, app_mod):
 
 
 def test_run_job_fail_no_workspace_access(ee2_port):
-    params = {"method": _MOD, "app_id": _APP, "wsid": 1}
+    params = {"method": _MOD, "wsid": 1}
     # this error could probably use some cleanup
     err = (
         "('An error occurred while fetching user permissions from the Workspace', "
@@ -613,7 +613,7 @@ def test_run_job_fail_no_workspace_access(ee2_port):
 
 
 def test_run_job_fail_bad_method(ee2_port):
-    params = {"method": "mod.meth.moke", "app_id": _APP}
+    params = {"method": "mod.meth.moke"}
     err = "Unrecognized method: 'mod.meth.moke'. Please input module_name.function_name"
     _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
@@ -629,7 +629,6 @@ def test_run_job_fail_bad_app(ee2_port):
 def test_run_job_fail_bad_upa(ee2_port):
     params = {
         "method": _MOD,
-        "app_id": _APP,
         "source_ws_objects": ["ws/obj/1"],
     }
     err = (
@@ -652,7 +651,7 @@ def test_run_job_fail_no_such_object(ee2_port, ws_controller):
             ],
         }
     )
-    params = {"method": _MOD, "app_id": _APP, "source_ws_objects": ["1/2/1"]}
+    params = {"method": _MOD, "source_ws_objects": ["1/2/1"]}
     err = "Some workspace object is inaccessible"
     with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
         list_cgroups.return_value = []
@@ -817,7 +816,7 @@ def _run_job_concierge(
 
 
 def test_run_job_concierge_fail_no_workspace_access(ee2_port):
-    params = {"method": _MOD, "app_id": _APP, "wsid": 1}
+    params = {"method": _MOD, "wsid": 1}
     # this error could probably use some cleanup
     err = (
         "('An error occurred while fetching user permissions from the Workspace', "
@@ -827,33 +826,33 @@ def test_run_job_concierge_fail_no_workspace_access(ee2_port):
 
 
 def test_run_job_concierge_fail_not_concierge(ee2_port):
-    params = {"method": _MOD, "app_id": _APP}
+    params = {"method": _MOD}
     err = "You are not the concierge user. This method is not for you"
     _run_job_concierge_fail(ee2_port, TOKEN_NO_ADMIN, params, {"a": "b"}, err)
 
 
 def test_run_job_concierge_fail_bad_method(ee2_port):
-    params = {"method": "mod.meth.moke", "app_id": _APP}
+    params = {"method": "mod.meth.moke"}
     err = "Unrecognized method: 'mod.meth.moke'. Please input module_name.function_name"
     _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, {"a": "b"}, err)
 
 
 def test_run_job_concierge_fail_reqs_list_not_list(ee2_port):
-    params = {"method": _MOD, "app_id": _APP}
+    params = {"method": _MOD}
     conc_params = {"requirements_list": {"a": "b"}}
     err = "requirements_list must be a list"
     _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
 
 
 def test_run_job_concierge_fail_reqs_list_bad_req(ee2_port):
-    params = {"method": _MOD, "app_id": _APP}
+    params = {"method": _MOD}
     conc_params = {"requirements_list": ["a=b", "touchmymonkey"]}
     err = "Found illegal requirement in requirements_list: touchmymonkey"
     _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
 
 
 def test_run_job_concierge_fail_bad_cpu(ee2_port):
-    params = {"method": _MOD, "app_id": _APP}
+    params = {"method": _MOD}
     conc_params = {"request_cpus": [2]}
     err = (
         "Found illegal cpu request '[2]' in job requirements from concierge parameters"
@@ -862,14 +861,14 @@ def test_run_job_concierge_fail_bad_cpu(ee2_port):
 
 
 def test_run_job_concierge_fail_bad_mem(ee2_port):
-    params = {"method": _MOD, "app_id": _APP}
+    params = {"method": _MOD}
     conc_params = {"request_memory": "-3"}
     err = "memory in MB must be at least 1"
     _run_job_concierge_fail(ee2_port, TOKEN_KBASE_CONCIERGE, params, conc_params, err)
 
 
 def test_run_job_concierge_fail_bad_disk(ee2_port):
-    params = {"method": _MOD, "app_id": _APP}
+    params = {"method": _MOD}
     conc_params = {"request_disk": 4.5}
     err = (
         "Found illegal disk request '4.5' in job requirements from concierge parameters"
@@ -878,7 +877,7 @@ def test_run_job_concierge_fail_bad_disk(ee2_port):
 
 
 def test_run_job_concierge_fail_bad_clientgroup(ee2_port):
-    params = {"method": _MOD, "app_id": _APP}
+    params = {"method": _MOD}
     conc_params = {"client_group": "fakefakefake"}
     err = "No such clientgroup: fakefakefake"
     with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
@@ -889,7 +888,7 @@ def test_run_job_concierge_fail_bad_clientgroup(ee2_port):
 
 
 def test_run_job_concierge_fail_bad_clientgroup_regex(ee2_port):
-    params = {"method": _MOD, "app_id": _APP}
+    params = {"method": _MOD}
     conc_params = {"client_group_regex": "now I have 2 problems"}
     err = (
         "Found illegal client group regex 'now I have 2 problems' in job requirements "
@@ -902,7 +901,7 @@ def test_run_job_concierge_fail_bad_catalog_data(ee2_port):
     with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
         list_cgroups.return_value = [{"client_groups": ['{"request_cpus":-8}']}]
 
-        params = {"method": _MOD, "app_id": _APP}
+        params = {"method": _MOD}
         conc_params = {"request_memory": 9}
         # TODO this is not a useful error for the user. Need to change the job reqs resolver
         # However, getting this wrong in the catalog is not super likely so not urgent
@@ -913,7 +912,7 @@ def test_run_job_concierge_fail_bad_catalog_data(ee2_port):
 
 
 def test_run_job_concierge_fail_bad_reqs_item(ee2_port):
-    params = {"method": _MOD, "app_id": _APP}
+    params = {"method": _MOD}
     conc_params = {"requirements_list": ["a=b", "=c"]}
     # this error isn't the greatest but as I understand it the concierge endpoint is going
     # to become redundant so don't worry about it for now
@@ -922,7 +921,7 @@ def test_run_job_concierge_fail_bad_reqs_item(ee2_port):
 
 
 def test_run_job_concierge_fail_bad_debug_mode(ee2_port):
-    params = {"method": _MOD, "app_id": _APP}
+    params = {"method": _MOD}
     conc_params = {"debug_mode": "debug debug debug"}
     err = (
         "Found illegal debug mode 'debug debug debug' in job requirements from "
@@ -944,7 +943,6 @@ def test_run_job_concierge_fail_bad_app(ee2_port):
 def test_run_job_concierge_fail_bad_upa(ee2_port):
     params = {
         "method": _MOD,
-        "app_id": _APP,
         "source_ws_objects": ["ws/obj/1"],
     }
     err = (
@@ -969,7 +967,7 @@ def test_run_job_concierge_fail_no_such_object(ee2_port, ws_controller):
             ],
         }
     )
-    params = {"method": _MOD, "app_id": _APP, "source_ws_objects": ["1/2/1"]}
+    params = {"method": _MOD, "source_ws_objects": ["1/2/1"]}
     err = "Some workspace object is inaccessible"
     with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
         list_cgroups.return_value = []
@@ -1210,7 +1208,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
 
 def test_run_job_batch_fail_no_workspace_access_for_batch(ee2_port, ws_controller):
     _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
-    params = [{"method": _MOD, "app_id": _APP}]
+    params = [{"method": _MOD}]
     # this error could probably use some cleanup
     err = (
         "('An error occurred while fetching user permissions from the Workspace', "
@@ -1221,8 +1219,8 @@ def test_run_job_batch_fail_no_workspace_access_for_batch(ee2_port, ws_controlle
 
 def test_run_job_batch_fail_no_workspace_access_for_job(ee2_port):
     params = [
-        {"method": _MOD, "app_id": _APP},
-        {"method": _MOD, "app_id": _APP, "wsid": 1},
+        {"method": _MOD},
+        {"method": _MOD, "wsid": 1},
     ]
     # this error could probably use some cleanup
     err = (
@@ -1237,7 +1235,7 @@ def test_run_job_batch_fail_bad_catalog_data(ee2_port, ws_controller):
     with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
         list_cgroups.return_value = [{"client_groups": ['{"request_cpus":-8}']}]
 
-        params = [{"method": _MOD, "app_id": _APP}]
+        params = [{"method": _MOD}]
         # TODO this is not a useful error for the user. Need to change the job reqs resolver
         # However, getting this wrong in the catalog is not super likely so not urgent
         err = "CPU count must be at least 1"
@@ -1247,8 +1245,8 @@ def test_run_job_batch_fail_bad_catalog_data(ee2_port, ws_controller):
 def test_run_job_batch_fail_bad_method(ee2_port, ws_controller):
     _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
     params = [
-        {"method": _MOD, "app_id": _APP},
-        {"method": "mod.meth.moke", "app_id": _APP},
+        {"method": _MOD},
+        {"method": "mod.meth.moke"},
     ]
     err = "Unrecognized method: 'mod.meth.moke'. Please input module_name.function_name"
     # TODO this test surfaced a bug - if a batch wsid is not supplied and any job does not have
@@ -1272,7 +1270,6 @@ def test_run_job_batch_fail_bad_upa(ee2_port, ws_controller):
     params = [
         {
             "method": _MOD,
-            "app_id": _APP,
             "source_ws_objects": ["ws/obj/1"],
         }
     ]
@@ -1287,15 +1284,15 @@ def test_run_job_batch_fail_bad_upa(ee2_port, ws_controller):
 def test_run_job_batch_fail_parent_id(ee2_port, ws_controller):
     _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
 
-    params = [{"method": _MOD, "app_id": _APP, "parent_job_id": "ae"}]
+    params = [{"method": _MOD, "parent_job_id": "ae"}]
     err = "Batch jobs may not specify a parent job ID"
     with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
         list_cgroups.return_value = []
         _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
 
     params = [
-        {"method": _MOD, "app_id": _APP},
-        {"method": _MOD, "app_id": _APP, "parent_job_id": "ae"},
+        {"method": _MOD},
+        {"method": _MOD, "parent_job_id": "ae"},
     ]
     err = "Job #2: batch jobs may not specify a parent job ID"
     with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
@@ -1315,7 +1312,7 @@ def test_run_job_batch_fail_no_such_object(ee2_port, ws_controller):
             ],
         }
     )
-    params = [{"method": _MOD, "app_id": _APP, "source_ws_objects": ["1/2/1"]}]
+    params = [{"method": _MOD, "source_ws_objects": ["1/2/1"]}]
     err = "Some workspace object is inaccessible"
     with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
         list_cgroups.return_value = []
