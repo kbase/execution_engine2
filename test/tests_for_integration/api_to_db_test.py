@@ -95,7 +95,7 @@ MONGO_EE2_DB = "ee2"
 MONGO_EE2_JOBS_COL = "ee2_jobs"
 
 _MOD = "mod.meth"
-_APP = "mod.app"
+_APP = "mod/app"
 
 
 @fixture(scope="module")
