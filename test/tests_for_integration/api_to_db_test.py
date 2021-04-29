@@ -964,7 +964,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
         ]
         get_mod_ver.side_effect = [
             {"git_commit_hash": "somehash"},
-            {"git_commit_hash": "somehash2"}
+            {"git_commit_hash": "somehash2"},
         ]
 
         # run the method
@@ -980,7 +980,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
                 "tag": "yourit",
                 "cell_id": "cid",
                 "thiskey": "getssilentlydropped",
-            }
+            },
         }
         job2_params = {
             "method": "mod2.meth2",
@@ -996,7 +996,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
                 "tag": "yourit2",
                 "cell_id": "cid2",
                 "thiskey": "getssilentlydropped2",
-            }
+            },
         }
         ee2 = ee2client(f"http://localhost:{ee2_port}", token=TOKEN_NO_ADMIN)
         ret = ee2.run_job_batch([job1_params, job2_params], job_batch_params)
@@ -1005,14 +1005,18 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
 
         # check that mocks were called correctly
         # Since these are class methods, the first argument is self, which we ignore
-        get_mod_ver.assert_has_calls([
-            call(ANY, {"module_name": "mod", "version": "beta"}),
-            call(ANY, {"module_name": "mod2", "version": "release"})
-        ])
-        list_cgroups.assert_has_calls([
-            call(ANY, {"module_name": "mod", "function_name": "meth"}),
-            call(ANY, {"module_name": "mod2", "function_name": "meth2"}),
-        ])
+        get_mod_ver.assert_has_calls(
+            [
+                call(ANY, {"module_name": "mod", "version": "beta"}),
+                call(ANY, {"module_name": "mod2", "version": "release"}),
+            ]
+        )
+        list_cgroups.assert_has_calls(
+            [
+                call(ANY, {"module_name": "mod", "function_name": "meth"}),
+                call(ANY, {"module_name": "mod2", "function_name": "meth2"}),
+            ]
+        )
 
         job1 = _get_mongo_job(mongo_client, job_id_1)
         job2 = _get_mongo_job(mongo_client, job_id_2)
@@ -1069,7 +1073,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
                     "memory": 2000,
                     "disk": 100,
                 },
-                "narrative_cell_info": {}
+                "narrative_cell_info": {},
             },
             "child_jobs": [],
             "batch_job": False,
@@ -1107,15 +1111,24 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
         )
         expected_sub_1["+KB_WSID"] = ""
         expected_sub_2 = _get_condor_sub_for_rj_param_set(
-            job_id_2, USER_NO_ADMIN, TOKEN_NO_ADMIN, "bigmem", 4, 2000, 100, parent_job_id
+            job_id_2,
+            USER_NO_ADMIN,
+            TOKEN_NO_ADMIN,
+            "bigmem",
+            4,
+            2000,
+            100,
+            parent_job_id,
         )
-        expected_sub_2.update({
-            "+KB_MODULE_NAME": '"mod2"',
-            "+KB_FUNCTION_NAME": '"meth2"',
-            "+KB_APP_ID": '"mod2/app2"',
-            "+KB_APP_MODULE_NAME": '"mod2"',
-            "+KB_SOURCE_WS_OBJECTS": ""
-        })
+        expected_sub_2.update(
+            {
+                "+KB_MODULE_NAME": '"mod2"',
+                "+KB_FUNCTION_NAME": '"meth2"',
+                "+KB_APP_ID": '"mod2/app2"',
+                "+KB_APP_MODULE_NAME": '"mod2"',
+                "+KB_SOURCE_WS_OBJECTS": "",
+            }
+        )
 
         assert sub_init.call_args_list == [call(expected_sub_1), call(expected_sub_2)]
         # The line above and the line below should be completely equivalent IIUC, but the line
@@ -1145,8 +1158,10 @@ def test_run_job_batch_fail_no_workspace_access_for_batch(ee2_port, ws_controlle
 
 
 def test_run_job_batch_fail_no_workspace_access_for_job(ee2_port):
-    params = [{"method": _MOD, "app_id": _APP},
-              {"method": _MOD, "app_id": _APP, "wsid": 1}]
+    params = [
+        {"method": _MOD, "app_id": _APP},
+        {"method": _MOD, "app_id": _APP, "wsid": 1},
+    ]
     # this error could probably use some cleanup
     err = (
         "('An error occurred while fetching user permissions from the Workspace', "
@@ -1169,8 +1184,10 @@ def test_run_job_batch_fail_bad_catalog_data(ee2_port, ws_controller):
 
 def test_run_job_batch_fail_bad_method(ee2_port, ws_controller):
     _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
-    params = [{"method": _MOD, "app_id": _APP},
-              {"method": "mod.meth.moke", "app_id": _APP}]
+    params = [
+        {"method": _MOD, "app_id": _APP},
+        {"method": "mod.meth.moke", "app_id": _APP},
+    ]
     err = "Unrecognized method: 'mod.meth.moke'. Please input module_name.function_name"
     # TODO this test surfaced a bug - if a batch wsid is not supplied and any job does not have
     # a wsid an error occurs
@@ -1186,11 +1203,13 @@ def test_run_job_batch_fail_bad_app(ee2_port, ws_controller):
 
 def test_run_job_batch_fail_bad_upa(ee2_port, ws_controller):
     _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
-    params = [{
-        "method": _MOD,
-        "app_id": _APP,
-        "source_ws_objects": ["ws/obj/1"],
-    }]
+    params = [
+        {
+            "method": _MOD,
+            "app_id": _APP,
+            "source_ws_objects": ["ws/obj/1"],
+        }
+    ]
     err = (
         "source_ws_objects index 0, 'ws/obj/1', is not a valid Unique Permanent Address"
     )
@@ -1199,14 +1218,14 @@ def test_run_job_batch_fail_bad_upa(ee2_port, ws_controller):
 
 def test_run_job_batch_fail_parent_id(ee2_port, ws_controller):
     _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
-    
+
     params = [{"method": _MOD, "app_id": _APP, "parent_job_id": "ae"}]
     err = "Batch jobs may not specify a parent job ID"
     _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
 
     params = [
         {"method": _MOD, "app_id": _APP},
-        {"method": _MOD, "app_id": _APP, "parent_job_id": "ae"}
+        {"method": _MOD, "app_id": _APP, "parent_job_id": "ae"},
     ]
     err = "Job #2: batch jobs may not specify a parent job ID"
     _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
@@ -1229,7 +1248,9 @@ def test_run_job_batch_fail_no_such_object(ee2_port, ws_controller):
     _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
 
 
-def _run_job_batch_fail(ee2_port, token, params, batch_params, expected, throw_exception=False):
+def _run_job_batch_fail(
+    ee2_port, token, params, batch_params, expected, throw_exception=False
+):
     client = ee2client(f"http://localhost:{ee2_port}", token=token)
     if throw_exception:
         client.run_job_batch(params, batch_params)
