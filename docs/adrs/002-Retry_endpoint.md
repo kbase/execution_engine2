@@ -60,6 +60,7 @@ Pending decision
 * `-` Loss of control of jobs, such as the ability to restrict a job's running based on number of retries/failures.
 * `-` Wrong version of app will run if the app was updated after job completion, and a version tag rather than a git commit was provided
 * `-` Increase complexity of `run_job*` methods
+* `-` The client will have to keep track of the child_job relationship, so that info is lost once the client is terminated
  
 ### Re-writing `run_job` to address the aforementioned deficiencies without refactoring
 * `+` Solves most requirements, but 
