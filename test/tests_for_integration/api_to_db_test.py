@@ -1114,7 +1114,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             cpu=8,
             mem=5,
             disk=30,
-            parent_job_id=parent_job_id
+            parent_job_id=parent_job_id,
         )
         expected_sub_1["+KB_WSID"] = ""
         expected_sub_2 = _get_condor_sub_for_rj_param_set(
