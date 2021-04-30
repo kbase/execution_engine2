@@ -87,7 +87,7 @@ def _int_request(putative_int, original, name, source):
         _check_raise(f"{name} request", original, source)
     try:
         return int(putative_int)
-    except ValueError:
+    except (ValueError, TypeError):
         _check_raise(f"{name} request", original, source)
 
 

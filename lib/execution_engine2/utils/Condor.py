@@ -3,9 +3,7 @@ Authors @bsadkhin
 Functions to call condor to manage jobs and extract resource requirements
 """
 import logging
-import os
 import pathlib
-import pwd
 from typing import Dict, Optional, Any
 
 import htcondor
@@ -137,8 +135,8 @@ class Condor:
             reqs = [f'regexp("{job_reqs.client_group}",CLIENTGROUP)']
         else:
             reqs = [f'(CLIENTGROUP == "{job_reqs.client_group}")']
-        for key, value in job_reqs.scheduler_requirements.items():
-            reqs.append(f'({key} == "{value}")')
+        for key in sorted(job_reqs.scheduler_requirements):
+            reqs.append(f'({key} == "{job_reqs.scheduler_requirements[key]}")')
         return " && ".join(reqs)
 
     def _add_resources_and_special_attributes(
