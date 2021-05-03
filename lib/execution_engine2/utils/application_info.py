@@ -36,7 +36,7 @@ class AppInfo:
         Create the application information.
 
         method - the method name, e.g. kb_uploadmethods.import_reads_from_staging
-        app_id - the app name, in the module/app_name format (e.g.
+        app_id - the app name in the module/app_name format (e.g.
             kb_uploadmethods/import_fastq_interleaved_as_reads_from_staging). For historical
             reasons, this class will also accept only the module name or the module.app_name
             format. In both cases the module name must match that given for the method argument.
