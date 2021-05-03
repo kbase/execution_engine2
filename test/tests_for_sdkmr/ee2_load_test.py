@@ -251,12 +251,14 @@ class ee2_server_load_test(unittest.TestCase):
     )
     @patch("installed_clients.CatalogClient.Catalog.get_module_version", autospec=True)
     @patch("installed_clients.CatalogClient.Catalog.log_exec_stats", autospec=True)
-    def test_run_job_stress(self, ccles, ccgmv, cclcgc, workspace, condor):
+    def test_run_job_stress(
+        self, cc_log_stats, cc_get_mod_ver, cc_list_cli_configs, workspace, condor
+    ):
         """
         testing running 3 different jobs in multiple theads.
         """
-        ccgmv.return_value = {"git_commit_hash": "moduleversiongoeshere"}
-        cclcgc.return_value = []
+        cc_get_mod_ver.return_value = {"git_commit_hash": "moduleversiongoeshere"}
+        cc_list_cli_configs.return_value = []
 
         thread_count = self.thread_count  # threads to test
 
