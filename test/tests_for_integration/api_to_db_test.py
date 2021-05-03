@@ -1250,7 +1250,7 @@ def test_run_job_batch_fail_bad_method(ee2_port, ws_controller):
         {"method": _MOD},
         {"method": "mod.meth.moke"},
     ]
-    err = "Unrecognized method: 'mod.meth.moke'. Please input module_name.function_name"
+    err = "Job #2: Unrecognized method: 'mod.meth.moke'. Please input module_name.function_name"
     # TODO this test surfaced a bug - if a batch wsid is not supplied and any job does not have
     # a wsid an error occurs
     with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
@@ -1287,7 +1287,7 @@ def test_run_job_batch_fail_parent_id(ee2_port, ws_controller):
     _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
 
     params = [{"method": _MOD, "parent_job_id": "ae"}]
-    err = "Batch jobs may not specify a parent job ID"
+    err = "batch jobs may not specify a parent job ID"
     with patch(CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True) as list_cgroups:
         list_cgroups.return_value = []
         _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)

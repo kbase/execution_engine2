@@ -27,10 +27,12 @@ REQUEST_CPUS = "request_cpus"
 REQUEST_MEMORY = "request_memory"
 REQUEST_DISK = "request_disk"
 CLIENT_GROUP_REGEX = "client_group_regex"
+BILL_TO_USER = "bill_to_user"
+IGNORE_CONCURRENCY_LIMITS = "ignore_concurrency_limits"
 DEBUG_MODE = "debug_mode"
 _RESOURCES = set([CLIENT_GROUP, REQUEST_CPUS, REQUEST_MEMORY, REQUEST_DISK])
 _ALL_SPECIAL_KEYS = _RESOURCES | set(
-    [CLIENT_GROUP_REGEX, DEBUG_MODE, "bill_to_user", "ignore_concurrency_limits"]
+    [CLIENT_GROUP_REGEX, DEBUG_MODE, BILL_TO_USER, IGNORE_CONCURRENCY_LIMITS]
 )
 
 _CLIENT_GROUPS = "client_groups"
