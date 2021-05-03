@@ -160,7 +160,7 @@ class JobInput(EmbeddedDocument):
 
     wsid = IntField(required=False, default=None)
     method = StringField(required=True)
-    requested_release = StringField()
+    requested_release = StringField()  # deprecated
     params = DynamicField()
     service_ver = StringField(required=True)
     app_id = StringField(required=True)
@@ -321,6 +321,10 @@ class Job(Document):
     condor_job_ads = DynamicField()
     child_jobs = ListField()
     batch_job = BooleanField(default=False)
+    retried = BooleanField()
+    retry_count = IntField(min_value=0)
+    # Could use a ReferenceField here?
+    retry_parent = StringField()
 
     meta = {"collection": "ee2_jobs"}
 

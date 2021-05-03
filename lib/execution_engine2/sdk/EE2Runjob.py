@@ -36,12 +36,12 @@ from execution_engine2.utils.job_requirements_resolver import (
 from execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
 from execution_engine2.exceptions import IncorrectParamsException
 
-
 _JOB_REQUIREMENTS = "job_reqs"
 _REQUIREMENTS_LIST = "requirements_list"
 _METHOD = "method"
 _APP_ID = "app_id"
 _PARENT_JOB_ID = "parent_job_id"
+_PARENT_RETRY_JOB_ID = "retry_parent_job_id"
 _WORKSPACE_ID = "wsid"
 _SOURCE_WS_OBJECTS = "source_ws_objects"
 
@@ -74,6 +74,13 @@ class EE2RunJob:
         user_id: str,
         params: Dict,
     ) -> str:
+        """
+        Params:
+        _METHOD  (Name of method [required])
+        "params" (Job Params)
+
+        """
+
         job = Job()
         inputs = JobInput()
         job.user = user_id
@@ -92,7 +99,11 @@ class EE2RunJob:
 
         inputs.app_id = params.get(_APP_ID)
         inputs.source_ws_objects = params.get(_SOURCE_WS_OBJECTS)
-        inputs.parent_job_id = str(params.get(_PARENT_JOB_ID))
+
+        parent_job_id = params.get(_PARENT_JOB_ID)
+        if parent_job_id:
+            inputs.parent_job_id = str(parent_job_id)
+
         inputs.narrative_cell_info = Meta()
         meta = params.get("meta")
 
@@ -108,6 +119,12 @@ class EE2RunJob:
         inputs.requirements = jr
 
         job.job_input = inputs
+
+        # TODO MOVE THIS OUT OF INPUT
+        # parent_retry_job_id = params.get(_PARENT_RETRY_JOB_ID)
+        # if parent_retry_job_id:
+        #     job.retry_parent = str(params.get(_PARENT_RETRY_JOB_ID))
+
         job_id = self.sdkmr.save_job(job)
 
         self.sdkmr.get_kafka_client().send_kafka_message(
@@ -376,6 +393,124 @@ class EE2RunJob:
             # This is also an opportunity for caching
             # although most likely jobs aren't operating on the same object
             self._check_ws_objects(source_objects=job.get(_SOURCE_WS_OBJECTS))
+
+    def retry(self, job_id, as_admin=False) -> str:
+        """
+        :param job_id: The main job to retry
+        :param as_admin: Run with admin permission
+        :return: The child job id that has been retried
+        """
+        job = self.sdkmr.get_job_with_permission(
+            job_id, JobPermissions.WRITE, as_admin=as_admin
+        )
+        if job.retry_parent:
+            raise Exception(
+                "Cannot retry a retried job attempt, please retry the parent"
+            )
+
+        if job.child_jobs:
+            raise Exception("Cannot retry a job with child jobs yet.")
+
+        # Get run job params from db, and inject parent job id, then run it
+        run_job_params = self._get_run_job_params_from_existing_job(job)
+        run_job_params[_PARENT_RETRY_JOB_ID] = job_id
+        # Submit job to job scheduler or fail and not count it as a retry attempt
+        child_job_id = self.run(params=run_job_params, as_admin=as_admin)
+        # Save that the job has been retried, and increment the count
+        job.has_been_retried = True
+        job.retry_count += 1
+        job.save()
+        # For a test, run a job, get the record, then retry a job, get the record, compare that they are the same
+        # and that certain fields have been updated
+        return child_job_id
+
+    @staticmethod
+    def _get_job_input_params_from_existing_job(job_input: JobInput) -> Dict:
+        # Expected fields are found in `_init_job_rec`
+        inputs = {}
+
+        # Used to iterate over "Job" attributes but in dictionary like lookup
+        inputs_list = {
+            "method": _METHOD,
+            "params": "params",
+            "service_ver": "service_ver",
+            "app_id": _APP_ID,
+            "source_ws_objects": _SOURCE_WS_OBJECTS,
+            "parent_job_id": _PARENT_JOB_ID,
+            "narrative_cell_info": "narrative_cell_info",
+            "wsid": _WORKSPACE_ID,
+            "requirements": _JOB_REQUIREMENTS,
+        }
+
+        for k, v in inputs_list.items():
+            print("Checking for", k, "in", "inputs_list")
+            if job_input[k]:
+                inputs[k] = job_input[k]
+
+        # Special Cases: It is OK if meta/narr_cell_info is in params 2x
+        if "narrative_cell_info" in job_input:
+            inputs["meta"] = job_input["narrative_cell_info"]
+
+        # Require a non blank params for job browser or narrative compatibility
+        if "params" not in inputs:
+            inputs["params"] = {}
+
+        return inputs
+
+        # if job_input.method:
+        #     inputs[_METHOD] = job_input.method
+        #
+        # if job_input.params:
+        #     inputs["params"] = job_input.params
+        #
+        # if job_input.service_ver:
+        #     inputs["service_ver"] = job_input.service_ver
+        #
+        # if job_input.app_id:
+        #     inputs[_APP_ID] = job_input.app_id
+        #
+        # if job_input.source_ws_objects:
+        #     inputs[_SOURCE_WS_OBJECTS] = job_input.source_ws_objects
+        #
+        # if
+
+        #
+        # # Input Level
+        # new_job_inputs = {}
+        # if job_input.source_ws_objects:
+        #     new_job_inputs[_SOURCE_WS_OBJECTS] = job_input.source_ws_objects
+        # if job_input.parent_job_id:
+        #     new_job_inputs[_PARENT_JOB_ID] = job_input.parent_job_id
+        # if job_input.app_id:
+        #     new_job_inputs[_APP_ID] = job_input.app_id
+        #
+        # # TODO Fix requirements
+        # if job_input.requirements:
+        #     new_job_inputs[_JOB_REQUIREMENTS] = job_input.app_id
+        #
+        # inputs[_METHOD] = 1
+        # inputs['params'] = 1
+        # inputs['service_ver'] = 1
+
+    @staticmethod
+    def _get_run_job_params_from_existing_job(job: Job, user_id: str) -> Dict:
+        """
+        Get fields from job model to be sent into `run_job`
+        The top level fields that must be sent are
+        "user_id" , "wsid" , "job_input"
+        """
+        # We only need to extract job workspace id
+        # "authstrat", "scheduler_type" are autoset,
+        # and we DO NOT want user_id due to others retrying your job
+        job_params = {_WORKSPACE_ID: job.wsid, "user": user_id}
+        # Then the next fields are job inputs top level requirements, app run parameters, and scheduler resource requirements
+        job_input = EE2RunJob._get_job_input_params_from_existing_job(job.job_input)
+        job_params["job_input"] = job_input
+
+        return job_params
+
+    def _copy_job_input_params(self, job_input_params):
+        pass
 
     def run(
         self, params=None, as_admin=False, concierge_params: Dict = None

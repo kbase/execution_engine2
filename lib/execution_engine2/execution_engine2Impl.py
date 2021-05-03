@@ -29,8 +29,8 @@ class execution_engine2:
     # the latter method is running.
     ######################################### noqa
     VERSION = "0.0.5"
-    GIT_URL = "https://github.com/mrcreosote/execution_engine2.git"
-    GIT_COMMIT_HASH = "ba016db2ffabc0fa48f79559816cf0f115c00feb"
+    GIT_URL = "git@github.com:kbase/execution_engine2.git"
+    GIT_COMMIT_HASH = "dae866d7ed3967c93012c9fdafc6ab15b380daa6"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -231,6 +231,33 @@ class execution_engine2:
         # At some point might do deeper type checking...
         if not isinstance(job_id, str):
             raise ValueError('Method run_job return value ' +
+                             'job_id is not type str as required.')
+        # return the results
+        return [job_id]
+
+    def retry_job(self, ctx, params):
+        """
+        Retry a job based on record in ee2 db, return a job id or error out
+        :param params: instance of type "RetryParams" (job_id of job to
+           retry) -> structure: parameter "job_id" of type "job_id" (A job
+           id.), parameter "as_admin" of type "boolean" (@range [0,1])
+        :returns: instance of type "job_id" (A job id.)
+        """
+        # ctx is the context object
+        # return variables are: job_id
+        #BEGIN retry_job
+        mr = SDKMethodRunner(
+            user_clients=self.gen_cfg.get_user_clients(ctx),
+            clients = self.clients,
+            job_permission_cache=self.job_permission_cache,
+            admin_permissions_cache=self.admin_permissions_cache
+        )
+        job_id = mr.retry(job_id=params['job_id'], as_admin=params.get('as_admin'))
+        #END retry_job
+
+        # At some point might do deeper type checking...
+        if not isinstance(job_id, str):
+            raise ValueError('Method retry_job return value ' +
                              'job_id is not type str as required.')
         # return the results
         return [job_id]

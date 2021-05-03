@@ -122,12 +122,7 @@ class JSONRPCServiceCustom(JSONRPCService):
             newerr = JSONServerError()
             newerr.trace = traceback.format_exc()
             if len(e.args) == 1:
-                # THIS WAS CHANGED INTENTIONALLY - if you recompile please restore.
-                # repr adds single quotes around string arguments which is not what we want.
-                if type(e.args[0]) == str:
-                    newerr.data = e.args[0]
-                else:
-                    newerr.data = repr(e.args[0])
+                newerr.data = repr(e.args[0])
             else:
                 newerr.data = repr(e.args)
             raise newerr
@@ -392,6 +387,12 @@ class Application(object):
             types=[dict],
         )
         self.method_authentication["execution_engine2.run_job"] = "required"  # noqa
+        self.rpc_service.add(
+            impl_execution_engine2.retry_job,
+            name="execution_engine2.retry_job",
+            types=[dict],
+        )
+        self.method_authentication["execution_engine2.retry_job"] = "required"  # noqa
         self.rpc_service.add(
             impl_execution_engine2.run_job_batch,
             name="execution_engine2.run_job_batch",

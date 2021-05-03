@@ -299,6 +299,11 @@ class SDKMethodRunner:
         return self.get_ee2_auth().retrieve_admin_permissions()
 
     # ENDPOINTS: Running jobs and getting job input params
+
+    def retry(self, job_id, as_admin=False):
+        """Authorization Required Read/Write"""
+        return self.get_runjob().retry(job_id=job_id, as_admin=as_admin)
+
     def run_job(self, params, as_admin=False):
         """Authorization Required Read/Write"""
         return self.get_runjob().run(params=params, as_admin=as_admin)

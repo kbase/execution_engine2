@@ -54,6 +54,26 @@ def get_example_job_as_dict(
     return job
 
 
+def get_example_job_input(wsid, params=None):
+    if params == None:
+        params = {}
+
+    job_input = JobInput()
+    job_input.wsid = wsid
+
+    job_input.method = "module.method"
+    job_input.requested_release = "requested_release"
+    job_input.params = params
+    job_input.service_ver = "dev"
+    job_input.app_id = "module/super_function"
+
+    m = Meta()
+    m.cell_id = "ApplePie"
+    job_input.narrative_cell_info = m
+
+    return job_input
+
+
 def get_example_job(
     user: str = "boris",
     wsid: int = 123,
@@ -63,18 +83,8 @@ def get_example_job(
     j = Job()
     j.user = user
     j.wsid = wsid
-    job_input = JobInput()
-    job_input.wsid = j.wsid
+    job_input = get_example_job_input(wsid)
 
-    job_input.method = "module.method"
-    job_input.requested_release = "requested_release"
-    job_input.params = {}
-    job_input.service_ver = "dev"
-    job_input.app_id = "module/super_function"
-
-    m = Meta()
-    m.cell_id = "ApplePie"
-    job_input.narrative_cell_info = m
     j.job_input = job_input
     j.status = "queued"
     j.authstrat = authstrat
