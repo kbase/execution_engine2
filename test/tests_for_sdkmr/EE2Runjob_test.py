@@ -328,12 +328,12 @@ def test_run_job_as_admin_with_job_requirements():
         "bill_to_user": _OTHER_USER,
         "ignore_concurrency_limits": "righty ho, luv",
         "scheduler_requirements": {"foo": "bar", "baz": "bat"},
-        "debug_mode": "true"
+        "debug_mode": "true",
     }
     params = {
         "method": _METHOD,
         "source_ws_objects": [_WS_REF_1, _WS_REF_2],
-        "job_requirements": inc_reqs
+        "job_requirements": inc_reqs,
     }
     assert rj.run(params, as_admin=True) == _JOB_ID
 
@@ -582,9 +582,17 @@ def test_run_job_and_run_job_batch_fail_illegal_arguments():
         IncorrectParamsException("job_requirements must be a mapping"),
     )
     _run_and_run_batch_fail_illegal_arguments(
-        {"method": "foo.bar", "job_requirements": {
-            "bill_to_user": {
-                "Bill": "$3.78", "Boris": "$2.95", "AJ": "$1.32", "Sumin": "$1,469,890.42"}}},
+        {
+            "method": "foo.bar",
+            "job_requirements": {
+                "bill_to_user": {
+                    "Bill": "$3.78",
+                    "Boris": "$2.95",
+                    "AJ": "$1.32",
+                    "Sumin": "$1,469,890.42",
+                }
+            },
+        },
         IncorrectParamsException("bill_to_user must be a string"),
     )
 
@@ -603,7 +611,10 @@ def test_run_job_and_run_job_batch_fail_arg_normalization():
     jrr.normalize_job_reqs.side_effect = IncorrectParamsException(e)
     _run_and_run_batch_fail(
         mocks[SDKMethodRunner],
-        {"method": "foo.bar", "job_requirements": {"request_cpus": "like 10 I guess? IDK"}},
+        {
+            "method": "foo.bar",
+            "job_requirements": {"request_cpus": "like 10 I guess? IDK"},
+        },
         IncorrectParamsException(e),
     )
 
@@ -859,7 +870,10 @@ def test_run_job_batch_with_parent_job_wsid():
     mocks[WorkspaceAuth].can_write_list.return_value = {wsid: True}
 
     jrr.normalize_job_reqs.side_effect = [{}, {}]
-    jrr.get_requirements_type.side_effect = [RequirementsType.STANDARD, RequirementsType.STANDARD]
+    jrr.get_requirements_type.side_effect = [
+        RequirementsType.STANDARD,
+        RequirementsType.STANDARD,
+    ]
     reqs1 = ResolvedRequirements(
         cpus=1,
         memory_MB=2,
@@ -901,9 +915,11 @@ def test_run_job_batch_with_parent_job_wsid():
     mocks[WorkspaceAuth].can_write_list.assert_called_once_with([parent_wsid, wsid])
     jrr = mocks[JobRequirementsResolver]
     jrr.normalize_job_reqs.assert_has_calls(
-        [call({}, "input job"), call({}, "input job")])
-    jrr.get_requirements_type.assert_has_calls([
-        call(**_EMPTY_JOB_REQUIREMENTS), call(**_EMPTY_JOB_REQUIREMENTS)])
+        [call({}, "input job"), call({}, "input job")]
+    )
+    jrr.get_requirements_type.assert_has_calls(
+        [call(**_EMPTY_JOB_REQUIREMENTS), call(**_EMPTY_JOB_REQUIREMENTS)]
+    )
     jrr.resolve_requirements.assert_has_calls(
         [
             call(_METHOD_1, **_EMPTY_JOB_REQUIREMENTS),
@@ -945,10 +961,13 @@ def test_run_job_batch_as_admin_with_job_requirements():
             "request_disk": disk,
             "client_group": client_group,
             "client_group_regex": True,
-            "debug_mode": True
+            "debug_mode": True,
         },
     ]
-    jrr.get_requirements_type.side_effect = [RequirementsType.STANDARD, RequirementsType.BILLING]
+    jrr.get_requirements_type.side_effect = [
+        RequirementsType.STANDARD,
+        RequirementsType.BILLING,
+    ]
     req_args = {
         "cpus": cpus,
         "memory_MB": mem,
@@ -961,7 +980,8 @@ def test_run_job_batch_as_admin_with_job_requirements():
         "debug_mode": True,
     }
     reqs1 = ResolvedRequirements(
-        cpus=1, memory_MB=1, disk_GB=1, client_group="verysmallclientgroup")
+        cpus=1, memory_MB=1, disk_GB=1, client_group="verysmallclientgroup"
+    )
     reqs2 = ResolvedRequirements(**req_args)
     jrr.resolve_requirements.side_effect = [reqs1, reqs2]
 
@@ -978,7 +998,7 @@ def test_run_job_batch_as_admin_with_job_requirements():
         "bill_to_user": _OTHER_USER,
         "ignore_concurrency_limits": "righty ho, luv",
         "scheduler_requirements": {"foo": "bar", "baz": "bat"},
-        "debug_mode": "true"
+        "debug_mode": "true",
     }
     params = [
         {
@@ -1000,12 +1020,15 @@ def test_run_job_batch_as_admin_with_job_requirements():
 
     # check mocks called as expected. The order here is the order that they're called in the code.
     sdkmr.check_as_admin.assert_called_once_with(JobPermissions.WRITE)
-    jrr.normalize_job_reqs.assert_has_calls([
-        call({}, "input job"), call(inc_reqs, "input job")])
-    jrr.get_requirements_type.assert_has_calls([
-        call(**_EMPTY_JOB_REQUIREMENTS), call(**req_args)])
-    jrr.resolve_requirements.assert_has_calls([
-        call(_METHOD_1, **_EMPTY_JOB_REQUIREMENTS), call(_METHOD_2, **req_args)])
+    jrr.normalize_job_reqs.assert_has_calls(
+        [call({}, "input job"), call(inc_reqs, "input job")]
+    )
+    jrr.get_requirements_type.assert_has_calls(
+        [call(**_EMPTY_JOB_REQUIREMENTS), call(**req_args)]
+    )
+    jrr.resolve_requirements.assert_has_calls(
+        [call(_METHOD_1, **_EMPTY_JOB_REQUIREMENTS), call(_METHOD_2, **req_args)]
+    )
     _check_common_mock_calls_batch(mocks, reqs1, reqs2, None, wsid)
 
 
@@ -1031,6 +1054,7 @@ def test_run_batch_fail_params_not_list():
 # Note the next few tests are specifically testing that errors for multiple jobs have the
 # correct job number
 
+
 def test_run_job_batch_fail_illegal_arguments():
     """
     Test that illegal arguments cause the job to fail. Note that not all arguments are
@@ -1048,23 +1072,38 @@ def test_run_job_batch_fail_illegal_arguments():
     job = {"method": "foo.bar"}
 
     _run_batch_fail(
-        rj, [job, job, {}], {}, True, IncorrectParamsException(
-            "Job #3: Missing input parameter: method ID")
+        rj,
+        [job, job, {}],
+        {},
+        True,
+        IncorrectParamsException("Job #3: Missing input parameter: method ID"),
     )
     _run_batch_fail(
-        rj, [job, {"method": "foo.bar", "wsid": 0}], {}, True,
+        rj,
+        [job, {"method": "foo.bar", "wsid": 0}],
+        {},
+        True,
         IncorrectParamsException("Job #2: wsid must be at least 1"),
     )
     _run_batch_fail(
-        rj, [{"method": "foo.bar", "source_ws_objects": {"a": "b"}}, job], {}, True,
+        rj,
+        [{"method": "foo.bar", "source_ws_objects": {"a": "b"}}, job],
+        {},
+        True,
         IncorrectParamsException("Job #1: source_ws_objects must be a list"),
     )
     _run_batch_fail(
-        rj, [job, {"method": "foo.bar", "job_requirements": ["10 bob", "a pickled egg"]}], {}, True,
+        rj,
+        [job, {"method": "foo.bar", "job_requirements": ["10 bob", "a pickled egg"]}],
+        {},
+        True,
         IncorrectParamsException("Job #2: job_requirements must be a mapping"),
     )
     _run_batch_fail(
-        rj, [{"method": "foo.bar", "job_requirements": {"bill_to_user": 1}}, job], {}, True,
+        rj,
+        [{"method": "foo.bar", "job_requirements": {"bill_to_user": 1}}, job],
+        {},
+        True,
         IncorrectParamsException("Job #1: bill_to_user must be a string"),
     )
 
@@ -1076,8 +1115,13 @@ def test_run_job_batch_fail_arg_normalization():
     jrr.normalize_job_reqs.side_effect = [{}, IncorrectParamsException(e)]
     _run_batch_fail(
         EE2RunJob(mocks[SDKMethodRunner]),
-        [{"method": "foo.bar"},
-         {"method": "foo.bar", "job_requirements": {"request_cpus": "like 10 I guess? IDK"}}],
+        [
+            {"method": "foo.bar"},
+            {
+                "method": "foo.bar",
+                "job_requirements": {"request_cpus": "like 10 I guess? IDK"},
+            },
+        ],
         {},
         True,
         IncorrectParamsException("Job #2: " + e),
@@ -1090,13 +1134,17 @@ def test_run_job_batch_fail_get_requirements_type():
     jrr.normalize_job_reqs.return_value = {}
     e = "bill_to_user contains control characters"
     jrr.get_requirements_type.side_effect = [
-        RequirementsType.STANDARD, RequirementsType.STANDARD, IncorrectParamsException(e)]
+        RequirementsType.STANDARD,
+        RequirementsType.STANDARD,
+        IncorrectParamsException(e),
+    ]
     _run_batch_fail(
         EE2RunJob(mocks[SDKMethodRunner]),
-        [{"method": "foo.bar"},
-         {"method": "foo.bar"},
-         {"method": "foo.bar", "job_requirements": {"bill_to_user": "ding\bding"}}
-         ],
+        [
+            {"method": "foo.bar"},
+            {"method": "foo.bar"},
+            {"method": "foo.bar", "job_requirements": {"bill_to_user": "ding\bding"}},
+        ],
         {},
         False,
         IncorrectParamsException("Job #3: " + e),
@@ -1108,15 +1156,20 @@ def test_run_job_batch_fail_not_admin_with_job_reqs():
     jrr = mocks[JobRequirementsResolver]
     jrr.normalize_job_reqs.return_value = {}
     jrr.get_requirements_type.side_effect = [
-        RequirementsType.PROCESSING, RequirementsType.STANDARD]
+        RequirementsType.PROCESSING,
+        RequirementsType.STANDARD,
+    ]
     _run_batch_fail(
         EE2RunJob(mocks[SDKMethodRunner]),
-        [{"method": "foo.bar", "job_requirements": {"ignore_concurrency_limits": 1}},
-         {"method": "foo.bar"}
-         ],
+        [
+            {"method": "foo.bar", "job_requirements": {"ignore_concurrency_limits": 1}},
+            {"method": "foo.bar"},
+        ],
         {},
         False,
-        AuthError("Job #1: In order to specify job requirements you must be a full admin"),
+        AuthError(
+            "Job #1: In order to specify job requirements you must be a full admin"
+        ),
     )
 
 
@@ -1130,12 +1183,11 @@ def test_run_job_batch_fail_resolve_requirements():
     jrr.resolve_requirements.side_effect = [jr, IncorrectParamsException(e)]
     _run_batch_fail(
         EE2RunJob(mocks[SDKMethodRunner]),
-        [{},
-         {"method": "foo.bar"}
-         ],
+        [{}, {"method": "foo.bar"}],
         {},
         False,
-        IncorrectParamsException("Job #2: " + e))
+        IncorrectParamsException("Job #2: " + e),
+    )
 
 
 def test_run_job_batch_fail_parent_id_included():

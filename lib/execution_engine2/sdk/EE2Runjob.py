@@ -364,12 +364,15 @@ class EE2RunJob:
             job_reqs = job.get(_JOB_REQUIREMENTS_INCOMING) or {}
             if not isinstance(job_reqs, dict):
                 raise IncorrectParamsException(
-                    f"{pre}{_JOB_REQUIREMENTS_INCOMING} must be a mapping")
+                    f"{pre}{_JOB_REQUIREMENTS_INCOMING} must be a mapping"
+                )
             try:
                 norm = jrr.normalize_job_reqs(job_reqs, "input job")
             except IncorrectParamsException as e:
                 self._rethrow_incorrect_params_with_error_prefix(e, pre)
-            self._check_job_requirements_vs_admin(jrr, norm, job_reqs, is_write_admin, pre)
+            self._check_job_requirements_vs_admin(
+                jrr, norm, job_reqs, is_write_admin, pre
+            )
 
             try:
                 job[_JOB_REQUIREMENTS] = jrr.resolve_requirements(
@@ -389,7 +392,9 @@ class EE2RunJob:
             except IncorrectParamsException as e:
                 self._rethrow_incorrect_params_with_error_prefix(e, pre)
 
-    def _check_job_requirements_vs_admin(self, jrr, norm, job_reqs, is_write_admin, err_prefix):
+    def _check_job_requirements_vs_admin(
+        self, jrr, norm, job_reqs, is_write_admin, err_prefix
+    ):
         # just a helper method for _add_job_requirements to make that method a bit shorter.
         # treat it as part of that method
         try:
@@ -402,18 +407,18 @@ class EE2RunJob:
                 # Note that this is never confirmed to be a real user. May want to fix that, but
                 # since it's admin only... YAGNI
                 bill_to_user=self._check_is_string(
-                    job_reqs.get(BILL_TO_USER), "bill_to_user"),
-                ignore_concurrency_limits=bool(
-                    job_reqs.get(IGNORE_CONCURRENCY_LIMITS)
+                    job_reqs.get(BILL_TO_USER), "bill_to_user"
                 ),
+                ignore_concurrency_limits=bool(job_reqs.get(IGNORE_CONCURRENCY_LIMITS)),
                 scheduler_requirements=job_reqs.get(_SCHEDULER_REQUIREMENTS),
-                debug_mode=norm.get(DEBUG_MODE)
+                debug_mode=norm.get(DEBUG_MODE),
             )
         except IncorrectParamsException as e:
             self._rethrow_incorrect_params_with_error_prefix(e, err_prefix)
         if perm_type != RequirementsType.STANDARD and not is_write_admin:
-            raise AuthError(f"{err_prefix}In order to specify job requirements "
-                            + "you must be a full admin")
+            raise AuthError(
+                f"{err_prefix}In order to specify job requirements you must be a full admin"
+            )
 
     def _check_is_string(self, putative_str, name):
         if not putative_str:
@@ -477,7 +482,8 @@ class EE2RunJob:
                 params.get(_METHOD), concierge_params
             )
         else:
-            self._add_job_requirements([params], bool(as_admin))  # as_admin checked above
+            # as_admin checked above
+            self._add_job_requirements([params], bool(as_admin))
         self._check_job_arguments([params])
 
         return self._run(params=params)
