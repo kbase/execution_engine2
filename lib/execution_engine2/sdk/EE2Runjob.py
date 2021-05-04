@@ -352,7 +352,7 @@ class EE2RunJob:
         optional keys {REQUEST_CPUS}, {REQUEST_MEMORY}, {REQUEST_DISK}, {CLIENT_GROUP},
         {CLIENT_GROUP_REGEX}, {BILL_TO_USER}, {IGNORE_CONCURRENCY_LIMITS},
         {_SCHEDULER_REQUIREMENTS}, and {DEBUG_MODE}. Adds the {_JOB_REQUIREMENTS} field to the
-        param dicts, which holds the value of the job requirements object.
+        param dicts, which holds the job requirements object.
         """
         # could add a cache in the job requirements resolver to avoid making the same
         # catalog call over and over if all the jobs have the same method
