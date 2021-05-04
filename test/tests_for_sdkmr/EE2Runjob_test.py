@@ -221,6 +221,44 @@ def _check_common_mock_calls(mocks, reqs, wsid, app=_APP):
     mocks[SlackClient].run_job_message.assert_called_once_with(_JOB_ID, _CLUSTER, _USER)
 
 
+def _create_reqs_dict(
+    cpu,
+    mem,
+    disk,
+    clientgroup,
+    client_group_regex=None,
+    ignore_concurrency_limits=None,
+    debug_mode=None,
+    merge_with=None,
+    internal_representation=False,
+):
+    # the bill to user and scheduler requirements keys are different for the concierge endpoint
+    # so we don't include them. If needed use the merge_with parameter.
+    if internal_representation:
+        ret = {
+            "cpus": cpu,
+            "memory_MB": mem,
+            "disk_GB": disk,
+        }
+    else:
+        ret = {
+            "request_cpus": cpu,
+            "request_memory": mem,
+            "request_disk": disk,
+        }
+    ret.update(
+        {
+            "client_group": clientgroup,
+            "client_group_regex": client_group_regex,
+            "ignore_concurrency_limits": ignore_concurrency_limits,
+            "debug_mode": debug_mode,
+        }
+    )
+    if merge_with:
+        ret.update(merge_with)
+    return ret
+
+
 def test_run_job():
     """
     A basic unit test of the run() method.
@@ -293,43 +331,43 @@ def test_run_job_as_admin_with_job_requirements():
     # already a very large test. This may be something to be added later when needed.
 
     # Set up call returns. These calls are in the order they occur in the code
-    jrr.normalize_job_reqs.return_value = {
-        "request_cpus": cpus,
-        "request_memory": mem,
-        "request_disk": disk,
-        "client_group": client_group,
-        "client_group_regex": True,
-        "debug_mode": True,
-    }
+    jrr.normalize_job_reqs.return_value = _create_reqs_dict(
+        cpus, mem, disk, client_group, client_group_regex=True, debug_mode=True
+    )
     jrr.get_requirements_type.return_value = RequirementsType.BILLING
-    req_args = {
-        "cpus": cpus,
-        "memory_MB": mem,
-        "disk_GB": disk,
-        "client_group": client_group,
-        "client_group_regex": True,
-        "bill_to_user": _OTHER_USER,
-        "ignore_concurrency_limits": True,
-        "scheduler_requirements": {"foo": "bar", "baz": "bat"},
-        "debug_mode": True,
-    }
+    req_args = _create_reqs_dict(
+        cpus,
+        mem,
+        disk,
+        client_group,
+        client_group_regex=True,
+        ignore_concurrency_limits=True,
+        debug_mode=True,
+        merge_with={
+            "bill_to_user": _OTHER_USER,
+            "scheduler_requirements": {"foo": "bar", "baz": "bat"},
+        },
+        internal_representation=True
+    )
     reqs = ResolvedRequirements(**req_args)
     jrr.resolve_requirements.return_value = reqs
     _set_up_common_return_values(mocks)
 
     # set up the class to be tested and run the method
     rj = EE2RunJob(sdkmr)
-    inc_reqs = {
-        "request_cpus": cpus,
-        "requst_memory": mem,
-        "request_disk": disk,
-        "client_group": client_group,
-        "client_group_regex": 1,
-        "bill_to_user": _OTHER_USER,
-        "ignore_concurrency_limits": "righty ho, luv",
-        "scheduler_requirements": {"foo": "bar", "baz": "bat"},
-        "debug_mode": "true",
-    }
+    inc_reqs = _create_reqs_dict(
+        cpus,
+        mem,
+        disk,
+        client_group,
+        client_group_regex=1,
+        ignore_concurrency_limits="righty ho, luv",
+        debug_mode="true",
+        merge_with={
+            "bill_to_user": _OTHER_USER,
+            "scheduler_requirements": {"foo": "bar", "baz": "bat"},
+        },
+    )
     params = {
         "method": _METHOD,
         "source_ws_objects": [_WS_REF_1, _WS_REF_2],
@@ -369,14 +407,9 @@ def test_run_job_as_concierge_with_wsid():
 
     # Set up call returns. These calls are in the order they occur in the code
     wsauth.can_write.return_value = True
-    jrr.normalize_job_reqs.return_value = {
-        "request_cpus": cpus,
-        "request_memory": mem,
-        "request_disk": disk,
-        "client_group": client_group,
-        "client_group_regex": False,
-        "debug_mode": True,
-    }
+    jrr.normalize_job_reqs.return_value = _create_reqs_dict(
+        cpus, mem, disk, client_group, client_group_regex=False, debug_mode=True
+    )
     reqs = ResolvedRequirements(
         cpus=cpus,
         memory_MB=mem,
@@ -399,17 +432,19 @@ def test_run_job_as_concierge_with_wsid():
         "wsid": wsid,
         "source_ws_objects": [_WS_REF_1, _WS_REF_2],
     }
-    conc_params = {
-        "request_cpus": cpus,
-        "request_memory": mem,
-        "request_disk": disk,
-        "client_group": client_group,
-        "client_group_regex": 0,
-        "ignore_concurrency_limits": 0,
-        "account_group": _OTHER_USER,
-        "requirements_list": ["  foo   =   bar   ", "baz=bat"],
-        "debug_mode": 1,
-    }
+    conc_params = _create_reqs_dict(
+        cpus,
+        mem,
+        disk,
+        client_group,
+        client_group_regex=0,
+        ignore_concurrency_limits=0,
+        debug_mode=1,
+        merge_with={
+            "account_group": _OTHER_USER,
+            "requirements_list": ["  foo   =   bar   ", "baz=bat"],
+        }
+    )
     assert rj.run(params, concierge_params=conc_params) == _JOB_ID
 
     # check mocks called as expected. The order here is the order that they're called in the code.
@@ -588,7 +623,7 @@ def test_run_job_and_run_job_batch_fail_illegal_arguments():
                 "bill_to_user": {
                     "Bill": "$3.78",
                     "Boris": "$2.95",
-                    "AJ": "$1.32",
+                    "AJ": "one BILIIOOOON dollars",
                     "Sumin": "$1,469,890.42",
                 }
             },
@@ -955,30 +990,26 @@ def test_run_job_batch_as_admin_with_job_requirements():
     # Set up call returns. These calls are in the order they occur in the code
     jrr.normalize_job_reqs.side_effect = [
         {},
-        {
-            "request_cpus": cpus,
-            "request_memory": mem,
-            "request_disk": disk,
-            "client_group": client_group,
-            "client_group_regex": True,
-            "debug_mode": True,
-        },
+        _create_reqs_dict(cpus, mem, disk, client_group, client_group_regex=True, debug_mode=True),
     ]
     jrr.get_requirements_type.side_effect = [
         RequirementsType.STANDARD,
         RequirementsType.BILLING,
     ]
-    req_args = {
-        "cpus": cpus,
-        "memory_MB": mem,
-        "disk_GB": disk,
-        "client_group": client_group,
-        "client_group_regex": True,
-        "bill_to_user": _OTHER_USER,
-        "ignore_concurrency_limits": True,
-        "scheduler_requirements": {"foo": "bar", "baz": "bat"},
-        "debug_mode": True,
-    }
+    req_args = _create_reqs_dict(
+        cpus,
+        mem,
+        disk,
+        client_group,
+        client_group_regex=True,
+        ignore_concurrency_limits=True,
+        debug_mode=True,
+        merge_with={
+            "bill_to_user": _OTHER_USER,
+            "scheduler_requirements": {"foo": "bar", "baz": "bat"},
+        },
+        internal_representation=True
+    )
     reqs1 = ResolvedRequirements(
         cpus=1, memory_MB=1, disk_GB=1, client_group="verysmallclientgroup"
     )
@@ -989,17 +1020,19 @@ def test_run_job_batch_as_admin_with_job_requirements():
 
     # set up the class to be tested and run the method
     rj = EE2RunJob(sdkmr)
-    inc_reqs = {
-        "request_cpus": cpus,
-        "requst_memory": mem,
-        "request_disk": disk,
-        "client_group": client_group,
-        "client_group_regex": 1,
-        "bill_to_user": _OTHER_USER,
-        "ignore_concurrency_limits": "righty ho, luv",
-        "scheduler_requirements": {"foo": "bar", "baz": "bat"},
-        "debug_mode": "true",
-    }
+    inc_reqs = _create_reqs_dict(
+        cpus,
+        mem,
+        disk,
+        client_group,
+        client_group_regex=1,
+        ignore_concurrency_limits="righty ho, luv",
+        debug_mode="true",
+        merge_with={
+            "bill_to_user": _OTHER_USER,
+            "scheduler_requirements": {"foo": "bar", "baz": "bat"},
+        }
+    )
     params = [
         {
             "method": _METHOD_1,
