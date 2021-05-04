@@ -75,7 +75,7 @@ def test_run_job_minimal():
     subinfo = c.run_job(
         JobSubmissionParameters(
             "jobbyjob",
-            AppInfo("foo.bar", "foo/whoo"),
+            AppInfo("foo.bar"),
             JobRequirements(2, 3, 4, "cg"),
             UserCreds("user1", "token"),
         )
@@ -93,8 +93,8 @@ def test_run_job_minimal():
             "+KB_PARENT_JOB_ID": "",
             "+KB_MODULE_NAME": '"foo"',
             "+KB_FUNCTION_NAME": '"bar"',
-            "+KB_APP_ID": '"foo/whoo"',
-            "+KB_APP_MODULE_NAME": '"foo"',
+            "+KB_APP_ID": "",
+            "+KB_APP_MODULE_NAME": "",
             "+KB_WSID": "",
             "+KB_SOURCE_WS_OBJECTS": "",
             "request_cpus": "2",

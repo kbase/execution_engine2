@@ -154,7 +154,7 @@ def _set_up_common_return_values(mocks):
     mocks[MongoUtil].get_job.return_value = retjob
 
 
-def _check_common_mock_calls(mocks, reqs, wsid):
+def _check_common_mock_calls(mocks, reqs, wsid, app=_APP):
     """
     Check that mocks are called as expected when those calls are similar or the same for
     several tests.
@@ -170,7 +170,7 @@ def _check_common_mock_calls(mocks, reqs, wsid):
 
     # initial job data save
     expected_job = _create_job(
-        reqs, wsid=wsid, source_ws_objects=[_WS_REF_1, _WS_REF_2]
+        reqs, app=app, wsid=wsid, source_ws_objects=[_WS_REF_1, _WS_REF_2]
     )
     assert len(sdkmr.save_job.call_args_list) == 2
     got_job = sdkmr.save_job.call_args_list[0][0][0]
@@ -179,7 +179,7 @@ def _check_common_mock_calls(mocks, reqs, wsid):
     kafka.send_kafka_message.assert_any_call(KafkaCreateJob(_USER, _JOB_ID))
     jsp_expected = JobSubmissionParameters(
         _JOB_ID,
-        AppInfo(_METHOD, _APP),
+        AppInfo(_METHOD, app),
         reqs,
         UserCreds(_USER, _TOKEN),
         wsid=wsid,
@@ -212,6 +212,8 @@ def test_run_as_admin():
     This test is a fairly minimal test of the run() method. It does not exercise all the
     potential code paths or provide all the possible run inputs, such as job parameters, cell
     metadata, etc.
+
+    Does not include an app_id.
     """
 
     # Set up data variables
@@ -238,7 +240,6 @@ def test_run_as_admin():
     rj = EE2RunJob(sdkmr)
     params = {
         "method": _METHOD,
-        "app_id": _APP,
         "source_ws_objects": [_WS_REF_1, _WS_REF_2],
     }
     assert rj.run(params, as_admin=True) == _JOB_ID
@@ -246,12 +247,14 @@ def test_run_as_admin():
     # check mocks called as expected. The order here is the order that they're called in the code.
     sdkmr.check_as_admin.assert_called_once_with(JobPermissions.WRITE)
     jrr.resolve_requirements.assert_called_once_with(_METHOD)
-    _check_common_mock_calls(mocks, reqs, None)
+    _check_common_mock_calls(mocks, reqs, None, None)
 
 
 def test_run_as_concierge_with_wsid():
     """
     A unit test of the run() method with a concierge - but not admin - user.
+
+    Includes an app ID.
     """
 
     # Set up data variables
@@ -339,16 +342,22 @@ def test_run_as_concierge_empty_as_admin():
     A unit test of the run() method with an effectively empty concierge dict and admin privs.
     The fake key should be ignored but is required to make the concierge params truthy and
     trigger the pathway.
+
+    Also provides a module only app ID, as some KBase processes provide these.
     """
-    _run_as_concierge_empty_as_admin({"fake": "foo"})
+    _run_as_concierge_empty_as_admin({"fake": "foo"}, "lolcats")
 
 
 def test_run_as_concierge_sched_reqs_None_as_admin():
     """
     A unit test of the run() method with an concierge dict containing None for the scheduler
     requirements and admin privs.
+
+    Also provides an app ID with a . instead of a /
     """
-    _run_as_concierge_empty_as_admin({"requirements_list": None})
+    _run_as_concierge_empty_as_admin(
+        {"requirements_list": None}, "lolcats.itsmypartyilllolifiwantto"
+    )
 
 
 def test_run_as_concierge_sched_reqs_empty_list_as_admin():
@@ -356,10 +365,10 @@ def test_run_as_concierge_sched_reqs_empty_list_as_admin():
     A unit test of the run() method with an concierge dict containing an empty list for the
     scheduler requirements and admin privs.
     """
-    _run_as_concierge_empty_as_admin({"requirements_list": []})
+    _run_as_concierge_empty_as_admin({"requirements_list": []}, _APP)
 
 
-def _run_as_concierge_empty_as_admin(concierge_params):
+def _run_as_concierge_empty_as_admin(concierge_params, app):
 
     # Set up data variables
     client_group = "concierge"  # hardcoded default for run_as_concierge
@@ -389,7 +398,7 @@ def _run_as_concierge_empty_as_admin(concierge_params):
     rj = EE2RunJob(sdkmr)
     params = {
         "method": _METHOD,
-        "app_id": _APP,
+        "app_id": app,
         "source_ws_objects": [_WS_REF_1, _WS_REF_2],
     }
     assert rj.run(params, concierge_params=concierge_params, as_admin=True) == _JOB_ID
@@ -413,7 +422,7 @@ def _run_as_concierge_empty_as_admin(concierge_params):
         scheduler_requirements={},
         debug_mode=None,
     )
-    _check_common_mock_calls(mocks, reqs, None)
+    _check_common_mock_calls(mocks, reqs, None, app)
 
 
 def test_run_fail_concierge_params():
@@ -466,15 +475,11 @@ def test_run_and_run_batch_fail_illegal_arguments():
         {}, IncorrectParamsException("Missing input parameter: method ID")
     )
     _run_and_run_batch_fail_illegal_arguments(
-        {"method": "foo.bar"},
-        IncorrectParamsException("Missing input parameter: application ID"),
-    )
-    _run_and_run_batch_fail_illegal_arguments(
-        {"method": "foo.bar", "app_id": "foo/baz", "wsid": 0},
+        {"method": "foo.bar", "wsid": 0},
         IncorrectParamsException("wsid must be at least 1"),
     )
     _run_and_run_batch_fail_illegal_arguments(
-        {"method": "foo.bar", "app_id": "foo/baz", "source_ws_objects": {"a": "b"}},
+        {"method": "foo.bar", "source_ws_objects": {"a": "b"}},
         IncorrectParamsException("source_ws_objects must be a list"),
     )
 
