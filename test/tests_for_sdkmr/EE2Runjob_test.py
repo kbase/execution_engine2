@@ -347,7 +347,7 @@ def test_run_job_as_admin_with_job_requirements():
             "bill_to_user": _OTHER_USER,
             "scheduler_requirements": {"foo": "bar", "baz": "bat"},
         },
-        internal_representation=True
+        internal_representation=True,
     )
     reqs = ResolvedRequirements(**req_args)
     jrr.resolve_requirements.return_value = reqs
@@ -443,7 +443,7 @@ def test_run_job_as_concierge_with_wsid():
         merge_with={
             "account_group": _OTHER_USER,
             "requirements_list": ["  foo   =   bar   ", "baz=bat"],
-        }
+        },
     )
     assert rj.run(params, concierge_params=conc_params) == _JOB_ID
 
@@ -990,7 +990,9 @@ def test_run_job_batch_as_admin_with_job_requirements():
     # Set up call returns. These calls are in the order they occur in the code
     jrr.normalize_job_reqs.side_effect = [
         {},
-        _create_reqs_dict(cpus, mem, disk, client_group, client_group_regex=True, debug_mode=True),
+        _create_reqs_dict(
+            cpus, mem, disk, client_group, client_group_regex=True, debug_mode=True
+        ),
     ]
     jrr.get_requirements_type.side_effect = [
         RequirementsType.STANDARD,
@@ -1008,7 +1010,7 @@ def test_run_job_batch_as_admin_with_job_requirements():
             "bill_to_user": _OTHER_USER,
             "scheduler_requirements": {"foo": "bar", "baz": "bat"},
         },
-        internal_representation=True
+        internal_representation=True,
     )
     reqs1 = ResolvedRequirements(
         cpus=1, memory_MB=1, disk_GB=1, client_group="verysmallclientgroup"
@@ -1031,7 +1033,7 @@ def test_run_job_batch_as_admin_with_job_requirements():
         merge_with={
             "bill_to_user": _OTHER_USER,
             "scheduler_requirements": {"foo": "bar", "baz": "bat"},
-        }
+        },
     )
     params = [
         {
