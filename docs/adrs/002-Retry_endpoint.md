@@ -20,8 +20,10 @@ The current implementation of retry is to run jobs using the `run_job` or `run_j
 * Lack of ability to launch multiple jobs using the `run_job_batch` endpoint without creating a new parent job
 * Lack of ability to ensure that the proper catalog version /git commit of an app is used from the front end based on a tag, such as "beta/dev/release"
 * Lack of ability to specify which retries succeeded and which ones failed during submit time. 
-
 * Code is split more than is necessary
+
+### Note about submit time vs run time for job submission
+The job first needs to be submitted to ee2_runjob. It can fail there. Afterwards, it gets submitted to condor, it can fail there too. Currently those two happen at the same time, but they are supposed to happen in a thread at some point, so the current single point of submit time will become two separate points of submission. Once the job begins running, it can fail at Run Time.
 
 ## Author(s)
 
