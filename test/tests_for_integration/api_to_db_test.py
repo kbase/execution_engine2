@@ -703,7 +703,7 @@ def _run_job(
 
 
 def test_run_job_fail_not_admin(ee2_port):
-    params = {"method": _MOD, "job_requirements": {"request_cpus": -10}, "as_admin": 1}
+    params = {"method": _MOD, "as_admin": 1}
     err = "Access Denied: You are not an administrator. AdminPermissions.NONE"
     _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
@@ -1576,6 +1576,7 @@ def test_run_job_batch_fail_job_reqs_but_no_as_admin(ee2_port, ws_controller):
     _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
     params = [
         {"method": _MOD},
+        # as_admin is only considered in the batch params for run_job_batch
         {"method": _MOD, "job_requirements": {"request_memory": 1000}, "as_admin": True},
     ]
     err = "Job #2: In order to specify job requirements you must be a full admin"
