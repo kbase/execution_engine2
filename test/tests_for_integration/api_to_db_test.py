@@ -716,6 +716,12 @@ def test_run_job_fail_not_admin(ee2_port):
     _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
 
+def test_run_job_fail_only_read_admin(ee2_port):
+    params = {"method": _MOD, "as_admin": 1}
+    err = "Access Denied: You are a read-only admin. This function requires write access"
+    _run_job_fail(ee2_port, TOKEN_READ_ADMIN, params, err)
+
+
 def test_run_job_fail_no_workspace_access(ee2_port):
     params = {"method": _MOD, "wsid": 1}
     # this error could probably use some cleanup
@@ -1535,6 +1541,11 @@ def _check_batch_htc_calls(
 def test_run_job_batch_fail_not_admin(ee2_port, ws_controller):
     err = "Access Denied: You are not an administrator. AdminPermissions.NONE"
     _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, [], {"as_admin": True}, err)
+
+
+def test_run_job_batch_fail_only_read_admin(ee2_port, ws_controller):
+    err = "Access Denied: You are a read-only admin. This function requires write access"
+    _run_job_batch_fail(ee2_port, TOKEN_READ_ADMIN, [], {"as_admin": True}, err)
 
 
 def test_run_job_batch_fail_no_workspace_access_for_batch(ee2_port, ws_controller):
