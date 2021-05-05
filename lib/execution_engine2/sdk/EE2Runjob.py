@@ -31,13 +31,18 @@ from execution_engine2.utils.job_requirements_resolver import (
     REQUEST_MEMORY,
     CLIENT_GROUP,
     CLIENT_GROUP_REGEX,
+    BILL_TO_USER,
+    IGNORE_CONCURRENCY_LIMITS,
     DEBUG_MODE,
 )
+from execution_engine2.utils.job_requirements_resolver import RequirementsType
 from execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
-from execution_engine2.exceptions import IncorrectParamsException
+from execution_engine2.exceptions import IncorrectParamsException, AuthError
 
 
 _JOB_REQUIREMENTS = "job_reqs"
+_JOB_REQUIREMENTS_INCOMING = "job_requirements"
+_SCHEDULER_REQUIREMENTS = "scheduler_requirements"
 _REQUIREMENTS_LIST = "requirements_list"
 _METHOD = "method"
 _APP_ID = "app_id"
@@ -331,7 +336,7 @@ class EE2RunJob:
             wsids = [job_input.get(_WORKSPACE_ID, wsid) for job_input in params]
             self._check_workspace_permissions_list(wsids)
 
-        self._add_job_requirements(params)
+        self._add_job_requirements(params, bool(as_admin))  # as_admin checked above
         self._check_job_arguments(params, has_parent_job=True)
 
         parent_job = self._create_parent_job(wsid=wsid, meta=meta)
@@ -339,20 +344,95 @@ class EE2RunJob:
         return {_PARENT_JOB_ID: str(parent_job.id), "child_job_ids": children_jobs}
 
     # modifies the jobs in place
-    def _add_job_requirements(self, jobs: List[Dict[str, Any]]):
+    def _add_job_requirements(self, jobs: List[Dict[str, Any]], is_write_admin: bool):
         f"""
         Adds the job requirements, generated from the job requirements resolver,
         to the provided RunJobParams dicts. Expects the required field {_METHOD} in the param
-        dicts. Adds the {_JOB_REQUIREMENTS} field to the param dicts, which holds the value of the
-        job requirements object.
+        dicts. Looks in the {_JOB_REQUIREMENTS_INCOMING} key for a dictionary containing the
+        optional keys {REQUEST_CPUS}, {REQUEST_MEMORY}, {REQUEST_DISK}, {CLIENT_GROUP},
+        {CLIENT_GROUP_REGEX}, {BILL_TO_USER}, {IGNORE_CONCURRENCY_LIMITS},
+        {_SCHEDULER_REQUIREMENTS}, and {DEBUG_MODE}. Adds the {_JOB_REQUIREMENTS} field to the
+        param dicts, which holds the job requirements object.
         """
         # could add a cache in the job requirements resolver to avoid making the same
         # catalog call over and over if all the jobs have the same method
         jrr = self.sdkmr.get_job_requirements_resolver()
-        for j in jobs:
-            # TODO JRR check if requesting any job requirements & if is admin
-            # TODO JRR actually process the requirements once added to the spec
-            j[_JOB_REQUIREMENTS] = jrr.resolve_requirements(j.get(_METHOD))
+        for i, job in enumerate(jobs):
+            # TODO I feel like a class for just handling error formatting would be useful
+            # but too much work for a minor benefit
+            pre = f"Job #{i + 1}: " if len(jobs) > 1 else ""
+            job_reqs = job.get(_JOB_REQUIREMENTS_INCOMING) or {}
+            if not isinstance(job_reqs, dict):
+                raise IncorrectParamsException(
+                    f"{pre}{_JOB_REQUIREMENTS_INCOMING} must be a mapping"
+                )
+            try:
+                norm = jrr.normalize_job_reqs(job_reqs, "input job")
+            except IncorrectParamsException as e:
+                self._rethrow_incorrect_params_with_error_prefix(e, pre)
+            self._check_job_requirements_vs_admin(
+                jrr, norm, job_reqs, is_write_admin, pre
+            )
+
+            try:
+                job[_JOB_REQUIREMENTS] = jrr.resolve_requirements(
+                    job.get(_METHOD),
+                    cpus=norm.get(REQUEST_CPUS),
+                    memory_MB=norm.get(REQUEST_MEMORY),
+                    disk_GB=norm.get(REQUEST_DISK),
+                    client_group=norm.get(CLIENT_GROUP),
+                    client_group_regex=norm.get(CLIENT_GROUP_REGEX),
+                    bill_to_user=job_reqs.get(BILL_TO_USER),
+                    ignore_concurrency_limits=bool(
+                        job_reqs.get(IGNORE_CONCURRENCY_LIMITS)
+                    ),
+                    scheduler_requirements=job_reqs.get(_SCHEDULER_REQUIREMENTS),
+                    debug_mode=norm.get(DEBUG_MODE),
+                )
+            except IncorrectParamsException as e:
+                self._rethrow_incorrect_params_with_error_prefix(e, pre)
+
+    def _check_job_requirements_vs_admin(
+        self, jrr, norm, job_reqs, is_write_admin, err_prefix
+    ):
+        # just a helper method for _add_job_requirements to make that method a bit shorter.
+        # treat it as part of that method
+        try:
+            perm_type = jrr.get_requirements_type(
+                cpus=norm.get(REQUEST_CPUS),
+                memory_MB=norm.get(REQUEST_MEMORY),
+                disk_GB=norm.get(REQUEST_DISK),
+                client_group=norm.get(CLIENT_GROUP),
+                client_group_regex=norm.get(CLIENT_GROUP_REGEX),
+                # Note that this is never confirmed to be a real user. May want to fix that, but
+                # since it's admin only... YAGNI
+                bill_to_user=self._check_is_string(
+                    job_reqs.get(BILL_TO_USER), "bill_to_user"
+                ),
+                ignore_concurrency_limits=bool(job_reqs.get(IGNORE_CONCURRENCY_LIMITS)),
+                scheduler_requirements=job_reqs.get(_SCHEDULER_REQUIREMENTS),
+                debug_mode=norm.get(DEBUG_MODE),
+            )
+        except IncorrectParamsException as e:
+            self._rethrow_incorrect_params_with_error_prefix(e, err_prefix)
+        if perm_type != RequirementsType.STANDARD and not is_write_admin:
+            raise AuthError(
+                f"{err_prefix}In order to specify job requirements you must be a full admin"
+            )
+
+    def _check_is_string(self, putative_str, name):
+        if not putative_str:
+            return None
+        if type(putative_str) != str:
+            raise IncorrectParamsException(f"{name} must be a string")
+        return putative_str
+
+    def _rethrow_incorrect_params_with_error_prefix(
+        self, error: IncorrectParamsException, error_prefix: str
+    ):
+        if not error_prefix:
+            raise error
+        raise IncorrectParamsException(f"{error_prefix}{error.args[0]}") from error
 
     def _check_job_arguments(self, jobs, has_parent_job=False):
         # perform sanity checks before creating any jobs, including the parent job for batch jobs
@@ -360,18 +440,21 @@ class EE2RunJob:
             # Could make an argument checker method, or a class that doesn't require a job id.
             # Seems like more code & work for no real benefit though.
             # Just create the class for checks, don't use yet
-            JobSubmissionParameters(
-                "fakejobid",
-                AppInfo(job.get(_METHOD), job.get(_APP_ID)),
-                job[_JOB_REQUIREMENTS],
-                UserCreds(self.sdkmr.get_user_id(), self.sdkmr.get_token()),
-                wsid=job.get(_WORKSPACE_ID),
-                source_ws_objects=job.get(_SOURCE_WS_OBJECTS),
-            )
+            pre = f"Job #{i + 1}: " if len(jobs) > 1 else ""
+            try:
+                JobSubmissionParameters(
+                    "fakejobid",
+                    AppInfo(job.get(_METHOD), job.get(_APP_ID)),
+                    job[_JOB_REQUIREMENTS],
+                    UserCreds(self.sdkmr.get_user_id(), self.sdkmr.get_token()),
+                    wsid=job.get(_WORKSPACE_ID),
+                    source_ws_objects=job.get(_SOURCE_WS_OBJECTS),
+                )
+            except IncorrectParamsException as e:
+                self._rethrow_incorrect_params_with_error_prefix(e, pre)
             if has_parent_job and job.get(_PARENT_JOB_ID):
-                pre = f"Job #{i + 1}: b" if len(jobs) > 1 else "B"
                 raise IncorrectParamsException(
-                    f"{pre}atch jobs may not specify a parent job ID"
+                    f"{pre}batch jobs may not specify a parent job ID"
                 )
             # This is also an opportunity for caching
             # although most likely jobs aren't operating on the same object
@@ -399,7 +482,8 @@ class EE2RunJob:
                 params.get(_METHOD), concierge_params
             )
         else:
-            self._add_job_requirements([params])
+            # as_admin checked above
+            self._add_job_requirements([params], bool(as_admin))
         self._check_job_arguments([params])
 
         return self._run(params=params)
@@ -436,7 +520,7 @@ class EE2RunJob:
             bill_to_user=concierge_params.get("account_group"),
             # default is to ignore concurrency limits for concierge
             ignore_concurrency_limits=bool(
-                concierge_params.get("ignore_concurrency_limits", 1)
+                concierge_params.get(IGNORE_CONCURRENCY_LIMITS, 1)
             ),
             scheduler_requirements=schd_reqs,
             debug_mode=norm.get(DEBUG_MODE),

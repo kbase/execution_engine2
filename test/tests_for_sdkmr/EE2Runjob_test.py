@@ -11,7 +11,7 @@ from logging import Logger
 from unittest.mock import create_autospec, call
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.models.models import Job, JobInput, JobRequirements, Meta
-from execution_engine2.exceptions import IncorrectParamsException
+from execution_engine2.exceptions import IncorrectParamsException, AuthError
 from execution_engine2.sdk.EE2Runjob import EE2RunJob, JobPermissions
 from execution_engine2.sdk.job_submission_parameters import (
     JobSubmissionParameters,
@@ -26,7 +26,10 @@ from execution_engine2.utils.KafkaUtils import (
     KafkaQueueChange,
     KafkaCreateJob,
 )
-from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
+from execution_engine2.utils.job_requirements_resolver import (
+    JobRequirementsResolver,
+    RequirementsType,
+)
 from execution_engine2.utils.SlackUtils import SlackClient
 from execution_engine2.db.MongoUtil import MongoUtil
 from installed_clients.WorkspaceClient import Workspace
@@ -60,6 +63,19 @@ _METHOD_2 = "module2.method2"
 _APP_2 = "module2/app2"
 _CLUSTER_1 = "cluster1"
 _CLUSTER_2 = "cluster2"
+
+
+_EMPTY_JOB_REQUIREMENTS = {
+    "cpus": None,
+    "memory_MB": None,
+    "disk_GB": None,
+    "client_group": None,
+    "client_group_regex": None,
+    "bill_to_user": None,
+    "ignore_concurrency_limits": False,
+    "scheduler_requirements": None,
+    "debug_mode": None,
+}
 
 
 def _set_up_mocks(user: str, token: str) -> Dict[Any, Any]:
@@ -205,9 +221,94 @@ def _check_common_mock_calls(mocks, reqs, wsid, app=_APP):
     mocks[SlackClient].run_job_message.assert_called_once_with(_JOB_ID, _CLUSTER, _USER)
 
 
-def test_run_as_admin():
+def _create_reqs_dict(
+    cpu,
+    mem,
+    disk,
+    clientgroup,
+    client_group_regex=None,
+    ignore_concurrency_limits=None,
+    debug_mode=None,
+    merge_with=None,
+    internal_representation=False,
+):
+    # the bill to user and scheduler requirements keys are different for the concierge endpoint
+    # so we don't include them. If needed use the merge_with parameter.
+    if internal_representation:
+        ret = {
+            "cpus": cpu,
+            "memory_MB": mem,
+            "disk_GB": disk,
+        }
+    else:
+        ret = {
+            "request_cpus": cpu,
+            "request_memory": mem,
+            "request_disk": disk,
+        }
+    ret.update(
+        {
+            "client_group": clientgroup,
+            "client_group_regex": client_group_regex,
+            "ignore_concurrency_limits": ignore_concurrency_limits,
+            "debug_mode": debug_mode,
+        }
+    )
+    if merge_with:
+        ret.update(merge_with)
+    return ret
+
+
+def test_run_job():
     """
-    A basic unit test of the run() method with an administrative user.
+    A basic unit test of the run() method.
+
+    This test is a fairly minimal test of the run() method. It does not exercise all the
+    potential code paths or provide all the possible run inputs, such as job parameters, cell
+    metadata, etc.
+    """
+
+    # Set up data variables
+    client_group = "myfirstclientgroup"
+    cpus = 1
+    mem = 1
+    disk = 1
+
+    # set up mocks
+    mocks = _set_up_mocks(_USER, _TOKEN)
+    sdkmr = mocks[SDKMethodRunner]
+    jrr = mocks[JobRequirementsResolver]
+    # We intentionally do not check the logger methods as there are a lot of them and this is
+    # already a very large test. This may be something to be added later when needed.
+
+    # Set up call returns. These calls are in the order they occur in the code
+    jrr.normalize_job_reqs.return_value = {}
+    jrr.get_requirements_type.return_value = RequirementsType.STANDARD
+    reqs = ResolvedRequirements(
+        cpus=cpus, memory_MB=mem, disk_GB=disk, client_group=client_group
+    )
+    jrr.resolve_requirements.return_value = reqs
+    _set_up_common_return_values(mocks)
+
+    # set up the class to be tested and run the method
+    rj = EE2RunJob(sdkmr)
+    params = {
+        "method": _METHOD,
+        "app_id": _APP,
+        "source_ws_objects": [_WS_REF_1, _WS_REF_2],
+    }
+    assert rj.run(params) == _JOB_ID
+
+    # check mocks called as expected. The order here is the order that they're called in the code.
+    jrr.normalize_job_reqs.assert_called_once_with({}, "input job")
+    jrr.get_requirements_type.assert_called_once_with(**_EMPTY_JOB_REQUIREMENTS)
+    jrr.resolve_requirements.assert_called_once_with(_METHOD, **_EMPTY_JOB_REQUIREMENTS)
+    _check_common_mock_calls(mocks, reqs, None, _APP)
+
+
+def test_run_job_as_admin_with_job_requirements():
+    """
+    A basic unit test of the run() method with an administrative user and job requirements.
 
     This test is a fairly minimal test of the run() method. It does not exercise all the
     potential code paths or provide all the possible run inputs, such as job parameters, cell
@@ -230,27 +331,59 @@ def test_run_as_admin():
     # already a very large test. This may be something to be added later when needed.
 
     # Set up call returns. These calls are in the order they occur in the code
-    reqs = ResolvedRequirements(
-        cpus=cpus, memory_MB=mem, disk_GB=disk, client_group=client_group
+    jrr.normalize_job_reqs.return_value = _create_reqs_dict(
+        cpus, mem, disk, client_group, client_group_regex=True, debug_mode=True
     )
+    jrr.get_requirements_type.return_value = RequirementsType.BILLING
+    req_args = _create_reqs_dict(
+        cpus,
+        mem,
+        disk,
+        client_group,
+        client_group_regex=True,
+        ignore_concurrency_limits=True,
+        debug_mode=True,
+        merge_with={
+            "bill_to_user": _OTHER_USER,
+            "scheduler_requirements": {"foo": "bar", "baz": "bat"},
+        },
+        internal_representation=True,
+    )
+    reqs = ResolvedRequirements(**req_args)
     jrr.resolve_requirements.return_value = reqs
     _set_up_common_return_values(mocks)
 
     # set up the class to be tested and run the method
     rj = EE2RunJob(sdkmr)
+    inc_reqs = _create_reqs_dict(
+        cpus,
+        mem,
+        disk,
+        client_group,
+        client_group_regex=1,
+        ignore_concurrency_limits="righty ho, luv",
+        debug_mode="true",
+        merge_with={
+            "bill_to_user": _OTHER_USER,
+            "scheduler_requirements": {"foo": "bar", "baz": "bat"},
+        },
+    )
     params = {
         "method": _METHOD,
         "source_ws_objects": [_WS_REF_1, _WS_REF_2],
+        "job_requirements": inc_reqs,
     }
     assert rj.run(params, as_admin=True) == _JOB_ID
 
     # check mocks called as expected. The order here is the order that they're called in the code.
     sdkmr.check_as_admin.assert_called_once_with(JobPermissions.WRITE)
-    jrr.resolve_requirements.assert_called_once_with(_METHOD)
+    jrr.normalize_job_reqs.assert_called_once_with(inc_reqs, "input job")
+    jrr.get_requirements_type.assert_called_once_with(**req_args)
+    jrr.resolve_requirements.assert_called_once_with(_METHOD, **req_args)
     _check_common_mock_calls(mocks, reqs, None, None)
 
 
-def test_run_as_concierge_with_wsid():
+def test_run_job_as_concierge_with_wsid():
     """
     A unit test of the run() method with a concierge - but not admin - user.
 
@@ -274,14 +407,9 @@ def test_run_as_concierge_with_wsid():
 
     # Set up call returns. These calls are in the order they occur in the code
     wsauth.can_write.return_value = True
-    jrr.normalize_job_reqs.return_value = {
-        "request_cpus": cpus,
-        "request_memory": mem,
-        "request_disk": disk,
-        "client_group": client_group,
-        "client_group_regex": False,
-        "debug_mode": True,
-    }
+    jrr.normalize_job_reqs.return_value = _create_reqs_dict(
+        cpus, mem, disk, client_group, client_group_regex=False, debug_mode=True
+    )
     reqs = ResolvedRequirements(
         cpus=cpus,
         memory_MB=mem,
@@ -304,17 +432,19 @@ def test_run_as_concierge_with_wsid():
         "wsid": wsid,
         "source_ws_objects": [_WS_REF_1, _WS_REF_2],
     }
-    conc_params = {
-        "request_cpus": cpus,
-        "request_memory": mem,
-        "request_disk": disk,
-        "client_group": client_group,
-        "client_group_regex": 0,
-        "ignore_concurrency_limits": 0,
-        "account_group": _OTHER_USER,
-        "requirements_list": ["  foo   =   bar   ", "baz=bat"],
-        "debug_mode": 1,
-    }
+    conc_params = _create_reqs_dict(
+        cpus,
+        mem,
+        disk,
+        client_group,
+        client_group_regex=0,
+        ignore_concurrency_limits=0,
+        debug_mode=1,
+        merge_with={
+            "account_group": _OTHER_USER,
+            "requirements_list": ["  foo   =   bar   ", "baz=bat"],
+        },
+    )
     assert rj.run(params, concierge_params=conc_params) == _JOB_ID
 
     # check mocks called as expected. The order here is the order that they're called in the code.
@@ -337,7 +467,7 @@ def test_run_as_concierge_with_wsid():
     _check_common_mock_calls(mocks, reqs, wsid)
 
 
-def test_run_as_concierge_empty_as_admin():
+def test_run_job_as_concierge_empty_as_admin():
     """
     A unit test of the run() method with an effectively empty concierge dict and admin privs.
     The fake key should be ignored but is required to make the concierge params truthy and
@@ -348,7 +478,7 @@ def test_run_as_concierge_empty_as_admin():
     _run_as_concierge_empty_as_admin({"fake": "foo"}, "lolcats")
 
 
-def test_run_as_concierge_sched_reqs_None_as_admin():
+def test_run_job_as_concierge_sched_reqs_None_as_admin():
     """
     A unit test of the run() method with an concierge dict containing None for the scheduler
     requirements and admin privs.
@@ -360,7 +490,7 @@ def test_run_as_concierge_sched_reqs_None_as_admin():
     )
 
 
-def test_run_as_concierge_sched_reqs_empty_list_as_admin():
+def test_run_job_as_concierge_sched_reqs_empty_list_as_admin():
     """
     A unit test of the run() method with an concierge dict containing an empty list for the
     scheduler requirements and admin privs.
@@ -425,7 +555,7 @@ def _run_as_concierge_empty_as_admin(concierge_params, app):
     _check_common_mock_calls(mocks, reqs, None, app)
 
 
-def test_run_fail_concierge_params():
+def test_run_job_concierge_fail_bad_params():
     """
     Test that submitting invalid concierge params causes the job to fail. Note that most
     error checking happens in the mocked out job requirements resolver, so we only check for
@@ -460,7 +590,7 @@ def _run_fail_concierge_params(concierge_params, expected):
     assert_exception_correct(got.value, expected)
 
 
-def test_run_and_run_batch_fail_illegal_arguments():
+def test_run_job_and_run_job_batch_fail_illegal_arguments():
     """
     Test that illegal arguments cause the job to fail. Note that not all arguments are
     checked - this test checks arguments that are checked in the _check_job_arguments()
@@ -482,17 +612,85 @@ def test_run_and_run_batch_fail_illegal_arguments():
         {"method": "foo.bar", "source_ws_objects": {"a": "b"}},
         IncorrectParamsException("source_ws_objects must be a list"),
     )
+    _run_and_run_batch_fail_illegal_arguments(
+        {"method": "foo.bar", "job_requirements": ["10 bob", "a pickled egg"]},
+        IncorrectParamsException("job_requirements must be a mapping"),
+    )
+    _run_and_run_batch_fail_illegal_arguments(
+        {
+            "method": "foo.bar",
+            "job_requirements": {
+                "bill_to_user": {
+                    "Bill": "$3.78",
+                    "Boris": "$2.95",
+                    "AJ": "one BILIIOOOON dollars",
+                    "Sumin": "$1,469,890.42",
+                }
+            },
+        },
+        IncorrectParamsException("bill_to_user must be a string"),
+    )
 
 
 def _run_and_run_batch_fail_illegal_arguments(params, expected):
     mocks = _set_up_mocks(_USER, _TOKEN)
-    sdkmr = mocks[SDKMethodRunner]
     jrr = mocks[JobRequirementsResolver]
     jrr.resolve_requirements.return_value = ResolvedRequirements(1, 1, 1, "cg")
-    _run_and_run_batch_fail(sdkmr, params, expected)
+    _run_and_run_batch_fail(mocks[SDKMethodRunner], params, expected)
 
 
-def test_run_and_run_batch_fail_workspace_objects_check():
+def test_run_job_and_run_job_batch_fail_arg_normalization():
+    mocks = _set_up_mocks(_USER, _TOKEN)
+    jrr = mocks[JobRequirementsResolver]
+    e = "Found illegal request_cpus 'like 10 I guess? IDK' in job requirements from input job"
+    jrr.normalize_job_reqs.side_effect = IncorrectParamsException(e)
+    _run_and_run_batch_fail(
+        mocks[SDKMethodRunner],
+        {
+            "method": "foo.bar",
+            "job_requirements": {"request_cpus": "like 10 I guess? IDK"},
+        },
+        IncorrectParamsException(e),
+    )
+
+
+def test_run_job_and_run_job_batch_fail_get_requirements_type():
+    mocks = _set_up_mocks(_USER, _TOKEN)
+    jrr = mocks[JobRequirementsResolver]
+    jrr.normalize_job_reqs.return_value = {}
+    e = "bill_to_user contains control characters"
+    jrr.get_requirements_type.side_effect = IncorrectParamsException(e)
+    _run_and_run_batch_fail(
+        mocks[SDKMethodRunner],
+        {"method": "foo.bar", "job_requirements": {"bill_to_user": "ding\bding"}},
+        IncorrectParamsException(e),
+    )
+
+
+def test_run_job_and_run_job_batch_fail_not_admin_with_job_reqs():
+    mocks = _set_up_mocks(_USER, _TOKEN)
+    jrr = mocks[JobRequirementsResolver]
+    jrr.normalize_job_reqs.return_value = {}
+    jrr.get_requirements_type.return_value = RequirementsType.PROCESSING
+    _run_and_run_batch_fail(
+        mocks[SDKMethodRunner],
+        {"method": "foo.bar", "job_requirements": {"ignore_concurrency_limits": 1}},
+        AuthError("In order to specify job requirements you must be a full admin"),
+        as_admin=False,
+    )
+
+
+def test_run_job_and_run_job_batch_fail_resolve_requirements():
+    mocks = _set_up_mocks(_USER, _TOKEN)
+    jrr = mocks[JobRequirementsResolver]
+    jrr.normalize_job_reqs.return_value = {}
+    jrr.get_requirements_type.return_value = RequirementsType.STANDARD
+    e = "Unrecognized method: 'None'. Please input module_name.function_name"
+    jrr.resolve_requirements.side_effect = IncorrectParamsException(e)
+    _run_and_run_batch_fail(mocks[SDKMethodRunner], {}, IncorrectParamsException(e))
+
+
+def test_run_job_and_run_job_batch_fail_workspace_objects_check():
     mocks = _set_up_mocks(_USER, _TOKEN)
     sdkmr = mocks[SDKMethodRunner]
     jrr = mocks[JobRequirementsResolver]
@@ -511,34 +709,19 @@ def test_run_and_run_batch_fail_workspace_objects_check():
     )
 
 
-def _run_and_run_batch_fail(sdkmr, params, expected):
+def _run_and_run_batch_fail(sdkmr, params, expected, as_admin=True):
     rj = EE2RunJob(sdkmr)
     with raises(Exception) as got:
-        rj.run(params, as_admin=True)
+        rj.run(params, as_admin=as_admin)
     assert_exception_correct(got.value, expected)
 
-    with raises(Exception) as got:
-        rj.run_batch([params], {}, as_admin=True)
-    assert_exception_correct(got.value, expected)
+    _run_batch_fail(rj, [params], {}, as_admin, expected)
 
 
 def _set_up_common_return_values_batch(mocks):
     """
     Set up return values on mocks that are the same for several tests.
     """
-    reqs1 = ResolvedRequirements(
-        cpus=1,
-        memory_MB=2,
-        disk_GB=3,
-        client_group="cg1",
-    )
-    reqs2 = ResolvedRequirements(
-        cpus=10,
-        memory_MB=20,
-        disk_GB=30,
-        client_group="cg2",
-    )
-    mocks[JobRequirementsResolver].resolve_requirements.side_effect = [reqs1, reqs2]
     mocks[Workspace].get_object_info3.return_value = {
         "paths": [[_WS_REF_1], [_WS_REF_2]]
     }
@@ -569,7 +752,6 @@ def _set_up_common_return_values_batch(mocks):
     retjob_2.id = ObjectId(_JOB_ID_2)
     retjob_2.status = _CREATED_STATE
     mocks[MongoUtil].get_job.side_effect = [retjob_1, retjob_2]
-    return reqs1, reqs2
 
 
 def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
@@ -578,12 +760,6 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
     several tests.
     """
     sdkmr = mocks[SDKMethodRunner]
-    mocks[JobRequirementsResolver].resolve_requirements.assert_has_calls(
-        [
-            call(_METHOD_1),
-            call(_METHOD_2),
-        ]
-    )
     mocks[Workspace].get_object_info3.assert_called_once_with(
         {"objects": [{"ref": _WS_REF_1}, {"ref": _WS_REF_2}], "ignoreErrors": 1}
     )
@@ -705,7 +881,7 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
     assert_jobs_equal(final_got_parent_job, final_expected_parent_job)
 
 
-def test_run_batch_with_parent_job_wsid():
+def test_run_job_batch_with_parent_job_wsid():
     """
     A basic unit test of the run_batch() method, providing a workspace ID for the parent job.
 
@@ -720,14 +896,34 @@ def test_run_batch_with_parent_job_wsid():
     # set up mocks
     mocks = _set_up_mocks(_USER, _TOKEN)
     sdkmr = mocks[SDKMethodRunner]
+    jrr = mocks[JobRequirementsResolver]
     # We intentionally do not check the logger methods as there are a lot of them and this is
     # already a very large test. This may be something to be added later when needed.
 
     # Set up call returns. These calls are in the order they occur in the code
-
     mocks[WorkspaceAuth].can_write.return_value = True
     mocks[WorkspaceAuth].can_write_list.return_value = {wsid: True}
-    reqs1, reqs2 = _set_up_common_return_values_batch(mocks)
+
+    jrr.normalize_job_reqs.side_effect = [{}, {}]
+    jrr.get_requirements_type.side_effect = [
+        RequirementsType.STANDARD,
+        RequirementsType.STANDARD,
+    ]
+    reqs1 = ResolvedRequirements(
+        cpus=1,
+        memory_MB=2,
+        disk_GB=3,
+        client_group="cg1",
+    )
+    reqs2 = ResolvedRequirements(
+        cpus=10,
+        memory_MB=20,
+        disk_GB=30,
+        client_group="cg2",
+    )
+    jrr.resolve_requirements.side_effect = [reqs1, reqs2]
+
+    _set_up_common_return_values_batch(mocks)
 
     # set up the class to be tested and run the method
     rj = EE2RunJob(sdkmr)
@@ -752,12 +948,26 @@ def test_run_batch_with_parent_job_wsid():
     mocks[WorkspaceAuth].can_write.assert_called_once_with(parent_wsid)
     # this seems like a bug. See comments in the run_batch method
     mocks[WorkspaceAuth].can_write_list.assert_called_once_with([parent_wsid, wsid])
+    jrr = mocks[JobRequirementsResolver]
+    jrr.normalize_job_reqs.assert_has_calls(
+        [call({}, "input job"), call({}, "input job")]
+    )
+    jrr.get_requirements_type.assert_has_calls(
+        [call(**_EMPTY_JOB_REQUIREMENTS), call(**_EMPTY_JOB_REQUIREMENTS)]
+    )
+    jrr.resolve_requirements.assert_has_calls(
+        [
+            call(_METHOD_1, **_EMPTY_JOB_REQUIREMENTS),
+            call(_METHOD_2, **_EMPTY_JOB_REQUIREMENTS),
+        ]
+    )
     _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid)
 
 
-def test_run_batch_as_admin():
+def test_run_job_batch_as_admin_with_job_requirements():
     """
-    A basic unit test of the run_batch() method with an administrative user.
+    A basic unit test of the run_batch() method with an administrative user and supplied job
+    requirements.
 
     This test is a fairly minimal test of the run_batch() method. It does not exercise all the
     potential code paths or provide all the possible run inputs, such as job parameters, cell
@@ -765,18 +975,66 @@ def test_run_batch_as_admin():
     """
     # set up variables
     wsid = 32
+    cpus = 89
+    mem = 3
+    disk = 10000
+    client_group = "verylargeclientgroup"
 
     # set up mocks
     mocks = _set_up_mocks(_USER, _TOKEN)
     sdkmr = mocks[SDKMethodRunner]
+    jrr = mocks[JobRequirementsResolver]
     # We intentionally do not check the logger methods as there are a lot of them and this is
     # already a very large test. This may be something to be added later when needed.
 
     # Set up call returns. These calls are in the order they occur in the code
-    reqs1, reqs2 = _set_up_common_return_values_batch(mocks)
+    jrr.normalize_job_reqs.side_effect = [
+        {},
+        _create_reqs_dict(
+            cpus, mem, disk, client_group, client_group_regex=True, debug_mode=True
+        ),
+    ]
+    jrr.get_requirements_type.side_effect = [
+        RequirementsType.STANDARD,
+        RequirementsType.BILLING,
+    ]
+    req_args = _create_reqs_dict(
+        cpus,
+        mem,
+        disk,
+        client_group,
+        client_group_regex=True,
+        ignore_concurrency_limits=True,
+        debug_mode=True,
+        merge_with={
+            "bill_to_user": _OTHER_USER,
+            "scheduler_requirements": {"foo": "bar", "baz": "bat"},
+        },
+        internal_representation=True,
+    )
+    reqs1 = ResolvedRequirements(
+        cpus=1, memory_MB=1, disk_GB=1, client_group="verysmallclientgroup"
+    )
+    reqs2 = ResolvedRequirements(**req_args)
+    jrr.resolve_requirements.side_effect = [reqs1, reqs2]
+
+    _set_up_common_return_values_batch(mocks)
 
     # set up the class to be tested and run the method
     rj = EE2RunJob(sdkmr)
+    inc_reqs = _create_reqs_dict(
+        cpus,
+        mem,
+        disk,
+        client_group,
+        client_group_regex=1,
+        ignore_concurrency_limits="righty ho, luv",
+        debug_mode="true",
+        merge_with={
+            "bill_to_user": _OTHER_USER,
+            "scheduler_requirements": {"foo": "bar", "baz": "bat"},
+        },
+    )
     params = [
         {
             "method": _METHOD_1,
@@ -787,6 +1045,7 @@ def test_run_batch_as_admin():
             "method": _METHOD_2,
             "app_id": _APP_2,
             "wsid": wsid,
+            "job_requirements": inc_reqs,
         },
     ]
     assert rj.run_batch(params, {}, as_admin=True) == {
@@ -796,6 +1055,15 @@ def test_run_batch_as_admin():
 
     # check mocks called as expected. The order here is the order that they're called in the code.
     sdkmr.check_as_admin.assert_called_once_with(JobPermissions.WRITE)
+    jrr.normalize_job_reqs.assert_has_calls(
+        [call({}, "input job"), call(inc_reqs, "input job")]
+    )
+    jrr.get_requirements_type.assert_has_calls(
+        [call(**_EMPTY_JOB_REQUIREMENTS), call(**req_args)]
+    )
+    jrr.resolve_requirements.assert_has_calls(
+        [call(_METHOD_1, **_EMPTY_JOB_REQUIREMENTS), call(_METHOD_2, **req_args)]
+    )
     _check_common_mock_calls_batch(mocks, reqs1, reqs2, None, wsid)
 
 
@@ -818,7 +1086,146 @@ def test_run_batch_fail_params_not_list():
         )
 
 
-def test_run_batch_fail_parent_id_included():
+# Note the next few tests are specifically testing that errors for multiple jobs have the
+# correct job number
+
+
+def test_run_job_batch_fail_illegal_arguments():
+    """
+    Test that illegal arguments cause the job to fail. Note that not all arguments are
+    checked - this test checks arguments that are checked in the _check_job_arguments()
+    method. Furthermore, most argument checking occurs in the job submission parameters
+    class and its respective composed classes, and we don't reproduce all the error conditions
+    possible - just enough to ensure the error checking occurs. If major changes are made to
+    the error checking code then more tests may need to be written.
+
+    """
+    mocks = _set_up_mocks(_USER, _TOKEN)
+    jrr = mocks[JobRequirementsResolver]
+    jrr.resolve_requirements.return_value = ResolvedRequirements(1, 1, 1, "cg")
+    rj = EE2RunJob(mocks[SDKMethodRunner])
+    job = {"method": "foo.bar"}
+
+    _run_batch_fail(
+        rj,
+        [job, job, {}],
+        {},
+        True,
+        IncorrectParamsException("Job #3: Missing input parameter: method ID"),
+    )
+    _run_batch_fail(
+        rj,
+        [job, {"method": "foo.bar", "wsid": 0}],
+        {},
+        True,
+        IncorrectParamsException("Job #2: wsid must be at least 1"),
+    )
+    _run_batch_fail(
+        rj,
+        [{"method": "foo.bar", "source_ws_objects": {"a": "b"}}, job],
+        {},
+        True,
+        IncorrectParamsException("Job #1: source_ws_objects must be a list"),
+    )
+    _run_batch_fail(
+        rj,
+        [job, {"method": "foo.bar", "job_requirements": ["10 bob", "a pickled egg"]}],
+        {},
+        True,
+        IncorrectParamsException("Job #2: job_requirements must be a mapping"),
+    )
+    _run_batch_fail(
+        rj,
+        [{"method": "foo.bar", "job_requirements": {"bill_to_user": 1}}, job],
+        {},
+        True,
+        IncorrectParamsException("Job #1: bill_to_user must be a string"),
+    )
+
+
+def test_run_job_batch_fail_arg_normalization():
+    mocks = _set_up_mocks(_USER, _TOKEN)
+    jrr = mocks[JobRequirementsResolver]
+    e = "Found illegal request_cpus 'like 10 I guess? IDK' in job requirements from input job"
+    jrr.normalize_job_reqs.side_effect = [{}, IncorrectParamsException(e)]
+    _run_batch_fail(
+        EE2RunJob(mocks[SDKMethodRunner]),
+        [
+            {"method": "foo.bar"},
+            {
+                "method": "foo.bar",
+                "job_requirements": {"request_cpus": "like 10 I guess? IDK"},
+            },
+        ],
+        {},
+        True,
+        IncorrectParamsException("Job #2: " + e),
+    )
+
+
+def test_run_job_batch_fail_get_requirements_type():
+    mocks = _set_up_mocks(_USER, _TOKEN)
+    jrr = mocks[JobRequirementsResolver]
+    jrr.normalize_job_reqs.return_value = {}
+    e = "bill_to_user contains control characters"
+    jrr.get_requirements_type.side_effect = [
+        RequirementsType.STANDARD,
+        RequirementsType.STANDARD,
+        IncorrectParamsException(e),
+    ]
+    _run_batch_fail(
+        EE2RunJob(mocks[SDKMethodRunner]),
+        [
+            {"method": "foo.bar"},
+            {"method": "foo.bar"},
+            {"method": "foo.bar", "job_requirements": {"bill_to_user": "ding\bding"}},
+        ],
+        {},
+        False,
+        IncorrectParamsException("Job #3: " + e),
+    )
+
+
+def test_run_job_batch_fail_not_admin_with_job_reqs():
+    mocks = _set_up_mocks(_USER, _TOKEN)
+    jrr = mocks[JobRequirementsResolver]
+    jrr.normalize_job_reqs.return_value = {}
+    jrr.get_requirements_type.side_effect = [
+        RequirementsType.PROCESSING,
+        RequirementsType.STANDARD,
+    ]
+    _run_batch_fail(
+        EE2RunJob(mocks[SDKMethodRunner]),
+        [
+            {"method": "foo.bar", "job_requirements": {"ignore_concurrency_limits": 1}},
+            {"method": "foo.bar"},
+        ],
+        {},
+        False,
+        AuthError(
+            "Job #1: In order to specify job requirements you must be a full admin"
+        ),
+    )
+
+
+def test_run_job_batch_fail_resolve_requirements():
+    mocks = _set_up_mocks(_USER, _TOKEN)
+    jrr = mocks[JobRequirementsResolver]
+    jrr.normalize_job_reqs.return_value = {}
+    jrr.get_requirements_type.return_value = RequirementsType.STANDARD
+    e = "Unrecognized method: 'None'. Please input module_name.function_name"
+    jr = ResolvedRequirements(cpus=4, memory_MB=4, disk_GB=4, client_group="cg")
+    jrr.resolve_requirements.side_effect = [jr, IncorrectParamsException(e)]
+    _run_batch_fail(
+        EE2RunJob(mocks[SDKMethodRunner]),
+        [{}, {"method": "foo.bar"}],
+        {},
+        False,
+        IncorrectParamsException("Job #2: " + e),
+    )
+
+
+def test_run_job_batch_fail_parent_id_included():
     mocks = _set_up_mocks(_USER, _TOKEN)
     sdkmr = mocks[SDKMethodRunner]
     rj = EE2RunJob(sdkmr)
@@ -828,7 +1235,7 @@ def test_run_batch_fail_parent_id_included():
         [{"method": "foo.bar", "app_id": "foo/bat", "parent_job_id": "a"}],
         {},
         True,
-        IncorrectParamsException("Batch jobs may not specify a parent job ID"),
+        IncorrectParamsException("batch jobs may not specify a parent job ID"),
     )
 
     _run_batch_fail(
