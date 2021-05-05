@@ -29,9 +29,18 @@ The job first needs to be submitted to ee2_runjob. It can fail there. Afterwards
 
 @bio-boris
 
-## Status
+## Status and Decision Outcome
 
-Pending
+* We have decided to go with the retry endpoint in favor of retrofitting the run_job endpoint
+* We are implementing a minimal retry endpoint, then iterating over a design ADR to create a more fully featured/robust Retry endpoint when time permits 
+* Minimal endpoint PR found at https://github.com/kbase/execution_engine2/pull/383
+* Design ADR will be added to ee2 repo
+
+### The new ADR will contain:
+* Copy of comments to be addressed
+* Link to spec file with inputs and outputs for the retry endpoint 
+* Link to Jira Ticket with business logic documentation for success and cancel cases
+
 
 ## Alternatives Considered
 
@@ -39,12 +48,6 @@ Pending
 * Re-writing run_job/run_job_batch to address the aforementioned deficiencies
 * Creating a retry endpoint dedicated to addressing book-keeping and job launching features
 
-## Decision Outcome
-
-Pending
-
-* Link to spec file with inputs and outputs for the retry endpoint goes here
-* Link to Jira Ticket with business logic documentation for success and cancel cases
 
 ### Possible additional things to think about
 * Creating sets of objects and what to do at the end of a batch run
