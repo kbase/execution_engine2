@@ -542,7 +542,7 @@ def test_run_job_no_app_id(ee2_port, ws_controller, mongo_client):
         ee2_port,
         ws_controller,
         mongo_client,
-        catalog_return=[{"client_groups": ['{"request_cpus":8,"request_memory":5}']}]
+        catalog_return=[{"client_groups": ['{"request_cpus":8,"request_memory":5}']}],
     )
 
 
@@ -553,7 +553,7 @@ def test_run_job_with_app_id(ee2_port, ws_controller, mongo_client):
         mongo_client,
         app_id="mod/app",
         app_mod="mod",
-        catalog_return=[{"client_groups": ['{"request_cpus":8,"request_memory":5}']}]
+        catalog_return=[{"client_groups": ['{"request_cpus":8,"request_memory":5}']}],
     )
 
 
@@ -561,10 +561,13 @@ def test_run_job_with_job_requirements_full(ee2_port, ws_controller, mongo_clien
     """
     Tests running a job where all requirements are specified on input.
     """
+
     def modify_sub(sub):
         del sub["Concurrency_Limits"]
-        sub["requirements"] = ('(CLIENTGROUP == "extreme") && (after == "pantsremoval") && '
-                               + '(beforemy == "2pmsalonappt")')
+        sub["requirements"] = (
+            '(CLIENTGROUP == "extreme") && (after == "pantsremoval") && '
+            + '(beforemy == "2pmsalonappt")'
+        )
         sub["+AccountingGroup"] = '"borishesgoodforit"'
         sub["environment"] = sub["environment"].replace(
             "DEBUG_MODE=False", "DEBUG_MODE=True"
@@ -582,20 +585,27 @@ def test_run_job_with_job_requirements_full(ee2_port, ws_controller, mongo_clien
             "client_group_regex": 0,
             "bill_to_user": "borishesgoodforit",
             "ignore_concurrency_limits": "true",
-            "scheduler_requirements": {"beforemy": "2pmsalonappt", "after": "pantsremoval"},
-            "debug_mode": True
+            "scheduler_requirements": {
+                "beforemy": "2pmsalonappt",
+                "after": "pantsremoval",
+            },
+            "debug_mode": True,
         },
         modify_sub=modify_sub,
         clientgroup="extreme",
         cpu=21,
         mem=34,
         disk=99,
-        catalog_return=[{"client_groups": [
-            '{"client_group":"njs","request_cpus":8,"request_memory":5}']}
+        catalog_return=[
+            {
+                "client_groups": [
+                    '{"client_group":"njs","request_cpus":8,"request_memory":5}'
+                ]
+            }
         ],
         as_admin=7,  # truthy
         user=USER_WRITE_ADMIN,
-        token=TOKEN_WRITE_ADMIN
+        token=TOKEN_WRITE_ADMIN,
     )
 
 
@@ -613,12 +623,10 @@ def test_run_job_with_job_requirements_mixed(ee2_port, ws_controller, mongo_clie
         cpu=9,
         mem=5,
         disk=30,
-        catalog_return=[{"client_groups": [
-            '{"request_cpus":8,"request_memory":5}']}
-        ],
+        catalog_return=[{"client_groups": ['{"request_cpus":8,"request_memory":5}']}],
         as_admin="wheee",  # truthy
         user=USER_WRITE_ADMIN,
-        token=TOKEN_WRITE_ADMIN
+        token=TOKEN_WRITE_ADMIN,
     )
 
 
@@ -637,7 +645,7 @@ def _run_job(
     catalog_return=None,
     as_admin=False,
     user=None,
-    token=None
+    token=None,
 ):
     # values in the method sig are set at the time of method creation, at which time the
     # user and token fields haven't yet been set by the fixtures
@@ -725,8 +733,9 @@ def test_run_job_fail_bad_cpu(ee2_port):
 
 
 def test_run_job_fail_bad_scheduler_requirements(ee2_port):
-    params = {"method": _MOD, "job_requirements": {
-        "scheduler_requirements": {"foo": ""}}
+    params = {
+        "method": _MOD,
+        "job_requirements": {"scheduler_requirements": {"foo": ""}},
     }
     # TODO non-string keys/values in schd_reqs causes a not-very-useful error
     # Since it's admin only don't worry about it for now
@@ -1365,7 +1374,7 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
                 "ignore_concurrency_limits": "true",
                 "scheduler_requirements": {"foo": "bar", "baz": "bat"},
                 "debug_mode": True,
-            }
+            },
         }
         job_batch_params = {"wsid": 1, "as_admin": "foo"}
         ee2 = ee2client(f"http://localhost:{ee2_port}", token=TOKEN_WRITE_ADMIN)
@@ -1483,7 +1492,7 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             disk=8,
             parent_job_id=parent_job_id,
             app_id=None,
-            app_module=None
+            app_module=None,
         )
         expected_sub_2.update(
             {
@@ -1493,11 +1502,12 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
                 "+KB_MODULE_NAME": '"mod2"',
                 "+KB_FUNCTION_NAME": '"meth2"',
                 "requirements": '(CLIENTGROUP == "extreme") && (baz == "bat") && (foo == "bar")',
-                "environment": expected_sub_2[
-                    "environment"].replace("DEBUG_MODE=False", "DEBUG_MODE=True")
+                "environment": expected_sub_2["environment"].replace(
+                    "DEBUG_MODE=False", "DEBUG_MODE=True"
+                ),
             }
         )
-        del expected_sub_2['Concurrency_Limits']
+        del expected_sub_2["Concurrency_Limits"]
         _check_batch_htc_calls(
             sub_init, schedd_init, sub, schedd, txn, expected_sub_1, expected_sub_2
         )
@@ -1576,8 +1586,12 @@ def test_run_job_batch_fail_job_reqs_but_no_as_admin(ee2_port, ws_controller):
     _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
     params = [
         {"method": _MOD},
-        # as_admin is only considered in the batch params for run_job_batch
-        {"method": _MOD, "job_requirements": {"request_memory": 1000}, "as_admin": True},
+        {
+            "method": _MOD,
+            "job_requirements": {"request_memory": 1000},
+            # as_admin is only considered in the batch params for run_job_batch
+            "as_admin": True,
+        },
     ]
     err = "Job #2: In order to specify job requirements you must be a full admin"
     _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
