@@ -418,7 +418,7 @@ def _set_up_workspace_objects(ws_controller, token, ws_name="foo"):
     )
 
 
-def _get_run_job_param_set(app_id=_APP):
+def _get_run_job_param_set(app_id=_APP, job_reqs=None, as_admin=False):
     return {
         "method": _MOD,
         "app_id": app_id,
@@ -427,6 +427,8 @@ def _get_run_job_param_set(app_id=_APP):
         "params": [{"foo": "bar"}, 42],
         "service_ver": "beta",
         "parent_job_id": "totallywrongid",
+        "job_requirements": job_reqs,
+        "as_admin": as_admin,
         "meta": {
             "run_id": "rid",
             "token_id": "tid",
@@ -536,15 +538,120 @@ def _check_mongo_job(
 
 
 def test_run_job_no_app_id(ee2_port, ws_controller, mongo_client):
-    _run_job(ee2_port, ws_controller, mongo_client, None, None)
+    _run_job(
+        ee2_port,
+        ws_controller,
+        mongo_client,
+        catalog_return=[{"client_groups": ['{"request_cpus":8,"request_memory":5}']}],
+    )
 
 
 def test_run_job_with_app_id(ee2_port, ws_controller, mongo_client):
-    _run_job(ee2_port, ws_controller, mongo_client, "mod/app", "mod")
+    _run_job(
+        ee2_port,
+        ws_controller,
+        mongo_client,
+        app_id="mod/app",
+        app_mod="mod",
+        catalog_return=[{"client_groups": ['{"request_cpus":8,"request_memory":5}']}],
+    )
 
 
-def _run_job(ee2_port, ws_controller, mongo_client, app_id, app_mod):
-    _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
+def test_run_job_with_job_requirements_full(ee2_port, ws_controller, mongo_client):
+    """
+    Tests running a job where all requirements are specified on input.
+    """
+
+    def modify_sub(sub):
+        del sub["Concurrency_Limits"]
+        sub["requirements"] = (
+            '(CLIENTGROUP == "extreme") && (after == "pantsremoval") && '
+            + '(beforemy == "2pmsalonappt")'
+        )
+        sub["+AccountingGroup"] = '"borishesgoodforit"'
+        sub["environment"] = sub["environment"].replace(
+            "DEBUG_MODE=False", "DEBUG_MODE=True"
+        )
+
+    _run_job(
+        ee2_port,
+        ws_controller,
+        mongo_client,
+        job_reqs={
+            "request_cpus": 21,
+            "request_memory": 34,
+            "request_disk": 99,
+            "client_group": "extreme",
+            "client_group_regex": 0,
+            "bill_to_user": "borishesgoodforit",
+            "ignore_concurrency_limits": "true",
+            "scheduler_requirements": {
+                "beforemy": "2pmsalonappt",
+                "after": "pantsremoval",
+            },
+            "debug_mode": True,
+        },
+        modify_sub=modify_sub,
+        clientgroup="extreme",
+        cpu=21,
+        mem=34,
+        disk=99,
+        catalog_return=[
+            {
+                "client_groups": [
+                    '{"client_group":"njs","request_cpus":8,"request_memory":5}'
+                ]
+            }
+        ],
+        as_admin=7,  # truthy
+        user=USER_WRITE_ADMIN,
+        token=TOKEN_WRITE_ADMIN,
+    )
+
+
+def test_run_job_with_job_requirements_mixed(ee2_port, ws_controller, mongo_client):
+    """
+    Tests running a job where requirements are specified on input, from the catalog, and from
+    the deploy.cfg file.
+    """
+    _run_job(
+        ee2_port,
+        ws_controller,
+        mongo_client,
+        job_reqs={"request_cpus": 9},
+        clientgroup="njs",
+        cpu=9,
+        mem=5,
+        disk=30,
+        catalog_return=[{"client_groups": ['{"request_cpus":8,"request_memory":5}']}],
+        as_admin="wheee",  # truthy
+        user=USER_WRITE_ADMIN,
+        token=TOKEN_WRITE_ADMIN,
+    )
+
+
+def _run_job(
+    ee2_port,
+    ws_controller,
+    mongo_client,
+    app_id=None,
+    app_mod=None,
+    job_reqs=None,
+    modify_sub=lambda x: x,
+    clientgroup="njs",
+    cpu=8,
+    mem=5,
+    disk=30,
+    catalog_return=None,
+    as_admin=False,
+    user=None,
+    token=None,
+):
+    # values in the method sig are set at the time of method creation, at which time the
+    # user and token fields haven't yet been set by the fixtures
+    user = user if user else USER_NO_ADMIN
+    token = token if token else TOKEN_NO_ADMIN
+    _set_up_workspace_objects(ws_controller, token)
     # need to get the mock objects first so spec_set can do its magic before we mock out
     # the classes in the context manager
     sub, schedd, txn = _get_htc_mocks()
@@ -559,14 +666,12 @@ def _run_job(ee2_port, ws_controller, mongo_client, app_id, app_mod):
         # set up the rest of the mocks
         _finish_htc_mocks(sub_init, schedd_init, sub, schedd, txn)
         sub.queue.return_value = 123
-        list_cgroups.return_value = [
-            {"client_groups": ['{"request_cpus":8,"request_memory":5}']}
-        ]
+        list_cgroups.return_value = catalog_return or []
         get_mod_ver.return_value = {"git_commit_hash": "somehash"}
 
         # run the method
-        ee2 = ee2client(f"http://localhost:{ee2_port}", token=TOKEN_NO_ADMIN)
-        params = _get_run_job_param_set(app_id)
+        ee2 = ee2client(f"http://localhost:{ee2_port}", token=token)
+        params = _get_run_job_param_set(app_id, job_reqs, as_admin)
         job_id = ee2.run_job(params)
 
         # check that mocks were called correctly
@@ -580,28 +685,43 @@ def _run_job(ee2_port, ws_controller, mongo_client, app_id, app_mod):
 
         expected_sub = _get_condor_sub_for_rj_param_set(
             job_id,
-            USER_NO_ADMIN,
-            TOKEN_NO_ADMIN,
-            clientgroup="njs",
-            cpu=8,
-            mem=5,
-            disk=30,
+            user,
+            token,
+            clientgroup=clientgroup,
+            cpu=cpu,
+            mem=mem,
+            disk=disk,
             app_id=app_id,
             app_module=app_mod,
         )
+        modify_sub(expected_sub)
         _check_htc_calls(sub_init, sub, schedd_init, schedd, txn, expected_sub)
 
         _check_mongo_job(
             mongo_client,
             job_id,
-            USER_NO_ADMIN,
+            user,
             app_id,
-            clientgroup="njs",
-            cpu=8,
-            mem=5,
-            disk=30,
+            clientgroup=clientgroup,
+            cpu=cpu,
+            mem=mem,
+            disk=disk,
             githash="somehash",
         )
+
+
+def test_run_job_fail_not_admin(ee2_port):
+    params = {"method": _MOD, "as_admin": 1}
+    err = "Access Denied: You are not an administrator. AdminPermissions.NONE"
+    _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
+
+
+def test_run_job_fail_only_read_admin(ee2_port):
+    params = {"method": _MOD, "as_admin": 1}
+    err = (
+        "Access Denied: You are a read-only admin. This function requires write access"
+    )
+    _run_job_fail(ee2_port, TOKEN_READ_ADMIN, params, err)
 
 
 def test_run_job_fail_no_workspace_access(ee2_port):
@@ -611,6 +731,29 @@ def test_run_job_fail_no_workspace_access(ee2_port):
         "('An error occurred while fetching user permissions from the Workspace', "
         + "ServerError('No workspace with id 1 exists'))"
     )
+    _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
+
+
+def test_run_job_fail_bad_cpu(ee2_port):
+    params = {"method": _MOD, "job_requirements": {"request_cpus": -10}}
+    err = "CPU count must be at least 1"
+    _run_job_fail(ee2_port, TOKEN_WRITE_ADMIN, params, err)
+
+
+def test_run_job_fail_bad_scheduler_requirements(ee2_port):
+    params = {
+        "method": _MOD,
+        "job_requirements": {"scheduler_requirements": {"foo": ""}},
+    }
+    # TODO non-string keys/values in schd_reqs causes a not-very-useful error
+    # Since it's admin only don't worry about it for now
+    err = "Missing input parameter: value for key 'foo' in scheduler requirements structure"
+    _run_job_fail(ee2_port, TOKEN_WRITE_ADMIN, params, err)
+
+
+def test_run_job_fail_job_reqs_but_no_as_admin(ee2_port):
+    params = {"method": _MOD, "job_requirements": {"request_cpus": 10}}
+    err = "In order to specify job requirements you must be a full admin"
     _run_job_fail(ee2_port, TOKEN_NO_ADMIN, params, err)
 
 
@@ -1191,21 +1334,222 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
                 "+KB_SOURCE_WS_OBJECTS": "",
             }
         )
+        _check_batch_htc_calls(
+            sub_init, schedd_init, sub, schedd, txn, expected_sub_1, expected_sub_2
+        )
 
-        assert sub_init.call_args_list == [call(expected_sub_1), call(expected_sub_2)]
-        # The line above and the line below should be completely equivalent IIUC, but the line
-        # below fails for reasons I don't understand. The error output shows the actual calls
-        # for the line below having 2 extra calls that appear to be the sub.queue calls
-        # below. Stumped, so going with what works and moving on.
-        # sub_init.assert_has_calls([call(expected_sub_1), call(expected_sub_2)])
-        schedd_init.call_args_list = [call(), call()]
-        # same deal here. Output includes stuff like `call().transaction()` so
-        # it appears the sub calls are being picked up, which is weird.
-        # schedd_init.assert_has_calls([call(), call()])
-        schedd.transaction.call_args_list = [call(), call()]
-        # and again
-        # schedd.transaction.assert_has_calls([call(), call()])
-        sub.queue.assert_has_calls([call(txn, 1), call(txn, 1)])
+
+def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_client):
+    """
+    A test of the run_job method focusing on job requirements and minimizing all other inputs.
+    Since the batch endpoint uses the same code path as the single job endpoint for processing
+    job requirements, we only have a single test that mixes job requirements from the input,
+    catalog, and deploy configuration, as opposed to the multiple tests for single jobs.
+    """
+    _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN, "foo")  # ws 1
+    # need to get the mock objects first so spec_set can do its magic before we mock out
+    # the classes in the context manager
+    sub, schedd, txn = _get_htc_mocks()
+    # seriously black you're killing me here. This is readable?
+    with patch("htcondor.Submit", spec_set=True, autospec=True) as sub_init, patch(
+        "htcondor.Schedd", spec_set=True, autospec=True
+    ) as schedd_init, patch(
+        CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True
+    ) as list_cgroups, patch(
+        CAT_GET_MODULE_VERSION, spec_set=True, autospec=True
+    ) as get_mod_ver:
+        # set up the rest of the mocks
+        _finish_htc_mocks(sub_init, schedd_init, sub, schedd, txn)
+        sub.queue.side_effect = [123, 456]
+        list_cgroups.side_effect = [
+            [{"client_groups": ['{"client_group":"bigmem"}']}],
+            [{"client_groups": ['{"request_disk":8,"request_memory":5}']}],
+        ]
+        get_mod_ver.side_effect = [
+            {"git_commit_hash": "somehash"},
+            {"git_commit_hash": "somehash2"},
+        ]
+
+        # run the method
+        job1_params = {"method": _MOD}
+        job2_params = {
+            "method": "mod2.meth2",
+            "job_requirements": {
+                "request_memory": 42,
+                "client_group": "extreme",
+                "client_group_regex": 0,
+                "bill_to_user": "forrest_gump",
+                "ignore_concurrency_limits": "true",
+                "scheduler_requirements": {"foo": "bar", "baz": "bat"},
+                "debug_mode": True,
+            },
+        }
+        job_batch_params = {"wsid": 1, "as_admin": "foo"}
+        ee2 = ee2client(f"http://localhost:{ee2_port}", token=TOKEN_WRITE_ADMIN)
+        ret = ee2.run_job_batch([job1_params, job2_params], job_batch_params)
+        parent_job_id = ret["parent_job_id"]
+        job_id_1, job_id_2 = ret["child_job_ids"]
+
+        # check that mocks were called correctly
+        # Since these are class methods, the first argument is self, which we ignore
+        get_mod_ver.assert_has_calls(
+            [
+                call(ANY, {"module_name": "mod", "version": "release"}),
+                call(ANY, {"module_name": "mod2", "version": "release"}),
+            ]
+        )
+        list_cgroups.assert_has_calls(
+            [
+                call(ANY, {"module_name": "mod", "function_name": "meth"}),
+                call(ANY, {"module_name": "mod2", "function_name": "meth2"}),
+            ]
+        )
+
+        job1 = _get_mongo_job(mongo_client, job_id_1)
+        job2 = _get_mongo_job(mongo_client, job_id_2)
+
+        expected_job1 = {
+            "_id": ObjectId(job_id_1),
+            "user": USER_WRITE_ADMIN,
+            "authstrat": "kbaseworkspace",
+            "status": "queued",
+            "job_input": {
+                "method": _MOD,
+                "service_ver": "somehash",
+                "source_ws_objects": [],
+                "parent_job_id": parent_job_id,
+                "requirements": {
+                    "clientgroup": "bigmem",
+                    "cpu": 4,
+                    "memory": 2000,
+                    "disk": 100,
+                },
+                "narrative_cell_info": {},
+            },
+            "child_jobs": [],
+            "batch_job": False,
+            "scheduler_id": "123",
+            "scheduler_type": "condor",
+        }
+        assert job1 == expected_job1
+
+        expected_job2 = {
+            "_id": ObjectId(job_id_2),
+            "user": USER_WRITE_ADMIN,
+            "authstrat": "kbaseworkspace",
+            "status": "queued",
+            "job_input": {
+                "method": "mod2.meth2",
+                "service_ver": "somehash2",
+                "source_ws_objects": [],
+                "parent_job_id": parent_job_id,
+                "requirements": {
+                    "clientgroup": "extreme",
+                    "cpu": 32,
+                    "memory": 42,
+                    "disk": 8,
+                },
+                "narrative_cell_info": {},
+            },
+            "child_jobs": [],
+            "batch_job": False,
+            "scheduler_id": "456",
+            "scheduler_type": "condor",
+        }
+        assert job2 == expected_job2
+
+        parent_job = _get_mongo_job(mongo_client, parent_job_id, has_queued=False)
+        expected_parent_job = {
+            "_id": ObjectId(parent_job_id),
+            "user": USER_WRITE_ADMIN,
+            "authstrat": "kbaseworkspace",
+            "wsid": 1,
+            "status": "created",
+            "job_input": {
+                "method": "batch",
+                "service_ver": "batch",
+                "app_id": "batch",
+                "source_ws_objects": [],
+                "narrative_cell_info": {},
+            },
+            "child_jobs": [job_id_1, job_id_2],
+            "batch_job": True,
+        }
+        assert parent_job == expected_parent_job
+
+        expected_sub_1 = _get_condor_sub_for_rj_param_set(
+            job_id_1,
+            USER_WRITE_ADMIN,
+            TOKEN_WRITE_ADMIN,
+            clientgroup="bigmem",
+            cpu=4,
+            mem=2000,
+            disk=100,
+            parent_job_id=parent_job_id,
+            app_id=None,
+            app_module=None,
+        )
+        expected_sub_1.update({"+KB_SOURCE_WS_OBJECTS": "", "+KB_WSID": ""})
+        expected_sub_2 = _get_condor_sub_for_rj_param_set(
+            job_id_2,
+            USER_WRITE_ADMIN,
+            TOKEN_WRITE_ADMIN,
+            clientgroup="extreme",
+            cpu=32,
+            mem=42,
+            disk=8,
+            parent_job_id=parent_job_id,
+            app_id=None,
+            app_module=None,
+        )
+        expected_sub_2.update(
+            {
+                "+KB_SOURCE_WS_OBJECTS": "",
+                "+KB_WSID": "",
+                "+AccountingGroup": '"forrest_gump"',
+                "+KB_MODULE_NAME": '"mod2"',
+                "+KB_FUNCTION_NAME": '"meth2"',
+                "requirements": '(CLIENTGROUP == "extreme") && (baz == "bat") && (foo == "bar")',
+                "environment": expected_sub_2["environment"].replace(
+                    "DEBUG_MODE=False", "DEBUG_MODE=True"
+                ),
+            }
+        )
+        del expected_sub_2["Concurrency_Limits"]
+        _check_batch_htc_calls(
+            sub_init, schedd_init, sub, schedd, txn, expected_sub_1, expected_sub_2
+        )
+
+
+def _check_batch_htc_calls(
+    sub_init, schedd_init, sub, schedd, txn, expected_sub_1, expected_sub_2
+):
+    assert sub_init.call_args_list == [call(expected_sub_1), call(expected_sub_2)]
+    # The line above and the line below should be completely equivalent IIUC, but the line
+    # below fails for reasons I don't understand. The error output shows the actual calls
+    # for the line below having 2 extra calls that appear to be the sub.queue calls
+    # below. Stumped, so going with what works and moving on.
+    # sub_init.assert_has_calls([call(expected_sub_1), call(expected_sub_2)])
+    schedd_init.call_args_list = [call(), call()]
+    # same deal here. Output includes stuff like `call().transaction()` so
+    # it appears the sub calls are being picked up, which is weird.
+    # schedd_init.assert_has_calls([call(), call()])
+    schedd.transaction.call_args_list = [call(), call()]
+    # and again
+    # schedd.transaction.assert_has_calls([call(), call()])
+    sub.queue.assert_has_calls([call(txn, 1), call(txn, 1)])
+
+
+def test_run_job_batch_fail_not_admin(ee2_port, ws_controller):
+    err = "Access Denied: You are not an administrator. AdminPermissions.NONE"
+    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, [], {"as_admin": True}, err)
+
+
+def test_run_job_batch_fail_only_read_admin(ee2_port, ws_controller):
+    err = (
+        "Access Denied: You are a read-only admin. This function requires write access"
+    )
+    _run_job_batch_fail(ee2_port, TOKEN_READ_ADMIN, [], {"as_admin": True}, err)
 
 
 def test_run_job_batch_fail_no_workspace_access_for_batch(ee2_port, ws_controller):
@@ -1229,6 +1573,42 @@ def test_run_job_batch_fail_no_workspace_access_for_job(ee2_port):
         "('An error occurred while fetching user permissions from the Workspace', "
         + "ServerError('No workspace with id 1 exists'))"
     )
+    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+
+
+def test_run_job_batch_fail_bad_memory(ee2_port, ws_controller):
+    _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
+    params = [
+        {"method": _MOD},
+        {"method": _MOD},
+        {"method": _MOD, "job_requirements": {"request_memory": [1000]}},
+    ]
+    err = "Job #3: Found illegal memory request '[1000]' in job requirements from input job"
+    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+
+
+def test_run_job_batch_fail_bad_scheduler_requirements(ee2_port, ws_controller):
+    _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
+    params = [
+        {"method": _MOD, "job_requirements": {"scheduler_requirements": {"": "foo"}}},
+        {"method": _MOD},
+    ]
+    err = "Job #1: Missing input parameter: key in scheduler requirements structure"
+    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+
+
+def test_run_job_batch_fail_job_reqs_but_no_as_admin(ee2_port, ws_controller):
+    _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN)
+    params = [
+        {"method": _MOD},
+        {
+            "method": _MOD,
+            "job_requirements": {"request_memory": 1000},
+            # as_admin is only considered in the batch params for run_job_batch
+            "as_admin": True,
+        },
+    ]
+    err = "Job #2: In order to specify job requirements you must be a full admin"
     _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
 
 
