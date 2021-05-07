@@ -9,7 +9,6 @@ from unittest.mock import patch
 import requests_mock
 from mock import MagicMock
 
-from exceptions import CannotRetryARetryException
 from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.db.models.models import Job
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
