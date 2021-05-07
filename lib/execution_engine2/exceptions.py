@@ -13,6 +13,8 @@ class IncorrectParamsException(ExecutionEngineValueError):
 
 
 class MissingRunJobParamsException(ExecutionEngineValueError):
+    """Missing a required run_job_parameter"""
+
     pass
 
 
@@ -49,7 +51,7 @@ class CondorJobNotFoundException(ExecutionEngineException):
 
 
 class CannotRetryARetryException(ExecutionEngineException):
-    """ Raised if a user attempts to retry the retried job, rather than the original job"""
+    """Raised if a user attempts to retry the retried job, rather than the original job"""
 
 
 class AuthError(ExecutionEngineException):
