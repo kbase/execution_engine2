@@ -14,29 +14,29 @@ from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
 from execution_engine2.utils.clients import ClientSet
 
 
-def _build_job_reqs(config, cfgfile):
+def _build_job_reqs(config, cfgfile, impls):
     with open(cfgfile) as cf:
-        return JobRequirementsResolver(Catalog(config["catalog-url"]), cf)
+        return JobRequirementsResolver(impls[Catalog], cf)
 
 
 _CLASS_IMPLEMENTATION_BUILDERS = {
-    KBaseAuth: lambda config, cfgfile: KBaseAuth(
+    KBaseAuth: lambda config, cfgfile, impls: KBaseAuth(
         auth_url=config["auth-url"] + "/api/legacy/KBase/Sessions/Login"
     ),
-    AdminAuthUtil: lambda config, cfgfile: AdminAuthUtil(
+    AdminAuthUtil: lambda config, cfgfile, impls: AdminAuthUtil(
         config["auth-url"], [ADMIN_READ_ROLE, ADMIN_WRITE_ROLE]
     ),
-    Condor: lambda config, cfgfile: Condor(config),
-    Catalog: lambda config, cfgfile: Catalog(config["catalog-url"]),
+    Condor: lambda config, cfgfile, impls: Condor(config),
+    Catalog: lambda config, cfgfile, impls: Catalog(config["catalog-url"]),
     JobRequirementsResolver: _build_job_reqs,
-    KafkaClient: lambda config, cfgfile: KafkaClient(config["kafka-host"]),
-    MongoUtil: lambda config, cfgfile: MongoUtil(config),
-    SlackClient: lambda config, cfgfile: SlackClient(
+    KafkaClient: lambda config, cfgfile, impls: KafkaClient(config["kafka-host"]),
+    MongoUtil: lambda config, cfgfile, impls: MongoUtil(config),
+    SlackClient: lambda config, cfgfile, impls: SlackClient(
         config["slack-token"], debug=True, endpoint=config["ee2-url"]
     ),
 }
 
-ALL_CLIENTS = _CLASS_IMPLEMENTATION_BUILDERS.keys()
+ALL_CLIENTS = sorted(_CLASS_IMPLEMENTATION_BUILDERS.keys(), key=lambda x: x.__name__)
 
 
 def get_client_mocks(config, config_path, *to_be_mocked):
@@ -56,7 +56,10 @@ def get_client_mocks(config, config_path, *to_be_mocked):
         if clazz in to_be_mocked:
             ret[clazz] = create_autospec(clazz, instance=True, spec_set=True)
         else:
-            ret[clazz] = _CLASS_IMPLEMENTATION_BUILDERS[clazz](config, config_path)
+            # this is a hack - only one client depends on another (JRR -> Cat)
+            # so we rely on the ALL_CLIENTS sort to make sure the dependency is built before the
+            # dependent module. If things become more complicated we'll need a dependency graph.
+            ret[clazz] = _CLASS_IMPLEMENTATION_BUILDERS[clazz](config, config_path, ret)
     ret[ClientSet] = ClientSet(
         ret[KBaseAuth],
         ret[AdminAuthUtil],

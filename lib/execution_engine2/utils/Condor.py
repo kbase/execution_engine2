@@ -176,8 +176,8 @@ class Condor:
         sub["+KB_PARENT_JOB_ID"] = params.parent_job_id or ""
         sub["+KB_MODULE_NAME"] = params.app_info.module
         sub["+KB_FUNCTION_NAME"] = params.app_info.method
-        sub["+KB_APP_ID"] = params.app_info.get_application_id()
-        sub["+KB_APP_MODULE_NAME"] = params.app_info.application_module
+        sub["+KB_APP_ID"] = params.app_info.get_application_id() or ""
+        sub["+KB_APP_MODULE_NAME"] = params.app_info.application_module or ""
         sub["+KB_WSID"] = params.wsid or ""
         sub["+KB_SOURCE_WS_OBJECTS"] = ",".join(params.source_ws_objects)
 

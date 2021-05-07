@@ -86,6 +86,36 @@
             string cell_id;
         } Meta;
 
+        /* Job requirements for a job. All fields are optional. To submit job requirements,
+            the user must have full EE2 admin permissions. Ignored for the run concierge endpoint.
+
+            request_cpus: the number of CPUs to request for the job.
+            request_memory: the amount of memory, in MB, to request for the job.
+            request_disk: the amount of disk space, in GB, to request for the job.
+            client_group: the name of the client group on which to run the job.
+            client_group_regex: Whether to treat the client group string, whether provided here,
+                from the catalog, or as a default, as a regular expression when matching
+                clientgroups. Default True for HTC, but the default depends on the scheduler.
+                Omit to use the default.
+            bill_to_user: the job will be counted against the provided user's fair share quota.
+            ignore_concurrency_limits: ignore any limits on simultaneous job runs. Default false.
+            scheduler_requirements: arbitrary key-value pairs to be provided to the job
+                scheduler. Requires knowledge of the scheduler interface.
+            debug_mode: Whether to run the job in debug mode. Default false.
+
+        */
+        typedef structure {
+            int request_cpus;
+            int requst_memory;
+            int request_disk;
+            string client_group;
+            boolean client_group_regex;
+            string bill_to_user;
+            boolean ignore_concurrency_limits;
+            mapping<string, string> scheduler_requirements;
+            boolean debug_mode;
+        } JobRequirements;
+
         /*
             method - the SDK method to run in module.method format, e.g.
                 'KBaseTrees.construct_species_tree'
@@ -111,6 +141,14 @@
                 record is not altered.
                 Submitting a job with a parent ID to run_job_batch will cause an error to be
                 returned.
+            job_requirements: the requirements for the job. The user must have full EE2
+                administration rights to use this parameter. Note that the job_requirements
+                are not returned along with the rest of the job parameters when querying the EE2
+                API - they are only considered when submitting a job.
+            as_admin: run the job with full EE2 permissions, meaning that any supplied workspace
+                IDs are not checked for accessibility and job_requirements may be supplied. The
+                user must have full EE2 administration rights.
+                Note that this field is not included in returned data when querying EE2.
 
         */
         typedef structure {
@@ -122,16 +160,24 @@
             Meta meta;
             int wsid;
             string parent_job_id;
+            JobRequirements job_requirements;
+            boolean as_admin;
         } RunJobParams;
 
         /*
-            Start a new job (long running method of service registered in ServiceRegistery).
-            Such job runs Docker image for this service in script mode.
+            Start a new job.
         */
         funcdef run_job(RunJobParams params) returns (job_id job_id) authentication required;
 
+        /* Additional parameters for a batch job.
+            wsid: the workspace with which to associate the parent job.
+            as_admin: run the job with full EE2 permissions, meaning that any supplied workspace
+                IDs are not checked for accessibility and job_requirements may be supplied. The
+                user must have full EE2 administration rights.
+        */
         typedef structure {
             int wsid;
+            boolean as_admin;
         } BatchParams;
 
         typedef structure {
@@ -144,6 +190,13 @@
             list<job_id> child_job_ids;
             boolean as_admin;
         } AbandonChildren;
+
+        /* Run a batch job, consisting of a parent job and one or more child jobs.
+            Note that the as_admin parameters in the list of child jobs are ignored -
+            only the as_admin parameter in the batch_params is considered.
+        */
+        funcdef run_job_batch(list<RunJobParams> params, BatchParams batch_params)
+            returns (BatchSubmission job_ids) authentication required;
 
 
         typedef structure {
@@ -168,6 +221,10 @@
         funcdef run_job_batch(list<RunJobParams> params, BatchParams batch_params) returns (BatchSubmission job_ids) authentication required;
 
         funcdef abandon_children(AbandonChildren params) returns (BatchSubmission parent_and_child_ids) authentication required;
+
+        funcdef abandon_children(AbandonChildren params)
+            returns (BatchSubmission parent_and_child_ids) authentication required;
+
 
 
         /* EE2Constants Concierge Params are

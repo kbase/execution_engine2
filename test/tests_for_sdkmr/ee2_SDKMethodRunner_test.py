@@ -22,7 +22,10 @@ from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.KafkaUtils import KafkaClient
 from execution_engine2.utils.SlackUtils import SlackClient
-from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
+from execution_engine2.utils.job_requirements_resolver import (
+    JobRequirementsResolver,
+    RequirementsType,
+)
 from lib.execution_engine2.db.models.models import Job, Status, TerminatedCode
 from execution_engine2.exceptions import AuthError
 from lib.execution_engine2.exceptions import InvalidStatusTransitionException
@@ -914,6 +917,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
         runner.workspace_auth = MagicMock()
         runner.get_job_requirements_resolver = MagicMock(return_value=resolver)
+        resolver.get_requirements_type.return_value = RequirementsType.STANDARD
         resolver.resolve_requirements.return_value = JobRequirements(
             cpus=1,
             memory_MB=100,

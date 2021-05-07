@@ -18,6 +18,8 @@ from execution_engine2.utils.clients import (
     get_user_client_set,
 )
 from execution_engine2.sdk.job_submission_parameters import JobRequirements
+from installed_clients.CatalogClient import Catalog
+
 from test.utils_shared.test_utils import (
     bootstrap,
     get_example_job,
@@ -85,7 +87,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner = self.getRunner()
         self.assertTrue(set(class_attri) <= set(runner.__dict__.keys()))
 
-    def test_init_job_rec(self):
+    @patch.object(Catalog, "get_module_version")
+    def test_init_job_rec(self, get_mod_ver):
         ori_job_count = Job.objects.count()
         runner = self.getRunner()
 
@@ -111,7 +114,15 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             "meta": {"tag": "dev", "token_id": "12345"},
         }
 
+        get_mod_ver.return_value = {
+            "git_commit_hash": "048baf3c2b76cb923b3b4c52008ed77dbe20292d"
+        }
+
         job_id = runner.get_runjob()._init_job_rec(self.user_id, job_params)
+
+        get_mod_ver.assert_called_once_with(
+            {"module_name": "MEGAHIT", "version": "2.2.1"}
+        )
 
         self.assertEqual(ori_job_count, Job.objects.count() - 1)
 

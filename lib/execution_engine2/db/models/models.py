@@ -163,7 +163,7 @@ class JobInput(EmbeddedDocument):
     requested_release = StringField()  # deprecated, legacy field
     params = DynamicField()
     service_ver = StringField(required=True)
-    app_id = StringField(required=True)
+    app_id = StringField()
     source_ws_objects = ListField()
     parent_job_id = StringField()
     requirements = EmbeddedDocumentField(JobRequirements)

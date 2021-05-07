@@ -4,7 +4,28 @@ from execution_engine2.exceptions import IncorrectParamsException
 from utils_shared.test_utils import assert_exception_correct
 
 
-def test_app_info_strict_init_success():
+def test_app_info_init_success_minimal_strict():
+    ai = AppInfo("   \t  mod   .   meth   ")
+    assert ai.module == "mod"
+    assert ai.method == "meth"
+    assert ai.application_module is None
+    assert ai.application is None
+    assert ai.get_method_id() == "mod.meth"
+    assert ai.get_application_id() is None
+
+
+def test_app_info_init_success_no_app_id_strict():
+    for appid in [None, "    \t    "]:
+        ai = AppInfo("   \t  mod   .   meth   ", appid)
+        assert ai.module == "mod"
+        assert ai.method == "meth"
+        assert ai.application_module is None
+        assert ai.application is None
+        assert ai.get_method_id() == "mod.meth"
+        assert ai.get_application_id() is None
+
+
+def test_app_info_init_success_strict_full():
     ai = AppInfo("   \t  mod   .   meth   ", "mod/  appthing")
     assert ai.module == "mod"
     assert ai.method == "meth"
@@ -14,18 +35,28 @@ def test_app_info_strict_init_success():
     assert ai.get_application_id() == "mod/appthing"
 
 
-def test_app_info_without_app_module_strict_init_success():
-    ai = AppInfo("   \t  mod   .   meth   ", "  appthing \t  ")
+def test_app_info_init_success_strict_full_dot_separator():
+    ai = AppInfo("   \t  mod   .   meth   ", "mod   .  appthing")
     assert ai.module == "mod"
     assert ai.method == "meth"
     assert ai.application_module == "mod"
     assert ai.application == "appthing"
     assert ai.get_method_id() == "mod.meth"
-    assert ai.get_application_id() == "mod/appthing"
+    assert ai.get_application_id() == "mod.appthing"
 
 
-def test_app_info_init_success():
-    ai = AppInfo("   \t  mod   .   meth   ", "mod2.  appthing", strict=False)
+def test_app_info_init_success_strict_with_app_module_only():
+    ai = AppInfo("   \t  mod   .   meth   ", "  mod \t  ")
+    assert ai.module == "mod"
+    assert ai.method == "meth"
+    assert ai.application_module == "mod"
+    assert ai.application is None
+    assert ai.get_method_id() == "mod.meth"
+    assert ai.get_application_id() == "mod"
+
+
+def test_app_info_init_success_non_strict():
+    ai = AppInfo("   \t  mod   .   meth   ", "mod2/  appthing", strict=False)
     assert ai.module == "mod"
     assert ai.method == "meth"
     assert ai.application_module == "mod2"
@@ -36,25 +67,27 @@ def test_app_info_init_success():
 
 def test_app_info_init_fail():
     m = "m.n"
-    a = "m.b"
     _app_info_init_fail(
-        None, a, False, IncorrectParamsException("Missing input parameter: method ID")
+        None,
+        None,
+        False,
+        IncorrectParamsException("Missing input parameter: method ID"),
     )
     _app_info_init_fail(
         "   \t    ",
-        a,
+        None,
         False,
         IncorrectParamsException("Missing input parameter: method ID"),
     )
     _app_info_init_fail(
         "   method   ",
-        a,
+        None,
         False,
         IncorrectParamsException("Expected exactly one '.' in method ID 'method'"),
     )
     _app_info_init_fail(
         "   mod.innermod.method   ",
-        a,
+        None,
         False,
         IncorrectParamsException(
             "Expected exactly one '.' in method ID 'mod.innermod.method'"
@@ -62,7 +95,7 @@ def test_app_info_init_fail():
     )
     _app_info_init_fail(
         "    .  meth",
-        a,
+        None,
         False,
         IncorrectParamsException(
             "Missing input parameter: module portion of method ID"
@@ -70,24 +103,17 @@ def test_app_info_init_fail():
     )
     _app_info_init_fail(
         " mod   .  ",
-        a,
+        None,
         False,
         IncorrectParamsException(
             "Missing input parameter: method portion of method ID"
         ),
     )
-
     _app_info_init_fail(
         m,
-        None,
+        "mod / me\tth ",
         False,
-        IncorrectParamsException("Missing input parameter: application ID"),
-    )
-    _app_info_init_fail(
-        m,
-        "   \t    ",
-        False,
-        IncorrectParamsException("Missing input parameter: application ID"),
+        IncorrectParamsException("application ID contains control characters"),
     )
     _app_info_init_fail(
         m,
@@ -107,19 +133,12 @@ def test_app_info_init_fail():
     )
     _app_info_init_fail(
         m,
-        "mod.meth",
-        True,
-        IncorrectParamsException("Application ID 'mod.meth' contains a '.'"),
-    )
-    _app_info_init_fail(
-        m,
         "mod.meth.anothermeth",
         False,
         IncorrectParamsException(
-            "Expected exactly one '.' in application ID 'mod.meth.anothermeth'"
+            "Expected exactly one '/' in application ID 'mod.meth.anothermeth'"
         ),
     )
-
     _app_info_init_fail(
         "mod.meth",
         "  mod2  /meth",
@@ -170,11 +189,16 @@ def _app_info_init_fail(meth, app, strict, expected):
 
 
 def test_equals():
+    assert AppInfo("m.n") == AppInfo("m.n")
+    assert AppInfo("m.n", "m") == AppInfo("m.n", "m")
     assert AppInfo("m.n", "m/p") == AppInfo("m.n", "m/p")
+    assert AppInfo("m.n", "m.p") == AppInfo("m.n", "m.p")
     assert AppInfo("m.n", "p/p", False) == AppInfo("m.n", "p/p", False)
+    assert AppInfo("m.n", "p.p", False) == AppInfo("m.n", "p.p", False)
 
     assert AppInfo("m.n", "m/p", False) != AppInfo("n.n", "m/p", False)
     assert AppInfo("m.n", "m/p") != AppInfo("m.x", "m/p")
+    assert AppInfo("m.n", "m/p") != AppInfo("m.n", "m.p")
     assert AppInfo("m.n", "m/p", False) != AppInfo("m.n", "x/p", False)
     assert AppInfo("m.n", "m/p") != AppInfo("m.n", "m/x")
     assert AppInfo("m.n", "m/p") != ("m.n", "m/x")
@@ -184,10 +208,15 @@ def test_hashcode():
     # hashes will change from instance to instance of the python interpreter, and therefore
     # tests can't be written that directly test the hash value. See
     # https://docs.python.org/3/reference/datamodel.html#object.__hash__
+    assert hash(AppInfo("m.n")) == hash(AppInfo("m.n"))
+    assert hash(AppInfo("m.n", "m")) == hash(AppInfo("m.n", "m"))
     assert hash(AppInfo("m.n", "m/p")) == hash(AppInfo("m.n", "m/p"))
+    assert hash(AppInfo("m.n", "m.p")) == hash(AppInfo("m.n", "m.p"))
     assert hash(AppInfo("m.n", "p/p", False)) == hash(AppInfo("m.n", "p/p", False))
+    assert hash(AppInfo("m.n", "p.p", False)) == hash(AppInfo("m.n", "p.p", False))
 
     assert hash(AppInfo("m.n", "m/p", False)) != hash(AppInfo("n.n", "m/p", False))
     assert hash(AppInfo("m.n", "m/p")) != hash(AppInfo("m.x", "m/p"))
+    assert hash(AppInfo("m.n", "m/p")) != hash(AppInfo("m.n", "m.p"))
     assert hash(AppInfo("m.n", "m/p", False)) != hash(AppInfo("m.n", "x/p", False))
     assert hash(AppInfo("m.n", "m/p")) != hash(AppInfo("m.n", "m/x"))
