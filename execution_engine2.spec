@@ -216,12 +216,6 @@
         */
         funcdef retry_job(RetryParams params) returns (job_id job_id) authentication required;
 
-
-
-        funcdef run_job_batch(list<RunJobParams> params, BatchParams batch_params) returns (BatchSubmission job_ids) authentication required;
-
-        funcdef abandon_children(AbandonChildren params) returns (BatchSubmission parent_and_child_ids) authentication required;
-
         funcdef abandon_children(AbandonChildren params)
             returns (BatchSubmission parent_and_child_ids) authentication required;
 
