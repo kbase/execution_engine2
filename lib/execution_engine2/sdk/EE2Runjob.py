@@ -500,9 +500,9 @@ class EE2RunJob:
             _WORKSPACE_ID: job.wsid,
             "user": user_id,
             "method": job_input.method,
+            "job_input": EE2RunJob._get_job_input_params_from_existing_job(job_input),
         }
         # Then the next fields are job inputs top level requirements, app run parameters, and scheduler resource requirements
-        job_params["job_input"] = EE2RunJob._get_job_input_params_from_existing_job()
 
         return job_params
 

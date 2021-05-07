@@ -66,6 +66,7 @@ def get_example_job_input(wsid, params=None):
     job_input.params = params
     job_input.service_ver = "dev"
     job_input.app_id = "module/super_function"
+    job_input.source_ws_objects = [1, 2, 3]
 
     m = Meta()
     m.cell_id = "ApplePie"
