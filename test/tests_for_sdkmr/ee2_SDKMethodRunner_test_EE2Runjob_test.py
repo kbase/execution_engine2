@@ -9,6 +9,7 @@ from unittest.mock import patch
 import requests_mock
 from mock import MagicMock
 
+from exceptions import CannotRetryARetryException
 from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.db.models.models import Job
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
@@ -32,6 +33,7 @@ logging.basicConfig(level=logging.INFO)
 bootstrap()
 
 from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
+from pytest import raises
 
 
 class ee2_SDKMethodRunner_test(unittest.TestCase):
@@ -261,11 +263,40 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job = get_example_job_as_dict(user=self.user_id, wsid=self.ws_id)
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-        job_id = runner.run_job(params=job)
+        parent_job_id = runner.run_job(params=job)
 
         # 2. Retry the job
-        retry_job_id = runner.retry(job_id=job_id)
-        print(retry_job_id)
+        retry_job_id = runner.retry(job_id=parent_job_id)
+
+        # 3. Attempt to retry a retry
+        # TODO: Why cant I use a CannotRetryARetryException here?
+        with self.assertRaises(Exception):
+            runner.retry(job_id=retry_job_id)
+
+        # 4. Attempt a fresh retry
+
+        runner.retry(job_id=parent_job_id)
+
+        # 5. Get both jobs and compare them!
+        original_job, retried_job = runner.check_jobs(
+            job_ids=[parent_job_id, retry_job_id]
+        )["job_states"]
+
+        same_keys = ["user", "authstrat", "wsid", "scheduler_type", "job_input"]
+        different_keys = ["updated", "queued", "finished"]
+        assert "retry_parent" not in original_job
+        assert original_job["retried"]
+        assert original_job["retry_count"] == 2
+        assert retried_job["retry_parent"] == parent_job_id
+
+        for key in same_keys:
+            assert original_job[key] == retried_job[key]
+
+        for key in different_keys:
+            assert original_job[key] != retried_job[key]
+
+        # TODO Retry a job that uses run_job_batch or kbparallels (Like metabat)
+        # TODO Retry a job without an app_id
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)

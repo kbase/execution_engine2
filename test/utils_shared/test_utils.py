@@ -80,6 +80,7 @@ def get_example_job(
     wsid: int = 123,
     authstrat: str = "kbaseworkspace",
     scheduler_id: str = None,
+    narrative_cell_info: dict = None,
 ) -> Job:
     j = Job()
     j.user = user
@@ -89,6 +90,9 @@ def get_example_job(
     j.job_input = job_input
     j.status = "queued"
     j.authstrat = authstrat
+
+    if narrative_cell_info:
+        job_input.narrative_cell_info = narrative_cell_info
 
     if scheduler_id is None:
         scheduler_id = str(uuid.uuid4())
@@ -102,7 +106,11 @@ def get_example_job_as_dict_for_runjob(
     user=None, wsid=None, authstrat=None, scheduler_id=None
 ):
     job = get_example_job(
-        user=user, wsid=wsid, authstrat=authstrat, scheduler_id=scheduler_id
+        user=user,
+        wsid=wsid,
+        authstrat=authstrat,
+        scheduler_id=scheduler_id,
+        narrative_cell_info={},
     )
     job_dict = job.to_mongo().to_dict()
     job_dict["method"] = job["job_input"]["method"]

@@ -48,6 +48,10 @@ class CondorJobNotFoundException(ExecutionEngineException):
     pass
 
 
+class CannotRetryARetryException(ExecutionEngineException):
+    """ Raised if a user attempts to retry the retried job, rather than the original job"""
+
+
 class AuthError(ExecutionEngineException):
     """Raised if a user is unauthorized for a particular action, or doesn't have the right auth role"""
 

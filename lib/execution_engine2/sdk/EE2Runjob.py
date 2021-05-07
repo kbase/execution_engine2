@@ -37,7 +37,11 @@ from execution_engine2.utils.job_requirements_resolver import (
 )
 from execution_engine2.utils.job_requirements_resolver import RequirementsType
 from execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
-from execution_engine2.exceptions import IncorrectParamsException, AuthError
+from execution_engine2.exceptions import (
+    IncorrectParamsException,
+    AuthError,
+    CannotRetryARetryException,
+)
 
 _JOB_REQUIREMENTS = "job_reqs"
 
@@ -506,8 +510,8 @@ class EE2RunJob:
         )
         # Cannot retry a retried job, you must retry the parent
         if job.retry_parent:
-            raise Exception(
-                "Cannot retry a retried job attempt, please retry the parent"
+            raise CannotRetryARetryException(
+                f"Cannot retry a retried job attempt, please retry the parent {job.retry_parent}"
             )
         # Get run job params from db, and inject parent job id, then run it
         run_job_params = self._get_run_job_params_from_existing_job(
@@ -515,10 +519,18 @@ class EE2RunJob:
         )
         run_job_params[_PARENT_RETRY_JOB_ID] = job_id
         # Submit job to job scheduler or fail and not count it as a retry attempt
+        print("About to run job with")
+        print(run_job_params)
+
         child_job_id = self.run(params=run_job_params, as_admin=as_admin)
         # Save that the job has been retried, and increment the count
-        job.has_been_retried = True
-        job.retry_count += 1
+
+        if job.retried:
+            job.retry_count += 1
+        else:
+            job.retried = True
+            job.retry_count = 1
+
         job.save()
         # Should we compare the original and child job to make sure certain fields match,
         # to make sure the retried job is correctly submitted? Or save that for a unit test?
@@ -537,8 +549,9 @@ class EE2RunJob:
             _APP_ID,
             _SOURCE_WS_OBJECTS,
             _PARENT_JOB_ID,
-            _NARRATIVE_CELL_INFO,
+            # _NARRATIVE_CELL_INFO,
             _WORKSPACE_ID,
+            "requirements",
         ]
 
         # Insert field if available
@@ -546,9 +559,9 @@ class EE2RunJob:
             if job_input[field]:
                 inputs[field] = job_input[field]
 
-        # Insert Requirements
-        if _JOB_REQUIREMENTS in job_input:
-            inputs["requirements"] = job_input[_JOB_REQUIREMENTS]
+        # # Insert Requirements
+        # if 'requirements' in job_input:
+        #     inputs["requirements"] = job_input[_JOB_REQUIREMENTS]
 
         # Special Cases: It is OK if meta/narr_cell_info is in params 2x
         if "narrative_cell_info" in job_input:
@@ -560,16 +573,12 @@ class EE2RunJob:
         if "params" not in inputs:
             inputs["params"] = {}
 
+        # from pprint import pprint
+        # pprint("original")
+        # pprint(job_input.to_mongo().to_dict())
+        # pprint("Returning")
+        # pprint(inputs)
         return inputs
-
-        #
-        # # TODO Fix requirements
-        # if job_input.requirements:
-        #     new_job_inputs[_JOB_REQUIREMENTS] = job_input.app_id
-        #
-        # inputs[_METHOD] = 1
-        # inputs['params'] = 1
-        # inputs['service_ver'] = 1
 
     @staticmethod
     def _get_run_job_params_from_existing_job(job: Job, user_id: str) -> Dict:
@@ -586,6 +595,7 @@ class EE2RunJob:
             _WORKSPACE_ID: job.wsid,
             "user": user_id,
             "method": job_input.method,
+            "app_id": job_input.app_id,  # TODO Check this  case with a blank app id?
             "job_input": EE2RunJob._get_job_input_params_from_existing_job(job_input),
         }
         # Then the next fields are job inputs top level requirements, app run parameters, and scheduler resource requirements
