@@ -238,6 +238,26 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    def test_retry_job(self, rq_mock, condor_mock):
+        # 1. Run the job
+        rq_mock.add_matcher(
+            run_job_adapter(
+                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
+            )
+        )
+        runner = self.getRunner()
+        runner.get_condor = MagicMock(return_value=condor_mock)
+        job = get_example_job_as_dict(user=self.user_id, wsid=self.ws_id)
+        si = SubmissionInfo(clusterid="test", submit=job, error=None)
+        condor_mock.run_job = MagicMock(return_value=si)
+        job_id = runner.run_job(params=job)
+
+        # 2. Retry the job
+        retry_job_id = runner.retry(job_id=job_id)
+        print(retry_job_id)
+
+    @requests_mock.Mocker()
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_run_job_batch(self, rq_mock, condor_mock):
         """
         Test running batch jobs

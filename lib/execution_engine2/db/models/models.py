@@ -160,7 +160,7 @@ class JobInput(EmbeddedDocument):
 
     wsid = IntField(required=False, default=None)
     method = StringField(required=True)
-    requested_release = StringField()  # deprecated
+    requested_release = StringField()  # deprecated, legacy field
     params = DynamicField()
     service_ver = StringField(required=True)
     app_id = StringField(required=True)
@@ -217,6 +217,7 @@ class TerminatedCode(Enum):
     terminated_by_admin = 1
     terminated_by_automation = 2
     terminated_by_batch_abort = 3
+    terminated_by_user_retry = 4
 
 
 class Status(Enum):

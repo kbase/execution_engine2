@@ -4,25 +4,17 @@ Unit tests for the Condor wrapper.
 
 # TODO Add tests for get_job_resource_info and cancel_job
 
-import htcondor
-from unittest.mock import create_autospec
-
-from execution_engine2.sdk.job_submission_parameters import (
-    JobSubmissionParameters,
-    JobRequirements,
-)
-from execution_engine2.utils.application_info import AppInfo
-from execution_engine2.utils.user_info import UserCreds
-from execution_engine2.utils.Condor import Condor
-from execution_engine2.utils.CondorTuples import SubmissionInfo
 
 from execution_engine2.sdk.EE2Runjob import EE2RunJob
-
 
 from test.utils_shared.test_utils import get_example_job, get_example_job_input
 
 
 def test_get_job_input_params_from_existing_job():
+    """
+    Test to see that the retried job INPUTS match the job that got retried from the db
+    Not all fields are expected back
+    """
     wsid = 1234
     example_job_input = get_example_job_input(wsid)
     job_input_as_dict = example_job_input.to_mongo().to_dict()
@@ -44,13 +36,11 @@ def test_get_job_input_params_from_existing_job():
     for item in expected_params:
         assert job_input_as_dict2[item] == extracted_job_input2[item]
 
-    print((job_input_as_dict))
-    print((extracted_job_input))
-
 
 def test_retry_get_run_job_params_from_existing_job():
     """
-    Test to see that the retried job matches the job it got retried from
+    Test to see that the retried job matches the job it got retried from the db
+    Not all fields are expected back
     """
     example_job = get_example_job()
     example_job_as_dict = example_job.to_mongo().to_dict()
@@ -91,6 +81,12 @@ def test_retry_get_run_job_params_from_existing_job():
     for key, val in example_job_inputs.items():
         if key in deprecated_fields:
             continue
-        assert example_job_inputs[key] == extracted_job_inputs[key]
+
+        if example_job_inputs[key]:
+            ej_value = example_job_inputs[key]
+            if ej_value == []:
+                # It might not be copied if optional, but this behavior could be normalized with a refactor
+                continue
+            assert ej_value == extracted_job_inputs[key]
 
     print(extracted_job)

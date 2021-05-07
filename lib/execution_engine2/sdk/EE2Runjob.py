@@ -37,6 +37,7 @@ from execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
 from execution_engine2.exceptions import IncorrectParamsException
 
 _JOB_REQUIREMENTS = "job_reqs"
+_APP_PARAMS = "params"
 _REQUIREMENTS_LIST = "requirements_list"
 _METHOD = "method"
 _APP_ID = "app_id"
@@ -44,6 +45,8 @@ _PARENT_JOB_ID = "parent_job_id"
 _PARENT_RETRY_JOB_ID = "retry_parent_job_id"
 _WORKSPACE_ID = "wsid"
 _SOURCE_WS_OBJECTS = "source_ws_objects"
+_NARRATIVE_CELL_INFO = "narrative_cell_info"
+_SERVICE_VER = "service_ver"
 
 
 class JobPermissions(Enum):
@@ -75,12 +78,17 @@ class EE2RunJob:
         params: Dict,
     ) -> str:
         """
-        Params:
-        _METHOD  (Name of method [required])
-        "params" (Job Params)
-
+        Expected optional params are
+        _WORKSPACE_ID
+        _METHOD
+        params (job params)
+        service_ver
+        _APP_ID
+        _SOURCE_WS_OBJECTS
+        _PARENT_JOB_ID
+        meta
+        _JOB_REQUIREMENTS
         """
-
         job = Job()
         inputs = JobInput()
         job.user = user_id
@@ -111,19 +119,21 @@ class EE2RunJob:
             for meta_attr in ["run_id", "token_id", "tag", "cell_id"]:
                 inputs.narrative_cell_info[meta_attr] = meta.get(meta_attr)
 
-        jr = JobRequirements()
-        jr.cpu = params[_JOB_REQUIREMENTS].cpus
-        jr.memory = params[_JOB_REQUIREMENTS].memory_MB
-        jr.disk = params[_JOB_REQUIREMENTS].disk_GB
-        jr.clientgroup = params[_JOB_REQUIREMENTS].client_group
-        inputs.requirements = jr
+        resolved_reqs = params.get(_JOB_REQUIREMENTS)  # type: ResolvedRequirements
 
+        jr = JobRequirements(
+            cpu=resolved_reqs.cpus,
+            memory=resolved_reqs.memory_MB,
+            disk=resolved_reqs.disk_GB,
+            clientgroup=resolved_reqs.client_group,
+        )
+        inputs.requirements = jr
         job.job_input = inputs
 
-        # TODO MOVE THIS OUT OF INPUT
-        # parent_retry_job_id = params.get(_PARENT_RETRY_JOB_ID)
-        # if parent_retry_job_id:
-        #     job.retry_parent = str(params.get(_PARENT_RETRY_JOB_ID))
+        # Set the id of the parent that was retried to get this job
+        parent_retry_job_id = params.get(_PARENT_RETRY_JOB_ID)
+        if parent_retry_job_id:
+            job.retry_parent = str(params.get(_PARENT_RETRY_JOB_ID))
 
         job_id = self.sdkmr.save_job(job)
 
@@ -396,6 +406,7 @@ class EE2RunJob:
 
     def retry(self, job_id, as_admin=False) -> str:
         """
+        #TODO Add new job requirements/cgroups as an optional param
         :param job_id: The main job to retry
         :param as_admin: Run with admin permission
         :return: The child job id that has been retried
@@ -403,16 +414,19 @@ class EE2RunJob:
         job = self.sdkmr.get_job_with_permission(
             job_id, JobPermissions.WRITE, as_admin=as_admin
         )
+        # Cancel job and it's children
+        self.sdkmr.cancel_job(
+            job_id=job_id, terminated_code=TerminatedCode.terminated_by_user_retry.value
+        )
+        # Cannot retry a retried job, you must retry the parent
         if job.retry_parent:
             raise Exception(
                 "Cannot retry a retried job attempt, please retry the parent"
             )
-
-        if job.child_jobs:
-            raise Exception("Cannot retry a job with child jobs yet.")
-
         # Get run job params from db, and inject parent job id, then run it
-        run_job_params = self._get_run_job_params_from_existing_job(job)
+        run_job_params = self._get_run_job_params_from_existing_job(
+            job, user_id=self.sdkmr.user_id
+        )
         run_job_params[_PARENT_RETRY_JOB_ID] = job_id
         # Submit job to job scheduler or fail and not count it as a retry attempt
         child_job_id = self.run(params=run_job_params, as_admin=as_admin)
@@ -420,8 +434,8 @@ class EE2RunJob:
         job.has_been_retried = True
         job.retry_count += 1
         job.save()
-        # For a test, run a job, get the record, then retry a job, get the record, compare that they are the same
-        # and that certain fields have been updated
+        # Should we compare the original and child job to make sure certain fields match,
+        # to make sure the retried job is correctly submitted? Or save that for a unit test?
         return child_job_id
 
     @staticmethod
@@ -430,26 +444,31 @@ class EE2RunJob:
         inputs = {}
 
         # Used to iterate over "Job" attributes but in dictionary like lookup
-        inputs_list = {
-            "method": _METHOD,
-            "params": "params",
-            "service_ver": "service_ver",
-            "app_id": _APP_ID,
-            "source_ws_objects": _SOURCE_WS_OBJECTS,
-            "parent_job_id": _PARENT_JOB_ID,
-            "narrative_cell_info": "narrative_cell_info",
-            "wsid": _WORKSPACE_ID,
-            "requirements": _JOB_REQUIREMENTS,
-        }
+        inputs_list = [
+            _METHOD,
+            _APP_PARAMS,
+            _SERVICE_VER,
+            _APP_ID,
+            _SOURCE_WS_OBJECTS,
+            _PARENT_JOB_ID,
+            _NARRATIVE_CELL_INFO,
+            _WORKSPACE_ID,
+        ]
 
-        for k, v in inputs_list.items():
-            print("Checking for", k, "in", "inputs_list")
-            if job_input[k]:
-                inputs[k] = job_input[k]
+        # Insert field if available
+        for field in inputs_list:
+            if job_input[field]:
+                inputs[field] = job_input[field]
+
+        # Insert Requirements
+        if _JOB_REQUIREMENTS in job_input:
+            inputs["requirements"] = job_input[_JOB_REQUIREMENTS]
 
         # Special Cases: It is OK if meta/narr_cell_info is in params 2x
         if "narrative_cell_info" in job_input:
-            inputs["meta"] = job_input["narrative_cell_info"]
+            nci = job_input["narrative_cell_info"]  # type: Meta
+            # For easier testing
+            inputs["meta"] = inputs["narrative_cell_info"] = nci.to_mongo().to_dict()
 
         # Require a non blank params for job browser or narrative compatibility
         if "params" not in inputs:
@@ -457,32 +476,6 @@ class EE2RunJob:
 
         return inputs
 
-        # if job_input.method:
-        #     inputs[_METHOD] = job_input.method
-        #
-        # if job_input.params:
-        #     inputs["params"] = job_input.params
-        #
-        # if job_input.service_ver:
-        #     inputs["service_ver"] = job_input.service_ver
-        #
-        # if job_input.app_id:
-        #     inputs[_APP_ID] = job_input.app_id
-        #
-        # if job_input.source_ws_objects:
-        #     inputs[_SOURCE_WS_OBJECTS] = job_input.source_ws_objects
-        #
-        # if
-
-        #
-        # # Input Level
-        # new_job_inputs = {}
-        # if job_input.source_ws_objects:
-        #     new_job_inputs[_SOURCE_WS_OBJECTS] = job_input.source_ws_objects
-        # if job_input.parent_job_id:
-        #     new_job_inputs[_PARENT_JOB_ID] = job_input.parent_job_id
-        # if job_input.app_id:
-        #     new_job_inputs[_APP_ID] = job_input.app_id
         #
         # # TODO Fix requirements
         # if job_input.requirements:
@@ -497,15 +490,19 @@ class EE2RunJob:
         """
         Get fields from job model to be sent into `run_job`
         The top level fields that must be sent are
-        "user_id" , "wsid" , "job_input"
+        "user" , "wsid" , "job_input", "method"
         """
         # We only need to extract job workspace id
         # "authstrat", "scheduler_type" are autoset,
         # and we DO NOT want user_id due to others retrying your job
-        job_params = {_WORKSPACE_ID: job.wsid, "user": user_id}
+        job_input = job.job_input  # type: JobInput
+        job_params = {
+            _WORKSPACE_ID: job.wsid,
+            "user": user_id,
+            "method": job_input.method,
+        }
         # Then the next fields are job inputs top level requirements, app run parameters, and scheduler resource requirements
-        job_input = EE2RunJob._get_job_input_params_from_existing_job(job.job_input)
-        job_params["job_input"] = job_input
+        job_params["job_input"] = EE2RunJob._get_job_input_params_from_existing_job()
 
         return job_params
 
