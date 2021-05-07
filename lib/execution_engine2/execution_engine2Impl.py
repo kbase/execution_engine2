@@ -30,8 +30,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.5"
     GIT_URL = "git@github.com:kbase/execution_engine2.git"
-    GIT_COMMIT_HASH = "dae866d7ed3967c93012c9fdafc6ab15b380daa6"
-
+    GIT_COMMIT_HASH = "e1920961e36d934c9d326fa82a704e7b9c7ce624"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -179,7 +178,7 @@ class execution_engine2:
 
     def run_job(self, ctx, params):
         """
-        Start a new job (long running method registered in the Catalog).
+        Start a new job.
         :param params: instance of type "RunJobParams" (method - the SDK
            method to run in module.method format, e.g.
            'KBaseTrees.construct_species_tree' app_id - the id of the
@@ -238,7 +237,7 @@ class execution_engine2:
            provided user's fair share quota. ignore_concurrency_limits:
            ignore any limits on simultaneous job runs. Default false.
            scheduler_requirements: arbitrary key-value pairs to be provided
-           to the job scheduler. Requires knowledge ot the scheduler
+           to the job scheduler. Requires knowledge of the scheduler
            interface. debug_mode: Whether to run the job in debug mode.
            Default false.) -> structure: parameter "request_cpus" of Long,
            parameter "requst_memory" of Long, parameter "request_disk" of
@@ -266,33 +265,6 @@ class execution_engine2:
         # At some point might do deeper type checking...
         if not isinstance(job_id, str):
             raise ValueError('Method run_job return value ' +
-                             'job_id is not type str as required.')
-        # return the results
-        return [job_id]
-
-    def retry_job(self, ctx, params):
-        """
-        Retry a job based on record in ee2 db, return a job id or error out
-        :param params: instance of type "RetryParams" (job_id of job to
-           retry) -> structure: parameter "job_id" of type "job_id" (A job
-           id.), parameter "as_admin" of type "boolean" (@range [0,1])
-        :returns: instance of type "job_id" (A job id.)
-        """
-        # ctx is the context object
-        # return variables are: job_id
-        #BEGIN retry_job
-        mr = SDKMethodRunner(
-            user_clients=self.gen_cfg.get_user_clients(ctx),
-            clients = self.clients,
-            job_permission_cache=self.job_permission_cache,
-            admin_permissions_cache=self.admin_permissions_cache
-        )
-        job_id = mr.retry(job_id=params['job_id'], as_admin=params.get('as_admin'))
-        #END retry_job
-
-        # At some point might do deeper type checking...
-        if not isinstance(job_id, str):
-            raise ValueError('Method retry_job return value ' +
                              'job_id is not type str as required.')
         # return the results
         return [job_id]
@@ -360,7 +332,7 @@ class execution_engine2:
            provided user's fair share quota. ignore_concurrency_limits:
            ignore any limits on simultaneous job runs. Default false.
            scheduler_requirements: arbitrary key-value pairs to be provided
-           to the job scheduler. Requires knowledge ot the scheduler
+           to the job scheduler. Requires knowledge of the scheduler
            interface. debug_mode: Whether to run the job in debug mode.
            Default false.) -> structure: parameter "request_cpus" of Long,
            parameter "requst_memory" of Long, parameter "request_disk" of
@@ -402,6 +374,33 @@ class execution_engine2:
                              'job_ids is not type dict as required.')
         # return the results
         return [job_ids]
+
+    def retry_job(self, ctx, params):
+        """
+        Retry a job based on record in ee2 db, return a job id or error out
+        :param params: instance of type "RetryParams" (job_id of job to
+           retry) -> structure: parameter "job_id" of type "job_id" (A job
+           id.), parameter "as_admin" of type "boolean" (@range [0,1])
+        :returns: instance of type "job_id" (A job id.)
+        """
+        # ctx is the context object
+        # return variables are: job_id
+        #BEGIN retry_job
+        mr = SDKMethodRunner(
+            user_clients=self.gen_cfg.get_user_clients(ctx),
+            clients = self.clients,
+            job_permission_cache=self.job_permission_cache,
+            admin_permissions_cache=self.admin_permissions_cache
+        )
+        job_id = mr.retry(job_id=params['job_id'], as_admin=params.get('as_admin'))
+        #END retry_job
+
+        # At some point might do deeper type checking...
+        if not isinstance(job_id, str):
+            raise ValueError('Method retry_job return value ' +
+                             'job_id is not type str as required.')
+        # return the results
+        return [job_id]
 
     def abandon_children(self, ctx, params):
         """
@@ -494,7 +493,7 @@ class execution_engine2:
            provided user's fair share quota. ignore_concurrency_limits:
            ignore any limits on simultaneous job runs. Default false.
            scheduler_requirements: arbitrary key-value pairs to be provided
-           to the job scheduler. Requires knowledge ot the scheduler
+           to the job scheduler. Requires knowledge of the scheduler
            interface. debug_mode: Whether to run the job in debug mode.
            Default false.) -> structure: parameter "request_cpus" of Long,
            parameter "requst_memory" of Long, parameter "request_disk" of
@@ -611,7 +610,7 @@ class execution_engine2:
            provided user's fair share quota. ignore_concurrency_limits:
            ignore any limits on simultaneous job runs. Default false.
            scheduler_requirements: arbitrary key-value pairs to be provided
-           to the job scheduler. Requires knowledge ot the scheduler
+           to the job scheduler. Requires knowledge of the scheduler
            interface. debug_mode: Whether to run the job in debug mode.
            Default false.) -> structure: parameter "request_cpus" of Long,
            parameter "requst_memory" of Long, parameter "request_disk" of
@@ -922,7 +921,7 @@ class execution_engine2:
            provided user's fair share quota. ignore_concurrency_limits:
            ignore any limits on simultaneous job runs. Default false.
            scheduler_requirements: arbitrary key-value pairs to be provided
-           to the job scheduler. Requires knowledge ot the scheduler
+           to the job scheduler. Requires knowledge of the scheduler
            interface. debug_mode: Whether to run the job in debug mode.
            Default false.) -> structure: parameter "request_cpus" of Long,
            parameter "requst_memory" of Long, parameter "request_disk" of
@@ -1065,7 +1064,7 @@ class execution_engine2:
            provided user's fair share quota. ignore_concurrency_limits:
            ignore any limits on simultaneous job runs. Default false.
            scheduler_requirements: arbitrary key-value pairs to be provided
-           to the job scheduler. Requires knowledge ot the scheduler
+           to the job scheduler. Requires knowledge of the scheduler
            interface. debug_mode: Whether to run the job in debug mode.
            Default false.) -> structure: parameter "request_cpus" of Long,
            parameter "requst_memory" of Long, parameter "request_disk" of
@@ -1173,7 +1172,7 @@ class execution_engine2:
            provided user's fair share quota. ignore_concurrency_limits:
            ignore any limits on simultaneous job runs. Default false.
            scheduler_requirements: arbitrary key-value pairs to be provided
-           to the job scheduler. Requires knowledge ot the scheduler
+           to the job scheduler. Requires knowledge of the scheduler
            interface. debug_mode: Whether to run the job in debug mode.
            Default false.) -> structure: parameter "request_cpus" of Long,
            parameter "requst_memory" of Long, parameter "request_disk" of
@@ -1314,7 +1313,7 @@ class execution_engine2:
            provided user's fair share quota. ignore_concurrency_limits:
            ignore any limits on simultaneous job runs. Default false.
            scheduler_requirements: arbitrary key-value pairs to be provided
-           to the job scheduler. Requires knowledge ot the scheduler
+           to the job scheduler. Requires knowledge of the scheduler
            interface. debug_mode: Whether to run the job in debug mode.
            Default false.) -> structure: parameter "request_cpus" of Long,
            parameter "requst_memory" of Long, parameter "request_disk" of
@@ -1458,7 +1457,7 @@ class execution_engine2:
            provided user's fair share quota. ignore_concurrency_limits:
            ignore any limits on simultaneous job runs. Default false.
            scheduler_requirements: arbitrary key-value pairs to be provided
-           to the job scheduler. Requires knowledge ot the scheduler
+           to the job scheduler. Requires knowledge of the scheduler
            interface. debug_mode: Whether to run the job in debug mode.
            Default false.) -> structure: parameter "request_cpus" of Long,
            parameter "requst_memory" of Long, parameter "request_disk" of
@@ -1746,7 +1745,7 @@ class execution_engine2:
            provided user's fair share quota. ignore_concurrency_limits:
            ignore any limits on simultaneous job runs. Default false.
            scheduler_requirements: arbitrary key-value pairs to be provided
-           to the job scheduler. Requires knowledge ot the scheduler
+           to the job scheduler. Requires knowledge of the scheduler
            interface. debug_mode: Whether to run the job in debug mode.
            Default false.) -> structure: parameter "request_cpus" of Long,
            parameter "requst_memory" of Long, parameter "request_disk" of
@@ -1949,7 +1948,7 @@ class execution_engine2:
            provided user's fair share quota. ignore_concurrency_limits:
            ignore any limits on simultaneous job runs. Default false.
            scheduler_requirements: arbitrary key-value pairs to be provided
-           to the job scheduler. Requires knowledge ot the scheduler
+           to the job scheduler. Requires knowledge of the scheduler
            interface. debug_mode: Whether to run the job in debug mode.
            Default false.) -> structure: parameter "request_cpus" of Long,
            parameter "requst_memory" of Long, parameter "request_disk" of

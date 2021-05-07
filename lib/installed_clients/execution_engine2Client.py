@@ -100,8 +100,7 @@ class execution_engine2(object):
 
     def run_job(self, params, context=None):
         """
-        Start a new job (long running method of service registered in ServiceRegistery).
-        Such job runs Docker image for this service in script mode.
+        Start a new job.
         :param params: instance of type "RunJobParams" (method - the SDK
            method to run in module.method format, e.g.
            'KBaseTrees.construct_species_tree' app_id - the id of the
@@ -120,21 +119,57 @@ class execution_engine2(object):
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
            Warning: No checking is done on the validity of the job ID, and
-           the parent job record is not altered. run_job_batch ignores this
-           parameter when starting a job batch.) -> structure: parameter
-           "method" of String, parameter "app_id" of String, parameter
-           "params" of list of unspecified object, parameter "service_ver" of
-           String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
-           structure: parameter "run_id" of String, parameter "token_id" of
-           String, parameter "tag" of String, parameter "cell_id" of String,
-           parameter "wsid" of Long, parameter "parent_job_id" of String
+           the parent job record is not altered. Submitting a job with a
+           parent ID to run_job_batch will cause an error to be returned.
+           job_requirements: the requirements for the job. The user must have
+           full EE2 administration rights to use this parameter. Note that
+           the job_requirements are not returned along with the rest of the
+           job parameters when querying the EE2 API - they are only
+           considered when submitting a job. as_admin: run the job with full
+           EE2 permissions, meaning that any supplied workspace IDs are not
+           checked for accessibility and job_requirements may be supplied.
+           The user must have full EE2 administration rights. Note that this
+           field is not included in returned data when querying EE2.) ->
+           structure: parameter "method" of String, parameter "app_id" of
+           String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "source_ws_objects"
+           of list of type "wsref" (A workspace object reference of the form
+           X/Y/Z, where X is the workspace id, Y is the object id, Z is the
+           version.), parameter "meta" of type "Meta" (Narrative metadata for
+           a job. All fields are optional. run_id - the Narrative-assigned ID
+           of the job run. 1:1 with a job ID. token_id - the ID of the token
+           used to run the method. tag - the release tag, e.g.
+           dev/beta/release. cell_id - the ID of the narrative cell from
+           which the job was run.) -> structure: parameter "run_id" of
+           String, parameter "token_id" of String, parameter "tag" of String,
+           parameter "cell_id" of String, parameter "wsid" of Long, parameter
+           "parent_job_id" of String, parameter "job_requirements" of type
+           "JobRequirements" (Job requirements for a job. All fields are
+           optional. To submit job requirements, the user must have full EE2
+           admin permissions. Ignored for the run concierge endpoint.
+           request_cpus: the number of CPUs to request for the job.
+           request_memory: the amount of memory, in MB, to request for the
+           job. request_disk: the amount of disk space, in GB, to request for
+           the job. client_group: the name of the client group on which to
+           run the job. client_group_regex: Whether to treat the client group
+           string, whether provided here, from the catalog, or as a default,
+           as a regular expression when matching clientgroups. Default True
+           for HTC, but the default depends on the scheduler. Omit to use the
+           default. bill_to_user: the job will be counted against the
+           provided user's fair share quota. ignore_concurrency_limits:
+           ignore any limits on simultaneous job runs. Default false.
+           scheduler_requirements: arbitrary key-value pairs to be provided
+           to the job scheduler. Requires knowledge of the scheduler
+           interface. debug_mode: Whether to run the job in debug mode.
+           Default false.) -> structure: parameter "request_cpus" of Long,
+           parameter "requst_memory" of Long, parameter "request_disk" of
+           Long, parameter "client_group" of String, parameter
+           "client_group_regex" of type "boolean" (@range [0,1]), parameter
+           "bill_to_user" of String, parameter "ignore_concurrency_limits" of
+           type "boolean" (@range [0,1]), parameter "scheduler_requirements"
+           of mapping from String to String, parameter "debug_mode" of type
+           "boolean" (@range [0,1]), parameter "as_admin" of type "boolean"
+           (@range [0,1])
         :returns: instance of type "job_id" (A job id.)
         """
         return self._client.call_method(
@@ -143,6 +178,9 @@ class execution_engine2(object):
 
     def run_job_batch(self, params, batch_params, context=None):
         """
+        Run a batch job, consisting of a parent job and one or more child jobs.
+        Note that the as_admin parameters in the list of child jobs are ignored -
+        only the as_admin parameter in the batch_params is considered.
         :param params: instance of list of type "RunJobParams" (method - the
            SDK method to run in module.method format, e.g.
            'KBaseTrees.construct_species_tree' app_id - the id of the
@@ -161,23 +199,65 @@ class execution_engine2(object):
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
            Warning: No checking is done on the validity of the job ID, and
-           the parent job record is not altered. run_job_batch ignores this
-           parameter when starting a job batch.) -> structure: parameter
-           "method" of String, parameter "app_id" of String, parameter
-           "params" of list of unspecified object, parameter "service_ver" of
-           String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
-           structure: parameter "run_id" of String, parameter "token_id" of
-           String, parameter "tag" of String, parameter "cell_id" of String,
-           parameter "wsid" of Long, parameter "parent_job_id" of String
-        :param batch_params: instance of type "BatchParams" -> structure:
-           parameter "wsid" of Long
+           the parent job record is not altered. Submitting a job with a
+           parent ID to run_job_batch will cause an error to be returned.
+           job_requirements: the requirements for the job. The user must have
+           full EE2 administration rights to use this parameter. Note that
+           the job_requirements are not returned along with the rest of the
+           job parameters when querying the EE2 API - they are only
+           considered when submitting a job. as_admin: run the job with full
+           EE2 permissions, meaning that any supplied workspace IDs are not
+           checked for accessibility and job_requirements may be supplied.
+           The user must have full EE2 administration rights. Note that this
+           field is not included in returned data when querying EE2.) ->
+           structure: parameter "method" of String, parameter "app_id" of
+           String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "source_ws_objects"
+           of list of type "wsref" (A workspace object reference of the form
+           X/Y/Z, where X is the workspace id, Y is the object id, Z is the
+           version.), parameter "meta" of type "Meta" (Narrative metadata for
+           a job. All fields are optional. run_id - the Narrative-assigned ID
+           of the job run. 1:1 with a job ID. token_id - the ID of the token
+           used to run the method. tag - the release tag, e.g.
+           dev/beta/release. cell_id - the ID of the narrative cell from
+           which the job was run.) -> structure: parameter "run_id" of
+           String, parameter "token_id" of String, parameter "tag" of String,
+           parameter "cell_id" of String, parameter "wsid" of Long, parameter
+           "parent_job_id" of String, parameter "job_requirements" of type
+           "JobRequirements" (Job requirements for a job. All fields are
+           optional. To submit job requirements, the user must have full EE2
+           admin permissions. Ignored for the run concierge endpoint.
+           request_cpus: the number of CPUs to request for the job.
+           request_memory: the amount of memory, in MB, to request for the
+           job. request_disk: the amount of disk space, in GB, to request for
+           the job. client_group: the name of the client group on which to
+           run the job. client_group_regex: Whether to treat the client group
+           string, whether provided here, from the catalog, or as a default,
+           as a regular expression when matching clientgroups. Default True
+           for HTC, but the default depends on the scheduler. Omit to use the
+           default. bill_to_user: the job will be counted against the
+           provided user's fair share quota. ignore_concurrency_limits:
+           ignore any limits on simultaneous job runs. Default false.
+           scheduler_requirements: arbitrary key-value pairs to be provided
+           to the job scheduler. Requires knowledge of the scheduler
+           interface. debug_mode: Whether to run the job in debug mode.
+           Default false.) -> structure: parameter "request_cpus" of Long,
+           parameter "requst_memory" of Long, parameter "request_disk" of
+           Long, parameter "client_group" of String, parameter
+           "client_group_regex" of type "boolean" (@range [0,1]), parameter
+           "bill_to_user" of String, parameter "ignore_concurrency_limits" of
+           type "boolean" (@range [0,1]), parameter "scheduler_requirements"
+           of mapping from String to String, parameter "debug_mode" of type
+           "boolean" (@range [0,1]), parameter "as_admin" of type "boolean"
+           (@range [0,1])
+        :param batch_params: instance of type "BatchParams" (Additional
+           parameters for a batch job. wsid: the workspace with which to
+           associate the parent job. as_admin: run the job with full EE2
+           permissions, meaning that any supplied workspace IDs are not
+           checked for accessibility and job_requirements may be supplied.
+           The user must have full EE2 administration rights.) -> structure:
+           parameter "wsid" of Long, parameter "as_admin" of type "boolean"
+           (@range [0,1])
         :returns: instance of type "BatchSubmission" -> structure: parameter
            "parent_job_id" of type "job_id" (A job id.), parameter
            "child_job_ids" of list of type "job_id" (A job id.)
@@ -187,6 +267,18 @@ class execution_engine2(object):
             [params, batch_params],
             self._service_ver,
             context,
+        )
+
+    def retry_job(self, params, context=None):
+        """
+        Retry a job based on record in ee2 db, return a job id or error out
+        :param params: instance of type "RetryParams" (job_id of job to
+           retry) -> structure: parameter "job_id" of type "job_id" (A job
+           id.), parameter "as_admin" of type "boolean" (@range [0,1])
+        :returns: instance of type "job_id" (A job id.)
+        """
+        return self._client.call_method(
+            "execution_engine2.retry_job", [params], self._service_ver, context
         )
 
     def abandon_children(self, params, context=None):
@@ -223,21 +315,57 @@ class execution_engine2(object):
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
            Warning: No checking is done on the validity of the job ID, and
-           the parent job record is not altered. run_job_batch ignores this
-           parameter when starting a job batch.) -> structure: parameter
-           "method" of String, parameter "app_id" of String, parameter
-           "params" of list of unspecified object, parameter "service_ver" of
-           String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
-           structure: parameter "run_id" of String, parameter "token_id" of
-           String, parameter "tag" of String, parameter "cell_id" of String,
-           parameter "wsid" of Long, parameter "parent_job_id" of String
+           the parent job record is not altered. Submitting a job with a
+           parent ID to run_job_batch will cause an error to be returned.
+           job_requirements: the requirements for the job. The user must have
+           full EE2 administration rights to use this parameter. Note that
+           the job_requirements are not returned along with the rest of the
+           job parameters when querying the EE2 API - they are only
+           considered when submitting a job. as_admin: run the job with full
+           EE2 permissions, meaning that any supplied workspace IDs are not
+           checked for accessibility and job_requirements may be supplied.
+           The user must have full EE2 administration rights. Note that this
+           field is not included in returned data when querying EE2.) ->
+           structure: parameter "method" of String, parameter "app_id" of
+           String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "source_ws_objects"
+           of list of type "wsref" (A workspace object reference of the form
+           X/Y/Z, where X is the workspace id, Y is the object id, Z is the
+           version.), parameter "meta" of type "Meta" (Narrative metadata for
+           a job. All fields are optional. run_id - the Narrative-assigned ID
+           of the job run. 1:1 with a job ID. token_id - the ID of the token
+           used to run the method. tag - the release tag, e.g.
+           dev/beta/release. cell_id - the ID of the narrative cell from
+           which the job was run.) -> structure: parameter "run_id" of
+           String, parameter "token_id" of String, parameter "tag" of String,
+           parameter "cell_id" of String, parameter "wsid" of Long, parameter
+           "parent_job_id" of String, parameter "job_requirements" of type
+           "JobRequirements" (Job requirements for a job. All fields are
+           optional. To submit job requirements, the user must have full EE2
+           admin permissions. Ignored for the run concierge endpoint.
+           request_cpus: the number of CPUs to request for the job.
+           request_memory: the amount of memory, in MB, to request for the
+           job. request_disk: the amount of disk space, in GB, to request for
+           the job. client_group: the name of the client group on which to
+           run the job. client_group_regex: Whether to treat the client group
+           string, whether provided here, from the catalog, or as a default,
+           as a regular expression when matching clientgroups. Default True
+           for HTC, but the default depends on the scheduler. Omit to use the
+           default. bill_to_user: the job will be counted against the
+           provided user's fair share quota. ignore_concurrency_limits:
+           ignore any limits on simultaneous job runs. Default false.
+           scheduler_requirements: arbitrary key-value pairs to be provided
+           to the job scheduler. Requires knowledge of the scheduler
+           interface. debug_mode: Whether to run the job in debug mode.
+           Default false.) -> structure: parameter "request_cpus" of Long,
+           parameter "requst_memory" of Long, parameter "request_disk" of
+           Long, parameter "client_group" of String, parameter
+           "client_group_regex" of type "boolean" (@range [0,1]), parameter
+           "bill_to_user" of String, parameter "ignore_concurrency_limits" of
+           type "boolean" (@range [0,1]), parameter "scheduler_requirements"
+           of mapping from String to String, parameter "debug_mode" of type
+           "boolean" (@range [0,1]), parameter "as_admin" of type "boolean"
+           (@range [0,1])
         :param concierge_params: instance of type "ConciergeParams"
            (EE2Constants Concierge Params are request_cpus: int
            request_memory: int in MB request_disk: int in GB job_priority:
@@ -294,21 +422,57 @@ class execution_engine2(object):
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
            Warning: No checking is done on the validity of the job ID, and
-           the parent job record is not altered. run_job_batch ignores this
-           parameter when starting a job batch.) -> structure: parameter
-           "method" of String, parameter "app_id" of String, parameter
-           "params" of list of unspecified object, parameter "service_ver" of
-           String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
-           structure: parameter "run_id" of String, parameter "token_id" of
-           String, parameter "tag" of String, parameter "cell_id" of String,
-           parameter "wsid" of Long, parameter "parent_job_id" of String
+           the parent job record is not altered. Submitting a job with a
+           parent ID to run_job_batch will cause an error to be returned.
+           job_requirements: the requirements for the job. The user must have
+           full EE2 administration rights to use this parameter. Note that
+           the job_requirements are not returned along with the rest of the
+           job parameters when querying the EE2 API - they are only
+           considered when submitting a job. as_admin: run the job with full
+           EE2 permissions, meaning that any supplied workspace IDs are not
+           checked for accessibility and job_requirements may be supplied.
+           The user must have full EE2 administration rights. Note that this
+           field is not included in returned data when querying EE2.) ->
+           structure: parameter "method" of String, parameter "app_id" of
+           String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "source_ws_objects"
+           of list of type "wsref" (A workspace object reference of the form
+           X/Y/Z, where X is the workspace id, Y is the object id, Z is the
+           version.), parameter "meta" of type "Meta" (Narrative metadata for
+           a job. All fields are optional. run_id - the Narrative-assigned ID
+           of the job run. 1:1 with a job ID. token_id - the ID of the token
+           used to run the method. tag - the release tag, e.g.
+           dev/beta/release. cell_id - the ID of the narrative cell from
+           which the job was run.) -> structure: parameter "run_id" of
+           String, parameter "token_id" of String, parameter "tag" of String,
+           parameter "cell_id" of String, parameter "wsid" of Long, parameter
+           "parent_job_id" of String, parameter "job_requirements" of type
+           "JobRequirements" (Job requirements for a job. All fields are
+           optional. To submit job requirements, the user must have full EE2
+           admin permissions. Ignored for the run concierge endpoint.
+           request_cpus: the number of CPUs to request for the job.
+           request_memory: the amount of memory, in MB, to request for the
+           job. request_disk: the amount of disk space, in GB, to request for
+           the job. client_group: the name of the client group on which to
+           run the job. client_group_regex: Whether to treat the client group
+           string, whether provided here, from the catalog, or as a default,
+           as a regular expression when matching clientgroups. Default True
+           for HTC, but the default depends on the scheduler. Omit to use the
+           default. bill_to_user: the job will be counted against the
+           provided user's fair share quota. ignore_concurrency_limits:
+           ignore any limits on simultaneous job runs. Default false.
+           scheduler_requirements: arbitrary key-value pairs to be provided
+           to the job scheduler. Requires knowledge of the scheduler
+           interface. debug_mode: Whether to run the job in debug mode.
+           Default false.) -> structure: parameter "request_cpus" of Long,
+           parameter "requst_memory" of Long, parameter "request_disk" of
+           Long, parameter "client_group" of String, parameter
+           "client_group_regex" of type "boolean" (@range [0,1]), parameter
+           "bill_to_user" of String, parameter "ignore_concurrency_limits" of
+           type "boolean" (@range [0,1]), parameter "scheduler_requirements"
+           of mapping from String to String, parameter "debug_mode" of type
+           "boolean" (@range [0,1]), parameter "as_admin" of type "boolean"
+           (@range [0,1])
         """
         return self._client.call_method(
             "execution_engine2.get_job_params", [params], self._service_ver, context
@@ -470,29 +634,64 @@ class execution_engine2(object):
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
            Warning: No checking is done on the validity of the job ID, and
-           the parent job record is not altered. run_job_batch ignores this
-           parameter when starting a job batch.) -> structure: parameter
-           "method" of String, parameter "app_id" of String, parameter
-           "params" of list of unspecified object, parameter "service_ver" of
-           String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
-           structure: parameter "run_id" of String, parameter "token_id" of
-           String, parameter "tag" of String, parameter "cell_id" of String,
-           parameter "wsid" of Long, parameter "parent_job_id" of String,
-           parameter "created" of Long, parameter "queued" of Long, parameter
-           "estimating" of Long, parameter "running" of Long, parameter
-           "finished" of Long, parameter "updated" of Long, parameter "error"
-           of type "JsonRpcError" (Error block of JSON RPC response) ->
-           structure: parameter "name" of String, parameter "code" of Long,
-           parameter "message" of String, parameter "error" of String,
-           parameter "error_code" of Long, parameter "errormsg" of String,
-           parameter "terminated_code" of Long
+           the parent job record is not altered. Submitting a job with a
+           parent ID to run_job_batch will cause an error to be returned.
+           job_requirements: the requirements for the job. The user must have
+           full EE2 administration rights to use this parameter. Note that
+           the job_requirements are not returned along with the rest of the
+           job parameters when querying the EE2 API - they are only
+           considered when submitting a job. as_admin: run the job with full
+           EE2 permissions, meaning that any supplied workspace IDs are not
+           checked for accessibility and job_requirements may be supplied.
+           The user must have full EE2 administration rights. Note that this
+           field is not included in returned data when querying EE2.) ->
+           structure: parameter "method" of String, parameter "app_id" of
+           String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "source_ws_objects"
+           of list of type "wsref" (A workspace object reference of the form
+           X/Y/Z, where X is the workspace id, Y is the object id, Z is the
+           version.), parameter "meta" of type "Meta" (Narrative metadata for
+           a job. All fields are optional. run_id - the Narrative-assigned ID
+           of the job run. 1:1 with a job ID. token_id - the ID of the token
+           used to run the method. tag - the release tag, e.g.
+           dev/beta/release. cell_id - the ID of the narrative cell from
+           which the job was run.) -> structure: parameter "run_id" of
+           String, parameter "token_id" of String, parameter "tag" of String,
+           parameter "cell_id" of String, parameter "wsid" of Long, parameter
+           "parent_job_id" of String, parameter "job_requirements" of type
+           "JobRequirements" (Job requirements for a job. All fields are
+           optional. To submit job requirements, the user must have full EE2
+           admin permissions. Ignored for the run concierge endpoint.
+           request_cpus: the number of CPUs to request for the job.
+           request_memory: the amount of memory, in MB, to request for the
+           job. request_disk: the amount of disk space, in GB, to request for
+           the job. client_group: the name of the client group on which to
+           run the job. client_group_regex: Whether to treat the client group
+           string, whether provided here, from the catalog, or as a default,
+           as a regular expression when matching clientgroups. Default True
+           for HTC, but the default depends on the scheduler. Omit to use the
+           default. bill_to_user: the job will be counted against the
+           provided user's fair share quota. ignore_concurrency_limits:
+           ignore any limits on simultaneous job runs. Default false.
+           scheduler_requirements: arbitrary key-value pairs to be provided
+           to the job scheduler. Requires knowledge of the scheduler
+           interface. debug_mode: Whether to run the job in debug mode.
+           Default false.) -> structure: parameter "request_cpus" of Long,
+           parameter "requst_memory" of Long, parameter "request_disk" of
+           Long, parameter "client_group" of String, parameter
+           "client_group_regex" of type "boolean" (@range [0,1]), parameter
+           "bill_to_user" of String, parameter "ignore_concurrency_limits" of
+           type "boolean" (@range [0,1]), parameter "scheduler_requirements"
+           of mapping from String to String, parameter "debug_mode" of type
+           "boolean" (@range [0,1]), parameter "as_admin" of type "boolean"
+           (@range [0,1]), parameter "created" of Long, parameter "queued" of
+           Long, parameter "estimating" of Long, parameter "running" of Long,
+           parameter "finished" of Long, parameter "updated" of Long,
+           parameter "error" of type "JsonRpcError" (Error block of JSON RPC
+           response) -> structure: parameter "name" of String, parameter
+           "code" of Long, parameter "message" of String, parameter "error"
+           of String, parameter "error_code" of Long, parameter "errormsg" of
+           String, parameter "terminated_code" of Long
         """
         return self._client.call_method(
             "execution_engine2.check_job", [params], self._service_ver, context
@@ -562,41 +761,76 @@ class execution_engine2(object):
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
            Warning: No checking is done on the validity of the job ID, and
-           the parent job record is not altered. run_job_batch ignores this
-           parameter when starting a job batch.) -> structure: parameter
-           "method" of String, parameter "app_id" of String, parameter
-           "params" of list of unspecified object, parameter "service_ver" of
-           String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
-           structure: parameter "run_id" of String, parameter "token_id" of
-           String, parameter "tag" of String, parameter "cell_id" of String,
-           parameter "wsid" of Long, parameter "parent_job_id" of String,
-           parameter "created" of Long, parameter "queued" of Long, parameter
-           "estimating" of Long, parameter "running" of Long, parameter
-           "finished" of Long, parameter "updated" of Long, parameter "error"
-           of type "JsonRpcError" (Error block of JSON RPC response) ->
-           structure: parameter "name" of String, parameter "code" of Long,
-           parameter "message" of String, parameter "error" of String,
-           parameter "error_code" of Long, parameter "errormsg" of String,
-           parameter "terminated_code" of Long, parameter "child_jobstates"
-           of list of type "JobState" (job_id - string - id of the job user -
-           string - user who started the job wsid - int - optional id of the
-           workspace where the job is bound authstrat - string - what
-           strategy used to authenticate the job job_input - object - inputs
-           to the job (from the run_job call)  ## TODO - verify updated - int
-           - timestamp since epoch in milliseconds of the last time the
-           status was updated running - int - timestamp since epoch in
-           milliseconds of when it entered the running state created - int -
-           timestamp since epoch in milliseconds when the job was created
-           finished - int - timestamp since epoch in milliseconds when the
-           job was finished status - string - status of the job. one of the
-           following: created - job has been created in the service
+           the parent job record is not altered. Submitting a job with a
+           parent ID to run_job_batch will cause an error to be returned.
+           job_requirements: the requirements for the job. The user must have
+           full EE2 administration rights to use this parameter. Note that
+           the job_requirements are not returned along with the rest of the
+           job parameters when querying the EE2 API - they are only
+           considered when submitting a job. as_admin: run the job with full
+           EE2 permissions, meaning that any supplied workspace IDs are not
+           checked for accessibility and job_requirements may be supplied.
+           The user must have full EE2 administration rights. Note that this
+           field is not included in returned data when querying EE2.) ->
+           structure: parameter "method" of String, parameter "app_id" of
+           String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "source_ws_objects"
+           of list of type "wsref" (A workspace object reference of the form
+           X/Y/Z, where X is the workspace id, Y is the object id, Z is the
+           version.), parameter "meta" of type "Meta" (Narrative metadata for
+           a job. All fields are optional. run_id - the Narrative-assigned ID
+           of the job run. 1:1 with a job ID. token_id - the ID of the token
+           used to run the method. tag - the release tag, e.g.
+           dev/beta/release. cell_id - the ID of the narrative cell from
+           which the job was run.) -> structure: parameter "run_id" of
+           String, parameter "token_id" of String, parameter "tag" of String,
+           parameter "cell_id" of String, parameter "wsid" of Long, parameter
+           "parent_job_id" of String, parameter "job_requirements" of type
+           "JobRequirements" (Job requirements for a job. All fields are
+           optional. To submit job requirements, the user must have full EE2
+           admin permissions. Ignored for the run concierge endpoint.
+           request_cpus: the number of CPUs to request for the job.
+           request_memory: the amount of memory, in MB, to request for the
+           job. request_disk: the amount of disk space, in GB, to request for
+           the job. client_group: the name of the client group on which to
+           run the job. client_group_regex: Whether to treat the client group
+           string, whether provided here, from the catalog, or as a default,
+           as a regular expression when matching clientgroups. Default True
+           for HTC, but the default depends on the scheduler. Omit to use the
+           default. bill_to_user: the job will be counted against the
+           provided user's fair share quota. ignore_concurrency_limits:
+           ignore any limits on simultaneous job runs. Default false.
+           scheduler_requirements: arbitrary key-value pairs to be provided
+           to the job scheduler. Requires knowledge of the scheduler
+           interface. debug_mode: Whether to run the job in debug mode.
+           Default false.) -> structure: parameter "request_cpus" of Long,
+           parameter "requst_memory" of Long, parameter "request_disk" of
+           Long, parameter "client_group" of String, parameter
+           "client_group_regex" of type "boolean" (@range [0,1]), parameter
+           "bill_to_user" of String, parameter "ignore_concurrency_limits" of
+           type "boolean" (@range [0,1]), parameter "scheduler_requirements"
+           of mapping from String to String, parameter "debug_mode" of type
+           "boolean" (@range [0,1]), parameter "as_admin" of type "boolean"
+           (@range [0,1]), parameter "created" of Long, parameter "queued" of
+           Long, parameter "estimating" of Long, parameter "running" of Long,
+           parameter "finished" of Long, parameter "updated" of Long,
+           parameter "error" of type "JsonRpcError" (Error block of JSON RPC
+           response) -> structure: parameter "name" of String, parameter
+           "code" of Long, parameter "message" of String, parameter "error"
+           of String, parameter "error_code" of Long, parameter "errormsg" of
+           String, parameter "terminated_code" of Long, parameter
+           "child_jobstates" of list of type "JobState" (job_id - string - id
+           of the job user - string - user who started the job wsid - int -
+           optional id of the workspace where the job is bound authstrat -
+           string - what strategy used to authenticate the job job_input -
+           object - inputs to the job (from the run_job call)  ## TODO -
+           verify updated - int - timestamp since epoch in milliseconds of
+           the last time the status was updated running - int - timestamp
+           since epoch in milliseconds of when it entered the running state
+           created - int - timestamp since epoch in milliseconds when the job
+           was created finished - int - timestamp since epoch in milliseconds
+           when the job was finished status - string - status of the job. one
+           of the following: created - job has been created in the service
            estimating - an estimation job is running to estimate resources
            required for the main job, and which queue should be used queued -
            job is queued to be run running - job is running on a worker node
@@ -635,29 +869,64 @@ class execution_engine2(object):
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
            Warning: No checking is done on the validity of the job ID, and
-           the parent job record is not altered. run_job_batch ignores this
-           parameter when starting a job batch.) -> structure: parameter
-           "method" of String, parameter "app_id" of String, parameter
-           "params" of list of unspecified object, parameter "service_ver" of
-           String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
-           structure: parameter "run_id" of String, parameter "token_id" of
-           String, parameter "tag" of String, parameter "cell_id" of String,
-           parameter "wsid" of Long, parameter "parent_job_id" of String,
-           parameter "created" of Long, parameter "queued" of Long, parameter
-           "estimating" of Long, parameter "running" of Long, parameter
-           "finished" of Long, parameter "updated" of Long, parameter "error"
-           of type "JsonRpcError" (Error block of JSON RPC response) ->
-           structure: parameter "name" of String, parameter "code" of Long,
-           parameter "message" of String, parameter "error" of String,
-           parameter "error_code" of Long, parameter "errormsg" of String,
-           parameter "terminated_code" of Long
+           the parent job record is not altered. Submitting a job with a
+           parent ID to run_job_batch will cause an error to be returned.
+           job_requirements: the requirements for the job. The user must have
+           full EE2 administration rights to use this parameter. Note that
+           the job_requirements are not returned along with the rest of the
+           job parameters when querying the EE2 API - they are only
+           considered when submitting a job. as_admin: run the job with full
+           EE2 permissions, meaning that any supplied workspace IDs are not
+           checked for accessibility and job_requirements may be supplied.
+           The user must have full EE2 administration rights. Note that this
+           field is not included in returned data when querying EE2.) ->
+           structure: parameter "method" of String, parameter "app_id" of
+           String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "source_ws_objects"
+           of list of type "wsref" (A workspace object reference of the form
+           X/Y/Z, where X is the workspace id, Y is the object id, Z is the
+           version.), parameter "meta" of type "Meta" (Narrative metadata for
+           a job. All fields are optional. run_id - the Narrative-assigned ID
+           of the job run. 1:1 with a job ID. token_id - the ID of the token
+           used to run the method. tag - the release tag, e.g.
+           dev/beta/release. cell_id - the ID of the narrative cell from
+           which the job was run.) -> structure: parameter "run_id" of
+           String, parameter "token_id" of String, parameter "tag" of String,
+           parameter "cell_id" of String, parameter "wsid" of Long, parameter
+           "parent_job_id" of String, parameter "job_requirements" of type
+           "JobRequirements" (Job requirements for a job. All fields are
+           optional. To submit job requirements, the user must have full EE2
+           admin permissions. Ignored for the run concierge endpoint.
+           request_cpus: the number of CPUs to request for the job.
+           request_memory: the amount of memory, in MB, to request for the
+           job. request_disk: the amount of disk space, in GB, to request for
+           the job. client_group: the name of the client group on which to
+           run the job. client_group_regex: Whether to treat the client group
+           string, whether provided here, from the catalog, or as a default,
+           as a regular expression when matching clientgroups. Default True
+           for HTC, but the default depends on the scheduler. Omit to use the
+           default. bill_to_user: the job will be counted against the
+           provided user's fair share quota. ignore_concurrency_limits:
+           ignore any limits on simultaneous job runs. Default false.
+           scheduler_requirements: arbitrary key-value pairs to be provided
+           to the job scheduler. Requires knowledge of the scheduler
+           interface. debug_mode: Whether to run the job in debug mode.
+           Default false.) -> structure: parameter "request_cpus" of Long,
+           parameter "requst_memory" of Long, parameter "request_disk" of
+           Long, parameter "client_group" of String, parameter
+           "client_group_regex" of type "boolean" (@range [0,1]), parameter
+           "bill_to_user" of String, parameter "ignore_concurrency_limits" of
+           type "boolean" (@range [0,1]), parameter "scheduler_requirements"
+           of mapping from String to String, parameter "debug_mode" of type
+           "boolean" (@range [0,1]), parameter "as_admin" of type "boolean"
+           (@range [0,1]), parameter "created" of Long, parameter "queued" of
+           Long, parameter "estimating" of Long, parameter "running" of Long,
+           parameter "finished" of Long, parameter "updated" of Long,
+           parameter "error" of type "JsonRpcError" (Error block of JSON RPC
+           response) -> structure: parameter "name" of String, parameter
+           "code" of Long, parameter "message" of String, parameter "error"
+           of String, parameter "error_code" of Long, parameter "errormsg" of
+           String, parameter "terminated_code" of Long
         """
         return self._client.call_method(
             "execution_engine2.check_job_batch", [params], self._service_ver, context
@@ -725,29 +994,64 @@ class execution_engine2(object):
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
            Warning: No checking is done on the validity of the job ID, and
-           the parent job record is not altered. run_job_batch ignores this
-           parameter when starting a job batch.) -> structure: parameter
-           "method" of String, parameter "app_id" of String, parameter
-           "params" of list of unspecified object, parameter "service_ver" of
-           String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
-           structure: parameter "run_id" of String, parameter "token_id" of
-           String, parameter "tag" of String, parameter "cell_id" of String,
-           parameter "wsid" of Long, parameter "parent_job_id" of String,
-           parameter "created" of Long, parameter "queued" of Long, parameter
-           "estimating" of Long, parameter "running" of Long, parameter
-           "finished" of Long, parameter "updated" of Long, parameter "error"
-           of type "JsonRpcError" (Error block of JSON RPC response) ->
-           structure: parameter "name" of String, parameter "code" of Long,
-           parameter "message" of String, parameter "error" of String,
-           parameter "error_code" of Long, parameter "errormsg" of String,
-           parameter "terminated_code" of Long
+           the parent job record is not altered. Submitting a job with a
+           parent ID to run_job_batch will cause an error to be returned.
+           job_requirements: the requirements for the job. The user must have
+           full EE2 administration rights to use this parameter. Note that
+           the job_requirements are not returned along with the rest of the
+           job parameters when querying the EE2 API - they are only
+           considered when submitting a job. as_admin: run the job with full
+           EE2 permissions, meaning that any supplied workspace IDs are not
+           checked for accessibility and job_requirements may be supplied.
+           The user must have full EE2 administration rights. Note that this
+           field is not included in returned data when querying EE2.) ->
+           structure: parameter "method" of String, parameter "app_id" of
+           String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "source_ws_objects"
+           of list of type "wsref" (A workspace object reference of the form
+           X/Y/Z, where X is the workspace id, Y is the object id, Z is the
+           version.), parameter "meta" of type "Meta" (Narrative metadata for
+           a job. All fields are optional. run_id - the Narrative-assigned ID
+           of the job run. 1:1 with a job ID. token_id - the ID of the token
+           used to run the method. tag - the release tag, e.g.
+           dev/beta/release. cell_id - the ID of the narrative cell from
+           which the job was run.) -> structure: parameter "run_id" of
+           String, parameter "token_id" of String, parameter "tag" of String,
+           parameter "cell_id" of String, parameter "wsid" of Long, parameter
+           "parent_job_id" of String, parameter "job_requirements" of type
+           "JobRequirements" (Job requirements for a job. All fields are
+           optional. To submit job requirements, the user must have full EE2
+           admin permissions. Ignored for the run concierge endpoint.
+           request_cpus: the number of CPUs to request for the job.
+           request_memory: the amount of memory, in MB, to request for the
+           job. request_disk: the amount of disk space, in GB, to request for
+           the job. client_group: the name of the client group on which to
+           run the job. client_group_regex: Whether to treat the client group
+           string, whether provided here, from the catalog, or as a default,
+           as a regular expression when matching clientgroups. Default True
+           for HTC, but the default depends on the scheduler. Omit to use the
+           default. bill_to_user: the job will be counted against the
+           provided user's fair share quota. ignore_concurrency_limits:
+           ignore any limits on simultaneous job runs. Default false.
+           scheduler_requirements: arbitrary key-value pairs to be provided
+           to the job scheduler. Requires knowledge of the scheduler
+           interface. debug_mode: Whether to run the job in debug mode.
+           Default false.) -> structure: parameter "request_cpus" of Long,
+           parameter "requst_memory" of Long, parameter "request_disk" of
+           Long, parameter "client_group" of String, parameter
+           "client_group_regex" of type "boolean" (@range [0,1]), parameter
+           "bill_to_user" of String, parameter "ignore_concurrency_limits" of
+           type "boolean" (@range [0,1]), parameter "scheduler_requirements"
+           of mapping from String to String, parameter "debug_mode" of type
+           "boolean" (@range [0,1]), parameter "as_admin" of type "boolean"
+           (@range [0,1]), parameter "created" of Long, parameter "queued" of
+           Long, parameter "estimating" of Long, parameter "running" of Long,
+           parameter "finished" of Long, parameter "updated" of Long,
+           parameter "error" of type "JsonRpcError" (Error block of JSON RPC
+           response) -> structure: parameter "name" of String, parameter
+           "code" of Long, parameter "message" of String, parameter "error"
+           of String, parameter "error_code" of Long, parameter "errormsg" of
+           String, parameter "terminated_code" of Long
         """
         return self._client.call_method(
             "execution_engine2.check_jobs", [params], self._service_ver, context
@@ -816,29 +1120,64 @@ class execution_engine2(object):
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
            Warning: No checking is done on the validity of the job ID, and
-           the parent job record is not altered. run_job_batch ignores this
-           parameter when starting a job batch.) -> structure: parameter
-           "method" of String, parameter "app_id" of String, parameter
-           "params" of list of unspecified object, parameter "service_ver" of
-           String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
-           structure: parameter "run_id" of String, parameter "token_id" of
-           String, parameter "tag" of String, parameter "cell_id" of String,
-           parameter "wsid" of Long, parameter "parent_job_id" of String,
-           parameter "created" of Long, parameter "queued" of Long, parameter
-           "estimating" of Long, parameter "running" of Long, parameter
-           "finished" of Long, parameter "updated" of Long, parameter "error"
-           of type "JsonRpcError" (Error block of JSON RPC response) ->
-           structure: parameter "name" of String, parameter "code" of Long,
-           parameter "message" of String, parameter "error" of String,
-           parameter "error_code" of Long, parameter "errormsg" of String,
-           parameter "terminated_code" of Long
+           the parent job record is not altered. Submitting a job with a
+           parent ID to run_job_batch will cause an error to be returned.
+           job_requirements: the requirements for the job. The user must have
+           full EE2 administration rights to use this parameter. Note that
+           the job_requirements are not returned along with the rest of the
+           job parameters when querying the EE2 API - they are only
+           considered when submitting a job. as_admin: run the job with full
+           EE2 permissions, meaning that any supplied workspace IDs are not
+           checked for accessibility and job_requirements may be supplied.
+           The user must have full EE2 administration rights. Note that this
+           field is not included in returned data when querying EE2.) ->
+           structure: parameter "method" of String, parameter "app_id" of
+           String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "source_ws_objects"
+           of list of type "wsref" (A workspace object reference of the form
+           X/Y/Z, where X is the workspace id, Y is the object id, Z is the
+           version.), parameter "meta" of type "Meta" (Narrative metadata for
+           a job. All fields are optional. run_id - the Narrative-assigned ID
+           of the job run. 1:1 with a job ID. token_id - the ID of the token
+           used to run the method. tag - the release tag, e.g.
+           dev/beta/release. cell_id - the ID of the narrative cell from
+           which the job was run.) -> structure: parameter "run_id" of
+           String, parameter "token_id" of String, parameter "tag" of String,
+           parameter "cell_id" of String, parameter "wsid" of Long, parameter
+           "parent_job_id" of String, parameter "job_requirements" of type
+           "JobRequirements" (Job requirements for a job. All fields are
+           optional. To submit job requirements, the user must have full EE2
+           admin permissions. Ignored for the run concierge endpoint.
+           request_cpus: the number of CPUs to request for the job.
+           request_memory: the amount of memory, in MB, to request for the
+           job. request_disk: the amount of disk space, in GB, to request for
+           the job. client_group: the name of the client group on which to
+           run the job. client_group_regex: Whether to treat the client group
+           string, whether provided here, from the catalog, or as a default,
+           as a regular expression when matching clientgroups. Default True
+           for HTC, but the default depends on the scheduler. Omit to use the
+           default. bill_to_user: the job will be counted against the
+           provided user's fair share quota. ignore_concurrency_limits:
+           ignore any limits on simultaneous job runs. Default false.
+           scheduler_requirements: arbitrary key-value pairs to be provided
+           to the job scheduler. Requires knowledge of the scheduler
+           interface. debug_mode: Whether to run the job in debug mode.
+           Default false.) -> structure: parameter "request_cpus" of Long,
+           parameter "requst_memory" of Long, parameter "request_disk" of
+           Long, parameter "client_group" of String, parameter
+           "client_group_regex" of type "boolean" (@range [0,1]), parameter
+           "bill_to_user" of String, parameter "ignore_concurrency_limits" of
+           type "boolean" (@range [0,1]), parameter "scheduler_requirements"
+           of mapping from String to String, parameter "debug_mode" of type
+           "boolean" (@range [0,1]), parameter "as_admin" of type "boolean"
+           (@range [0,1]), parameter "created" of Long, parameter "queued" of
+           Long, parameter "estimating" of Long, parameter "running" of Long,
+           parameter "finished" of Long, parameter "updated" of Long,
+           parameter "error" of type "JsonRpcError" (Error block of JSON RPC
+           response) -> structure: parameter "name" of String, parameter
+           "code" of Long, parameter "message" of String, parameter "error"
+           of String, parameter "error_code" of Long, parameter "errormsg" of
+           String, parameter "terminated_code" of Long
         """
         return self._client.call_method(
             "execution_engine2.check_workspace_jobs",
@@ -1014,31 +1353,66 @@ class execution_engine2(object):
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
            Warning: No checking is done on the validity of the job ID, and
-           the parent job record is not altered. run_job_batch ignores this
-           parameter when starting a job batch.) -> structure: parameter
-           "method" of String, parameter "app_id" of String, parameter
-           "params" of list of unspecified object, parameter "service_ver" of
-           String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
-           structure: parameter "run_id" of String, parameter "token_id" of
-           String, parameter "tag" of String, parameter "cell_id" of String,
-           parameter "wsid" of Long, parameter "parent_job_id" of String,
-           parameter "created" of Long, parameter "queued" of Long, parameter
-           "estimating" of Long, parameter "running" of Long, parameter
-           "finished" of Long, parameter "updated" of Long, parameter "error"
-           of type "JsonRpcError" (Error block of JSON RPC response) ->
-           structure: parameter "name" of String, parameter "code" of Long,
-           parameter "message" of String, parameter "error" of String,
-           parameter "error_code" of Long, parameter "errormsg" of String,
-           parameter "terminated_code" of Long, parameter "count" of Long,
-           parameter "query_count" of Long, parameter "filter" of mapping
-           from String to String, parameter "skip" of Long, parameter
+           the parent job record is not altered. Submitting a job with a
+           parent ID to run_job_batch will cause an error to be returned.
+           job_requirements: the requirements for the job. The user must have
+           full EE2 administration rights to use this parameter. Note that
+           the job_requirements are not returned along with the rest of the
+           job parameters when querying the EE2 API - they are only
+           considered when submitting a job. as_admin: run the job with full
+           EE2 permissions, meaning that any supplied workspace IDs are not
+           checked for accessibility and job_requirements may be supplied.
+           The user must have full EE2 administration rights. Note that this
+           field is not included in returned data when querying EE2.) ->
+           structure: parameter "method" of String, parameter "app_id" of
+           String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "source_ws_objects"
+           of list of type "wsref" (A workspace object reference of the form
+           X/Y/Z, where X is the workspace id, Y is the object id, Z is the
+           version.), parameter "meta" of type "Meta" (Narrative metadata for
+           a job. All fields are optional. run_id - the Narrative-assigned ID
+           of the job run. 1:1 with a job ID. token_id - the ID of the token
+           used to run the method. tag - the release tag, e.g.
+           dev/beta/release. cell_id - the ID of the narrative cell from
+           which the job was run.) -> structure: parameter "run_id" of
+           String, parameter "token_id" of String, parameter "tag" of String,
+           parameter "cell_id" of String, parameter "wsid" of Long, parameter
+           "parent_job_id" of String, parameter "job_requirements" of type
+           "JobRequirements" (Job requirements for a job. All fields are
+           optional. To submit job requirements, the user must have full EE2
+           admin permissions. Ignored for the run concierge endpoint.
+           request_cpus: the number of CPUs to request for the job.
+           request_memory: the amount of memory, in MB, to request for the
+           job. request_disk: the amount of disk space, in GB, to request for
+           the job. client_group: the name of the client group on which to
+           run the job. client_group_regex: Whether to treat the client group
+           string, whether provided here, from the catalog, or as a default,
+           as a regular expression when matching clientgroups. Default True
+           for HTC, but the default depends on the scheduler. Omit to use the
+           default. bill_to_user: the job will be counted against the
+           provided user's fair share quota. ignore_concurrency_limits:
+           ignore any limits on simultaneous job runs. Default false.
+           scheduler_requirements: arbitrary key-value pairs to be provided
+           to the job scheduler. Requires knowledge of the scheduler
+           interface. debug_mode: Whether to run the job in debug mode.
+           Default false.) -> structure: parameter "request_cpus" of Long,
+           parameter "requst_memory" of Long, parameter "request_disk" of
+           Long, parameter "client_group" of String, parameter
+           "client_group_regex" of type "boolean" (@range [0,1]), parameter
+           "bill_to_user" of String, parameter "ignore_concurrency_limits" of
+           type "boolean" (@range [0,1]), parameter "scheduler_requirements"
+           of mapping from String to String, parameter "debug_mode" of type
+           "boolean" (@range [0,1]), parameter "as_admin" of type "boolean"
+           (@range [0,1]), parameter "created" of Long, parameter "queued" of
+           Long, parameter "estimating" of Long, parameter "running" of Long,
+           parameter "finished" of Long, parameter "updated" of Long,
+           parameter "error" of type "JsonRpcError" (Error block of JSON RPC
+           response) -> structure: parameter "name" of String, parameter
+           "code" of Long, parameter "message" of String, parameter "error"
+           of String, parameter "error_code" of Long, parameter "errormsg" of
+           String, parameter "terminated_code" of Long, parameter "count" of
+           Long, parameter "query_count" of Long, parameter "filter" of
+           mapping from String to String, parameter "skip" of Long, parameter
            "projection" of list of String, parameter "limit" of Long,
            parameter "sort_order" of String
         """
@@ -1162,31 +1536,66 @@ class execution_engine2(object):
            job. For run_job and run_job_concierge, this value can be
            specified to denote the parent job of the job being created.
            Warning: No checking is done on the validity of the job ID, and
-           the parent job record is not altered. run_job_batch ignores this
-           parameter when starting a job batch.) -> structure: parameter
-           "method" of String, parameter "app_id" of String, parameter
-           "params" of list of unspecified object, parameter "service_ver" of
-           String, parameter "source_ws_objects" of list of type "wsref" (A
-           workspace object reference of the form X/Y or X/Y/Z, where X is
-           the workspace id, Y is the object id, Z is the version.),
-           parameter "meta" of type "Meta" (Narrative metadata for a job. All
-           fields are optional. run_id - the Narrative-assigned ID of the job
-           run. 1:1 with a job ID. token_id - the ID of the token used to run
-           the method. tag - the release tag, e.g. dev/beta/release. cell_id
-           - the ID of the narrative cell from which the job was run.) ->
-           structure: parameter "run_id" of String, parameter "token_id" of
-           String, parameter "tag" of String, parameter "cell_id" of String,
-           parameter "wsid" of Long, parameter "parent_job_id" of String,
-           parameter "created" of Long, parameter "queued" of Long, parameter
-           "estimating" of Long, parameter "running" of Long, parameter
-           "finished" of Long, parameter "updated" of Long, parameter "error"
-           of type "JsonRpcError" (Error block of JSON RPC response) ->
-           structure: parameter "name" of String, parameter "code" of Long,
-           parameter "message" of String, parameter "error" of String,
-           parameter "error_code" of Long, parameter "errormsg" of String,
-           parameter "terminated_code" of Long, parameter "count" of Long,
-           parameter "query_count" of Long, parameter "filter" of mapping
-           from String to String, parameter "skip" of Long, parameter
+           the parent job record is not altered. Submitting a job with a
+           parent ID to run_job_batch will cause an error to be returned.
+           job_requirements: the requirements for the job. The user must have
+           full EE2 administration rights to use this parameter. Note that
+           the job_requirements are not returned along with the rest of the
+           job parameters when querying the EE2 API - they are only
+           considered when submitting a job. as_admin: run the job with full
+           EE2 permissions, meaning that any supplied workspace IDs are not
+           checked for accessibility and job_requirements may be supplied.
+           The user must have full EE2 administration rights. Note that this
+           field is not included in returned data when querying EE2.) ->
+           structure: parameter "method" of String, parameter "app_id" of
+           String, parameter "params" of list of unspecified object,
+           parameter "service_ver" of String, parameter "source_ws_objects"
+           of list of type "wsref" (A workspace object reference of the form
+           X/Y/Z, where X is the workspace id, Y is the object id, Z is the
+           version.), parameter "meta" of type "Meta" (Narrative metadata for
+           a job. All fields are optional. run_id - the Narrative-assigned ID
+           of the job run. 1:1 with a job ID. token_id - the ID of the token
+           used to run the method. tag - the release tag, e.g.
+           dev/beta/release. cell_id - the ID of the narrative cell from
+           which the job was run.) -> structure: parameter "run_id" of
+           String, parameter "token_id" of String, parameter "tag" of String,
+           parameter "cell_id" of String, parameter "wsid" of Long, parameter
+           "parent_job_id" of String, parameter "job_requirements" of type
+           "JobRequirements" (Job requirements for a job. All fields are
+           optional. To submit job requirements, the user must have full EE2
+           admin permissions. Ignored for the run concierge endpoint.
+           request_cpus: the number of CPUs to request for the job.
+           request_memory: the amount of memory, in MB, to request for the
+           job. request_disk: the amount of disk space, in GB, to request for
+           the job. client_group: the name of the client group on which to
+           run the job. client_group_regex: Whether to treat the client group
+           string, whether provided here, from the catalog, or as a default,
+           as a regular expression when matching clientgroups. Default True
+           for HTC, but the default depends on the scheduler. Omit to use the
+           default. bill_to_user: the job will be counted against the
+           provided user's fair share quota. ignore_concurrency_limits:
+           ignore any limits on simultaneous job runs. Default false.
+           scheduler_requirements: arbitrary key-value pairs to be provided
+           to the job scheduler. Requires knowledge of the scheduler
+           interface. debug_mode: Whether to run the job in debug mode.
+           Default false.) -> structure: parameter "request_cpus" of Long,
+           parameter "requst_memory" of Long, parameter "request_disk" of
+           Long, parameter "client_group" of String, parameter
+           "client_group_regex" of type "boolean" (@range [0,1]), parameter
+           "bill_to_user" of String, parameter "ignore_concurrency_limits" of
+           type "boolean" (@range [0,1]), parameter "scheduler_requirements"
+           of mapping from String to String, parameter "debug_mode" of type
+           "boolean" (@range [0,1]), parameter "as_admin" of type "boolean"
+           (@range [0,1]), parameter "created" of Long, parameter "queued" of
+           Long, parameter "estimating" of Long, parameter "running" of Long,
+           parameter "finished" of Long, parameter "updated" of Long,
+           parameter "error" of type "JsonRpcError" (Error block of JSON RPC
+           response) -> structure: parameter "name" of String, parameter
+           "code" of Long, parameter "message" of String, parameter "error"
+           of String, parameter "error_code" of Long, parameter "errormsg" of
+           String, parameter "terminated_code" of Long, parameter "count" of
+           Long, parameter "query_count" of Long, parameter "filter" of
+           mapping from String to String, parameter "skip" of Long, parameter
            "projection" of list of String, parameter "limit" of Long,
            parameter "sort_order" of String
         """

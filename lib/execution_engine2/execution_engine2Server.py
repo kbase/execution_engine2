@@ -388,12 +388,6 @@ class Application(object):
         )
         self.method_authentication["execution_engine2.run_job"] = "required"  # noqa
         self.rpc_service.add(
-            impl_execution_engine2.retry_job,
-            name="execution_engine2.retry_job",
-            types=[dict],
-        )
-        self.method_authentication["execution_engine2.retry_job"] = "required"  # noqa
-        self.rpc_service.add(
             impl_execution_engine2.run_job_batch,
             name="execution_engine2.run_job_batch",
             types=[list, dict],
@@ -401,6 +395,12 @@ class Application(object):
         self.method_authentication[
             "execution_engine2.run_job_batch"
         ] = "required"  # noqa
+        self.rpc_service.add(
+            impl_execution_engine2.retry_job,
+            name="execution_engine2.retry_job",
+            types=[dict],
+        )
+        self.method_authentication["execution_engine2.retry_job"] = "required"  # noqa
         self.rpc_service.add(
             impl_execution_engine2.abandon_children,
             name="execution_engine2.abandon_children",
