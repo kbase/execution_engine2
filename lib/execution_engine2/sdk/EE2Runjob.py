@@ -506,8 +506,11 @@ class EE2RunJob:
         )
         # Cancel job and it's children
         self.sdkmr.cancel_job(
-            job_id=job_id, terminated_code=TerminatedCode.terminated_by_user_retry.value
+            job_id=job_id,
+            terminated_code=TerminatedCode.terminated_by_user_retry.value,
+            as_admin=as_admin,
         )
+
         # Cannot retry a retried job, you must retry the parent
         if job.retry_parent:
             raise CannotRetryARetryException(
