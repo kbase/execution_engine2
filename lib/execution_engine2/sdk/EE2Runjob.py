@@ -230,7 +230,9 @@ class EE2RunJob:
             error=f"{exception}",
         )
 
-    def _prepare_to_run(self, params, concierge_params=None) -> JobSubmissionParameters:
+    def _copy_job_input_params_prepare_to_run(
+        self, params, concierge_params=None
+    ) -> JobSubmissionParameters:
         """
         Creates a job record and creates the job submission params
         """
@@ -576,11 +578,6 @@ class EE2RunJob:
         if "params" not in inputs:
             inputs["params"] = {}
 
-        # from pprint import pprint
-        # pprint("original")
-        # pprint(job_input.to_mongo().to_dict())
-        # pprint("Returning")
-        # pprint(inputs)
         return inputs
 
     @staticmethod
@@ -604,9 +601,6 @@ class EE2RunJob:
         # Then the next fields are job inputs top level requirements, app run parameters, and scheduler resource requirements
 
         return job_params
-
-    def _copy_job_input_params(self, job_input_params):
-        pass
 
     def run(
         self, params=None, as_admin=False, concierge_params: Dict = None
