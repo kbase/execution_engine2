@@ -119,11 +119,11 @@
         /*
             method - the SDK method to run in module.method format, e.g.
                 'KBaseTrees.construct_species_tree'
-            app_id - the id of the Narrative application (UI) running this job (e.g.
-                repo/name)
             params - the parameters to pass to the method.
 
             Optional parameters:
+            app_id - the id of the Narrative application (UI) running this job (e.g.
+                repo/name)
             service_ver - specific version of deployed service, last version is
                 used if this parameter is not defined
             source_ws_objects - denotes the workspace objects that will serve as a
