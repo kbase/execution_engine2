@@ -537,8 +537,13 @@ class JobsStatus:
         log_exec_stats_params = dict()
         log_exec_stats_params["user_id"] = job.user
         app_id = job_input.app_id
-        log_exec_stats_params["app_module_name"] = app_id.split("/")[0]
-        log_exec_stats_params["app_id"] = app_id
+        if app_id:
+            # Note this will not work properly for app_ids incorrectly separated by a '.',
+            # which happens in some KBase code (which needs to be fixed at some point) -
+            # notably the narrative data download code, maybe more
+            # It's been this way for a long time, so leave for now
+            log_exec_stats_params["app_module_name"] = app_id.split("/")[0]
+            log_exec_stats_params["app_id"] = app_id
         method = job_input.method
         log_exec_stats_params["func_module_name"] = method.split(".")[0]
         log_exec_stats_params["func_name"] = method.split(".")[-1]
