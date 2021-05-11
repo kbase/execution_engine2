@@ -299,6 +299,83 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    def test_retry_job_with_params_and_nci_and_src_ws_objs(self, rq_mock, condor_mock):
+        # 1. Run the job
+        rq_mock.add_matcher(
+            run_job_adapter(
+                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
+            )
+        )
+        runner = self.getRunner()
+        runner.workspace.get_object_info3 = MagicMock(return_value={"paths": []})
+        runner.workspace_auth.can_write = MagicMock(return_value=True)
+
+        runner.get_condor = MagicMock(return_value=condor_mock)
+
+        quast_params = {
+            "workspace_name": "XX:narrative_1620418248793",
+            "assemblies": ["62160/9/18"],
+            "force_glimmer": 0,
+        }
+        source_ws_objects = quast_params["assemblies"]
+        nci = {
+            "run_id": "3a211c4e-5ba8-4b94-aeae-378079ccc63d",
+            "token_id": "f38f09f7-5ab1-4bfc-9f3f-2b82c7a8dbdc",
+            "tag": "release",
+            "cell_id": "3ee13d64-623b-407f-98a1-72e577662132",
+        }
+
+        job = get_example_job_as_dict(
+            user=self.user_id,
+            wsid=self.ws_id,
+            narrative_cell_info=nci,
+            params=quast_params,
+            source_ws_objects=source_ws_objects,
+        )
+        si = SubmissionInfo(clusterid="test", submit=job, error=None)
+        condor_mock.run_job = MagicMock(return_value=si)
+        parent_job_id = runner.run_job(params=job)
+
+        # 2. Retry the job
+        retry_job_id = runner.retry(job_id=parent_job_id)
+
+        # 3. Attempt to retry a retry
+        # TODO: Why cant I use a CannotRetryARetryException here?
+        with self.assertRaises(Exception):
+            runner.retry(job_id=retry_job_id)
+
+        # 4. Attempt a fresh retry
+
+        runner.retry(job_id=parent_job_id)
+
+        # 5. Get both jobs and compare them!
+        original_job, retried_job = runner.check_jobs(
+            job_ids=[parent_job_id, retry_job_id]
+        )["job_states"]
+
+        # TODO Check narrative_cell_info
+        same_keys = ["user", "authstrat", "wsid", "scheduler_type", "job_input"]
+        different_keys = [
+            "updated",
+            "queued",
+            "finished",
+        ]
+        assert "retry_parent" not in original_job
+        assert original_job["retried"]
+        assert original_job["retry_count"] == 2
+        assert retried_job["retry_parent"] == parent_job_id
+
+        for key in same_keys:
+            assert original_job[key] == retried_job[key]
+
+        for key in different_keys:
+            assert original_job[key] != retried_job[key]
+
+        # TODO Retry a job that uses run_job_batch or kbparallels (Like metabat)
+        # TODO Retry a job without an app_id
+
+    @requests_mock.Mocker()
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_run_job_batch(self, rq_mock, condor_mock):
         """
         Test running batch jobs

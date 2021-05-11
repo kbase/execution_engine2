@@ -45,16 +45,17 @@ from execution_engine2.exceptions import (
 
 _JOB_REQUIREMENTS = "job_reqs"
 
-_APP_PARAMS = "params"
 
 _JOB_REQUIREMENTS_INCOMING = "job_requirements"
 _SCHEDULER_REQUIREMENTS = "scheduler_requirements"
 
+_APP_PARAMS = "params"
+_JOB_INPUT = "job_input"
 _REQUIREMENTS_LIST = "requirements_list"
 _METHOD = "method"
 _APP_ID = "app_id"
 _PARENT_JOB_ID = "parent_job_id"
-_PARENT_RETRY_JOB_ID = "retry_parent_job_id"
+_PARENT_RETRY_JOB_ID = "retry_parent"
 _WORKSPACE_ID = "wsid"
 _SOURCE_WS_OBJECTS = "source_ws_objects"
 _NARRATIVE_CELL_INFO = "narrative_cell_info"
@@ -115,8 +116,8 @@ class EE2RunJob:
         params["service_ver"] = self._get_module_git_commit(
             params.get(_METHOD), params.get("service_ver")
         )
-        inputs.service_ver = params.get("service_ver")
 
+        inputs.service_ver = params.get("service_ver")
         inputs.app_id = params.get(_APP_ID)
         inputs.source_ws_objects = params.get(_SOURCE_WS_OBJECTS)
 
@@ -183,6 +184,7 @@ class EE2RunJob:
             )
             paths = info.get("paths")
 
+            # TODO It would be nice to show which object is inaccessible
             if None in paths:
                 raise ValueError("Some workspace object is inaccessible")
 
@@ -522,10 +524,13 @@ class EE2RunJob:
         )
         run_job_params[_PARENT_RETRY_JOB_ID] = job_id
         # Submit job to job scheduler or fail and not count it as a retry attempt
-        print("About to run job with")
-        print(run_job_params)
-
         child_job_id = self.run(params=run_job_params, as_admin=as_admin)
+
+        # TODO verify only parents have a batch_job, maybe rename to batch_job_parent?
+        if run_job_params.get("batch_job"):
+            # Otherwise we have to make this endpoint always return a list of retried_jobs?
+            raise Exception("Use batch retry endpoint for this job. ")
+
         # Save that the job has been retried, and increment the count
 
         if job.retried:
@@ -541,8 +546,11 @@ class EE2RunJob:
 
     @staticmethod
     def _get_job_input_params_from_existing_job(job_input: JobInput) -> Dict:
+        """
+        Get input level fields.
+        """
         # Expected fields are found in `_init_job_rec`
-        inputs = {}
+        inputs = dict()
 
         # Used to iterate over "Job" attributes but in dictionary like lookup
         inputs_list = [
@@ -550,9 +558,7 @@ class EE2RunJob:
             _APP_PARAMS,
             _SERVICE_VER,
             _APP_ID,
-            _SOURCE_WS_OBJECTS,
             _PARENT_JOB_ID,
-            # _NARRATIVE_CELL_INFO,
             _WORKSPACE_ID,
             "requirements",
         ]
@@ -562,51 +568,43 @@ class EE2RunJob:
             if job_input[field]:
                 inputs[field] = job_input[field]
 
-        # # Insert Requirements
-        # if 'requirements' in job_input:
-        #     inputs["requirements"] = job_input[_JOB_REQUIREMENTS]
+        # _SOURCE_WS_OBJECTS list
+        if job_input[_SOURCE_WS_OBJECTS]:
+            inputs[_SOURCE_WS_OBJECTS] = list(job_input[_SOURCE_WS_OBJECTS])
 
         # Special Cases: It is OK if meta/narr_cell_info is in params 2x
-        if "narrative_cell_info" in job_input:
-            nci = job_input["narrative_cell_info"]  # type: Meta
+        if job_input["narrative_cell_info"]:
             # For easier testing
+            nci = job_input["narrative_cell_info"]  # type: Meta
             inputs["meta"] = inputs["narrative_cell_info"] = nci.to_mongo().to_dict()
 
         # Require a non blank params for job browser or narrative compatibility
-        if "params" not in inputs:
-            inputs["params"] = {}
+        if _APP_PARAMS not in inputs:
+            inputs[_APP_PARAMS] = {}
 
-        # from pprint import pprint
-        # pprint("original")
-        # pprint(job_input.to_mongo().to_dict())
-        # pprint("Returning")
-        # pprint(inputs)
         return inputs
 
     @staticmethod
     def _get_run_job_params_from_existing_job(job: Job, user_id: str) -> Dict:
         """
-        Get fields from job model to be sent into `run_job`
-        The top level fields that must be sent are
-        "user" , "wsid" , "job_input", "method"
+        Get top level fields from job model to be sent into `run_job`
         """
-        # We only need to extract job workspace id
-        # "authstrat", "scheduler_type" are autoset,
-        # and we DO NOT want user_id due to others retrying your job
         job_input = job.job_input  # type: JobInput
-        job_params = {
-            _WORKSPACE_ID: job.wsid,
-            "user": user_id,
-            "method": job_input.method,
-            "app_id": job_input.app_id,  # TODO Check this  case with a blank app id?
-            "job_input": EE2RunJob._get_job_input_params_from_existing_job(job_input),
+        job_input_as_dict = EE2RunJob._get_job_input_params_from_existing_job(job_input)
+
+        run_job_params = {
+            _WORKSPACE_ID: job.wsid,  # optional
+            _NARRATIVE_CELL_INFO: job_input_as_dict[_NARRATIVE_CELL_INFO],  # optional
+            "meta": job_input_as_dict[_NARRATIVE_CELL_INFO],  # optional
+            _APP_PARAMS: job_input_as_dict[_APP_PARAMS],  # optional
+            "user": user_id,  # required
+            _METHOD: job_input_as_dict[_METHOD],  # required
+            _APP_ID: job_input_as_dict.get(_APP_ID),  # optional
+            _JOB_INPUT: job_input_as_dict,  # required
+            _SOURCE_WS_OBJECTS: job_input_as_dict[_SOURCE_WS_OBJECTS],  # optional
         }
         # Then the next fields are job inputs top level requirements, app run parameters, and scheduler resource requirements
-
-        return job_params
-
-    def _copy_job_input_params(self, job_input_params):
-        pass
+        return run_job_params
 
     def run(
         self, params=None, as_admin=False, concierge_params: Dict = None
