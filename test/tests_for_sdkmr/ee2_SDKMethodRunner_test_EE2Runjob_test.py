@@ -9,17 +9,16 @@ from unittest.mock import patch
 import requests_mock
 from mock import MagicMock
 
-from lib.execution_engine2.db.MongoUtil import MongoUtil
-from lib.execution_engine2.db.models.models import Job
-from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
+from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.utils.clients import (
     get_client_set,
     get_user_client_set,
 )
-from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from installed_clients.CatalogClient import Catalog
-
+from lib.execution_engine2.db.MongoUtil import MongoUtil
+from lib.execution_engine2.db.models.models import Job
+from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
+from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
 from test.utils_shared.test_utils import (
     bootstrap,
     get_example_job,
@@ -32,7 +31,6 @@ logging.basicConfig(level=logging.INFO)
 bootstrap()
 
 from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
-from pytest import raises
 
 
 class ee2_SDKMethodRunner_test(unittest.TestCase):

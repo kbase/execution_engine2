@@ -1,9 +1,6 @@
 """
-Unit tests for the Condor wrapper.
+Unit tests for the Retry Code
 """
-
-# TODO Add tests for get_job_resource_info and cancel_job
-
 
 from execution_engine2.sdk.EE2Runjob import EE2RunJob
 
@@ -47,7 +44,6 @@ def test_retry_get_run_job_params_from_existing_job():
     extracted_job = EE2RunJob._get_run_job_params_from_existing_job(
         example_job, user_id=example_job.user + "other"
     )
-
     # Check Top Level Fields Match
     discarded_keys = [
         "user",
@@ -70,7 +66,7 @@ def test_retry_get_run_job_params_from_existing_job():
             if key in extracted_job:
                 assert example_job_as_dict[key] != extracted_job[key]
         else:
-            print("About to check", key)
+
             assert example_job_as_dict[key] == extracted_job[key]
 
     deprecated_fields = ["requested_release"]
@@ -88,5 +84,3 @@ def test_retry_get_run_job_params_from_existing_job():
                 # It might not be copied if optional, but this behavior could be normalized with a refactor
                 continue
             assert ej_value == extracted_job_inputs[key]
-
-    print(extracted_job)
