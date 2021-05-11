@@ -44,6 +44,7 @@ def get_example_job_as_dict(
     narrative_cell_info: dict = None,
     source_ws_objects: list = None,
     method_name: str = None,
+    app_id: str = None,
 ):
     job = (
         get_example_job(
@@ -55,6 +56,7 @@ def get_example_job_as_dict(
             narrative_cell_info=narrative_cell_info,
             source_ws_objects=source_ws_objects,
             method_name=method_name,
+            app_id=app_id,
         )
         .to_mongo()
         .to_dict()
@@ -71,7 +73,7 @@ def get_example_job_as_dict(
     return job
 
 
-def get_example_job_input(wsid, params=None, method_name=None):
+def get_example_job_input(wsid, params=None, method_name=None, app_id=None):
     if params == None:
         params = {}
 
@@ -82,7 +84,7 @@ def get_example_job_input(wsid, params=None, method_name=None):
     job_input.requested_release = "requested_release"
     job_input.params = params
     job_input.service_ver = "dev"
-    job_input.app_id = "module/super_function"
+    job_input.app_id = app_id or "module/super_function"
     job_input.source_ws_objects = ["1/2/3", "2/3/4", "3/5/6"]
 
     m = Meta()
@@ -101,11 +103,14 @@ def get_example_job(
     narrative_cell_info: dict = None,
     source_ws_objects: list = None,
     method_name: str = None,
+    app_id: str = None,
 ) -> Job:
     j = Job()
     j.user = user
     j.wsid = wsid
-    job_input = get_example_job_input(params=params, wsid=wsid, method_name=method_name)
+    job_input = get_example_job_input(
+        params=params, wsid=wsid, method_name=method_name, app_id=app_id
+    )
 
     j.job_input = job_input
     j.status = "queued"

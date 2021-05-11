@@ -338,6 +338,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             params=quast_params,
             source_ws_objects=source_ws_objects,
             method_name="kb_quast.run_QUAST_app",
+            app_id="kb_quast/run_QUAST_app",
         )
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
