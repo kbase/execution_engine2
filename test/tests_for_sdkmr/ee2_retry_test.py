@@ -59,28 +59,10 @@ def test_retry_get_run_job_params_from_existing_job():
         "scheduler_id",
     ]
     for key, val in example_job_as_dict.items():
-        # if isinstance(val,dict)
         if key in discarded_keys:
             continue
         if key in expected_unequal_keys:
             if key in extracted_job:
                 assert example_job_as_dict[key] != extracted_job[key]
         else:
-
             assert example_job_as_dict[key] == extracted_job[key]
-
-    deprecated_fields = ["requested_release"]
-
-    # Check over each of the job input fields
-    example_job_inputs = example_job_as_dict["job_input"]
-    extracted_job_inputs = extracted_job["job_input"]
-    for key, val in example_job_inputs.items():
-        if key in deprecated_fields:
-            continue
-
-        if example_job_inputs[key]:
-            ej_value = example_job_inputs[key]
-            if ej_value == []:
-                # It might not be copied if optional, but this behavior could be normalized with a refactor
-                continue
-            assert ej_value == extracted_job_inputs[key]

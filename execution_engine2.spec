@@ -199,17 +199,45 @@
             returns (BatchSubmission job_ids) authentication required;
 
 
+        /*
+            job_id of retried job
+        */
         typedef structure {
             job_id job_id;
         } RetryResult;
 
         /*
             job_id of job to retry
+            as_admin: retry someone elses job in your namespace
         */
         typedef structure {
             job_id job_id;
             boolean as_admin;
         } RetryParams;
+
+        /*
+            job_ids of job to retry
+            as_admin: retry someone elses job in your namespace
+        */
+        typedef structure {
+            list<job_id> job_ids;
+            boolean as_admin;
+        } BulkRetryParams;
+
+        /*
+            job_id of retried job
+        */
+        typedef structure {
+            job_id job_id;
+            string error;
+        } BulkRetryResult;
+
+
+
+        /*
+            Retry a list of jobs based on records in ee2 db, return a job id or error out
+        */
+        funcdef retry_jobs(BulkRetryParams params) returns (list<BulkRetryResult> retry_results) authentication required;
 
         /*
             Retry a job based on record in ee2 db, return a job id or error out

@@ -29,9 +29,8 @@ class execution_engine2:
     # the latter method is running.
     ######################################### noqa
     VERSION = "0.0.5"
-
     GIT_URL = "git@github.com:kbase/execution_engine2.git"
-    GIT_COMMIT_HASH = "e1920961e36d934c9d326fa82a704e7b9c7ce624"
+    GIT_COMMIT_HASH = "c7296a8ef675e0c84fef37cca909cc7514c3c02f"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -375,6 +374,35 @@ class execution_engine2:
                              'job_ids is not type dict as required.')
         # return the results
         return [job_ids]
+
+    def retry_jobs(self, ctx, params):
+        """
+        Retry a list of jobs based on records in ee2 db, return a job id or error out
+        :param params: instance of type "BulkRetryParams" (job_ids of job to
+           retry) -> structure: parameter "job_ids" of list of type "job_id"
+           (A job id.), parameter "as_admin" of type "boolean" (@range [0,1])
+        :returns: instance of list of type "BulkRetryResult" (job_id of
+           retried job) -> structure: parameter "job_id" of type "job_id" (A
+           job id.), parameter "error" of String
+        """
+        # ctx is the context object
+        # return variables are: retry_results
+        #BEGIN retry_jobs
+        mr = SDKMethodRunner(
+            user_clients=self.gen_cfg.get_user_clients(ctx),
+            clients = self.clients,
+            job_permission_cache=self.job_permission_cache,
+            admin_permissions_cache=self.admin_permissions_cache
+        )
+        retry_results = mr.retry_multiple(job_ids=params['job_ids'], as_admin=params.get('as_admin'))
+        #END retry_jobs
+
+        # At some point might do deeper type checking...
+        if not isinstance(retry_results, list):
+            raise ValueError('Method retry_jobs return value ' +
+                             'retry_results is not type list as required.')
+        # return the results
+        return [retry_results]
 
     def retry_job(self, ctx, params):
         """
