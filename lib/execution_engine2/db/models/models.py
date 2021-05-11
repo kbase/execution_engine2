@@ -320,7 +320,7 @@ class Job(Document):
     job_input = EmbeddedDocumentField(JobInput, required=True)
     job_output = DynamicField()
     condor_job_ads = DynamicField()
-    child_jobs = ListField()
+    child_jobs = ListField(null=True)
     batch_job = BooleanField(default=False)
     retried = BooleanField()
     retry_count = IntField(min_value=0)
