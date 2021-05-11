@@ -198,7 +198,6 @@
         funcdef run_job_batch(list<RunJobParams> params, BatchParams batch_params)
             returns (BatchSubmission job_ids) authentication required;
 
-
         /*
             job_id of retried job
         */
@@ -232,7 +231,6 @@
             job_id job_id;
             string error;
         } BulkRetryResult;
-
 
 
         /*
