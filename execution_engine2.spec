@@ -208,6 +208,7 @@
 
         /*
             job_id of job to retry
+            as_admin: retry someone elses job in your namespace
         */
         typedef structure {
             job_id job_id;
@@ -216,6 +217,7 @@
 
         /*
             job_ids of job to retry
+            as_admin: retry someone elses job in your namespace
         */
         typedef structure {
             list<job_id> job_ids;
