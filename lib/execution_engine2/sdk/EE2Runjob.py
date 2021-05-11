@@ -589,19 +589,19 @@ class EE2RunJob:
         """
         Get top level fields from job model to be sent into `run_job`
         """
-        job_input = job.job_input  # type: JobInput
-        job_input_as_dict = EE2RunJob._get_job_input_params_from_existing_job(job_input)
+        ji = job.job_input  # type: JobInput
+        job_input = EE2RunJob._get_job_input_params_from_existing_job(ji)
 
         run_job_params = {
             _WORKSPACE_ID: job.wsid,  # optional
-            _NARRATIVE_CELL_INFO: job_input_as_dict[_NARRATIVE_CELL_INFO],  # optional
-            "meta": job_input_as_dict[_NARRATIVE_CELL_INFO],  # optional
-            _APP_PARAMS: job_input_as_dict[_APP_PARAMS],  # optional
+            _NARRATIVE_CELL_INFO: job_input.get(_NARRATIVE_CELL_INFO),  # optional
+            "meta": job_input.get(_NARRATIVE_CELL_INFO),  # optional
+            _APP_PARAMS: job_input.get(_APP_PARAMS),  # optional
             "user": user_id,  # required
-            _METHOD: job_input_as_dict[_METHOD],  # required
-            _APP_ID: job_input_as_dict.get(_APP_ID),  # optional
-            _JOB_INPUT: job_input_as_dict,  # required
-            _SOURCE_WS_OBJECTS: job_input_as_dict[_SOURCE_WS_OBJECTS],  # optional
+            _METHOD: job_input[_METHOD],  # required
+            _APP_ID: job_input.get(_APP_ID),  # optional
+            _JOB_INPUT: job_input,  # required
+            _SOURCE_WS_OBJECTS: job_input.get(_SOURCE_WS_OBJECTS),  # optional
         }
         # Then the next fields are job inputs top level requirements, app run parameters, and scheduler resource requirements
         return run_job_params
