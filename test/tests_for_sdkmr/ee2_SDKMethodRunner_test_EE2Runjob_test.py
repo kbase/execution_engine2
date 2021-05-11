@@ -336,7 +336,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )["job_states"]
 
         same_keys = ["user", "authstrat", "wsid", "scheduler_type", "job_input"]
-        different_keys = ["updated", "queued", "finished"]
+
         assert "retry_parent" not in original_job
         assert original_job["retried"]
         assert original_job["retry_count"] == 2
@@ -344,9 +344,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         for key in same_keys:
             assert original_job[key] == retried_job[key]
-
-        for key in different_keys:
-            assert original_job[key] != retried_job[key]
 
         assert original_job["job_input"]["params"] == retried_job["job_input"]["params"]
 
@@ -412,11 +409,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         # TODO Check narrative_cell_info
         same_keys = ["user", "authstrat", "wsid", "scheduler_type", "job_input"]
-        different_keys = [
-            "updated",
-            "queued",
-            "finished",
-        ]
         assert "retry_parent" not in original_job
         assert original_job["retried"]
         assert original_job["retry_count"] == 2
@@ -424,9 +416,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         for key in same_keys:
             assert original_job[key] == retried_job[key]
-
-        for key in different_keys:
-            assert original_job[key] != retried_job[key]
 
         # TODO Retry a job that uses run_job_batch or kbparallels (Like metabat)
         # TODO Retry a job without an app_id
