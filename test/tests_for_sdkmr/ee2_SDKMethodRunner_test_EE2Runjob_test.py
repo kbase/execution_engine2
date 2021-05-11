@@ -259,9 +259,14 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
         runner = self.getRunner()
         runner.get_condor = MagicMock(return_value=condor_mock)
-        job = get_example_job_as_dict(user=self.user_id, wsid=self.ws_id)
+        runner.workspace.get_object_info3 = MagicMock(return_value={"paths": []})
+
+        job = get_example_job_as_dict(
+            user=self.user_id, wsid=self.ws_id, source_ws_objects=[]
+        )
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
+
         parent_job_id = runner.run_job(params=job)
 
         # 2. Retry the job
@@ -309,7 +314,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner = self.getRunner()
         runner.workspace.get_object_info3 = MagicMock(return_value={"paths": []})
         runner.workspace_auth.can_write = MagicMock(return_value=True)
-
         runner.get_condor = MagicMock(return_value=condor_mock)
 
         quast_params = {
