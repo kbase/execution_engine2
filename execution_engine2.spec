@@ -226,6 +226,7 @@
 
         /*
             job_id of retried job
+            error message of why that job couldn't be retried
         */
         typedef structure {
             job_id job_id;
