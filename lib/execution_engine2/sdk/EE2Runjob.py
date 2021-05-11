@@ -602,6 +602,7 @@ class EE2RunJob:
             _APP_ID: job_input.get(_APP_ID),  # optional
             _JOB_INPUT: job_input,  # required
             _SOURCE_WS_OBJECTS: job_input.get(_SOURCE_WS_OBJECTS),  # optional
+            _SERVICE_VER: job_input.get(_SERVICE_VER),  # optional
         }
         # Then the next fields are job inputs top level requirements, app run parameters, and scheduler resource requirements
         return run_job_params
