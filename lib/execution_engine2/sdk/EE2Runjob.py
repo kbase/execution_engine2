@@ -529,7 +529,8 @@ class EE2RunJob:
         """
         job = self.sdkmr.get_job_with_permission(
             job_id, JobPermissions.WRITE, as_admin=as_admin
-        )
+        )  # type: Job
+
         # Cannot retry a retried job, you must retry the parent
         if job.retry_parent:
             raise CannotRetryARetryException(
@@ -558,14 +559,9 @@ class EE2RunJob:
         child_job_id = self.run(params=run_job_params, as_admin=as_admin)
 
         # Save that the job has been retried, and increment the count
+        # TODO Use and create a method in sdkmr?
+        job.modify(inc__retry_count=1, set__retried=True)
 
-        if job.retried:
-            job.retry_count += 1
-        else:
-            job.retried = True
-            job.retry_count = 1
-
-        job.save()
         # Should we compare the original and child job to make sure certain fields match,
         # to make sure the retried job is correctly submitted? Or save that for a unit test?
         return child_job_id
