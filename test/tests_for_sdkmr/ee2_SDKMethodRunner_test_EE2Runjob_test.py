@@ -299,6 +299,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         for key in different_keys:
             assert original_job[key] != retried_job[key]
 
+        assert original_job["job_input"]["params"] == retried_job["job_input"]["params"]
+
         # TODO Retry a job that uses run_job_batch or kbparallels (Like metabat)
         # TODO Retry a job without an app_id
 
@@ -335,6 +337,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             narrative_cell_info=nci,
             params=quast_params,
             source_ws_objects=source_ws_objects,
+            method_name="kb_quast.run_QUAST_app",
         )
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
