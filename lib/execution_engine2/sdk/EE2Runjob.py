@@ -93,13 +93,15 @@ class EE2RunJob:
         """
         Expected optional params are
         _WORKSPACE_ID
-        _METHOD
+
         params (job params)
         service_ver
         _APP_ID
         _SOURCE_WS_OBJECTS
         _PARENT_JOB_ID
         meta
+        Expected Non Optional
+        _METHOD
         _JOB_REQUIREMENTS
         """
         job = Job()
@@ -110,7 +112,13 @@ class EE2RunJob:
         job.status = "created"
         # Inputs
         inputs.wsid = job.wsid
-        inputs.method = params.get(_METHOD)
+
+        required_job_inputs = [_JOB_REQUIREMENTS, _METHOD]
+        for item in required_job_inputs:
+            if item not in params:
+                raise ValueError(f"{item} is required for job initialization")
+
+        inputs.method = params[_METHOD]
         inputs.params = params.get("params")
 
         params["service_ver"] = self._get_module_git_commit(
@@ -132,7 +140,7 @@ class EE2RunJob:
             for meta_attr in ["run_id", "token_id", "tag", "cell_id"]:
                 inputs.narrative_cell_info[meta_attr] = meta.get(meta_attr)
 
-        resolved_reqs = params.get(_JOB_REQUIREMENTS)  # type: ResolvedRequirements
+        resolved_reqs = params[_JOB_REQUIREMENTS]  # type: ResolvedRequirements
 
         jr = JobRequirements(
             cpu=resolved_reqs.cpus,
@@ -522,6 +530,22 @@ class EE2RunJob:
         job = self.sdkmr.get_job_with_permission(
             job_id, JobPermissions.WRITE, as_admin=as_admin
         )
+        # Cannot retry a retried job, you must retry the parent
+        if job.retry_parent:
+            raise CannotRetryARetryException(
+                f"Cannot retry a retried job attempt, please retry the parent {job.retry_parent}"
+            )
+
+        # Get run job params from db, and inject parent job id, then run it
+        run_job_params = self._get_run_job_params_from_existing_job(
+            job, user_id=self.sdkmr.user_id
+        )
+
+        # TODO verify only parents have a batch_job, maybe rename to batch_job_parent?
+        if run_job_params.get("batch_job"):
+            # Otherwise we have to make this endpoint always return a list of retried_jobs?
+            raise Exception("Use batch retry endpoint for this job. ")
+
         # Cancel job and it's children
         self.sdkmr.cancel_job(
             job_id=job_id,
@@ -529,23 +553,9 @@ class EE2RunJob:
             as_admin=as_admin,
         )
 
-        # Cannot retry a retried job, you must retry the parent
-        if job.retry_parent:
-            raise CannotRetryARetryException(
-                f"Cannot retry a retried job attempt, please retry the parent {job.retry_parent}"
-            )
-        # Get run job params from db, and inject parent job id, then run it
-        run_job_params = self._get_run_job_params_from_existing_job(
-            job, user_id=self.sdkmr.user_id
-        )
-        run_job_params[_PARENT_RETRY_JOB_ID] = job_id
         # Submit job to job scheduler or fail and not count it as a retry attempt
+        run_job_params[_PARENT_RETRY_JOB_ID] = job_id
         child_job_id = self.run(params=run_job_params, as_admin=as_admin)
-
-        # TODO verify only parents have a batch_job, maybe rename to batch_job_parent?
-        if run_job_params.get("batch_job"):
-            # Otherwise we have to make this endpoint always return a list of retried_jobs?
-            raise Exception("Use batch retry endpoint for this job. ")
 
         # Save that the job has been retried, and increment the count
 
@@ -610,13 +620,12 @@ class EE2RunJob:
 
         run_job_params = {
             _WORKSPACE_ID: job.wsid,  # optional
-            _NARRATIVE_CELL_INFO: job_input.get(_NARRATIVE_CELL_INFO),  # optional
             "meta": job_input.get(_NARRATIVE_CELL_INFO),  # optional
             _APP_PARAMS: job_input.get(_APP_PARAMS),  # optional
-            "user": user_id,  # required
+            "user": user_id,  # required, it runs as the current user
             _METHOD: job_input[_METHOD],  # required
             _APP_ID: job_input.get(_APP_ID),  # optional
-            _JOB_INPUT: job_input,  # required
+            # _JOB_INPUT: job_input,  # required
             _SOURCE_WS_OBJECTS: job_input.get(_SOURCE_WS_OBJECTS),  # optional
             _SERVICE_VER: job_input.get(_SERVICE_VER),  # optional
         }
