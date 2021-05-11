@@ -300,6 +300,10 @@ class SDKMethodRunner:
 
     # ENDPOINTS: Running jobs and getting job input params
 
+    def retry_multiple(self, job_ids, as_admin=False):
+        """Authorization Required Read/Write"""
+        return self.get_runjob().retry_multiple(job_ids=job_ids, as_admin=as_admin)
+
     def retry(self, job_id, as_admin=False):
         """Authorization Required Read/Write"""
         return self.get_runjob().retry(job_id=job_id, as_admin=as_admin)

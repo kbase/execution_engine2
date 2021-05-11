@@ -496,6 +496,22 @@ class EE2RunJob:
             # although most likely jobs aren't operating on the same object
             self._check_ws_objects(source_objects=job.get(_SOURCE_WS_OBJECTS))
 
+    def retry_multiple(self, job_ids, as_admin=False):
+        """
+        #TODO Add new job requirements/cgroups as an optional param
+        :param job_ids: The list of jobs to retry
+        :param as_admin: Run with admin permission
+        :return: The child job ids that have been retried or errors
+        """
+        retried_jobs = []
+        for job_id in job_ids:
+            try:
+                child_job_id = self.retry(job_id, as_admin=as_admin)
+                retried_jobs.append({"job_id": child_job_id})
+            except Exception as e:
+                retried_jobs.append({"job_id": None, "error": f"{e}"})
+        return retried_jobs
+
     def retry(self, job_id, as_admin=False) -> str:
         """
         #TODO Add new job requirements/cgroups as an optional param
