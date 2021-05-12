@@ -281,19 +281,22 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             "'123' is not a valid ObjectId, it must be a 12-byte input or a 24-character "
             "hex string"
         )
-        assert retry_job_ids[-1]["job_id"] is None
+        assert "retry_id" not in retry_job_ids[-1]
         assert retry_job_ids[-1]["error"] == errmsg
         assert len(retry_job_ids) == 5
 
         # Lets retry the jobs a few times
-        job1, job2, job3, job4 = runner.check_jobs(
+        js = runner.check_jobs(
             job_ids=[
-                retry_job_ids[0]["job_id"],
-                retry_job_ids[1]["job_id"],
-                retry_job_ids[2]["job_id"],
-                retry_job_ids[3]["job_id"],
+                retry_job_ids[0]["retry_id"],
+                retry_job_ids[1]["retry_id"],
+                retry_job_ids[2]["retry_id"],
+                retry_job_ids[3]["retry_id"],
             ]
         )["job_states"]
+
+        job1, job2, job3, job4 = js
+
         assert job1["retry_parent"] == parent_job_id1
         assert job2["retry_parent"] == parent_job_id2
         assert job3["retry_parent"] == parent_job_id1
