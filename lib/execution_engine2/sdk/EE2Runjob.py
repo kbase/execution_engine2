@@ -45,7 +45,6 @@ from execution_engine2.exceptions import (
 
 _JOB_REQUIREMENTS = "job_reqs"
 
-
 _JOB_REQUIREMENTS_INCOMING = "job_requirements"
 _SCHEDULER_REQUIREMENTS = "scheduler_requirements"
 
@@ -91,18 +90,18 @@ class EE2RunJob:
         params: Dict,
     ) -> str:
         """
-        Expected optional params are
-        _WORKSPACE_ID
+        *** Expected OPTIONAL Parameters ***
+        _WORKSPACE_ID (The workspace id)
+        params (job params for the app/method itself)
+        service_ver (app version)
+        _APP_ID (app UI)
+        _SOURCE_WS_OBJECTS (collected workspace objects for this app)
+        _PARENT_JOB_ID (parent of this job, doesn't update the parent)
+        meta (narrative cell information)
 
-        params (job params)
-        service_ver
-        _APP_ID
-        _SOURCE_WS_OBJECTS
-        _PARENT_JOB_ID
-        meta
-        Expected Non Optional
-        _METHOD
-        _JOB_REQUIREMENTS
+        *** Expected REQUIRED Parameters ***
+        _METHOD (The app method to run)
+        _JOB_REQUIREMENTS (Job Resource information)
         """
         job = Job()
         inputs = JobInput()
@@ -134,14 +133,13 @@ class EE2RunJob:
             inputs.parent_job_id = str(parent_job_id)
 
         inputs.narrative_cell_info = Meta()
-        meta = params.get("meta")
 
+        # Meta and Requirements
+        meta = params.get("meta")
         if meta:
             for meta_attr in ["run_id", "token_id", "tag", "cell_id"]:
                 inputs.narrative_cell_info[meta_attr] = meta.get(meta_attr)
-
         resolved_reqs = params[_JOB_REQUIREMENTS]  # type: ResolvedRequirements
-
         jr = JobRequirements(
             cpu=resolved_reqs.cpus,
             memory=resolved_reqs.memory_MB,
@@ -157,27 +155,20 @@ class EE2RunJob:
             job.retry_parent = str(params.get(_PARENT_RETRY_JOB_ID))
 
         job_id = self.sdkmr.save_job(job)
-
         self.sdkmr.get_kafka_client().send_kafka_message(
             message=KafkaCreateJob(job_id=job_id, user=user_id)
         )
-
         return job_id
 
     def _get_module_git_commit(self, method, service_ver=None) -> Optional[str]:
         module_name = method.split(".")[0]
-
         if not service_ver:
             service_ver = "release"
-
         self.logger.debug(f"Getting commit for {module_name} {service_ver}")
-
         module_version = self.sdkmr.get_catalog().get_module_version(
             {"module_name": module_name, "version": service_ver}
         )
-
         git_commit_hash = module_version.get("git_commit_hash")
-
         return git_commit_hash
 
     def _check_ws_objects(self, source_objects) -> None:
