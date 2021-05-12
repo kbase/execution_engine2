@@ -152,7 +152,10 @@ class EE2RunJob:
         inputs.requirements = jr
         job.job_input = inputs
 
-        # Set the id of the parent that was retried to get this job
+        f"""
+        Set the id of the parent that was retried to get this job
+        The {_PARENT_RETRY_JOB_ID} will only be set on a job retry
+        """
         parent_retry_job_id = params.get(_PARENT_RETRY_JOB_ID)
         if parent_retry_job_id:
             job.retry_parent = str(params.get(_PARENT_RETRY_JOB_ID))
@@ -509,9 +512,9 @@ class EE2RunJob:
         for job_id in job_ids:
             try:
                 child_job_id = self.retry(job_id, as_admin=as_admin)
-                retried_jobs.append({"job_id": child_job_id})
+                retried_jobs.append({"job_id": job_id, "retry_id": child_job_id})
             except Exception as e:
-                retried_jobs.append({"job_id": None, "error": f"{e}"})
+                retried_jobs.append({"job_id": job_id, "error": f"{e}"})
         return retried_jobs
 
     def retry(self, job_id, as_admin=False) -> str:

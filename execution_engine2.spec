@@ -216,7 +216,7 @@
 
         /*
             job_ids of job to retry
-            as_admin: retry someone elses job in your namespace
+            as_admin: retry someone else's job in your namespace
         */
         typedef structure {
             list<job_id> job_ids;
@@ -224,11 +224,14 @@
         } BulkRetryParams;
 
         /*
-            job_id of retried job
-            error message of why that job couldn't be retried
+             The result of the bulk retry operation
+             job_id; #Always returned
+             retry_id; #Only on successful retry
+             error; #Only on failure retry
         */
         typedef structure {
             job_id job_id;
+            job_id retry_id;
             string error;
         } BulkRetryResult;
 

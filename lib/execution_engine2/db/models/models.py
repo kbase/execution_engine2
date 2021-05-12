@@ -323,9 +323,9 @@ class Job(Document):
     child_jobs = ListField()
     batch_job = BooleanField(default=False)
     retried = BooleanField()
-    retry_count = IntField(min_value=0)
+    retry_count = IntField(min_value=0)  # Only present when a job has been retried
     # Could use a ReferenceField here?
-    retry_parent = StringField()
+    retry_parent = StringField()  # Only present on retrying a job
 
     meta = {"collection": "ee2_jobs"}
 
