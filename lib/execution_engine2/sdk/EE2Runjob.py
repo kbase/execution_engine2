@@ -48,7 +48,8 @@ _JOB_REQUIREMENTS = "job_reqs"
 _JOB_REQUIREMENTS_INCOMING = "job_requirements"
 _SCHEDULER_REQUIREMENTS = "scheduler_requirements"
 
-_APP_PARAMS = "params"
+_META = "meta"  # narrative_cell_info
+_APP_PARAMS = "params"  # application parameters
 _JOB_INPUT = "job_input"
 _REQUIREMENTS_LIST = "requirements_list"
 _METHOD = "method"
@@ -89,19 +90,21 @@ class EE2RunJob:
         user_id: str,
         params: Dict,
     ) -> str:
-        """
+        f"""
+        Save an initial job record to the db and send a message to kafka
+
         *** Expected OPTIONAL Parameters ***
-        _WORKSPACE_ID (The workspace id)
-        params (job params for the app/method itself)
-        service_ver (app version)
-        _APP_ID (app UI)
-        _SOURCE_WS_OBJECTS (collected workspace objects for this app)
-        _PARENT_JOB_ID (parent of this job, doesn't update the parent)
-        meta (narrative cell information)
+        {_WORKSPACE_ID} (The workspace id)
+        {_APP_PARAMS} (job params for the app/method itself)
+        {_SERVICE_VER} (app version)
+        {_APP_ID} (app UI)
+        {_SOURCE_WS_OBJECTS} (collected workspace objects for this app)
+        {_PARENT_JOB_ID} (parent of this job, doesn't update the parent)
+        {_META} (narrative cell information)
 
         *** Expected REQUIRED Parameters ***
-        _METHOD (The app method to run)
-        _JOB_REQUIREMENTS (Job Resource information)
+        {_METHOD} (The app method to run)
+        {_JOB_REQUIREMENTS} (Job Resource information)
         """
         job = Job()
         inputs = JobInput()
@@ -120,10 +123,10 @@ class EE2RunJob:
         inputs.method = params[_METHOD]
         inputs.params = params.get("params")
 
+        # Catalog git commit
         params["service_ver"] = self._get_module_git_commit(
             params.get(_METHOD), params.get("service_ver")
         )
-
         inputs.service_ver = params.get("service_ver")
         inputs.app_id = params.get(_APP_ID)
         inputs.source_ws_objects = params.get(_SOURCE_WS_OBJECTS)
