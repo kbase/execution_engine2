@@ -320,8 +320,8 @@ class Job(Document):
     job_input = EmbeddedDocumentField(JobInput, required=True)
     job_output = DynamicField()
     condor_job_ads = DynamicField()
-    child_jobs = ListField()
-    batch_job = BooleanField(default=False)
+    child_jobs = ListField()  # Only parent container should have child jobs
+    # batch_parent_container = BooleanField(default=False) # Only parent container should have this
     retried = BooleanField()
     retry_count = IntField(min_value=0)  # Only present when a job has been retried
     # Could use a ReferenceField here?
@@ -332,6 +332,53 @@ class Job(Document):
     def save(self, *args, **kwargs):
         self.updated = time.time()
         return super(Job, self).save(*args, **kwargs)
+
+    def __repr__(self):
+        return self.to_json()
+
+
+class BatchJobCollection(Document):
+    """
+    A container for storing related batch job containers
+    Does this need to exist before creating a collection?
+    """
+
+    # User and wsid are used for permission handling
+    user = StringField(required=True)
+    wsid = IntField(required=False, default=None)
+    batch_jobs = ListField(required=True)
+    updated = FloatField(default=time.time)
+    title = StringField(required=False)
+    description = StringField(required=False)
+
+    def save(self, *args, **kwargs):
+        self.updated = time.time()
+        return super(BatchJobCollection, self).save(*args, **kwargs)
+
+    def __repr__(self):
+        return self.to_json()
+
+
+class BatchJobContainer(Document):
+    """
+    A container for storing jobs information
+    Can be created via run_job_batch endpoint, or through the UI/ee2 api,
+    or a running job with the ee2_client
+    """
+
+    meta = {"collection": "ee2_jobs"}
+    user = StringField(required=True)
+    wsid = IntField(required=False, default=None)
+    updated = FloatField(default=time.time)
+    scheduler_type = StringField(default="htcondor", required=False)
+    child_jobs = ListField(required=True)
+    title = StringField(required=False)
+    description = StringField(required=False)
+    meta = {"collection": "ee2_jobs"}
+
+    def save(self, *args, **kwargs):
+        self.updated = time.time()
+        return super(BatchJobContainer, self).save(*args, **kwargs)
 
     def __repr__(self):
         return self.to_json()

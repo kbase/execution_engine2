@@ -40,7 +40,7 @@ from execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
 from execution_engine2.exceptions import (
     IncorrectParamsException,
     AuthError,
-    CannotRetryARetryException,
+    CannotRetryInProgressJob,
 )
 
 _JOB_REQUIREMENTS = "job_reqs"
@@ -528,11 +528,12 @@ class EE2RunJob:
             job_id, JobPermissions.WRITE, as_admin=as_admin
         )  # type: Job
 
+        if not job.finished:
+            raise CannotRetryInProgressJob(f"Please cancel {job_id} to retry job")
+
         # Cannot retry a retried job, you must retry the parent
         if job.retry_parent:
-            raise CannotRetryARetryException(
-                f"Cannot retry a retried job attempt, please retry the parent {job.retry_parent}"
-            )
+            self.retry(str(job.retry_parent), as_admin=as_admin)
 
         # Get run job params from db, and inject parent job id, then run it
         run_job_params = self._get_run_job_params_from_existing_job(
@@ -553,7 +554,7 @@ class EE2RunJob:
 
         # Submit job to job scheduler or fail and not count it as a retry attempt
         run_job_params[_PARENT_RETRY_JOB_ID] = job_id
-        child_job_id = self.run(params=run_job_params, as_admin=as_admin)
+        retry_job_id = self.run(params=run_job_params, as_admin=as_admin)
 
         # Save that the job has been retried, and increment the count
         # TODO Use and create a method in sdkmr?
@@ -561,7 +562,7 @@ class EE2RunJob:
 
         # Should we compare the original and child job to make sure certain fields match,
         # to make sure the retried job is correctly submitted? Or save that for a unit test?
-        return child_job_id
+        return retry_job_id
 
     @staticmethod
     def _get_job_input_params_from_existing_job(job_input: JobInput) -> Dict:
@@ -618,7 +619,6 @@ class EE2RunJob:
             "user": user_id,  # required, it runs as the current user
             _METHOD: job_input[_METHOD],  # required
             _APP_ID: job_input.get(_APP_ID),  # optional
-            # _JOB_INPUT: job_input,  # required
             _SOURCE_WS_OBJECTS: job_input.get(_SOURCE_WS_OBJECTS),  # optional
             _SERVICE_VER: job_input.get(_SERVICE_VER),  # optional
         }

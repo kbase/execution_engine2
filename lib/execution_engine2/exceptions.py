@@ -51,10 +51,10 @@ class CondorJobNotFoundException(ExecutionEngineException):
 
 
 class RetryFailureException(ExecutionEngineException):
-    """Couldn't retry the job"""
+    """General exception for 'couldn't Retry the job'"""
 
 
-class CannotRetryARetryException(ExecutionEngineException):
+class CannotRetryInProgressJob(ExecutionEngineException):
     """Raised if a user attempts to retry the retried job, rather than the original job"""
 
 

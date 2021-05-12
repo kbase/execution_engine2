@@ -242,7 +242,12 @@
         funcdef retry_jobs(BulkRetryParams params) returns (list<BulkRetryResult> retry_results) authentication required;
 
         /*
-            Retry a job based on record in ee2 db, return a job id or error out
+            Allowed Jobs
+            * Regular Job with no children
+            * Regular job with/without parent_id that runs a kbparallel call or a run_job_batch call
+            Not Allowed
+            * Regular Job with children (Should not be possible to create yet)
+            * Batch Job Parent Container (Not a job, it won't do anything, except cancel it's child jobs)
         */
         funcdef retry_job(RetryParams params) returns (job_id job_id) authentication required;
 
