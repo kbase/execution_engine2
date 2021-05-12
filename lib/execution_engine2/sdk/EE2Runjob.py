@@ -517,7 +517,10 @@ class EE2RunJob:
                 retried_jobs.append({"job_id": job_id, "error": f"{e}"})
         return retried_jobs
 
-    def retry(self, job_id, as_admin=False) -> str:
+    def _retryable(self, status: str):
+        return status not in [Status.terminated, Status.error, Status.completed]
+
+    def retry(self, job_id: str, as_admin=False) -> str:
         """
         #TODO Add new job requirements/cgroups as an optional param
         :param job_id: The main job to retry
@@ -528,8 +531,10 @@ class EE2RunJob:
             job_id, JobPermissions.WRITE, as_admin=as_admin
         )  # type: Job
 
-        if not job.finished:
-            raise CannotRetryInProgressJob(f"Please cancel {job_id} to retry job")
+        if not self._retryable(job.status):
+            raise CannotRetryInProgressJob(
+                f"Please cancel {job_id} first in order to retry job."
+            )
 
         # Cannot retry a retried job, you must retry the parent
         if job.retry_parent:

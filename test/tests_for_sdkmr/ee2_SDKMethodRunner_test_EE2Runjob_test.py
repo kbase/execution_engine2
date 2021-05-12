@@ -16,7 +16,7 @@ from execution_engine2.utils.clients import (
 )
 from installed_clients.CatalogClient import Catalog
 from lib.execution_engine2.db.MongoUtil import MongoUtil
-from lib.execution_engine2.db.models.models import Job
+from lib.execution_engine2.db.models.models import Job, Status
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
 from test.utils_shared.test_utils import (
@@ -321,13 +321,17 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         condor_mock.run_job = MagicMock(return_value=si)
         parent_job_id = runner.run_job(params=job)
 
-        # 2. Retry the job
+        # 2a. Retry the job and fail because it's in progress
+        # TODO fix this in progress
+        with self.assertRaises(Exception):
+            runner.retry(job_id=parent_job_id)
+
+        # 2b. Retry the job
+        runner.update_job_status(job_id=parent_job_id, status=Status.terminated.value)
         retry_job_id = runner.retry(job_id=parent_job_id)
 
         # 3. Attempt to retry a retry
-        # TODO: Why cant I use a CannotRetryARetryException here?
-        with self.assertRaises(Exception):
-            runner.retry(job_id=retry_job_id)
+        # TODO check to see that that the new job is retried off of the parent
 
         # 4. Attempt a fresh retry
 
