@@ -9,6 +9,7 @@ from unittest.mock import patch
 import requests_mock
 from mock import MagicMock
 
+from exceptions import CannotRetryInProgressJob
 from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.utils.clients import (
     get_client_set,
@@ -323,7 +324,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         # 2a. Retry the job and fail because it's in progress
         # TODO fix this in progress
-        with self.assertRaises(Exception):
+        with self.assertRaises(CannotRetryInProgressJob):
+            runner.update_job_status(job_id=parent_job_id, status=Status.running.value)
             runner.retry(job_id=parent_job_id)
 
         # 2b. Retry the job
