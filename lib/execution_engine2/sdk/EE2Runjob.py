@@ -518,7 +518,7 @@ class EE2RunJob:
         return retried_jobs
 
     def _retryable(self, status: str):
-        return status not in [Status.terminated, Status.error, Status.completed]
+        return status in [Status.terminated, Status.error]
 
     def retry(self, job_id: str, as_admin=False) -> str:
         """

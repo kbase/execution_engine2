@@ -51,7 +51,7 @@ class CondorJobNotFoundException(ExecutionEngineException):
 
 
 class RetryFailureException(ExecutionEngineException):
-    """General exception for 'couldn't Retry the job'"""
+    """General exception for couldn't Retry the job'"""
 
 
 class CannotRetryInProgressJob(ExecutionEngineException):

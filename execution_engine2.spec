@@ -200,14 +200,19 @@
 
         /*
             job_id of retried job
+            retry_id: job_id of the job that was launched
+            str error: reason as to why that particular retry failed (available for bulk retry only)
         */
         typedef structure {
             job_id job_id;
+            job_id retry_id;
+            str error;
         } RetryResult;
 
         /*
             job_id of job to retry
             as_admin: retry someone elses job in your namespace
+            #TODO Possibly Add JobRequirements job_requirements;
         */
         typedef structure {
             job_id job_id;
@@ -217,6 +222,7 @@
         /*
             job_ids of job to retry
             as_admin: retry someone else's job in your namespace
+            #TODO: Possibly Add list<JobRequirements> job_requirements;
         */
         typedef structure {
             list<job_id> job_ids;
@@ -224,24 +230,8 @@
         } BulkRetryParams;
 
         /*
-             The result of the bulk retry operation
-             job_id; #Always returned
-             retry_id; #Only on successful retry
-             error; #Only on failure retry
-        */
-        typedef structure {
-            job_id job_id;
-            job_id retry_id;
-            string error;
-        } BulkRetryResult;
-
-
-        /*
-            Retry a list of jobs based on records in ee2 db, return a job id or error out
-        */
-        funcdef retry_jobs(BulkRetryParams params) returns (list<BulkRetryResult> retry_results) authentication required;
-
-        /*
+            #TODO write retry parent tests to ensure BOTH the parent_job_id is present, and retry_job_id is present
+            #TODO Add retry child that checks the status of the child? to prevent multiple retries
             Allowed Jobs
             * Regular Job with no children
             * Regular job with/without parent_id that runs a kbparallel call or a run_job_batch call
@@ -250,6 +240,14 @@
             * Batch Job Parent Container (Not a job, it won't do anything, except cancel it's child jobs)
         */
         funcdef retry_job(RetryParams params) returns (job_id job_id) authentication required;
+
+        /*
+            Same as retry_job, but accepts multiple jobs
+        */
+        funcdef retry_jobs(BulkRetryParams params) returns (list<RetryResult> retry_results) authentication required;
+
+
+
 
         funcdef abandon_children(AbandonChildren params)
             returns (BatchSubmission parent_and_child_ids) authentication required;
