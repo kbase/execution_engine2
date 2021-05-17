@@ -202,7 +202,8 @@ def _check_common_mock_calls(mocks, reqs, wsid):
             scheduler_id=_CLUSTER,
         )
     )
-    mocks[SlackClient].run_job_message.assert_called_once_with(_JOB_ID, _CLUSTER, _USER)
+    # Removed for now, but might be added back in at a later point
+    # mocks[SlackClient].run_job_message.assert_called_once_with(_JOB_ID, _CLUSTER, _USER)
 
 
 def test_run_as_admin():
