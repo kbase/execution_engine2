@@ -498,7 +498,9 @@ class EE2RunJob:
             # although most likely jobs aren't operating on the same object
             self._check_ws_objects(source_objects=job.get(_SOURCE_WS_OBJECTS))
 
-    def retry_multiple(self, job_ids, as_admin=False):
+    def retry_multiple(
+        self, job_ids, as_admin=False
+    ) -> List[Dict[str, Union[str, Any]]]:
         """
         #TODO Add new job requirements/cgroups as an optional param
         :param job_ids: The list of jobs to retry
@@ -508,16 +510,16 @@ class EE2RunJob:
         retried_jobs = []
         for job_id in job_ids:
             try:
-                child_job_id = self.retry(job_id, as_admin=as_admin)
-                retried_jobs.append({"job_id": job_id, "retry_id": child_job_id})
+                retried_jobs.append(self.retry(job_id, as_admin=as_admin))
             except Exception as e:
                 retried_jobs.append({"job_id": job_id, "error": f"{e}"})
         return retried_jobs
 
-    def _retryable(self, status: str):
-        return status in [Status.terminated, Status.error]
+    @staticmethod
+    def _retryable(status: str):
+        return status in [Status.terminated.value, Status.error.value]
 
-    def retry(self, job_id: str, as_admin=False) -> str:
+    def retry(self, job_id: str, as_admin=False) -> Dict[str, Optional[str]]:
         """
         #TODO Add new job requirements/cgroups as an optional param
         :param job_id: The main job to retry
@@ -535,7 +537,7 @@ class EE2RunJob:
 
         # Cannot retry a retried job, you must retry the parent
         if job.retry_parent:
-            self.retry(str(job.retry_parent), as_admin=as_admin)
+            return self.retry(str(job.retry_parent), as_admin=as_admin)
 
         # Get run job params from db, and inject parent job id, then run it
         run_job_params = self._get_run_job_params_from_existing_job(
@@ -547,13 +549,6 @@ class EE2RunJob:
             # Otherwise we have to make this endpoint always return a list of retried_jobs?
             raise Exception("Use batch retry endpoint for this job. ")
 
-        # Cancel job and it's children
-        self.sdkmr.cancel_job(
-            job_id=job_id,
-            terminated_code=TerminatedCode.terminated_by_user_retry.value,
-            as_admin=as_admin,
-        )
-
         # Submit job to job scheduler or fail and not count it as a retry attempt
         run_job_params[_PARENT_RETRY_JOB_ID] = job_id
         retry_job_id = self.run(params=run_job_params, as_admin=as_admin)
@@ -564,7 +559,7 @@ class EE2RunJob:
 
         # Should we compare the original and child job to make sure certain fields match,
         # to make sure the retried job is correctly submitted? Or save that for a unit test?
-        return retry_job_id
+        return {"job_id": job_id, "retry_id": retry_job_id}
 
     @staticmethod
     def _get_job_input_params_from_existing_job(job_input: JobInput) -> Dict:

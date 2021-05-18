@@ -206,7 +206,7 @@
         typedef structure {
             job_id job_id;
             job_id retry_id;
-            str error;
+            string error;
         } RetryResult;
 
         /*
@@ -239,12 +239,12 @@
             * Regular Job with children (Should not be possible to create yet)
             * Batch Job Parent Container (Not a job, it won't do anything, except cancel it's child jobs)
         */
-        funcdef retry_job(RetryParams params) returns (job_id job_id) authentication required;
+        funcdef retry_job(RetryParams params) returns (RetryResult retry_result) authentication required;
 
         /*
             Same as retry_job, but accepts multiple jobs
         */
-        funcdef retry_jobs(BulkRetryParams params) returns (list<RetryResult> retry_results) authentication required;
+        funcdef retry_jobs(BulkRetryParams params) returns (list<RetryResult> retry_result) authentication required;
 
 
 
