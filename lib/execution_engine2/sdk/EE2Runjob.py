@@ -99,7 +99,7 @@ class EE2RunJob:
         {_SERVICE_VER} (app version)
         {_APP_ID} (app UI)
         {_SOURCE_WS_OBJECTS} (collected workspace objects for this app)
-        {_PARENT_JOB_ID} (parent of this job, doesn't update the parent)
+        {_PARENT_JOB_ID} (parent of this job, doesn't update/notify the parent)
         {_META} (narrative cell information)
 
         *** Expected REQUIRED Parameters ***
@@ -530,6 +530,10 @@ class EE2RunJob:
             job_id, JobPermissions.WRITE, as_admin=as_admin
         )  # type: Job
 
+        # TODO: Fix this when updating the run_job_batch endpoint
+        # if job.batch_job:
+        #     raise CannotRetryJob("Cannot retry parent container jobs")
+
         if not self._retryable(job.status):
             raise CannotRetryJob(
                 f"Can only retry a cancelled or errored job_id:{job_id} status:{job.status}"
@@ -544,25 +548,22 @@ class EE2RunJob:
             job, user_id=self.sdkmr.user_id
         )
 
-        # TODO verify only parents have a batch_job, maybe rename to batch_job_parent?
-        if run_job_params.get("batch_job"):
-            # Otherwise we have to make this endpoint always return a list of retried_jobs?
-            raise Exception("Use batch retry endpoint for this job. ")
-
         # Submit job to job scheduler or fail and not count it as a retry attempt
         run_job_params[_PARENT_RETRY_JOB_ID] = job_id
         retry_job_id = self.run(params=run_job_params, as_admin=as_admin)
 
-        # Save that the job has been retried, and increment the count. Notify the parent of the existence
+        # Save that the job has been retried, and increment the count. Notify the parent(s)
+        # 1) Notify the retry_parent that it has been retried
         # TODO Use and create a method in sdkmr?
-        if job.job_input.parent_job_id:
-            job.modify(
-                inc__retry_count=1, set__retried=True, push__child_jobs=retry_job_id
+        job.modify(inc__retry_count=1, set__retried=True)
+        # 2) Notify the parent container that it has a new child.. #TODO, maybe move this into multiple retries section
+        if run_job_params[_PARENT_JOB_ID]:
+            parent_job = self.sdkmr.get_job_with_permission(
+                run_job_params[_PARENT_JOB_ID], JobPermissions.WRITE, as_admin=as_admin
             )
-        else:
-            job.modify(inc__retry_count=1, set__retried=True)
+            parent_job.modify(push__child_jobs=retry_job_id)
 
-        # Should we compare the original and child job to make sure certain fields match,
+            # Should we compare the original and child job to make sure certain fields match,
         # to make sure the retried job is correctly submitted? Or save that for a unit test?
         return {"job_id": job_id, "retry_id": retry_job_id}
 
@@ -623,6 +624,7 @@ class EE2RunJob:
             _APP_ID: job_input.get(_APP_ID),  # optional
             _SOURCE_WS_OBJECTS: job_input.get(_SOURCE_WS_OBJECTS),  # optional
             _SERVICE_VER: job_input.get(_SERVICE_VER),  # optional
+            _PARENT_JOB_ID: job_input.get(_PARENT_JOB_ID),  # optional
         }
         # Then the next fields are job inputs top level requirements, app run parameters, and scheduler resource requirements
         return run_job_params

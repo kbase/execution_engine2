@@ -445,12 +445,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
         runner = self.getRunner()
         runner.get_condor = MagicMock(return_value=condor_mock)
-
-        job = get_example_job_as_dict(user=self.user_id, wsid=self.ws_id)
-
+        runner.workspace.get_object_info3 = MagicMock(return_value={"paths": []})
+        job = get_example_job_as_dict(
+            user=self.user_id, wsid=self.ws_id, source_ws_objects=[]
+        )
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-
         jobs = [job, job, job]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
@@ -466,6 +466,17 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             job_bad["service_ver"] = job["job_input"]["service_ver"]
             jobs = [job, job_bad]
             runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
+
+        # Squeeze in a retry test here
+        parent_job_id = job_ids["parent_job_id"]
+        child_job_id = job_ids["child_job_ids"][0]
+        runner.update_job_status(job_id=child_job_id, status=Status.terminated.value)
+        parent_job = runner.check_job(job_id=parent_job_id)
+        assert len(parent_job["child_jobs"]) == 3
+        retry_id = runner.retry(job_id=child_job_id)["retry_id"]
+        parent_job = runner.check_job(job_id=parent_job_id)
+        assert len(parent_job["child_jobs"]) == 4
+        assert parent_job["child_jobs"][-1] == retry_id
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
