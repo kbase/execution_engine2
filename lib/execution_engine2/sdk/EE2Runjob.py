@@ -282,9 +282,6 @@ class EE2RunJob:
             raise RuntimeError(error_msg)
 
         self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
-        self.sdkmr.get_slack_client().run_job_message(
-            job_id=job_id, scheduler_id=condor_job_id, username=self.sdkmr.get_user_id()
-        )
 
         return job_id
 

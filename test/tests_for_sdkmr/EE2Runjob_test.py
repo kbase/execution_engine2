@@ -219,7 +219,8 @@ def _check_common_mock_calls(mocks, reqs, wsid, app=_APP):
             scheduler_id=_CLUSTER,
         )
     )
-    mocks[SlackClient].run_job_message.assert_called_once_with(_JOB_ID, _CLUSTER, _USER)
+    # Removed for now, but might be added back in at a later point
+    # mocks[SlackClient].run_job_message.assert_called_once_with(_JOB_ID, _CLUSTER, _USER)
 
 
 def _create_reqs_dict(
@@ -867,12 +868,13 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
         ]
     )
 
-    mocks[SlackClient].run_job_message.assert_has_calls(
-        [
-            call(job_id=_JOB_ID_1, scheduler_id=_CLUSTER_1, username=_USER),
-            call(job_id=_JOB_ID_2, scheduler_id=_CLUSTER_2, username=_USER),
-        ]
-    )
+    # Removed for now, but might be added back in if run_job_message is re-added
+    # mocks[SlackClient].run_job_message.assert_has_calls(
+    #     [
+    #         call(job_id=_JOB_ID_1, scheduler_id=_CLUSTER_1, username=_USER),
+    #         call(job_id=_JOB_ID_2, scheduler_id=_CLUSTER_2, username=_USER),
+    #     ]
+    # )
 
     final_expected_parent_job = Job()
     final_expected_parent_job.id = ObjectId(_JOB_ID)
