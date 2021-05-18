@@ -40,7 +40,7 @@ from execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
 from execution_engine2.exceptions import (
     IncorrectParamsException,
     AuthError,
-    CannotRetryInProgressJob,
+    CannotRetryJob,
 )
 
 _JOB_REQUIREMENTS = "job_reqs"
@@ -531,8 +531,8 @@ class EE2RunJob:
         )  # type: Job
 
         if not self._retryable(job.status):
-            raise CannotRetryInProgressJob(
-                f"Please cancel {job_id} first in order to retry job."
+            raise CannotRetryJob(
+                f"Can only retry a cancelled or errored job_id:{job_id} status:{job.status}"
             )
 
         # Cannot retry a retried job, you must retry the parent
@@ -553,9 +553,14 @@ class EE2RunJob:
         run_job_params[_PARENT_RETRY_JOB_ID] = job_id
         retry_job_id = self.run(params=run_job_params, as_admin=as_admin)
 
-        # Save that the job has been retried, and increment the count
+        # Save that the job has been retried, and increment the count. Notify the parent of the existence
         # TODO Use and create a method in sdkmr?
-        job.modify(inc__retry_count=1, set__retried=True)
+        if job.job_input.parent_job_id:
+            job.modify(
+                inc__retry_count=1, set__retried=True, push__child_jobs=retry_job_id
+            )
+        else:
+            job.modify(inc__retry_count=1, set__retried=True)
 
         # Should we compare the original and child job to make sure certain fields match,
         # to make sure the retried job is correctly submitted? Or save that for a unit test?

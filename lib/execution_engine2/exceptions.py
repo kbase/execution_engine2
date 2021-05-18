@@ -54,8 +54,8 @@ class RetryFailureException(ExecutionEngineException):
     """General exception for couldn't Retry the job'"""
 
 
-class CannotRetryInProgressJob(ExecutionEngineException):
-    """Raised if a user attempts to retry the retried job, rather than the original job"""
+class CannotRetryJob(ExecutionEngineException):
+    """Can only retry errored or cancelled jobs"""
 
 
 class AuthError(ExecutionEngineException):
