@@ -312,7 +312,7 @@ class Job(Document):
 
     terminated_code = IntField(validation=valid_termination_code)
     error_code = IntField(validation=valid_errorcode)
-    batch_job = BooleanField()
+    batch_job = BooleanField(default=False)
     scheduler_type = StringField()
     scheduler_id = StringField()
     scheduler_estimator_id = StringField()
