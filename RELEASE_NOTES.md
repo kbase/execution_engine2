@@ -1,5 +1,11 @@
 # execution_engine2 (ee2) release notes
 =========================================
+## 0.0.5
+  * Fix a bug that caused job requirements from the catalog in CSV format to be ignored other
+    than the client group
+  * Full EE2 admins can now submit job requirements when running jobs via run_job_batch and
+    run_job. See the SDK spec for details.
+
 ## 0.0.4
   * Fix up tests
   * Remove dependency on slack

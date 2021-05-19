@@ -23,7 +23,6 @@ class AddLogResult(NamedTuple):
 class EE2Logs:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr
-        self.mongo_util = self.sdkmr.get_mongo_util()
 
     def _format_job_logs(self, record_position, log_lines):
 
@@ -49,14 +48,13 @@ class EE2Logs:
         :param log_lines: The lines to add to this log
         :return:
         """
-        with self.mongo_util.mongo_engine_connection():
-            jl = JLModel()
-            jl.primary_key = pk
-            jl.original_line_count = 0
-            jl.stored_line_count = 0
-            jl.lines = self._format_job_logs(record_position=-1, log_lines=log_lines)
-            jl.original_line_count = jl.stored_line_count = len(log_lines)
-            jl.save()
+        jl = JLModel()
+        jl.primary_key = pk
+        jl.original_line_count = 0
+        jl.stored_line_count = 0
+        jl.lines = self._format_job_logs(record_position=-1, log_lines=log_lines)
+        jl.original_line_count = jl.stored_line_count = len(log_lines)
+        jl.save()
         return jl
 
     def _add_first_logs(self, log_lines, job_id):
@@ -71,12 +69,12 @@ class EE2Logs:
         return AddLogResult(success=True, stored_line_count=log.stored_line_count)
 
     def _add_subsequent_logs(self, job_log, log_lines):
-        """ Add logs to an existing log entry """
+        """Add logs to an existing log entry"""
         formatted_logs = self._format_job_logs(
             record_position=job_log["stored_line_count"] - 1, log_lines=log_lines
         )
         record_count = int(job_log["stored_line_count"]) + len(formatted_logs)
-        slc = self.mongo_util._push_job_logs(
+        slc = self.sdkmr.mongo_util._push_job_logs(
             formatted_logs, job_id=job_log["_id"], record_count=record_count
         )
         return AddLogResult(success=True, stored_line_count=slc)
@@ -109,7 +107,7 @@ class EE2Logs:
         self.sdkmr.logger.debug(f"About to add logs for {job_id}")
         try:
             try:
-                job_log = self.mongo_util.get_job_log_pymongo(job_id)
+                job_log = self.sdkmr.mongo_util.get_job_log_pymongo(job_id)
             except RecordNotFoundException:
                 return self._add_first_logs(log_lines=log_lines, job_id=job_id)
             return self._add_subsequent_logs(job_log, log_lines)
@@ -145,7 +143,7 @@ class EE2Logs:
         :return:
         """
 
-        log = self.mongo_util.get_job_log_pymongo(job_id)
+        log = self.sdkmr.mongo_util.get_job_log_pymongo(job_id)
         lines = []
         last_line_number = 0
         count = len(log.get("lines", []))

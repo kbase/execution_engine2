@@ -7,9 +7,9 @@ the logic to retrieve info needed by the runnner to start the job
 import os
 import time
 from enum import Enum
-from typing import Optional, Dict, NamedTuple, Union, List
+from typing import Optional, Dict, NamedTuple, Union, List, Any
 
-from lib.execution_engine2.db.models.models import (
+from execution_engine2.db.models.models import (
     Job,
     JobInput,
     Meta,
@@ -18,9 +18,37 @@ from lib.execution_engine2.db.models.models import (
     ErrorCode,
     TerminatedCode,
 )
-from lib.execution_engine2.sdk.EE2Constants import ConciergeParams
-from lib.execution_engine2.utils.CondorTuples import CondorResources
-from lib.execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
+from execution_engine2.sdk.job_submission_parameters import (
+    JobSubmissionParameters,
+    JobRequirements as ResolvedRequirements,
+    AppInfo,
+    UserCreds,
+)
+from execution_engine2.sdk.EE2Constants import CONCIERGE_CLIENTGROUP
+from execution_engine2.utils.job_requirements_resolver import (
+    REQUEST_CPUS,
+    REQUEST_DISK,
+    REQUEST_MEMORY,
+    CLIENT_GROUP,
+    CLIENT_GROUP_REGEX,
+    BILL_TO_USER,
+    IGNORE_CONCURRENCY_LIMITS,
+    DEBUG_MODE,
+)
+from execution_engine2.utils.job_requirements_resolver import RequirementsType
+from execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
+from execution_engine2.exceptions import IncorrectParamsException, AuthError
+
+
+_JOB_REQUIREMENTS = "job_reqs"
+_JOB_REQUIREMENTS_INCOMING = "job_requirements"
+_SCHEDULER_REQUIREMENTS = "scheduler_requirements"
+_REQUIREMENTS_LIST = "requirements_list"
+_METHOD = "method"
+_APP_ID = "app_id"
+_PARENT_JOB_ID = "parent_job_id"
+_WORKSPACE_ID = "wsid"
+_SOURCE_WS_OBJECTS = "source_ws_objects"
 
 
 class JobPermissions(Enum):
@@ -44,71 +72,54 @@ class EE2RunJob:
     def __init__(self, sdkmr):
         self.sdkmr = sdkmr  # type: SDKMethodRunner
         self.override_clientgroup = os.environ.get("OVERRIDE_CLIENT_GROUP", None)
-        self.logger = self.sdkmr.logger
+        self.logger = self.sdkmr.get_logger()
 
     def _init_job_rec(
         self,
         user_id: str,
         params: Dict,
-        resources: CondorResources = None,
-        concierge_params: ConciergeParams = None,
     ) -> str:
         job = Job()
         inputs = JobInput()
         job.user = user_id
         job.authstrat = "kbaseworkspace"
-        job.wsid = params.get("wsid")
+        job.wsid = params.get(_WORKSPACE_ID)
         job.status = "created"
         # Inputs
         inputs.wsid = job.wsid
-        inputs.method = params.get("method")
+        inputs.method = params.get(_METHOD)
         inputs.params = params.get("params")
 
         params["service_ver"] = self._get_module_git_commit(
-            params.get("method"), params.get("service_ver")
+            params.get(_METHOD), params.get("service_ver")
         )
         inputs.service_ver = params.get("service_ver")
 
-        inputs.app_id = params.get("app_id")
-        inputs.source_ws_objects = params.get("source_ws_objects")
-        inputs.parent_job_id = str(params.get("parent_job_id"))
+        inputs.app_id = params.get(_APP_ID)
+        inputs.source_ws_objects = params.get(_SOURCE_WS_OBJECTS)
+        inputs.parent_job_id = str(params.get(_PARENT_JOB_ID))
         inputs.narrative_cell_info = Meta()
         meta = params.get("meta")
 
         if meta:
-            for meta_attr in ["run_id", "token_id", "tag", "cell_id", "status"]:
+            for meta_attr in ["run_id", "token_id", "tag", "cell_id"]:
                 inputs.narrative_cell_info[meta_attr] = meta.get(meta_attr)
 
-        if resources:
-            # TODO Should probably do some type checking on these before its passed in
-            jr = JobRequirements()
-            if concierge_params:
-                jr.cpu = concierge_params.request_cpus
-                jr.memory = concierge_params.request_memory
-                jr.disk = concierge_params.request_disk
-                jr.clientgroup = concierge_params.client_group
-            else:
-                jr.clientgroup = resources.client_group
-                if self.override_clientgroup:
-                    jr.clientgroup = self.override_clientgroup
-                jr.cpu = resources.request_cpus
-                jr.memory = resources.request_memory[:-1]  # Memory always in mb
-                jr.disk = resources.request_disk[:-2]  # Space always in gb
-
-            inputs.requirements = jr
+        jr = JobRequirements()
+        jr.cpu = params[_JOB_REQUIREMENTS].cpus
+        jr.memory = params[_JOB_REQUIREMENTS].memory_MB
+        jr.disk = params[_JOB_REQUIREMENTS].disk_GB
+        jr.clientgroup = params[_JOB_REQUIREMENTS].client_group
+        inputs.requirements = jr
 
         job.job_input = inputs
-        self.logger.debug(job.job_input.to_mongo().to_dict())
+        job_id = self.sdkmr.save_job(job)
 
-        with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            self.logger.debug(job.to_mongo().to_dict())
-            job.save()
-
-        self.sdkmr.kafka_client.send_kafka_message(
-            message=KafkaCreateJob(job_id=str(job.id), user=user_id)
+        self.sdkmr.get_kafka_client().send_kafka_message(
+            message=KafkaCreateJob(job_id=job_id, user=user_id)
         )
 
-        return str(job.id)
+        return job_id
 
     def _get_module_git_commit(self, method, service_ver=None) -> Optional[str]:
         module_name = method.split(".")[0]
@@ -118,7 +129,7 @@ class EE2RunJob:
 
         self.logger.debug(f"Getting commit for {module_name} {service_ver}")
 
-        module_version = self.sdkmr.catalog_utils.catalog.get_module_version(
+        module_version = self.sdkmr.get_catalog().get_module_version(
             {"module_name": module_name, "version": service_ver}
         )
 
@@ -185,48 +196,33 @@ class EE2RunJob:
             error=f"{exception}",
         )
 
-    def _prepare_to_run(self, params, concierge_params=None) -> PreparedJobParams:
+    def _prepare_to_run(self, params, concierge_params=None) -> JobSubmissionParameters:
         """
-        Creates a job record, grabs info about the objects,
-        checks the catalog resource requirements, and submits to condor
+        Creates a job record and creates the job submission params
         """
-        # perform sanity checks before creating job
-        self._check_ws_objects(source_objects=params.get("source_ws_objects"))
-        method = params.get("method")
-        # Normalize multiple formats into one format (csv vs json)
-        normalized_resources = self.sdkmr.catalog_utils.get_normalized_resources(method)
-        # These are for saving into job inputs. Maybe its best to pass this into condor as well?
-        extracted_resources = self.sdkmr.get_condor().extract_resources(
-            cgrr=normalized_resources
-        )  # type: CondorResources
-        # insert initial job document into db
 
-        job_id = self._init_job_rec(
-            self.sdkmr.user_id, params, extracted_resources, concierge_params
-        )
-
-        params["job_id"] = job_id
-        params["user_id"] = self.sdkmr.user_id
-        params["token"] = self.sdkmr.token
-        params["cg_resources_requirements"] = normalized_resources
+        job_id = self._init_job_rec(self.sdkmr.get_user_id(), params)
 
         self.logger.debug(
-            f"User {self.sdkmr.user_id} attempting to run job {method} {params}"
+            f"User {self.sdkmr.get_user_id()} attempting to run job {params[_METHOD]} {params}"
         )
 
-        return PreparedJobParams(params=params, job_id=job_id)
-
-    def _run(self, params, concierge_params=None):
-        prepared = self._prepare_to_run(
-            params=params, concierge_params=concierge_params
+        return JobSubmissionParameters(
+            job_id,
+            AppInfo(params[_METHOD], params.get(_APP_ID)),
+            params[_JOB_REQUIREMENTS],
+            UserCreds(self.sdkmr.get_user_id(), self.sdkmr.get_token()),
+            parent_job_id=params.get(_PARENT_JOB_ID),
+            wsid=params.get(_WORKSPACE_ID),
+            source_ws_objects=params.get(_SOURCE_WS_OBJECTS),
         )
-        params = prepared.params
-        job_id = prepared.job_id
+
+    def _run(self, params):
+        job_params = self._prepare_to_run(params=params)
+        job_id = job_params.job_id
 
         try:
-            submission_info = self.sdkmr.get_condor().run_job(
-                params=params, concierge_params=concierge_params
-            )
+            submission_info = self.sdkmr.get_condor().run_job(params=job_params)
             condor_job_id = submission_info.clusterid
             self.logger.debug(f"Submitted job id and got '{condor_job_id}'")
         except Exception as e:
@@ -244,14 +240,7 @@ class EE2RunJob:
             self._finish_created_job(job_id=job_id, exception=RuntimeError(error_msg))
             raise RuntimeError(error_msg)
 
-        self.logger.debug(
-            f"Attempting to update job to queued  {job_id} {condor_job_id} {submission_info}"
-        )
-
         self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
-        self.sdkmr.slack_client.run_job_message(
-            job_id=job_id, scheduler_id=condor_job_id, username=self.sdkmr.user_id
-        )
 
         return job_id
 
@@ -286,20 +275,18 @@ class EE2RunJob:
             job_input.narrative_cell_info.token_id = meta.get("token_id")
             job_input.narrative_cell_info.tag = meta.get("tag")
             job_input.narrative_cell_info.cell_id = meta.get("cell_id")
-            job_input.narrative_cell_info.status = meta.get("status")
 
-        with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            j = Job(
-                job_input=job_input,
-                batch_job=True,
-                status=Status.created.value,
-                wsid=wsid,
-                user=self.sdkmr.user_id,
-            )
-            j.save()
+        j = Job(
+            job_input=job_input,
+            batch_job=True,
+            status=Status.created.value,
+            wsid=wsid,
+            user=self.sdkmr.get_user_id(),
+        )
+        j = self.sdkmr.save_and_return_job(j)
 
         # TODO Do we need a new kafka call?
-        self.sdkmr.kafka_client.send_kafka_message(
+        self.sdkmr.get_kafka_client().send_kafka_message(
             message=KafkaCreateJob(job_id=str(j.id), user=j.user)
         )
         return j
@@ -307,8 +294,7 @@ class EE2RunJob:
     def _run_batch(self, parent_job: Job, params):
         child_jobs = []
         for job_param in params:
-            if "parent_job_id" not in job_param:
-                job_param["parent_job_id"] = str(parent_job.id)
+            job_param[_PARENT_JOB_ID] = str(parent_job.id)
             try:
                 child_jobs.append(str(self._run(params=job_param)))
             except Exception as e:
@@ -318,9 +304,8 @@ class EE2RunJob:
                 self._abort_child_jobs(child_jobs)
                 raise e
 
-        with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            parent_job.child_jobs = child_jobs
-            parent_job.save()
+        parent_job.child_jobs = child_jobs
+        self.sdkmr.save_job(parent_job)
 
         return child_jobs
 
@@ -333,19 +318,144 @@ class EE2RunJob:
         :param as_admin: Allows you to run jobs in other people's workspaces
         :return: A list of condor job ids or a failure notification
         """
-        wsid = batch_params.get("wsid")
+        if type(params) != list:
+            raise IncorrectParamsException("params must be a list")
+        wsid = batch_params.get(_WORKSPACE_ID)
         meta = batch_params.get("meta")
         if as_admin:
             self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
         else:
             # Make sure you aren't running a job in someone elses workspace
             self._check_workspace_permissions(wsid)
-            wsids = [job_input.get("wsid", wsid) for job_input in params]
+            # this is very odd. Why check the parent wsid again if there's no wsid in the job?
+            # also, what if the parent wsid is None?
+            # also also, why not just put all the wsids in one list and make one ws call?
+            wsids = [job_input.get(_WORKSPACE_ID, wsid) for job_input in params]
             self._check_workspace_permissions_list(wsids)
+
+        self._add_job_requirements(params, bool(as_admin))  # as_admin checked above
+        self._check_job_arguments(params, has_parent_job=True)
 
         parent_job = self._create_parent_job(wsid=wsid, meta=meta)
         children_jobs = self._run_batch(parent_job=parent_job, params=params)
-        return {"parent_job_id": str(parent_job.id), "child_job_ids": children_jobs}
+        return {_PARENT_JOB_ID: str(parent_job.id), "child_job_ids": children_jobs}
+
+    # modifies the jobs in place
+    def _add_job_requirements(self, jobs: List[Dict[str, Any]], is_write_admin: bool):
+        f"""
+        Adds the job requirements, generated from the job requirements resolver,
+        to the provided RunJobParams dicts. Expects the required field {_METHOD} in the param
+        dicts. Looks in the {_JOB_REQUIREMENTS_INCOMING} key for a dictionary containing the
+        optional keys {REQUEST_CPUS}, {REQUEST_MEMORY}, {REQUEST_DISK}, {CLIENT_GROUP},
+        {CLIENT_GROUP_REGEX}, {BILL_TO_USER}, {IGNORE_CONCURRENCY_LIMITS},
+        {_SCHEDULER_REQUIREMENTS}, and {DEBUG_MODE}. Adds the {_JOB_REQUIREMENTS} field to the
+        param dicts, which holds the job requirements object.
+        """
+        # could add a cache in the job requirements resolver to avoid making the same
+        # catalog call over and over if all the jobs have the same method
+        jrr = self.sdkmr.get_job_requirements_resolver()
+        for i, job in enumerate(jobs):
+            # TODO I feel like a class for just handling error formatting would be useful
+            # but too much work for a minor benefit
+            pre = f"Job #{i + 1}: " if len(jobs) > 1 else ""
+            job_reqs = job.get(_JOB_REQUIREMENTS_INCOMING) or {}
+            if not isinstance(job_reqs, dict):
+                raise IncorrectParamsException(
+                    f"{pre}{_JOB_REQUIREMENTS_INCOMING} must be a mapping"
+                )
+            try:
+                norm = jrr.normalize_job_reqs(job_reqs, "input job")
+            except IncorrectParamsException as e:
+                self._rethrow_incorrect_params_with_error_prefix(e, pre)
+            self._check_job_requirements_vs_admin(
+                jrr, norm, job_reqs, is_write_admin, pre
+            )
+
+            try:
+                job[_JOB_REQUIREMENTS] = jrr.resolve_requirements(
+                    job.get(_METHOD),
+                    cpus=norm.get(REQUEST_CPUS),
+                    memory_MB=norm.get(REQUEST_MEMORY),
+                    disk_GB=norm.get(REQUEST_DISK),
+                    client_group=norm.get(CLIENT_GROUP),
+                    client_group_regex=norm.get(CLIENT_GROUP_REGEX),
+                    bill_to_user=job_reqs.get(BILL_TO_USER),
+                    ignore_concurrency_limits=bool(
+                        job_reqs.get(IGNORE_CONCURRENCY_LIMITS)
+                    ),
+                    scheduler_requirements=job_reqs.get(_SCHEDULER_REQUIREMENTS),
+                    debug_mode=norm.get(DEBUG_MODE),
+                )
+            except IncorrectParamsException as e:
+                self._rethrow_incorrect_params_with_error_prefix(e, pre)
+
+    def _check_job_requirements_vs_admin(
+        self, jrr, norm, job_reqs, is_write_admin, err_prefix
+    ):
+        # just a helper method for _add_job_requirements to make that method a bit shorter.
+        # treat it as part of that method
+        try:
+            perm_type = jrr.get_requirements_type(
+                cpus=norm.get(REQUEST_CPUS),
+                memory_MB=norm.get(REQUEST_MEMORY),
+                disk_GB=norm.get(REQUEST_DISK),
+                client_group=norm.get(CLIENT_GROUP),
+                client_group_regex=norm.get(CLIENT_GROUP_REGEX),
+                # Note that this is never confirmed to be a real user. May want to fix that, but
+                # since it's admin only... YAGNI
+                bill_to_user=self._check_is_string(
+                    job_reqs.get(BILL_TO_USER), "bill_to_user"
+                ),
+                ignore_concurrency_limits=bool(job_reqs.get(IGNORE_CONCURRENCY_LIMITS)),
+                scheduler_requirements=job_reqs.get(_SCHEDULER_REQUIREMENTS),
+                debug_mode=norm.get(DEBUG_MODE),
+            )
+        except IncorrectParamsException as e:
+            self._rethrow_incorrect_params_with_error_prefix(e, err_prefix)
+        if perm_type != RequirementsType.STANDARD and not is_write_admin:
+            raise AuthError(
+                f"{err_prefix}In order to specify job requirements you must be a full admin"
+            )
+
+    def _check_is_string(self, putative_str, name):
+        if not putative_str:
+            return None
+        if type(putative_str) != str:
+            raise IncorrectParamsException(f"{name} must be a string")
+        return putative_str
+
+    def _rethrow_incorrect_params_with_error_prefix(
+        self, error: IncorrectParamsException, error_prefix: str
+    ):
+        if not error_prefix:
+            raise error
+        raise IncorrectParamsException(f"{error_prefix}{error.args[0]}") from error
+
+    def _check_job_arguments(self, jobs, has_parent_job=False):
+        # perform sanity checks before creating any jobs, including the parent job for batch jobs
+        for i, job in enumerate(jobs):
+            # Could make an argument checker method, or a class that doesn't require a job id.
+            # Seems like more code & work for no real benefit though.
+            # Just create the class for checks, don't use yet
+            pre = f"Job #{i + 1}: " if len(jobs) > 1 else ""
+            try:
+                JobSubmissionParameters(
+                    "fakejobid",
+                    AppInfo(job.get(_METHOD), job.get(_APP_ID)),
+                    job[_JOB_REQUIREMENTS],
+                    UserCreds(self.sdkmr.get_user_id(), self.sdkmr.get_token()),
+                    wsid=job.get(_WORKSPACE_ID),
+                    source_ws_objects=job.get(_SOURCE_WS_OBJECTS),
+                )
+            except IncorrectParamsException as e:
+                self._rethrow_incorrect_params_with_error_prefix(e, pre)
+            if has_parent_job and job.get(_PARENT_JOB_ID):
+                raise IncorrectParamsException(
+                    f"{pre}batch jobs may not specify a parent job ID"
+                )
+            # This is also an opportunity for caching
+            # although most likely jobs aren't operating on the same object
+            self._check_ws_objects(source_objects=job.get(_SOURCE_WS_OBJECTS))
 
     def run(
         self, params=None, as_admin=False, concierge_params: Dict = None
@@ -360,37 +470,79 @@ class EE2RunJob:
         if as_admin:
             self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
         else:
-            self._check_workspace_permissions(params.get("wsid"))
+            self._check_workspace_permissions(params.get(_WORKSPACE_ID))
 
         if concierge_params:
-            cp = ConciergeParams(**concierge_params)
             self.sdkmr.check_as_concierge()
+            # we don't check requirements type because the concierge can do what they like
+            params[_JOB_REQUIREMENTS] = self._get_job_reqs_from_concierge_params(
+                params.get(_METHOD), concierge_params
+            )
         else:
-            cp = None
+            # as_admin checked above
+            self._add_job_requirements([params], bool(as_admin))
+        self._check_job_arguments([params])
 
-        return self._run(params=params, concierge_params=cp)
+        return self._run(params=params)
+
+    def _get_job_reqs_from_concierge_params(
+        self, method: str, concierge_params: Dict[str, Any]
+    ) -> ResolvedRequirements:
+        jrr = self.sdkmr.get_job_requirements_resolver()
+        norm = jrr.normalize_job_reqs(concierge_params, "concierge parameters")
+        rl = concierge_params.get(_REQUIREMENTS_LIST)
+        schd_reqs = {}
+        if rl:
+            if type(rl) != list:
+                raise IncorrectParamsException(f"{_REQUIREMENTS_LIST} must be a list")
+            for s in rl:
+                if type(s) != str or "=" not in s:
+                    raise IncorrectParamsException(
+                        f"Found illegal requirement in {_REQUIREMENTS_LIST}: {s}"
+                    )
+                key, val = s.split("=")
+                schd_reqs[key.strip()] = val.strip()
+
+        return jrr.resolve_requirements(
+            method,
+            cpus=norm.get(REQUEST_CPUS),
+            memory_MB=norm.get(REQUEST_MEMORY),
+            disk_GB=norm.get(REQUEST_DISK),
+            client_group=norm.get(CLIENT_GROUP) or CONCIERGE_CLIENTGROUP,
+            client_group_regex=norm.get(CLIENT_GROUP_REGEX),
+            # error messaging here is for 'bill_to_user' vs 'account_group' but almost impossible
+            # to screw up so YAGNI
+            # Note that this is never confirmed to be a real user. May want to fix that, but
+            # since it's admin only... YAGNI
+            bill_to_user=concierge_params.get("account_group"),
+            # default is to ignore concurrency limits for concierge
+            ignore_concurrency_limits=bool(
+                concierge_params.get(IGNORE_CONCURRENCY_LIMITS, 1)
+            ),
+            scheduler_requirements=schd_reqs,
+            debug_mode=norm.get(DEBUG_MODE),
+        )
 
     def update_job_to_queued(self, job_id, scheduler_id):
         # TODO RETRY FOR RACE CONDITION OF RUN/CANCEL
         # TODO PASS QUEUE TIME IN FROM SCHEDULER ITSELF?
         # TODO PASS IN SCHEDULER TYPE?
-        with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            j = self.sdkmr.get_mongo_util().get_job(job_id=job_id)
-            previous_status = j.status
-            j.status = Status.queued.value
-            j.queued = time.time()
-            j.scheduler_id = scheduler_id
-            j.scheduler_type = "condor"
-            j.save()
+        j = self.sdkmr.get_mongo_util().get_job(job_id=job_id)
+        previous_status = j.status
+        j.status = Status.queued.value
+        j.queued = time.time()
+        j.scheduler_id = scheduler_id
+        j.scheduler_type = "condor"
+        self.sdkmr.save_job(j)
 
-            self.sdkmr.kafka_client.send_kafka_message(
-                message=KafkaQueueChange(
-                    job_id=str(j.id),
-                    new_status=j.status,
-                    previous_status=previous_status,
-                    scheduler_id=scheduler_id,
-                )
+        self.sdkmr.get_kafka_client().send_kafka_message(
+            message=KafkaQueueChange(
+                job_id=str(j.id),
+                new_status=j.status,
+                previous_status=previous_status,
+                scheduler_id=scheduler_id,
             )
+        )
 
     def get_job_params(self, job_id, as_admin=False):
         """
@@ -407,12 +559,12 @@ class EE2RunJob:
 
         job_input = job.job_input
 
-        job_params["method"] = job_input.method
+        job_params[_METHOD] = job_input.method
         job_params["params"] = job_input.params
         job_params["service_ver"] = job_input.service_ver
-        job_params["app_id"] = job_input.app_id
-        job_params["wsid"] = job_input.wsid
-        job_params["parent_job_id"] = job_input.parent_job_id
-        job_params["source_ws_objects"] = job_input.source_ws_objects
+        job_params[_APP_ID] = job_input.app_id
+        job_params[_WORKSPACE_ID] = job_input.wsid
+        job_params[_PARENT_JOB_ID] = job_input.parent_job_id
+        job_params[_SOURCE_WS_OBJECTS] = job_input.source_ws_objects
 
         return job_params

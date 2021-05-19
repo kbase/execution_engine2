@@ -109,7 +109,9 @@ class Meta(EmbeddedDocument):
     token_id = StringField()
     tag = StringField()
     cell_id = StringField()
-    status = StringField()
+
+    def __repr__(self):
+        return self.to_json()
 
 
 class CondorResourceUsage(EmbeddedDocument):
@@ -147,6 +149,9 @@ class JobRequirements(EmbeddedDocument):
     disk = IntField()
     estimate = EmbeddedDocumentField(Estimate)
 
+    def __repr__(self):
+        return self.to_json()
+
 
 class JobInput(EmbeddedDocument):
     """
@@ -158,11 +163,14 @@ class JobInput(EmbeddedDocument):
     requested_release = StringField()
     params = DynamicField()
     service_ver = StringField(required=True)
-    app_id = StringField(required=True)
+    app_id = StringField()
     source_ws_objects = ListField()
     parent_job_id = StringField()
     requirements = EmbeddedDocumentField(JobRequirements)
     narrative_cell_info = EmbeddedDocumentField(Meta, required=True)
+
+    def __repr__(self):
+        return self.to_json()
 
 
 class JobOutput(EmbeddedDocument):

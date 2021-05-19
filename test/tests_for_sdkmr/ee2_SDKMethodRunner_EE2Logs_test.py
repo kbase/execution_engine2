@@ -7,9 +7,10 @@ from configparser import ConfigParser
 
 import requests_mock
 
-from lib.execution_engine2.db.MongoUtil import MongoUtil
-from lib.execution_engine2.db.models.models import Job, JobLog
-from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
+from execution_engine2.db.MongoUtil import MongoUtil
+from execution_engine2.db.models.models import Job, JobLog
+from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
+from execution_engine2.utils.clients import get_user_client_set, get_client_set
 from test.utils_shared.test_utils import (
     bootstrap,
     run_job_adapter,
@@ -34,9 +35,11 @@ class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
         cls.ws_id = 9999
         cls.token = "token"
 
-        cls.method_runner = SDKMethodRunner(
-            cls.cfg, user_id=cls.user_id, token=cls.token
-        )
+        with open(deploy) as cf:
+            cls.method_runner = SDKMethodRunner(
+                get_user_client_set(cls.cfg, cls.user_id, cls.token),
+                get_client_set(cls.cfg, cf),
+            )
         cls.mongo_util = MongoUtil(cls.cfg)
         cls.mongo_helper = MongoTestHelper(cls.cfg)
 
@@ -44,7 +47,7 @@ class ee2_SDKMethodRunner_test_ee2_logs(unittest.TestCase):
             db=cls.cfg["mongo-database"], col=cls.cfg["mongo-jobs-collection"]
         )
 
-        cls.test_helper = ee2_sdkmr_test_helper(cls.method_runner)
+        cls.test_helper = ee2_sdkmr_test_helper(cls.user_id)
 
     def getRunner(self) -> SDKMethodRunner:
         return copy.copy(self.__class__.method_runner)

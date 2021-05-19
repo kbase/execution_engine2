@@ -18,6 +18,12 @@ RUN DEBIAN_FRONTEND=noninteractive wget -qO - https://research.cs.wisc.edu/htcon
     && apt-get update -y \
     && apt-get install -y condor
 
+# install jars
+# perhaps we should have test and prod dockerfiles to avoid jars and mongo installs in prod
+RUN cd /opt \
+    && git clone https://github.com/kbase/jars \
+    && cd -
+
 # install mongodb
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2930ADAE8CAF5059EE73BB4B58712A2291FA4AD5 \
     && echo "deb http://repo.mongodb.org/apt/debian stretch/mongodb-org/3.6 main" | tee /etc/apt/sources.list.d/mongodb-org-3.6.list  \

@@ -1,15 +1,16 @@
 from collections import Counter
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict
 
 from bson import ObjectId
 
-from lib.execution_engine2.db.models.models import Job
-from lib.execution_engine2.exceptions import AuthError
+from execution_engine2.utils.arg_processing import parse_bool
+from execution_engine2.exceptions import AuthError
 
 
+# TODO this class is duplicated all over the place, move to common file
 class JobPermissions(Enum):
     READ = "r"
     WRITE = "w"
@@ -74,18 +75,14 @@ class JobStatusRange:
         if offset is None:
             offset = 0
 
-        if self.sdkmr.token is None:
-            raise AuthError("Please provide a token to check jobs date range")
-
-        token_user = self.sdkmr.auth.get_user(self.sdkmr.token)
         if user is None:
-            user = token_user
-
+            user = self.sdkmr.get_user_id()
         # Admins can view "ALL" or check_jobs for other users
-        if user != token_user:
+        elif user != self.sdkmr.get_user_id():
             if not self.sdkmr.check_is_admin():
                 raise AuthError(
-                    f"You are not authorized to view all records or records for others. user={user} token={token_user}"
+                    "You are not authorized to view all records or records for others. "
+                    + f"user={user} token={self.sdkmr.get_user_id()}"
                 )
 
         dummy_ids = self._get_dummy_dates(creation_start_time, creation_end_time)
@@ -121,17 +118,12 @@ class JobStatusRange:
         if user != "ALL":
             job_filter_temp["user"] = user
 
-        with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            count = Job.objects.filter(**job_filter_temp).count()
-            jobs = (
-                Job.objects[:limit]
-                .filter(**job_filter_temp)
-                .order_by(f"{sort_order}_id")
-                .skip(offset)
-                .only(*job_projection)
-            )
+        count = self.sdkmr.get_job_counts(job_filter_temp)
+        jobs = self.sdkmr.get_jobs(
+            job_filter_temp, job_projection, sort_order, offset, limit
+        )
 
-        self.sdkmr.logger.debug(
+        self.sdkmr.get_logger().debug(
             f"Searching for jobs with id_gt {dummy_ids.start} id_lt {dummy_ids.stop}"
         )
 
@@ -161,6 +153,8 @@ class JobStatusRange:
         # TODO USE AS_PYMONGO() FOR SPEED
         # TODO Better define default fields
         # TODO Instead of SKIP use ID GT LT https://www.codementor.io/arpitbhayani/fast-and-efficient-pagination-in-mongodb-9095flbqr
+        # ^ this one is important - the workspace was DOSed by a single open narrative at one
+        #   point due to skip abuse, which is why it was removed
 
     def _get_dummy_dates(self, creation_start_time, creation_end_time):
 
@@ -170,14 +164,16 @@ class JobStatusRange:
             )
 
         creation_start_time = self.sdkmr.check_and_convert_time(creation_start_time)
-        creation_start_date = datetime.fromtimestamp(creation_start_time)
+        creation_start_date = datetime.fromtimestamp(
+            creation_start_time, tz=timezone.utc
+        )
         dummy_start_id = ObjectId.from_datetime(creation_start_date)
 
         if creation_end_time is None:
             raise Exception("Please provide a valid end time for when job was created")
 
         creation_end_time = self.sdkmr.check_and_convert_time(creation_end_time)
-        creation_end_date = datetime.fromtimestamp(creation_end_time)
+        creation_end_date = datetime.fromtimestamp(creation_end_time, tz=timezone.utc)
         dummy_end_id = ObjectId.from_datetime(creation_end_date)
 
         if creation_start_time > creation_end_time:
@@ -191,7 +187,7 @@ class JobStatusRange:
         if ascending is None:
             return "+"
         else:
-            if self.sdkmr.parse_bool_from_string(ascending):
+            if parse_bool(ascending):
                 return "+"
             else:
                 return "-"

@@ -3,6 +3,7 @@ import subprocess
 import time
 import traceback
 from contextlib import contextmanager
+from typing import Dict
 
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
@@ -17,7 +18,7 @@ from lib.execution_engine2.exceptions import (
 
 
 class MongoUtil:
-    def __init__(self, config: dict):
+    def __init__(self, config: Dict):
         self.config = config
         self.mongo_host = config["mongo-host"]
         self.mongo_port = int(config["mongo-port"])
@@ -41,7 +42,7 @@ class MongoUtil:
             authMechanism=self.mongo_authmechanism,
         )
 
-    def _get_mongoengine_client(self):
+    def _get_mongoengine_client(self) -> connection:
         return connect(
             db=self.mongo_database,
             host=self.mongo_host,
@@ -50,7 +51,7 @@ class MongoUtil:
             password=self.mongo_pass,
             authentication_source=self.mongo_database,
             authentication_mechanism=self.mongo_authmechanism,
-        )  # type: connection
+        )
 
     def _start_local_service(self):
         try:
@@ -372,8 +373,6 @@ class MongoUtil:
                     f"Cannot change already finished/terminated/errored job.  {j.status} to {status}"
                 )
 
-            self.logger.debug(f"job status is {j.status}. going to update to {status}")
-
             #  A job in status running can only be terminated/error/finished
             if j.status == Status.running.value:
                 if status not in [
@@ -442,7 +441,7 @@ class MongoUtil:
         return rec.inserted_id
 
     def _push_job_logs(self, log_lines: JobLog, job_id: str, record_count: int):
-        """ append a list of job logs, and update the record count  """
+        """append a list of job logs, and update the record count"""
 
         update_filter = {"_id": ObjectId(job_id)}
         push_op = {"lines": {"$each": log_lines}}
