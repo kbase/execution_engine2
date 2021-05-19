@@ -24,7 +24,8 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          tags: ghcr.io/${{ github.repository }}:${{ github.head_ref }}
+          tags: ghcr.io/${{ github.repository }}:${{ 
+          ref }}
 
       -
         name: Image digest
