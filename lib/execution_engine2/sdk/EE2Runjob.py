@@ -158,7 +158,7 @@ class EE2RunJob:
         """
         parent_retry_job_id = params.get(_PARENT_RETRY_JOB_ID)
         if parent_retry_job_id:
-            job.retry_parent = str(params.get(_PARENT_RETRY_JOB_ID))
+            job.retry_parent = str(parent_retry_job_id)
 
         job_id = self.sdkmr.save_job(job)
         self.sdkmr.get_kafka_client().send_kafka_message(
@@ -503,6 +503,8 @@ class EE2RunJob:
     ) -> List[Dict[str, Union[str, Any]]]:
         """
         #TODO Add new job requirements/cgroups as an optional param
+        #TODO Notify the parent container that it has multiple new children, instead of multiple transactions?
+
         :param job_ids: The list of jobs to retry
         :param as_admin: Run with admin permission
         :return: The child job ids that have been retried or errors
@@ -519,6 +521,58 @@ class EE2RunJob:
     def _retryable(status: str):
         return status in [Status.terminated.value, Status.error.value]
 
+    def _safe_cancel(
+        self,
+        job_id: str,
+        terminated_code: TerminatedCode,
+    ):
+        try:
+            self.sdkmr.cancel_job(job_id=job_id, terminated_code=terminated_code.value)
+        except Exception as e:
+            self.logger.error(f"Couldn't cancel {job_id} due to {e}")
+            pass
+
+    def _db_update_failure(
+        self, job_that_failed_operation: str, job_to_abort: str, exception: Exception
+    ):
+        """Attempt to cancel created/queued/running retried job and then raise exception"""
+        # TODO Use and create a method in sdkmr?
+        msg = (
+            f"Couldn't update job record:{job_that_failed_operation} during retry. Aborting:{job_to_abort}"
+            f"Exception:{exception}"
+        )
+        self._safe_cancel(
+            job_id=job_to_abort,
+            terminated_code=TerminatedCode.terminated_by_server_failure,
+        )
+        raise CannotRetryJob(msg)
+
+    def _validate_retry_presubmit(self, job_id, as_admin):
+        """Validate retry request before attempting to contact scheduler"""
+        # Check to see if you still have permissions to the job and then optionally the parent job id
+        job = self.sdkmr.get_job_with_permission(
+            job_id, JobPermissions.WRITE, as_admin=as_admin
+        )  # type: Job
+        job_input = job.job_input  # type: JobInput
+
+        parent_job = None
+        if job_input.parent_job_id:
+            parent_job = self.sdkmr.get_job_with_permission(
+                job_input.parent_job_id, JobPermissions.WRITE, as_admin=as_admin
+            )
+
+        if job.batch_job:
+            raise CannotRetryJob(
+                "Cannot retry batch job parents. Must retry individual jobs"
+            )
+
+        if not self._retryable(job.status):
+            raise CannotRetryJob(
+                f"Can only retry a cancelled or errored job_id:{job_id} status:{job.status}"
+            )
+
+        return job, job_input, parent_job
+
     def retry(self, job_id: str, as_admin=False) -> Dict[str, Optional[str]]:
         """
         #TODO Add new job requirements/cgroups as an optional param
@@ -526,20 +580,12 @@ class EE2RunJob:
         :param as_admin: Run with admin permission
         :return: The child job id that has been retried
         """
-        job = self.sdkmr.get_job_with_permission(
-            job_id, JobPermissions.WRITE, as_admin=as_admin
-        )  # type: Job
 
-        # TODO: Fix this when updating the run_job_batch endpoint
-        # if job.batch_job:
-        #     raise CannotRetryJob("Cannot retry parent container jobs")
+        job, job_input, parent_job = self._validate_retry_presubmit(
+            job_id=job_id, as_admin=as_admin
+        )
 
-        if not self._retryable(job.status):
-            raise CannotRetryJob(
-                f"Can only retry a cancelled or errored job_id:{job_id} status:{job.status}"
-            )
-
-        # Cannot retry a retried job, you must retry the parent
+        # Cannot retry a retried job, you must retry the retry_parent
         if job.retry_parent:
             return self.retry(str(job.retry_parent), as_admin=as_admin)
 
@@ -547,65 +593,35 @@ class EE2RunJob:
         run_job_params = self._get_run_job_params_from_existing_job(
             job, user_id=self.sdkmr.user_id
         )
-
         # Submit job to job scheduler or fail and not count it as a retry attempt
         run_job_params[_PARENT_RETRY_JOB_ID] = job_id
         retry_job_id = self.run(params=run_job_params, as_admin=as_admin)
 
         # Save that the job has been retried, and increment the count. Notify the parent(s)
         # 1) Notify the retry_parent that it has been retried
-        # TODO Use and create a method in sdkmr?
-        job.modify(inc__retry_count=1, set__retried=True)
-        # 2) Notify the parent container that it has a new child.. #TODO, maybe move this into multiple retries section
-        if run_job_params[_PARENT_JOB_ID]:
-            parent_job = self.sdkmr.get_job_with_permission(
-                run_job_params[_PARENT_JOB_ID], JobPermissions.WRITE, as_admin=as_admin
+        try:
+            job.modify(inc__retry_count=1, set__retried=True)
+        except Exception as e:
+            self._db_update_failure(
+                job_that_failed_operation=str(job.id),
+                job_to_abort=retry_job_id,
+                exception=e,
             )
-            parent_job.modify(push__child_jobs=retry_job_id)
 
-            # Should we compare the original and child job to make sure certain fields match,
+        # 2) Notify the parent container that it has a new child..
+        if parent_job:
+            try:
+                parent_job.modify(push__child_jobs=retry_job_id)
+            except Exception as e:
+                self._db_update_failure(
+                    job_that_failed_operation=str(parent_job.id),
+                    job_to_abort=retry_job_id,
+                    exception=e,
+                )
+
+        # Should we compare the original and child job to make sure certain fields match,
         # to make sure the retried job is correctly submitted? Or save that for a unit test?
         return {"job_id": job_id, "retry_id": retry_job_id}
-
-    @staticmethod
-    def _get_job_input_params_from_existing_job(job_input: JobInput) -> Dict:
-        """
-        Get input level fields.
-        """
-        # Expected fields are found in `_init_job_rec`
-        inputs = dict()
-
-        # Used to iterate over "Job" attributes but in dictionary like lookup
-        inputs_list = [
-            _METHOD,
-            _APP_PARAMS,
-            _SERVICE_VER,
-            _APP_ID,
-            _PARENT_JOB_ID,
-            _WORKSPACE_ID,
-            "requirements",
-        ]
-
-        # Insert field if available
-        for field in inputs_list:
-            if job_input[field]:
-                inputs[field] = job_input[field]
-
-        # _SOURCE_WS_OBJECTS list
-        if job_input[_SOURCE_WS_OBJECTS]:
-            inputs[_SOURCE_WS_OBJECTS] = list(job_input[_SOURCE_WS_OBJECTS])
-
-        # Special Cases: It is OK if meta/narr_cell_info is in params 2x
-        if job_input["narrative_cell_info"]:
-            # For easier testing
-            nci = job_input["narrative_cell_info"]  # type: Meta
-            inputs["meta"] = inputs["narrative_cell_info"] = nci.to_mongo().to_dict()
-
-        # Require a non blank params for job browser or narrative compatibility
-        if _APP_PARAMS not in inputs:
-            inputs[_APP_PARAMS] = {}
-
-        return inputs
 
     @staticmethod
     def _get_run_job_params_from_existing_job(job: Job, user_id: str) -> Dict:
@@ -613,19 +629,27 @@ class EE2RunJob:
         Get top level fields from job model to be sent into `run_job`
         """
         ji = job.job_input  # type: JobInput
-        job_input = EE2RunJob._get_job_input_params_from_existing_job(ji)
+
+        meta = None
+        if ji.narrative_cell_info:
+            meta = ji.narrative_cell_info.to_mongo().to_dict()
+
+        source_ws_objects = list
+        if ji.source_ws_objects:
+            source_ws_objects = list(ji.source_ws_objects)
 
         run_job_params = {
-            _WORKSPACE_ID: job.wsid,  # optional
-            "meta": job_input.get(_NARRATIVE_CELL_INFO),  # optional
-            _APP_PARAMS: job_input.get(_APP_PARAMS),  # optional
-            "user": user_id,  # required, it runs as the current user
-            _METHOD: job_input[_METHOD],  # required
-            _APP_ID: job_input.get(_APP_ID),  # optional
-            _SOURCE_WS_OBJECTS: job_input.get(_SOURCE_WS_OBJECTS),  # optional
-            _SERVICE_VER: job_input.get(_SERVICE_VER),  # optional
-            _PARENT_JOB_ID: job_input.get(_PARENT_JOB_ID),  # optional
+            _WORKSPACE_ID: job.wsid,
+            "meta": meta,
+            _APP_PARAMS: ji.params or {},
+            "user": user_id,  # REQUIRED, it runs as the current user
+            _METHOD: ji.method,  # REQUIRED
+            _APP_ID: ji.app_id,
+            _SOURCE_WS_OBJECTS: source_ws_objects,  # Must be list
+            _SERVICE_VER: ji.service_ver,
+            _PARENT_JOB_ID: ji.parent_job_id,
         }
+
         # Then the next fields are job inputs top level requirements, app run parameters, and scheduler resource requirements
         return run_job_params
 
