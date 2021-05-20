@@ -51,11 +51,15 @@ class CondorJobNotFoundException(ExecutionEngineException):
 
 
 class RetryFailureException(ExecutionEngineException):
-    """General exception for couldn't Retry the job'"""
+    """General exception for couldn't Retry the job failures'"""
+
+    pass
 
 
 class CannotRetryJob(ExecutionEngineException):
-    """Can only retry errored or cancelled jobs"""
+    """Can only retry errored or cancelled jobs, and not batch parents"""
+
+    pass
 
 
 class AuthError(ExecutionEngineException):

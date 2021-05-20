@@ -41,6 +41,7 @@ from execution_engine2.exceptions import (
     IncorrectParamsException,
     AuthError,
     CannotRetryJob,
+    RetryFailureException,
 )
 
 _JOB_REQUIREMENTS = "job_reqs"
@@ -550,7 +551,7 @@ class EE2RunJob:
         )
         # TODO Maybe move this log into multiple so not multiple error messages are generated
         self.logger.error(msg, exc_info=True, stack_info=True)
-        raise CannotRetryJob(msg)
+        raise RetryFailureException(msg)
 
     def _validate_retry_presubmit(self, job_id, as_admin):
         """Validate retry request before attempting to contact scheduler"""
