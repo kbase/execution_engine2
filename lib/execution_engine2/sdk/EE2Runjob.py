@@ -539,12 +539,14 @@ class EE2RunJob:
         # TODO Use and create a method in sdkmr?
         msg = (
             f"Couldn't update job record:{job_that_failed_operation} during retry. Aborting:{job_to_abort}"
-            f"Exception:{exception}"
+            f"Exception:{exception} "
         )
         self._safe_cancel(
             job_id=job_to_abort,
             terminated_code=TerminatedCode.terminated_by_server_failure,
         )
+        # TODO Maybe move this log into multiple so not multiple error messages are generated
+        self.logger.error(msg, exc_info=True, stack_info=True)
         raise CannotRetryJob(msg)
 
     def _validate_retry_presubmit(self, job_id, as_admin):

@@ -288,7 +288,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             "hex string"
         )
         assert "retry_id" not in retry_job_ids[-1]
-        assert retry_job_ids[-1]["error"] == errmsg
+        error = retry_job_ids[-1]["error"]
+        assert error == errmsg
         assert len(retry_job_ids) == 5
 
         # Lets retry the jobs a few times
