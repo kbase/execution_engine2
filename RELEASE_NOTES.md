@@ -3,10 +3,11 @@
 
 ## 0.0.X # TODO?
   * TODO: Added CreatedJobsReaper
-  * TODO: Will add retry endpoint
+  * Added retry_job and retry_jobs endpoint
   * TODO: Will deprecate run_job transaction and use scheduler API
-  * TODO: Add ADR for 
-  * Add Resource Requests
+  * Added 2 ADRs for Retry
+  * Add Resource Requests as a parameter for run_job
+  * Refactor RunJobParams and ResourceRequirements
   * Refactor auth tests
 
 
