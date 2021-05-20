@@ -406,7 +406,7 @@ class execution_engine2:
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache
         )
-        retry_result = mr.retry(job_id=params['job_id'], as_admin=params.get('as_admin'))
+        retry_result = mr.retry(job_id=params.get('job_id'), as_admin=params.get('as_admin'))
         #END retry_job
 
         # At some point might do deeper type checking...
@@ -440,7 +440,7 @@ class execution_engine2:
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache
         )
-        retry_result = mr.retry_multiple(job_ids=params['job_ids'], as_admin=params.get('as_admin'))
+        retry_result = mr.retry_multiple(job_ids=params.get('job_ids'), as_admin=params.get('as_admin'))
         #END retry_jobs
 
         # At some point might do deeper type checking...

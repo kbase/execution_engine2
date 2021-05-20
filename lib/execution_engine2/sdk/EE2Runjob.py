@@ -509,6 +509,9 @@ class EE2RunJob:
         :param as_admin: Run with admin permission
         :return: The child job ids that have been retried or errors
         """
+        if not job_ids:
+            raise ValueError("No job_ids provided to retry")
+
         retried_jobs = []
         for job_id in job_ids:
             try:
