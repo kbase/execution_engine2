@@ -160,7 +160,6 @@ class JobInput(EmbeddedDocument):
 
     wsid = IntField(required=False, default=None)
     method = StringField(required=True)
-    requested_release = StringField()
     params = DynamicField()
     service_ver = StringField(required=True)
     app_id = StringField()
