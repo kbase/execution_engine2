@@ -9,6 +9,7 @@
   * Add Resource Requests as a parameter for run_job
   * Refactor RunJobParams and ResourceRequirements
   * Refactor auth tests
+  * Removed slack messages for running jobs
 
 
 ## 0.0.5 
