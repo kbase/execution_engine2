@@ -52,7 +52,6 @@ _SCHEDULER_REQUIREMENTS = "scheduler_requirements"
 
 _META = "meta"  # narrative_cell_info
 _APP_PARAMS = "params"  # application parameters
-_JOB_INPUT = "job_input"
 _REQUIREMENTS_LIST = "requirements_list"
 _METHOD = "method"
 _APP_ID = "app_id"
