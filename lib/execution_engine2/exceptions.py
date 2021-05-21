@@ -15,11 +15,9 @@ class IncorrectParamsException(ExecutionEngineValueError):
 class MissingRunJobParamsException(ExecutionEngineValueError):
     """Missing a required run_job_parameter"""
 
-    pass
-
 
 class InvalidStatusTransitionException(ExecutionEngineValueError):
-    pass
+    """Raised if the status transition is NOT ALLOWED"""
 
 
 class InvalidOperationForStatusException(ExecutionEngineValueError):
@@ -27,42 +25,36 @@ class InvalidOperationForStatusException(ExecutionEngineValueError):
 
 
 class MissingCondorRequirementsException(ExecutionEngineValueError):
-    pass
+    """Raised if malformed requirements information is retrieved for an ee2 job"""
 
 
 class MalformedJobIdException(ExecutionEngineValueError):
-    pass
+    """Raised if bad ee2 id is passed in"""
 
 
 class MalformedTimestampException(ExecutionEngineException):
-    pass
+    """Bad timestamps"""
 
 
 class ChildrenNotFoundError(ExecutionEngineException):
-    pass
+    """Raised if children are not found for a given parent when attempting to abandon children"""
 
 
 class RecordNotFoundException(ExecutionEngineException):
-    pass
+    """Raised if ee2 job or ee2 job log record is not found in db"""
 
 
 class CondorJobNotFoundException(ExecutionEngineException):
-    pass
+    """Raised if condor job is not found"""
 
 
 class RetryFailureException(ExecutionEngineException):
     """General exception for couldn't Retry the job failures'"""
 
-    pass
-
 
 class CannotRetryJob(ExecutionEngineException):
     """Can only retry errored or cancelled jobs, and not batch parents"""
 
-    pass
-
 
 class AuthError(ExecutionEngineException):
     """Raised if a user is unauthorized for a particular action, or doesn't have the right auth role"""
-
-    pass

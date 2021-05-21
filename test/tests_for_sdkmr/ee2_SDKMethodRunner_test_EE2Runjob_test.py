@@ -353,7 +353,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         for job in [original_job, retried_job, retried_job2, retried_job3]:
             if job == original_job:
-                assert original_job["retried"]
                 assert original_job["retry_count"] == 3
             else:
                 assert job["retry_parent"] == parent_job_id
@@ -422,7 +421,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         same_keys = ["user", "authstrat", "wsid", "scheduler_type", "job_input"]
         assert "retry_parent" not in original_job
-        assert original_job["retried"]
         assert original_job["retry_count"] == 1
         assert retried_job["retry_parent"] == parent_job_id
 

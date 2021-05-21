@@ -18,13 +18,20 @@ from execution_engine2.db.models.models import (
     ErrorCode,
     TerminatedCode,
 )
+from execution_engine2.exceptions import (
+    IncorrectParamsException,
+    AuthError,
+    CannotRetryJob,
+    RetryFailureException,
+)
+from execution_engine2.sdk.EE2Constants import CONCIERGE_CLIENTGROUP
 from execution_engine2.sdk.job_submission_parameters import (
     JobSubmissionParameters,
     JobRequirements as ResolvedRequirements,
     AppInfo,
     UserCreds,
 )
-from execution_engine2.sdk.EE2Constants import CONCIERGE_CLIENTGROUP
+from execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
 from execution_engine2.utils.job_requirements_resolver import (
     REQUEST_CPUS,
     REQUEST_DISK,
@@ -36,13 +43,6 @@ from execution_engine2.utils.job_requirements_resolver import (
     DEBUG_MODE,
 )
 from execution_engine2.utils.job_requirements_resolver import RequirementsType
-from execution_engine2.utils.KafkaUtils import KafkaCreateJob, KafkaQueueChange
-from execution_engine2.exceptions import (
-    IncorrectParamsException,
-    AuthError,
-    CannotRetryJob,
-    RetryFailureException,
-)
 
 _JOB_REQUIREMENTS = "job_reqs"
 
@@ -59,7 +59,6 @@ _PARENT_JOB_ID = "parent_job_id"
 _PARENT_RETRY_JOB_ID = "retry_parent"
 _WORKSPACE_ID = "wsid"
 _SOURCE_WS_OBJECTS = "source_ws_objects"
-_NARRATIVE_CELL_INFO = "narrative_cell_info"
 _SERVICE_VER = "service_ver"
 
 
@@ -125,10 +124,10 @@ class EE2RunJob:
         inputs.params = params.get("params")
 
         # Catalog git commit
-        params["service_ver"] = self._get_module_git_commit(
-            params.get(_METHOD), params.get("service_ver")
+        params[_SERVICE_VER] = self._get_module_git_commit(
+            params.get(_METHOD), params.get(_SERVICE_VER)
         )
-        inputs.service_ver = params.get("service_ver")
+        inputs.service_ver = params.get(_SERVICE_VER)
         inputs.app_id = params.get(_APP_ID)
         inputs.source_ws_objects = params.get(_SOURCE_WS_OBJECTS)
 
@@ -534,7 +533,6 @@ class EE2RunJob:
             self.sdkmr.cancel_job(job_id=job_id, terminated_code=terminated_code.value)
         except Exception as e:
             self.logger.error(f"Couldn't cancel {job_id} due to {e}")
-            pass
 
     def _db_update_failure(
         self, job_that_failed_operation: str, job_to_abort: str, exception: Exception
@@ -606,7 +604,7 @@ class EE2RunJob:
         # Save that the job has been retried, and increment the count. Notify the parent(s)
         # 1) Notify the retry_parent that it has been retried
         try:
-            job.modify(inc__retry_count=1, set__retried=True)
+            job.modify(inc__retry_count=1)
         except Exception as e:
             self._db_update_failure(
                 job_that_failed_operation=str(job.id),
@@ -640,7 +638,7 @@ class EE2RunJob:
         if ji.narrative_cell_info:
             meta = ji.narrative_cell_info.to_mongo().to_dict()
 
-        source_ws_objects = list
+        source_ws_objects = list()
         if ji.source_ws_objects:
             source_ws_objects = list(ji.source_ws_objects)
 

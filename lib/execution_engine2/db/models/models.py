@@ -325,7 +325,6 @@ class Job(Document):
 
     # Only present when a job has been retried and on the retry_parent
     retry_count = IntField(min_value=0)
-    retried = BooleanField()
 
     # Only present on a retried job, not it's parent. If attempting to retry this job, use its parent instead
     retry_parent = StringField()
