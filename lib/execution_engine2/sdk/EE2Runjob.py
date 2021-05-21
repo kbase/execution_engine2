@@ -265,7 +265,8 @@ class EE2RunJob:
 
         try:
             # submission_info = self.sdkmr.get_condor().run_job(params=job_params)
-            submission_info = SubmissionInfo(clusterid=1, submit={})
+
+            submission_info = SubmissionInfo(clusterid=1, submit={}, error=None)
             condor_job_id = submission_info.clusterid
             self.logger.debug(f"Submitted job id and got '{condor_job_id}'")
         except Exception as e:
