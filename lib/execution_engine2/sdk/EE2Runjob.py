@@ -43,6 +43,7 @@ from execution_engine2.utils.job_requirements_resolver import (
     DEBUG_MODE,
 )
 from execution_engine2.utils.job_requirements_resolver import RequirementsType
+from execution_engine2.utils.CondorTuples import SubmissionInfo
 
 _JOB_REQUIREMENTS = "job_reqs"
 
@@ -263,7 +264,8 @@ class EE2RunJob:
         job_id = job_params.job_id
 
         try:
-            submission_info = self.sdkmr.get_condor().run_job(params=job_params)
+            # submission_info = self.sdkmr.get_condor().run_job(params=job_params)
+            submission_info = SubmissionInfo(clusterid=1, submit={})
             condor_job_id = submission_info.clusterid
             self.logger.debug(f"Submitted job id and got '{condor_job_id}'")
         except Exception as e:
