@@ -337,16 +337,23 @@ class EE2RunJob:
 
     def _run_batch(self, parent_job: Job, params):
         child_jobs = []
+        step_four_time = time.time()
         for job_param in params:
             job_param[_PARENT_JOB_ID] = str(parent_job.id)
             try:
+                job_time = time.time()
                 child_jobs.append(str(self._run(params=job_param)))
+                self.logger.debug(
+                    f"Time spent submitting job {time.time() - job_time} "
+                )
             except Exception as e:
                 self.logger.debug(
                     msg=f"Failed to submit child job. Aborting entire batch job {e}"
                 )
                 self._abort_child_jobs(child_jobs)
                 raise e
+
+        self.logger.debug(f"Time spent step4 {time.time() - step_four_time} ")
 
         parent_job.child_jobs = child_jobs
         self.sdkmr.save_job(parent_job)
@@ -366,6 +373,9 @@ class EE2RunJob:
             raise IncorrectParamsException("params must be a list")
         wsid = batch_params.get(_WORKSPACE_ID)
         meta = batch_params.get("meta")
+
+        step_one_time = time.time()
+
         if as_admin:
             self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
         else:
@@ -380,8 +390,16 @@ class EE2RunJob:
         self._add_job_requirements(params, bool(as_admin))  # as_admin checked above
         self._check_job_arguments(params, has_parent_job=True)
 
+        self.logger.debug(f"Time spent step1 {time.time() - step_one_time} ")
+
+        step_two_time = time.time()
         parent_job = self._create_parent_job(wsid=wsid, meta=meta)
+        self.logger.debug(f"Time spent step2 {time.time() - step_two_time} ")
+
+        step_three_time = time.time()
         children_jobs = self._run_batch(parent_job=parent_job, params=params)
+        self.logger.debug(f"Time spent step3 {time.time() - step_three_time} ")
+
         return {_PARENT_JOB_ID: str(parent_job.id), "child_job_ids": children_jobs}
 
     # modifies the jobs in place
