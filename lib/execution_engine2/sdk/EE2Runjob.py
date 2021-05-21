@@ -346,6 +346,9 @@ class EE2RunJob:
                 self.logger.debug(
                     f"Time spent submitting job {time.time() - job_time} "
                 )
+                self.logger.debug(
+                    f"Time spent submitting job so far {time.time() - step_four_time} "
+                )
             except Exception as e:
                 self.logger.debug(
                     msg=f"Failed to submit child job. Aborting entire batch job {e}"
@@ -391,15 +394,28 @@ class EE2RunJob:
         self._check_job_arguments(params, has_parent_job=True)
 
         self.logger.debug(f"Time spent step1 {time.time() - step_one_time} ")
+        """
+        1621620427.874145:DEBUG:ee2:Time spent step1 3.778172731399536
+        1621620501.779738:DEBUG:ee2:Time spent step1 3.9463050365448
+        1621620675.524177:DEBUG:ee2:Time spent step1 3.574579954147339
+        """
 
         step_two_time = time.time()
         parent_job = self._create_parent_job(wsid=wsid, meta=meta)
         self.logger.debug(f"Time spent step2 {time.time() - step_two_time} ")
+        """
+        1621620427.927013:DEBUG:ee2:Time spent step2 0.05260944366455078
+        1621620501.853718:DEBUG:ee2:Time spent step2 0.07359075546264648
+        1621620675.555091:DEBUG:ee2:Time spent step2 0.030597686767578125
+        """
 
         step_three_time = time.time()
         children_jobs = self._run_batch(parent_job=parent_job, params=params)
         self.logger.debug(f"Time spent step3 {time.time() - step_three_time} ")
-
+        """
+        1621620436.139422:DEBUG:ee2:Time spent step3 8.211862564086914
+        1621620510.209712:DEBUG:ee2:Time spent step3 8.355778455734253
+        """
         return {_PARENT_JOB_ID: str(parent_job.id), "child_job_ids": children_jobs}
 
     # modifies the jobs in place
