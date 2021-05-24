@@ -135,7 +135,7 @@ class EE2RunJob:
         inputs.narrative_cell_info = Meta()
 
         # Meta and Requirements
-        meta = params.get("meta")
+        meta = params.get(_META)
         if meta:
             for meta_attr in ["run_id", "token_id", "tag", "cell_id"]:
                 inputs.narrative_cell_info[meta_attr] = meta.get(meta_attr)
@@ -260,7 +260,7 @@ class EE2RunJob:
         job_id = job_params.job_id
 
         try:
-            submission_info = self.sdkmr.get_condor().run_job(params=params)
+            submission_info = self.sdkmr.get_condor().run_job(params=job_params)
             condor_job_id = submission_info.clusterid
             self.logger.debug(f"Submitted job id and got '{condor_job_id}'")
         except Exception as e:
@@ -369,7 +369,7 @@ class EE2RunJob:
         if type(params) != list:
             raise IncorrectParamsException("params must be a list")
         wsid = batch_params.get(_WORKSPACE_ID)
-        meta = batch_params.get("meta")
+        meta = batch_params.get(_META)
 
         if as_admin:
             self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
@@ -677,7 +677,7 @@ class EE2RunJob:
 
         run_job_params = {
             _WORKSPACE_ID: job.wsid,
-            "meta": meta,
+            _META: meta,
             _APP_PARAMS: ji.params or {},
             "user": user_id,  # REQUIRED, it runs as the current user
             _METHOD: ji.method,  # REQUIRED
