@@ -15,6 +15,7 @@ from execution_engine2.utils.job_requirements_resolver import JobRequirementsRes
 from execution_engine2.utils.KafkaUtils import KafkaClient
 from execution_engine2.utils.SlackUtils import SlackClient
 from execution_engine2.utils.arg_processing import parse_bool
+from execution_engine2.utils.catalog_util import CatalogCache
 
 from installed_clients.authclient import KBaseAuth
 from installed_clients.CatalogClient import Catalog
@@ -158,6 +159,7 @@ def get_clients(
     # TODO check keys are present - make some general methods for dealing with this
     # token is needed for running log_exec_stats in EE2Status
     catalog = Catalog(cfg["catalog-url"], token=cfg["catalog-token"])
+    catalog_cache = CatalogCache(catalog)
     # make a separate, hidden catalog instance
     jrr = JobRequirementsResolver(
         Catalog(cfg["catalog-url"]), cfg_file, override_client_group
@@ -184,6 +186,7 @@ def get_clients(
         auth_admin,
         condor,
         catalog,
+        catalog_cache,
         jrr,
         kafka_client,
         mongo_util,

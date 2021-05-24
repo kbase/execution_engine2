@@ -25,16 +25,17 @@ from lib.execution_engine2.sdk import (
     EE2Status,
     EE2Logs,
 )
-from lib.execution_engine2.sdk.EE2Constants import KBASE_CONCIERGE_USERNAME
-from lib.execution_engine2.utils.Condor import Condor
+from execution_engine2.sdk.EE2Constants import KBASE_CONCIERGE_USERNAME
+from execution_engine2.utils.Condor import Condor
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
 from execution_engine2.utils.clients import UserClientSet, ClientSet
-from lib.execution_engine2.utils.EE2Logger import get_logger as _get_logger
-from lib.execution_engine2.utils.KafkaUtils import KafkaClient
-from lib.execution_engine2.utils.SlackUtils import SlackClient
+from execution_engine2.utils.EE2Logger import get_logger as _get_logger
+from execution_engine2.utils.KafkaUtils import KafkaClient
+from execution_engine2.utils.SlackUtils import SlackClient
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
+from execution_engine2.utils.catalog_util import CatalogCache
 
 
 class JobPermissions(Enum):
@@ -157,6 +158,12 @@ class SDKMethodRunner:
         Get the catalog client for this instance of SDKMR.
         """
         return self.catalog
+
+    def get_catalog_util(self) -> CatalogCache:
+        """
+        Get the catalog client for this instance of SDKMR.
+        """
+        return self.catalog_util
 
     def get_job_requirements_resolver(self) -> JobRequirementsResolver:
         """

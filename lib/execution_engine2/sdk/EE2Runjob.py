@@ -43,6 +43,7 @@ from execution_engine2.utils.job_requirements_resolver import (
     DEBUG_MODE,
 )
 from execution_engine2.utils.job_requirements_resolver import RequirementsType
+from utils.catalog_util import _get_module_git_commit
 
 _JOB_REQUIREMENTS = "job_reqs"
 _JOB_REQUIREMENTS_INCOMING = "job_requirements"
@@ -81,6 +82,7 @@ class EE2RunJob:
         self.sdkmr = sdkmr  # type: SDKMethodRunner
         self.override_clientgroup = os.environ.get("OVERRIDE_CLIENT_GROUP", None)
         self.logger = self.sdkmr.get_logger()
+        self.catalog = self.sdkmr.get_catalog_util()
 
     def _init_job_rec(
         self,
@@ -121,8 +123,8 @@ class EE2RunJob:
         inputs.params = params.get("params")
 
         # Catalog git commit
-        params[_SERVICE_VER] = self._get_module_git_commit(
-            params.get(_METHOD), params.get(_SERVICE_VER)
+        params[_SERVICE_VER] = _get_module_git_commit(
+            self.logger, self.sdkmr, params.get(_METHOD), params.get(_SERVICE_VER)
         )
         inputs.service_ver = params.get(_SERVICE_VER)
         inputs.app_id = params.get(_APP_ID)
@@ -162,17 +164,6 @@ class EE2RunJob:
             message=KafkaCreateJob(job_id=job_id, user=user_id)
         )
         return job_id
-
-    def _get_module_git_commit(self, method, service_ver=None) -> Optional[str]:
-        module_name = method.split(".")[0]
-        if not service_ver:
-            service_ver = "release"
-        self.logger.debug(f"Getting commit for {module_name} {service_ver}")
-        module_version = self.sdkmr.get_catalog().get_module_version(
-            {"module_name": module_name, "version": service_ver}
-        )
-        git_commit_hash = module_version.get("git_commit_hash")
-        return git_commit_hash
 
     def _check_ws_objects(self, source_objects) -> None:
         """

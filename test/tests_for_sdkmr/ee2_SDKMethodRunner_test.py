@@ -44,6 +44,7 @@ from test.utils_shared.test_utils import (
 )
 from test.utils_shared.mock_utils import get_client_mocks, ALL_CLIENTS
 from tests_for_db.mongo_test_helper import MongoTestHelper
+from utils.catalog_util import _get_module_git_commit
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
