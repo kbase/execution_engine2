@@ -559,7 +559,7 @@ class EE2RunJob:
 
         if not self._retryable(job.status):
             raise CannotRetryJob(
-                f"Can only retry a cancelled or errored job_id:{job_id} status:{job.status}"
+                f"Error retrying job {job_id} with status {job.status}: can only retry jobs with status 'error' or 'terminated'"
             )
 
         return job, parent_job
