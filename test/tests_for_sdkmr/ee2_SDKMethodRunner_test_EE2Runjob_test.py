@@ -272,25 +272,24 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner.update_job_status(job_id=parent_job_id1, status=Status.terminated.value)
         runner.update_job_status(job_id=parent_job_id2, status=Status.error.value)
 
-        # 2. Retry the jobs
-        retry_job_ids = runner.retry_multiple(
-            job_ids=[
-                parent_job_id1,
-                parent_job_id2,
-                parent_job_id1,
-                parent_job_id2,
-                123,
-            ]
-        )
-
+        # 2. Retry the jobs with a fake input
         errmsg = (
             "'123' is not a valid ObjectId, it must be a 12-byte input or a 24-character "
             "hex string"
         )
-        assert "retry_id" not in retry_job_ids[-1]
-        error = retry_job_ids[-1]["error"]
-        assert error == errmsg
-        assert len(retry_job_ids) == 5
+        with self.assertRaisesRegexp(RetryFailureException, errmsg):
+            runner.retry_multiple(job_ids=[parent_job_id1, 123])
+
+        # 2. Actually retry the jobs
+        retry_candidates = (
+            parent_job_id1,
+            parent_job_id2,
+            parent_job_id1,
+            parent_job_id2,
+        )
+        retry_job_ids = runner.retry_multiple(retry_candidates)
+
+        assert len(retry_job_ids) == len(retry_candidates)
 
         # Lets retry the jobs a few times
         js = runner.check_jobs(
