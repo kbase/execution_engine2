@@ -534,28 +534,6 @@ class EE2RunJob:
             # although most likely jobs aren't operating on the same object
             self._check_ws_objects(source_objects=job.get(_SOURCE_WS_OBJECTS))
 
-    def retry_multiple(
-        self, job_ids, as_admin=False
-    ) -> List[Dict[str, Union[str, Any]]]:
-        """
-        #TODO Add new job requirements/cgroups as an optional param
-        #TODO Notify the parent container that it has multiple new children, instead of multiple transactions?
-
-        :param job_ids: The list of jobs to retry
-        :param as_admin: Run with admin permission
-        :return: The child job ids that have been retried or errors
-        """
-        if not job_ids:
-            raise ValueError("No job_ids provided to retry")
-
-        retried_jobs = []
-        for job_id in job_ids:
-            try:
-                retried_jobs.append(self.retry(job_id, as_admin=as_admin))
-            except Exception as e:
-                retried_jobs.append({"job_id": job_id, "error": f"{e}"})
-        return retried_jobs
-
     @staticmethod
     def _retryable(status: str):
         return status in [Status.terminated.value, Status.error.value]
@@ -611,20 +589,9 @@ class EE2RunJob:
                 f"Can only retry a cancelled or errored job_id:{job_id} status:{job.status}"
             )
 
-        return job, job_input, parent_job
+        return job, parent_job
 
-    def retry(self, job_id: str, as_admin=False) -> Dict[str, Optional[str]]:
-        """
-        #TODO Add new job requirements/cgroups as an optional param
-        :param job_id: The main job to retry
-        :param as_admin: Run with admin permission
-        :return: The child job id that has been retried
-        """
-
-        job, job_input, parent_job = self._validate_retry_presubmit(
-            job_id=job_id, as_admin=as_admin
-        )
-
+    def _retry(self, job_id: str, job: Job, parent_job: str, as_admin: bool):
         # Cannot retry a retried job, you must retry the retry_parent
         if job.retry_parent:
             return self.retry(str(job.retry_parent), as_admin=as_admin)
@@ -662,6 +629,49 @@ class EE2RunJob:
         # Should we compare the original and child job to make sure certain fields match,
         # to make sure the retried job is correctly submitted? Or save that for a unit test?
         return {"job_id": job_id, "retry_id": retry_job_id}
+
+    def retry(self, job_id: str, as_admin=False) -> Dict[str, Optional[str]]:
+        """
+        #TODO Add new job requirements/cgroups as an optional param
+        :param job_id: The main job to retry
+        :param as_admin: Run with admin permission
+        :return: The child job id that has been retried
+        """
+        job, parent_job = self._validate_retry_presubmit(
+            job_id=job_id, as_admin=as_admin
+        )
+        return self._retry(
+            job_id=job_id, job=job, parent_job=parent_job, as_admin=as_admin
+        )
+
+    def retry_multiple(
+        self, job_ids, as_admin=False
+    ) -> List[Dict[str, Union[str, Any]]]:
+        """
+        #TODO Add new job requirements/cgroups as an optional param
+        #TODO Notify the parent container that it has multiple new children, instead of multiple transactions?
+
+        :param job_ids: The list of jobs to retry
+        :param as_admin: Run with admin permission
+        :return: The child job ids that have been retried or errors
+        """
+        if not job_ids:
+            raise ValueError("No job_ids provided to retry")
+
+        retried_jobs = []
+        for job_id in job_ids:
+            try:
+                job, parent_job = self._validate_retry_presubmit(
+                    job_id=job_id, as_admin=as_admin
+                )
+                retried_jobs.append(
+                    self._retry(
+                        job_id=job_id, job=job, parent_job=parent_job, as_admin=as_admin
+                    )
+                )
+            except Exception as e:
+                retried_jobs.append({"job_id": job_id, "error": f"{e}"})
+        return retried_jobs
 
     @staticmethod
     def _get_run_job_params_from_existing_job(job: Job, user_id: str) -> Dict:
