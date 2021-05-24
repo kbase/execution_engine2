@@ -263,9 +263,7 @@ class EE2RunJob:
         job_id = job_params.job_id
 
         try:
-            # submission_info = self.sdkmr.get_condor().run_job(params=job_params)
-
-            submission_info = SubmissionInfo(clusterid="123", submit={}, error=None)
+            submission_info = self.sdkmr.get_condor().run_job(params=params)
             condor_job_id = submission_info.clusterid
             self.logger.debug(f"Submitted job id and got '{condor_job_id}'")
         except Exception as e:
@@ -376,8 +374,6 @@ class EE2RunJob:
         wsid = batch_params.get(_WORKSPACE_ID)
         meta = batch_params.get("meta")
 
-        step_one_time = time.time()
-
         if as_admin:
             self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
         else:
@@ -392,29 +388,9 @@ class EE2RunJob:
         self._add_job_requirements(params, bool(as_admin))  # as_admin checked above
         self._check_job_arguments(params, has_parent_job=True)
 
-        self.logger.debug(f"Time spent step1 {time.time() - step_one_time} ")
-        """
-        1621620427.874145:DEBUG:ee2:Time spent step1 3.778172731399536
-        1621620501.779738:DEBUG:ee2:Time spent step1 3.9463050365448
-        1621620675.524177:DEBUG:ee2:Time spent step1 3.574579954147339
-        """
-
-        step_two_time = time.time()
         parent_job = self._create_parent_job(wsid=wsid, meta=meta)
-        self.logger.debug(f"Time spent step2 {time.time() - step_two_time} ")
-        """
-        1621620427.927013:DEBUG:ee2:Time spent step2 0.05260944366455078
-        1621620501.853718:DEBUG:ee2:Time spent step2 0.07359075546264648
-        1621620675.555091:DEBUG:ee2:Time spent step2 0.030597686767578125
-        """
-
-        step_three_time = time.time()
         children_jobs = self._run_batch(parent_job=parent_job, params=params)
-        self.logger.debug(f"Time spent step3 {time.time() - step_three_time} ")
-        """
-        1621620436.139422:DEBUG:ee2:Time spent step3 8.211862564086914
-        1621620510.209712:DEBUG:ee2:Time spent step3 8.355778455734253
-        """
+
         return {_PARENT_JOB_ID: str(parent_job.id), "child_job_ids": children_jobs}
 
     # modifies the jobs in place
@@ -565,7 +541,7 @@ class EE2RunJob:
         self.logger.error(msg, exc_info=True, stack_info=True)
         raise RetryFailureException(msg)
 
-    def _validate_retry_presubmit(self, job_id, as_admin):
+    def _validate_retry_presubmit(self, job_id: str, as_admin: bool):
         """Validate retry request before attempting to contact scheduler"""
         # Check to see if you still have permissions to the job and then optionally the parent job id
         job = self.sdkmr.get_job_with_permission(
@@ -591,7 +567,7 @@ class EE2RunJob:
 
         return job, parent_job
 
-    def _retry(self, job_id: str, job: Job, parent_job: str, as_admin: bool):
+    def _retry(self, job_id: str, job: Job, parent_job: Job, as_admin: bool):
         # Cannot retry a retried job, you must retry the retry_parent
         if job.retry_parent:
             return self.retry(str(job.retry_parent), as_admin=as_admin)
@@ -658,15 +634,29 @@ class EE2RunJob:
         if not job_ids:
             raise ValueError("No job_ids provided to retry")
 
+        # Check all inputs before attempting to start submitting jobs
         retried_jobs = []
+        jobs = []
+        parent_jobs = []
         for job_id in job_ids:
             try:
                 job, parent_job = self._validate_retry_presubmit(
                     job_id=job_id, as_admin=as_admin
                 )
+                jobs.append(job)
+                parent_jobs.append(parent_job)
+            except Exception as e:
+                raise RetryFailureException(e)
+
+        # Submit all of the collected jobs
+        for i, job_id in enumerate(job_ids):
+            try:
                 retried_jobs.append(
                     self._retry(
-                        job_id=job_id, job=job, parent_job=parent_job, as_admin=as_admin
+                        job_id=job_id,
+                        job=jobs[i],
+                        parent_job=parent_jobs[i],
+                        as_admin=as_admin,
                     )
                 )
             except Exception as e:
