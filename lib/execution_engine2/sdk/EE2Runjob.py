@@ -43,13 +43,10 @@ from execution_engine2.utils.job_requirements_resolver import (
     DEBUG_MODE,
 )
 from execution_engine2.utils.job_requirements_resolver import RequirementsType
-from execution_engine2.utils.CondorTuples import SubmissionInfo
 
 _JOB_REQUIREMENTS = "job_reqs"
-
 _JOB_REQUIREMENTS_INCOMING = "job_requirements"
 _SCHEDULER_REQUIREMENTS = "scheduler_requirements"
-
 _META = "meta"  # narrative_cell_info
 _APP_PARAMS = "params"  # application parameters
 _REQUIREMENTS_LIST = "requirements_list"
