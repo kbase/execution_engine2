@@ -9,7 +9,7 @@ from unittest.mock import patch
 import requests_mock
 from mock import MagicMock
 
-from execution_engine2.exceptions import CannotRetryJob
+from execution_engine2.exceptions import CannotRetryJob, RetryFailureException
 from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.utils.clients import (
     get_client_set,
@@ -476,6 +476,13 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         parent_job = runner.check_job(job_id=parent_job_id)
         assert len(parent_job["child_jobs"]) == 4
         assert parent_job["child_jobs"][-1] == retry_id
+
+        # Test to see if one input fails, so fail them all
+        with self.assertRaises(expected_exception=RetryFailureException):
+            retry_id = runner.retry_multiple(
+                job_ids=[child_job_id, child_job_id, "fail"]
+            )
+            print(retry_id)
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
