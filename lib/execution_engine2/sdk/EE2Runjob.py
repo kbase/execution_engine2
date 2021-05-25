@@ -43,7 +43,7 @@ from execution_engine2.utils.job_requirements_resolver import (
     DEBUG_MODE,
 )
 from execution_engine2.utils.job_requirements_resolver import RequirementsType
-from utils.catalog_util import _get_module_git_commit
+
 
 _JOB_REQUIREMENTS = "job_reqs"
 _JOB_REQUIREMENTS_INCOMING = "job_requirements"

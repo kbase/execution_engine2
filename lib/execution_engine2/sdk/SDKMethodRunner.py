@@ -69,6 +69,7 @@ class SDKMethodRunner:
         self.mongo_util = clients.mongo_util
         self.condor = clients.condor
         self.catalog = clients.catalog
+        self.catalog_cache = clients.catalog_cache
         self.job_requirements_resolver = clients.requirements_resolver
         self.workspace = user_clients.workspace
         self.workspace_auth = user_clients.workspace_auth
@@ -163,7 +164,7 @@ class SDKMethodRunner:
         """
         Get the catalog client for this instance of SDKMR.
         """
-        return self.catalog_util
+        return self.catalog_cache
 
     def get_job_requirements_resolver(self) -> JobRequirementsResolver:
         """

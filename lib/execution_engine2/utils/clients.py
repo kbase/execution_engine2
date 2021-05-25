@@ -134,6 +134,7 @@ def get_clients(
     AdminAuthUtil,
     Condor,
     Catalog,
+    CatalogCache,
     JobRequirementsResolver,
     KafkaClient,
     MongoUtil,
@@ -162,11 +163,11 @@ def get_clients(
     # token is needed for running log_exec_stats in EE2Status
     catalog = Catalog(cfg["catalog-url"], token=cfg["catalog-token"])
     # instance of catalog without creds is used here
-    catalog_cache = Catalog(cfg["catalog-url"])
-    # make a separate, hidden catalog instance
-    jrr = JobRequirementsResolver(
-        Catalog(cfg["catalog-url"]), cfg_file, override_client_group
-    )
+    unauthenticated_cc = Catalog(cfg["catalog-url"])
+
+    catalog_cache = CatalogCache(catalog=unauthenticated_cc)
+    # use unauthenicated catalog instance
+    jrr = JobRequirementsResolver(unauthenticated_cc, cfg_file, override_client_group)
     auth_url = cfg["auth-url"]
     auth = KBaseAuth(auth_url=auth_url + "/api/legacy/KBase/Sessions/Login")
     # TODO using hardcoded roles for now to avoid possible bugs with mismatched cfg roles
