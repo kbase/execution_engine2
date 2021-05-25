@@ -578,17 +578,7 @@ class EE2RunJob:
         retry_job_id = self.run(params=run_job_params, as_admin=as_admin)
 
         # Save that the job has been retried, and increment the count. Notify the parent(s)
-        # 1) Notify the retry_parent that it has been retried
-        try:
-            job.modify(inc__retry_count=1)
-        except Exception as e:
-            self._db_update_failure(
-                job_that_failed_operation=str(job.id),
-                job_to_abort=retry_job_id,
-                exception=e,
-            )
-
-        # 2) Notify the parent container that it has a new child..
+        # 1) Notify the parent container that it has a new child..
         if parent_job:
             try:
                 parent_job.modify(push__child_jobs=retry_job_id)
@@ -598,6 +588,16 @@ class EE2RunJob:
                     job_to_abort=retry_job_id,
                     exception=e,
                 )
+
+        # 2) Notify the retry_parent that it has been retried
+        try:
+            job.modify(inc__retry_count=1)
+        except Exception as e:
+            self._db_update_failure(
+                job_that_failed_operation=str(job.id),
+                job_to_abort=retry_job_id,
+                exception=e,
+            )
 
         # Should we compare the original and child job to make sure certain fields match,
         # to make sure the retried job is correctly submitted? Or save that for a unit test?
