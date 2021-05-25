@@ -98,6 +98,7 @@ class ClientSet:
         auth_admin: AdminAuthUtil,
         condor: Condor,
         catalog: Catalog,
+        catalog_cache: CatalogCache,
         requirements_resolver: JobRequirementsResolver,
         kafka_client: KafkaClient,
         mongo_util: MongoUtil,
@@ -111,6 +112,7 @@ class ClientSet:
         self.auth_admin = _not_falsy(auth_admin, "auth_admin")
         self.condor = _not_falsy(condor, "condor")
         self.catalog = _not_falsy(catalog, "catalog")
+        self.catalog_cache = _not_falsy(catalog_cache, "catalog_cache")
         self.requirements_resolver = _not_falsy(
             requirements_resolver, "requirements_resolver"
         )
@@ -159,7 +161,8 @@ def get_clients(
     # TODO check keys are present - make some general methods for dealing with this
     # token is needed for running log_exec_stats in EE2Status
     catalog = Catalog(cfg["catalog-url"], token=cfg["catalog-token"])
-    catalog_cache = CatalogCache(catalog)
+    # instance of catalog without creds is used here
+    catalog_cache = Catalog(cfg["catalog-url"])
     # make a separate, hidden catalog instance
     jrr = JobRequirementsResolver(
         Catalog(cfg["catalog-url"]), cfg_file, override_client_group

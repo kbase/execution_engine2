@@ -8,6 +8,7 @@ from typing import Iterable, Dict, Union, Set
 from enum import Enum
 
 from lib.installed_clients.CatalogClient import Catalog
+from execution_engine2.utils.catalog_util import CatalogCache
 
 from execution_engine2.utils.arg_processing import (
     check_string as _check_string,
@@ -157,7 +158,7 @@ class JobRequirementsResolver:
 
     def __init__(
         self,
-        catalog: Catalog,
+        catalog_cache: CatalogCache,
         cfgfile: Iterable[str],
         override_client_group: str = None,
     ):
@@ -169,7 +170,7 @@ class JobRequirementsResolver:
         override_client_group - if provided, this client group will be used for all jobs, ignoring
             all other sources of client group information.
         """
-        self._catalog = _not_falsy(catalog, "catalog")
+        self._catalog_cache = _not_falsy(catalog_cache, "catalog_cache")
         self._override_client_group = _check_string(
             override_client_group, "override_client_group", optional=True
         )
@@ -467,7 +468,7 @@ class JobRequirementsResolver:
 
     def _get_catalog_reqs(self, module_name, function_name):
         # could cache results for 30s or so to speed things up... YAGNI
-        group_config = self._catalog.list_client_group_configs(
+        group_config = self._catalog_cache.get_condor_resources(
             {"module_name": module_name, "function_name": function_name}
         )
         # If group_config is empty, that means there's no clientgroup entry in the catalog

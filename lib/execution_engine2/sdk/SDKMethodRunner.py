@@ -159,7 +159,7 @@ class SDKMethodRunner:
         """
         return self.catalog
 
-    def get_catalog_util(self) -> CatalogCache:
+    def get_catalog_cache(self) -> CatalogCache:
         """
         Get the catalog client for this instance of SDKMR.
         """

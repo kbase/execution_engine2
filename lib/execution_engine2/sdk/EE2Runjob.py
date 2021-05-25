@@ -82,7 +82,7 @@ class EE2RunJob:
         self.sdkmr = sdkmr  # type: SDKMethodRunner
         self.override_clientgroup = os.environ.get("OVERRIDE_CLIENT_GROUP", None)
         self.logger = self.sdkmr.get_logger()
-        self.catalog = self.sdkmr.get_catalog_util()
+        self.catalog_cache = self.sdkmr.get_catalog_cache()
 
     def _init_job_rec(
         self,
@@ -123,8 +123,8 @@ class EE2RunJob:
         inputs.params = params.get("params")
 
         # Catalog git commit
-        params[_SERVICE_VER] = _get_module_git_commit(
-            self.logger, self.sdkmr, params.get(_METHOD), params.get(_SERVICE_VER)
+        params[_SERVICE_VER] = self.catalog_cache.get_git_commit_version(
+            method=params.get(_METHOD), service_ver=params.get(_SERVICE_VER)
         )
         inputs.service_ver = params.get(_SERVICE_VER)
         inputs.app_id = params.get(_APP_ID)
