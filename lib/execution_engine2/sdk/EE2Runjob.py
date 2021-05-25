@@ -331,26 +331,17 @@ class EE2RunJob:
 
     def _run_batch(self, parent_job: Job, params):
         child_jobs = []
-        step_four_time = time.time()
+
         for job_param in params:
             job_param[_PARENT_JOB_ID] = str(parent_job.id)
             try:
-                job_time = time.time()
                 child_jobs.append(str(self._run(params=job_param)))
-                self.logger.debug(
-                    f"Time spent submitting job {time.time() - job_time} "
-                )
-                self.logger.debug(
-                    f"Time spent submitting job so far {time.time() - step_four_time} "
-                )
             except Exception as e:
                 self.logger.debug(
                     msg=f"Failed to submit child job. Aborting entire batch job {e}"
                 )
                 self._abort_child_jobs(child_jobs)
                 raise e
-
-        self.logger.debug(f"Time spent step4 {time.time() - step_four_time} ")
 
         parent_job.child_jobs = child_jobs
         self.sdkmr.save_job(parent_job)
