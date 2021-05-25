@@ -4,7 +4,7 @@ Unit tests for the Retry Code
 
 from execution_engine2.sdk.EE2Runjob import EE2RunJob
 
-from test.utils_shared.test_utils import get_example_job, get_example_job_input
+from test.utils_shared.test_utils import get_example_job
 
 
 def test_retry_get_run_job_params_from_existing_job():
