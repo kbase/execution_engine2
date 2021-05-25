@@ -54,6 +54,7 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 * Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
 * One single submission to HTCondor instead of multiple job submissions
 * Ability to gracefully handle jobs with children
+* Ability to handle database consistentcy during retry failure
 
 
 ### Questions
@@ -71,6 +72,9 @@ A: Unknown TBD, maybe the frontend does it?
 
 #### Q: It might be best to always submit a git commit for the module, maybe?
 A: (This could be a narrative ticket)
+
+#### Q: How do we handle DB consistentcy during retry failure? 
+
 
 
 ### Sort of answered
