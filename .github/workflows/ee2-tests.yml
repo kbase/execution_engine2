@@ -42,4 +42,5 @@ jobs:
         docker-compose up -d
         cp test/env/test.travis.env test.env
         make test-coverage
+        codecov
 
