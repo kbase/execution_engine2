@@ -563,7 +563,7 @@ class EE2RunJob:
 
         return job, parent_job
 
-    def _retry(self, job_id: str, job: Job, parent_job: Job, as_admin: bool):
+    def _retry(self, job_id: str, job: Job, parent_job: Job, as_admin: bool = False):
         # Cannot retry a retried job, you must retry the retry_parent
         if job.retry_parent:
             return self.retry(str(job.retry_parent), as_admin=as_admin)

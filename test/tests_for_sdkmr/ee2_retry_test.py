@@ -10,22 +10,40 @@ from unittest.mock import create_autospec, MagicMock
 from pytest import raises
 
 
+def test_retry_db_failures():
+    sdkmr = MagicMock()
+    retry_job = get_example_job(status="error")
+    parent_job = get_example_job(status="error")
+    retry_job.job_input.parent_job_id = "123"
+    sdkmr.get_job_with_permission = MagicMock(return_value=retry_job)
+    rj = EE2RunJob(sdkmr=sdkmr)
+    rj.run = MagicMock(return_value=retry_job)
+    # One DB failure
+    rj._db_update_failure = MagicMock(side_effect=Exception("Boom!"))
+    with raises(Exception):
+        rj._retry(job_id=retry_job.id, job=retry_job, parent_job=parent_job)
+    assert rj._db_update_failure.call_count == 1
+
+    # Two db failures
+    rj._db_update_failure = MagicMock()
+    rj._retry(job_id=retry_job.id, job=retry_job, parent_job=parent_job)
+
+
 def test_validate_retry():
     sdkmr = create_autospec(SDKMethodRunner, instance=True, spec_set=True)
 
-    # Passing case
-    sdkmr.get_job_with_permission = MagicMock(
-        return_value=get_example_job(status="error")
-    )
+    # Passing case with nothing to assert, all goes well
+    good_job = get_example_job(status="error")
+    sdkmr.get_job_with_permission = MagicMock(return_value=good_job)
     rj = EE2RunJob(sdkmr=sdkmr)
-    job_id, parent_id = rj._validate_retry_presubmit("unknown")
+    rj._validate_retry_presubmit("unknown")
 
-    # Fail case
-    sdkmr.get_job_with_permission = MagicMock(
-        return_value=get_example_job(status="running")
-    )
-    rj = EE2RunJob(sdkmr=sdkmr)
+    # Fail case with the wrong status
     with raises(Exception) as e:
+        sdkmr.get_job_with_permission = MagicMock(
+            return_value=get_example_job(status="running")
+        )
+        rj = EE2RunJob(sdkmr=sdkmr)
         rj._validate_retry_presubmit("unknown")
     expected_exception = CannotRetryJob(
         "Error retrying job unknown with status running: can only retry jobs with "
@@ -33,17 +51,17 @@ def test_validate_retry():
     )
     assert_exception_correct(e.value, expected_exception)
 
-    # if job.batch_job:
-    #     raise CannotRetryJob(
-    #         "Cannot retry batch job parents. Must retry individual jobs"
-    #     )
-    #
-    # if not self._retryable(job.status):
-    #     raise CannotRetryJob(
-    #         f"Error retrying job {job_id} with status {job.status}: can only retry jobs with status 'error' or 'terminated'"
-    #     )
-    #
-    # return job, parent_job
+    # Fail case with the batch job
+    with raises(Exception) as e:
+        good_job.batch_job = True
+        sdkmr.get_job_with_permission = MagicMock(return_value=good_job)
+        rj = EE2RunJob(sdkmr=sdkmr)
+        rj._validate_retry_presubmit("unknown")
+
+    expected_exception = CannotRetryJob(
+        "Cannot retry batch job parents. Must retry individual jobs"
+    )
+    assert_exception_correct(e.value, expected_exception)
 
 
 def test_retry_get_run_job_params_from_existing_job():
