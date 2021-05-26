@@ -529,7 +529,7 @@ class EE2RunJob:
         self.logger.error(msg, exc_info=True, stack_info=True)
         raise RetryFailureException(msg)
 
-    def _validate_retry_presubmit(self, job_id: str, as_admin: bool):
+    def _validate_retry_presubmit(self, job_id: str, as_admin: bool = False):
         """
         Validate retry request before attempting to contact scheduler
 

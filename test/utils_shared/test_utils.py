@@ -104,6 +104,7 @@ def get_example_job(
     source_ws_objects: list = None,
     method_name: str = None,
     app_id: str = None,
+    status: str = None,
 ) -> Job:
     j = Job()
     j.user = user
@@ -115,6 +116,9 @@ def get_example_job(
     j.job_input = job_input
     j.status = "queued"
     j.authstrat = authstrat
+
+    if status:
+        j.status = status
 
     if params:
         job_input.params = params

@@ -388,6 +388,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         assert original_job["job_input"]["params"] == retried_job["job_input"]["params"]
 
+        # Some failure cases
+
         # TODO Retry a job that uses run_job_batch or kbparallels (Like metabat)
         # TODO Retry a job without an app_id
 

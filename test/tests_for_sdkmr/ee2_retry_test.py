@@ -1,10 +1,49 @@
 """
 Unit tests for the Retry Code
 """
-
+from execution_engine2.exceptions import CannotRetryJob
 from execution_engine2.sdk.EE2Runjob import EE2RunJob
+from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 
-from test.utils_shared.test_utils import get_example_job
+from test.utils_shared.test_utils import get_example_job, assert_exception_correct
+from unittest.mock import create_autospec, MagicMock
+from pytest import raises
+
+
+def test_validate_retry():
+    sdkmr = create_autospec(SDKMethodRunner, instance=True, spec_set=True)
+
+    # Passing case
+    sdkmr.get_job_with_permission = MagicMock(
+        return_value=get_example_job(status="error")
+    )
+    rj = EE2RunJob(sdkmr=sdkmr)
+    job_id, parent_id = rj._validate_retry_presubmit("unknown")
+
+    # Fail case
+    sdkmr.get_job_with_permission = MagicMock(
+        return_value=get_example_job(status="running")
+    )
+    rj = EE2RunJob(sdkmr=sdkmr)
+    with raises(Exception) as e:
+        rj._validate_retry_presubmit("unknown")
+    expected_exception = CannotRetryJob(
+        "Error retrying job unknown with status running: can only retry jobs with "
+        "status 'error' or 'terminated'",
+    )
+    assert_exception_correct(e.value, expected_exception)
+
+    # if job.batch_job:
+    #     raise CannotRetryJob(
+    #         "Cannot retry batch job parents. Must retry individual jobs"
+    #     )
+    #
+    # if not self._retryable(job.status):
+    #     raise CannotRetryJob(
+    #         f"Error retrying job {job_id} with status {job.status}: can only retry jobs with status 'error' or 'terminated'"
+    #     )
+    #
+    # return job, parent_job
 
 
 def test_retry_get_run_job_params_from_existing_job():
