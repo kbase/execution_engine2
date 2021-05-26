@@ -1,7 +1,7 @@
 """
 Unit tests for the Retry Code
 """
-from execution_engine2.exceptions import CannotRetryJob
+from execution_engine2.exceptions import CannotRetryJob, RetryFailureException
 from execution_engine2.sdk.EE2Runjob import EE2RunJob
 from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 
@@ -11,12 +11,49 @@ from pytest import raises
 
 
 def test_retry_db_failures():
+    """
+    * Test correct db update failure message, and that cancel_job is called
+    * Test that on exception, the db_update failure is called
+    """
     sdkmr = MagicMock()
     retry_job = get_example_job(status="error")
     parent_job = get_example_job(status="error")
     retry_job.job_input.parent_job_id = "123"
     sdkmr.get_job_with_permission = MagicMock(return_value=retry_job)
+    sdkmr.cancel_job = MagicMock()
     rj = EE2RunJob(sdkmr=sdkmr)
+
+    # Check correct exception and that safe cancel/cancel_job is called
+    job1 = "job1"
+    job_to_abort = "job_to_abort"
+
+    # Check to make sure cancel_job is called on failure
+    with raises(Exception) as e:
+        rj._db_update_failure(
+            job_that_failed_operation="job1",
+            job_to_abort="job_to_abort",
+            exception=Exception(123),
+        )
+        expected_exception = RetryFailureException(
+            f"Couldn't update job record:{job1} during retry. Aborting:{job_to_abort} Exception:123 "
+        )
+        assert_exception_correct(e.value, expected_exception)
+    assert sdkmr.cancel_job.call_count == 1
+
+    # Check to make sure safe_cancel_call is called on failure
+    with raises(Exception) as e:
+        rj._safe_cancel = MagicMock()
+        rj._db_update_failure(
+            job_that_failed_operation="job1",
+            job_to_abort="job_to_abort",
+            exception=Exception(123),
+        )
+        expected_exception = RetryFailureException(
+            f"Couldn't update job record:{job1} during retry. Aborting:{job_to_abort} Exception:123 "
+        )
+        assert_exception_correct(e.value, expected_exception)
+    assert rj._safe_cancel.call_count == 1
+
     rj.run = MagicMock(return_value=retry_job)
     # One DB failure
     rj._db_update_failure = MagicMock(side_effect=Exception("Boom!"))
