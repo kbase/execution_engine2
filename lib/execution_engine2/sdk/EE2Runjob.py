@@ -530,7 +530,15 @@ class EE2RunJob:
         raise RetryFailureException(msg)
 
     def _validate_retry_presubmit(self, job_id: str, as_admin: bool):
-        """Validate retry request before attempting to contact scheduler"""
+        """
+        Validate retry request before attempting to contact scheduler
+
+        _validate doesn't do a recursive check if if the job has a retry parent,
+        but the _validate call on the recursion is guaranteed to pass because
+        the parent was retried once already so the _validate must have passed previously.
+        Since the parent job's state can't have changed it would just pass again.
+        """
+
         # Check to see if you still have permissions to the job and then optionally the parent job id
         job = self.sdkmr.get_job_with_permission(
             job_id, JobPermissions.WRITE, as_admin=as_admin

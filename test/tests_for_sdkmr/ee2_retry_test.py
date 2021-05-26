@@ -31,7 +31,7 @@ def test_retry_get_run_job_params_from_existing_job():
         "queued",
         "scheduler_id",
     ]
-    for key, val in example_job_as_dict.items():
+    for key in example_job_as_dict.keys():
         if key in discarded_keys:
             continue
         if key in expected_unequal_keys:
