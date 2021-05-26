@@ -73,7 +73,11 @@ A: Unknown TBD, maybe the frontend does it?
 #### Q: It might be best to always submit a git commit for the module, maybe?
 A: (This could be a narrative ticket)
 
-#### Q: How do we handle DB consistentcy during retry failure? 
+#### Q: How do we handle DB consistency during retry failure? 
+Looks like the options are
+* implement db integrity checks and two-phase commits for making the relationships between a job, its retry parent, and the batch container
+* accept that the db info may be incomplete and write workarounds into the clients
+* (upgrade to Mongo 4.4 for better transaction support)
 
 
 
