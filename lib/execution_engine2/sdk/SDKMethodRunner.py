@@ -35,7 +35,7 @@ from execution_engine2.utils.KafkaUtils import KafkaClient
 from execution_engine2.utils.SlackUtils import SlackClient
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
-from execution_engine2.utils.catalog_util import CatalogCache
+from execution_engine2.utils.catalog_cache import CatalogCache
 
 
 class JobPermissions(Enum):

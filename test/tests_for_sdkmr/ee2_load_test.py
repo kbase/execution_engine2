@@ -25,7 +25,7 @@ from test.utils_shared.test_utils import (
     read_config_into_dict,
 )
 from tests_for_db.mongo_test_helper import MongoTestHelper
-from utils.catalog_util import _get_module_git_commit
+from utils.catalog_cache import _get_module_git_commit
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()

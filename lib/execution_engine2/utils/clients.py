@@ -15,7 +15,7 @@ from execution_engine2.utils.job_requirements_resolver import JobRequirementsRes
 from execution_engine2.utils.KafkaUtils import KafkaClient
 from execution_engine2.utils.SlackUtils import SlackClient
 from execution_engine2.utils.arg_processing import parse_bool
-from execution_engine2.utils.catalog_util import CatalogCache
+from execution_engine2.utils.catalog_cache import CatalogCache
 
 from installed_clients.authclient import KBaseAuth
 from installed_clients.CatalogClient import Catalog

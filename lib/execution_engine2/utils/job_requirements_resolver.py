@@ -8,7 +8,7 @@ from typing import Iterable, Dict, Union, Set
 from enum import Enum
 
 from lib.installed_clients.CatalogClient import Catalog
-from execution_engine2.utils.catalog_util import CatalogCache
+from execution_engine2.utils.catalog_cache import CatalogCache
 
 from execution_engine2.utils.arg_processing import (
     check_string as _check_string,
