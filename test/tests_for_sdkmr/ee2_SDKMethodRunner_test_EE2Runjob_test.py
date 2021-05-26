@@ -247,7 +247,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job_id = runner.run_job(params=job)
         print(f"Job id is {job_id} ")
 
-    def check_retry_job_state(self, job_id: str, retry_job_id: str):
+    @staticmethod
+    def check_retry_job_state(job_id: str, retry_job_id: str):
         job = Job.objects.get(id=job_id)  # type: Job
         retry_job = Job.objects.get(id=retry_job_id)  # type: Job
 
