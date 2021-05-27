@@ -25,7 +25,6 @@ from test.utils_shared.test_utils import (
     read_config_into_dict,
 )
 from tests_for_db.mongo_test_helper import MongoTestHelper
-from utils.catalog_cache import _get_module_git_commit
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
@@ -243,6 +242,39 @@ class ee2_server_load_test(unittest.TestCase):
     # @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
 
     si = SubmissionInfo(clusterid="test", submit="job", error=None)
+
+    @patch.object(Condor, "run_job", return_value=si)
+    @patch.object(WorkspaceAuth, "can_write", return_value=True)
+    @patch(
+        "installed_clients.CatalogClient.Catalog.list_client_group_configs",
+        autospec=True,
+    )
+    @patch("installed_clients.CatalogClient.Catalog.get_module_version", autospec=True)
+    def test_retry_job_stress(
+        self, cc_get_mod_ver, cc_list_cli_configs, workspace, condor
+    ):
+        """
+        Not a stress test, more of an impl test
+        """
+        cc_get_mod_ver.return_value = {"git_commit_hash": "moduleversiongoeshere"}
+        cc_list_cli_configs.return_value = []
+
+        # set job method differently to distinguish
+        method_1 = "app1.a_method"
+        job_params_1 = get_sample_job_params(method=method_1, app_id="app1/a")
+
+        # Remove fake parent_job_id
+        del job_params_1["parent_job_id"]
+
+        job_ids = []
+        for i in range(10):
+            job_ids.append(self.impl.run_job(ctx=self.ctx, params=job_params_1)[0])
+
+        for job_id in job_ids:
+            self.impl.update_job_status(
+                ctx=self.ctx, params={"job_id": job_id, "status": "error"}
+            )
+            self.impl.retry_job(ctx=self.ctx, params={"job_id": job_id})
 
     @patch.object(Condor, "run_job", return_value=si)
     @patch.object(WorkspaceAuth, "can_write", return_value=True)
