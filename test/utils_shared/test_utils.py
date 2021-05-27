@@ -81,7 +81,6 @@ def get_example_job_input(wsid, params=None, method_name=None, app_id=None):
     job_input.wsid = wsid
 
     job_input.method = method_name or "module.method"
-    job_input.requested_release = "requested_release"
     job_input.params = params
     job_input.service_ver = "dev"
     job_input.app_id = app_id or "module/super_function"
