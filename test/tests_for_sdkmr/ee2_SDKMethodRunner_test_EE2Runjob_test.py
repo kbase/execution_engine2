@@ -326,6 +326,21 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         self.check_retry_job_state(parent_job_id2, job2["job_id"])
         self.check_retry_job_state(parent_job_id2, job4["job_id"])
 
+        # Test no job ids
+        with self.assertRaisesRegexp(ValueError, "No job_ids provided to retry"):
+            runner.retry_multiple(job_ids=None)
+
+        # Test error during retry, but passing validate
+        runner._ee2_runjob._retry = MagicMock(
+            side_effect=Exception("Job Retry Misbehaved!")
+        )
+        misbehaving_jobs = runner.retry_multiple(retry_candidates)
+        for i, candidate in enumerate(retry_candidates):
+            assert misbehaving_jobs[i] == {
+                "error": "Job Retry Misbehaved!",
+                "job_id": candidate,
+            }
+
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_retry_job(self, rq_mock, condor_mock):
