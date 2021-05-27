@@ -287,8 +287,13 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         parent_job_id1 = runner.run_job(params=job)
         parent_job_id2 = runner.run_job(params=job)
+        parent_job_id3 = runner.run_job(params=job)
+        parent_job_id4 = runner.run_job(params=job)
+
         runner.update_job_status(job_id=parent_job_id1, status=Status.terminated.value)
         runner.update_job_status(job_id=parent_job_id2, status=Status.error.value)
+        runner.update_job_status(job_id=parent_job_id3, status=Status.terminated.value)
+        runner.update_job_status(job_id=parent_job_id4, status=Status.error.value)
 
         # 2. Retry the jobs with a fake input
         errmsg = (
@@ -298,12 +303,25 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         with self.assertRaisesRegexp(RetryFailureException, errmsg):
             runner.retry_multiple(job_ids=[parent_job_id1, 123])
 
-        # 2. Actually retry the jobs
+        # 3. Retry the jobs with duplicate job ids
         retry_candidates = (
             parent_job_id1,
             parent_job_id2,
             parent_job_id1,
             parent_job_id2,
+        )
+        fail_msg = f"Retry of the same id in the same request is not supported. Offending ids:{[parent_job_id1,parent_job_id2]} "
+
+        with self.assertRaises(ValueError) as e:
+            runner.retry_multiple(retry_candidates)
+        assert str(e.exception) == str(ValueError(fail_msg))
+
+        # 4. Retry the jobs
+        retry_candidates = (
+            parent_job_id1,
+            parent_job_id2,
+            parent_job_id3,
+            parent_job_id4,
         )
         retry_job_ids = runner.retry_multiple(retry_candidates)
 
@@ -322,9 +340,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job1, job2, job3, job4 = js
 
         self.check_retry_job_state(parent_job_id1, job1["job_id"])
-        self.check_retry_job_state(parent_job_id1, job3["job_id"])
         self.check_retry_job_state(parent_job_id2, job2["job_id"])
-        self.check_retry_job_state(parent_job_id2, job4["job_id"])
+        self.check_retry_job_state(parent_job_id3, job3["job_id"])
+        self.check_retry_job_state(parent_job_id4, job4["job_id"])
 
         # Test no job ids
         with self.assertRaisesRegexp(ValueError, "No job_ids provided to retry"):
@@ -521,9 +539,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         # Test to see if one input fails, so fail them all
         with self.assertRaises(expected_exception=RetryFailureException):
-            retry_id = runner.retry_multiple(
-                job_ids=[child_job_id, child_job_id, "fail"]
-            )
+            retry_id = runner.retry_multiple(job_ids=[child_job_id, "grail", "fail"])
             print(retry_id)
         # Check to see other job wasn't retried
         job.reload()

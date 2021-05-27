@@ -6,6 +6,7 @@ the logic to retrieve info needed by the runnner to start the job
 """
 import os
 import time
+from collections import defaultdict
 from enum import Enum
 from typing import Optional, Dict, NamedTuple, Union, List, Any
 
@@ -629,6 +630,17 @@ class EE2RunJob:
         """
         if not job_ids:
             raise ValueError("No job_ids provided to retry")
+
+        offending_ids = defaultdict(int)
+        for job_id in job_ids:
+            if job_ids.count(job_id) > 1:
+                offending_ids[job_id] += 1
+
+        if offending_ids.keys():
+            raise ValueError(
+                f"Retry of the same id in the same request is not supported."
+                f" Offending ids:{list(offending_ids.keys())} "
+            )
 
         # Check all inputs before attempting to start submitting jobs
         retried_jobs = []
