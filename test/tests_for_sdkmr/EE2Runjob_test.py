@@ -117,7 +117,7 @@ def _create_job(
     app=_APP,
     state=_CREATED_STATE,
     git_commit=_GIT_COMMIT,
-    parent_job_id="None",
+    parent_job_id=None,
     source_ws_objects=None,
     wsid=None,
 ):
@@ -131,7 +131,8 @@ def _create_job(
     ji.wsid = wsid
     ji.service_ver = git_commit
     ji.source_ws_objects = source_ws_objects
-    ji.parent_job_id = parent_job_id
+    if parent_job_id:
+        ji.parent_job_id = parent_job_id
     jr = JobRequirements()
     jr.clientgroup = reqs.client_group
     jr.cpu = reqs.cpus

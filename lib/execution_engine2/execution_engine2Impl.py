@@ -29,8 +29,8 @@ class execution_engine2:
     # the latter method is running.
     ######################################### noqa
     VERSION = "0.0.5"
-    GIT_URL = "https://github.com/mrcreosote/execution_engine2.git"
-    GIT_COMMIT_HASH = "46df42a6ed9fda3796cf9a68ea8088067e674936"
+    GIT_URL = "git@github.com:kbase/execution_engine2.git"
+    GIT_COMMIT_HASH = "8b6f4e1917dbdfa374e6f22b1f2adbe7eca5a24c"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -374,6 +374,81 @@ class execution_engine2:
                              'job_ids is not type dict as required.')
         # return the results
         return [job_ids]
+
+    def retry_job(self, ctx, params):
+        """
+        #TODO write retry parent tests to ensure BOTH the parent_job_id is present, and retry_job_id is present
+        #TODO Add retry child that checks the status of the child? to prevent multiple retries
+        Allowed Jobs
+         Regular Job with no children
+         Regular job with/without parent_id that runs a kbparallel call or a run_job_batch call
+        Not Allowed
+         Regular Job with children (Should not be possible to create yet)
+         Batch Job Parent Container (Not a job, it won't do anything, except cancel it's child jobs)
+        :param params: instance of type "RetryParams" (job_id of job to retry
+           as_admin: retry someone elses job in your namespace #TODO Possibly
+           Add JobRequirements job_requirements;) -> structure: parameter
+           "job_id" of type "job_id" (A job id.), parameter "as_admin" of
+           type "boolean" (@range [0,1])
+        :returns: instance of type "RetryResult" (job_id of retried job
+           retry_id: job_id of the job that was launched str error: reason as
+           to why that particular retry failed (available for bulk retry
+           only)) -> structure: parameter "job_id" of type "job_id" (A job
+           id.), parameter "retry_id" of type "job_id" (A job id.), parameter
+           "error" of String
+        """
+        # ctx is the context object
+        # return variables are: retry_result
+        #BEGIN retry_job
+        mr = SDKMethodRunner(
+            user_clients=self.gen_cfg.get_user_clients(ctx),
+            clients = self.clients,
+            job_permission_cache=self.job_permission_cache,
+            admin_permissions_cache=self.admin_permissions_cache
+        )
+        retry_result = mr.retry(job_id=params.get('job_id'), as_admin=params.get('as_admin'))
+        #END retry_job
+
+        # At some point might do deeper type checking...
+        if not isinstance(retry_result, dict):
+            raise ValueError('Method retry_job return value ' +
+                             'retry_result is not type dict as required.')
+        # return the results
+        return [retry_result]
+
+    def retry_jobs(self, ctx, params):
+        """
+        Same as retry_job, but accepts multiple jobs
+        :param params: instance of type "BulkRetryParams" (job_ids of job to
+           retry as_admin: retry someone else's job in your namespace #TODO:
+           Possibly Add list<JobRequirements> job_requirements;) ->
+           structure: parameter "job_ids" of list of type "job_id" (A job
+           id.), parameter "as_admin" of type "boolean" (@range [0,1])
+        :returns: instance of list of type "RetryResult" (job_id of retried
+           job retry_id: job_id of the job that was launched str error:
+           reason as to why that particular retry failed (available for bulk
+           retry only)) -> structure: parameter "job_id" of type "job_id" (A
+           job id.), parameter "retry_id" of type "job_id" (A job id.),
+           parameter "error" of String
+        """
+        # ctx is the context object
+        # return variables are: retry_result
+        #BEGIN retry_jobs
+        mr = SDKMethodRunner(
+            user_clients=self.gen_cfg.get_user_clients(ctx),
+            clients = self.clients,
+            job_permission_cache=self.job_permission_cache,
+            admin_permissions_cache=self.admin_permissions_cache
+        )
+        retry_result = mr.retry_multiple(job_ids=params.get('job_ids'), as_admin=params.get('as_admin'))
+        #END retry_jobs
+
+        # At some point might do deeper type checking...
+        if not isinstance(retry_result, list):
+            raise ValueError('Method retry_jobs return value ' +
+                             'retry_result is not type list as required.')
+        # return the results
+        return [retry_result]
 
     def abandon_children(self, ctx, params):
         """
