@@ -9,32 +9,33 @@ from configparser import ConfigParser
 from datetime import datetime, timedelta, timezone
 from pprint import pprint
 from unittest.mock import patch, create_autospec
-from pytest import raises
 
 import bson
 import dateutil
 import requests_mock
 from bson import ObjectId
 from mock import MagicMock
+from pytest import raises
 
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.MongoUtil import MongoUtil
+from execution_engine2.exceptions import AuthError
+from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.KafkaUtils import KafkaClient
 from execution_engine2.utils.SlackUtils import SlackClient
+from execution_engine2.utils.clients import UserClientSet, ClientSet
+from execution_engine2.utils.clients import get_user_client_set, get_client_set
 from execution_engine2.utils.job_requirements_resolver import (
     JobRequirementsResolver,
     RequirementsType,
 )
 from lib.execution_engine2.db.models.models import Job, Status, TerminatedCode
-from execution_engine2.exceptions import AuthError
 from lib.execution_engine2.exceptions import InvalidStatusTransitionException
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
-from execution_engine2.utils.clients import UserClientSet, ClientSet
-from execution_engine2.utils.clients import get_user_client_set, get_client_set
 from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
+from test.utils_shared.mock_utils import get_client_mocks, ALL_CLIENTS
 from test.utils_shared.test_utils import (
     bootstrap,
     get_example_job,
@@ -42,9 +43,7 @@ from test.utils_shared.test_utils import (
     run_job_adapter,
     assert_exception_correct,
 )
-from test.utils_shared.mock_utils import get_client_mocks, ALL_CLIENTS
 from tests_for_db.mongo_test_helper import MongoTestHelper
-from utils.catalog_cache import _get_module_git_commit
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
@@ -99,6 +98,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner.get_jobs_status()
         runner.get_runjob()
         runner.get_job_logs()
+        runner.get_catalog_cache()
         return runner
 
     def create_job_rec(self):
@@ -278,8 +278,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         # runner.get_runjob = MagicMock(return_value="git_commit_goes_here")
 
         runner.get_condor = MagicMock(return_value=condor_mock)
+        runner.get_catalog_cache = MagicMock()
+
         fixed_rj = EE2RunJob(runner)
-        fixed_rj._get_module_git_commit = MagicMock(return_value="hash_goes_here")
+        # _get_module_git_commitfixed_rj._get_module_git_commit = MagicMock(return_value="hash_goes_here")
 
         runner.get_runjob = MagicMock(return_value=fixed_rj)
 
@@ -931,9 +933,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner.workspace_auth.can_read = MagicMock(return_value=True)
 
         self.mock = MagicMock(return_value=True)
-        runner._ee2_runjob._get_module_git_commit = MagicMock(
-            return_value="hash_goes_here"
-        )
 
         # fixed_rj = RunJob(runner)
         # fixed_rj._get_module_git_commit = MagicMock(return_value='hash_goes_here')

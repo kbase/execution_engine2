@@ -164,10 +164,9 @@ def get_clients(
     catalog = Catalog(cfg["catalog-url"], token=cfg["catalog-token"])
     # instance of catalog without creds is used here
     unauthenticated_cc = Catalog(cfg["catalog-url"])
-
     catalog_cache = CatalogCache(catalog=unauthenticated_cc)
-    # use unauthenicated catalog instance
-    jrr = JobRequirementsResolver(unauthenticated_cc, cfg_file, override_client_group)
+    # use unauthenticated catalog instance
+    jrr = JobRequirementsResolver(catalog_cache, cfg_file, override_client_group)
     auth_url = cfg["auth-url"]
     auth = KBaseAuth(auth_url=auth_url + "/api/legacy/KBase/Sessions/Login")
     # TODO using hardcoded roles for now to avoid possible bugs with mismatched cfg roles

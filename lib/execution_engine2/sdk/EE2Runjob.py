@@ -122,7 +122,7 @@ class EE2RunJob:
         inputs.params = params.get("params")
 
         # Catalog git commit
-        params[_SERVICE_VER] = self.catalog_cache.get_git_commit_version(
+        params[_SERVICE_VER] = self.sdkmr.catalog_cache.get_git_commit_version(
             method=params.get(_METHOD), service_ver=params.get(_SERVICE_VER)
         )
         inputs.service_ver = params.get(_SERVICE_VER)

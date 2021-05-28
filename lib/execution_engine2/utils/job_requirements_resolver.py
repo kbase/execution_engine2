@@ -469,7 +469,7 @@ class JobRequirementsResolver:
     def _get_catalog_reqs(self, module_name, function_name):
         # could cache results for 30s or so to speed things up... YAGNI
         group_config = self._catalog_cache.get_condor_resources(
-            {"module_name": module_name, "function_name": function_name}
+            module_name=module_name, function_name=function_name
         )
         # If group_config is empty, that means there's no clientgroup entry in the catalog
         # It'll return an empty list even for non-existent modules
