@@ -81,7 +81,6 @@ def get_example_job_input(wsid, params=None, method_name=None, app_id=None):
     job_input.wsid = wsid
 
     job_input.method = method_name or "module.method"
-    job_input.requested_release = "requested_release"
     job_input.params = params
     job_input.service_ver = "dev"
     job_input.app_id = app_id or "module/super_function"
@@ -104,6 +103,7 @@ def get_example_job(
     source_ws_objects: list = None,
     method_name: str = None,
     app_id: str = None,
+    status: str = None,
 ) -> Job:
     j = Job()
     j.user = user
@@ -115,6 +115,9 @@ def get_example_job(
     j.job_input = job_input
     j.status = "queued"
     j.authstrat = authstrat
+
+    if status:
+        j.status = status
 
     if params:
         job_input.params = params

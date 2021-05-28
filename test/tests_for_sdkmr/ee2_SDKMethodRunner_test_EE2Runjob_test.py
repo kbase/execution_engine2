@@ -247,6 +247,26 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job_id = runner.run_job(params=job)
         print(f"Job id is {job_id} ")
 
+    @staticmethod
+    def check_retry_job_state(job_id: str, retry_job_id: str):
+        job = Job.objects.get(id=job_id)  # type: Job
+        retry_job = Job.objects.get(id=retry_job_id)  # type: Job
+
+        check_attributes = [
+            "job_input",
+            "wsid",
+            "authstrat",
+            "batch_job",
+            "scheduler_type",
+        ]
+
+        for item in check_attributes:
+            if job[item]:
+                assert job[item] == retry_job[item]
+
+        assert retry_job.retry_parent == job_id
+        assert job.retry_count > 0
+
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_retry_job_multiple(self, rq_mock, condor_mock):
@@ -264,13 +284,16 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-        parent_job_id1 = runner.run_job(params=job)
-        parent_job_id2 = runner.run_job(params=job)
 
         parent_job_id1 = runner.run_job(params=job)
         parent_job_id2 = runner.run_job(params=job)
+        parent_job_id3 = runner.run_job(params=job)
+        parent_job_id4 = runner.run_job(params=job)
+
         runner.update_job_status(job_id=parent_job_id1, status=Status.terminated.value)
         runner.update_job_status(job_id=parent_job_id2, status=Status.error.value)
+        runner.update_job_status(job_id=parent_job_id3, status=Status.terminated.value)
+        runner.update_job_status(job_id=parent_job_id4, status=Status.error.value)
 
         # 2. Retry the jobs with a fake input
         errmsg = (
@@ -280,12 +303,25 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         with self.assertRaisesRegexp(RetryFailureException, errmsg):
             runner.retry_multiple(job_ids=[parent_job_id1, 123])
 
-        # 2. Actually retry the jobs
+        # 3. Retry the jobs with duplicate job ids
         retry_candidates = (
             parent_job_id1,
             parent_job_id2,
             parent_job_id1,
             parent_job_id2,
+        )
+        fail_msg = f"Retry of the same id in the same request is not supported. Offending ids:{[parent_job_id1,parent_job_id2]} "
+
+        with self.assertRaises(ValueError) as e:
+            runner.retry_multiple(retry_candidates)
+        assert str(e.exception) == str(ValueError(fail_msg))
+
+        # 4. Retry the jobs
+        retry_candidates = (
+            parent_job_id1,
+            parent_job_id2,
+            parent_job_id3,
+            parent_job_id4,
         )
         retry_job_ids = runner.retry_multiple(retry_candidates)
 
@@ -303,10 +339,25 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         job1, job2, job3, job4 = js
 
-        assert job1["retry_parent"] == parent_job_id1
-        assert job2["retry_parent"] == parent_job_id2
-        assert job3["retry_parent"] == parent_job_id1
-        assert job4["retry_parent"] == parent_job_id2
+        self.check_retry_job_state(parent_job_id1, job1["job_id"])
+        self.check_retry_job_state(parent_job_id2, job2["job_id"])
+        self.check_retry_job_state(parent_job_id3, job3["job_id"])
+        self.check_retry_job_state(parent_job_id4, job4["job_id"])
+
+        # Test no job ids
+        with self.assertRaisesRegexp(ValueError, "No job_ids provided to retry"):
+            runner.retry_multiple(job_ids=None)
+
+        # Test error during retry, but passing validate
+        runner._ee2_runjob._retry = MagicMock(
+            side_effect=Exception("Job Retry Misbehaved!")
+        )
+        misbehaving_jobs = runner.retry_multiple(retry_candidates)
+        for i, candidate in enumerate(retry_candidates):
+            assert misbehaving_jobs[i] == {
+                "error": "Job Retry Misbehaved!",
+                "job_id": candidate,
+            }
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
@@ -328,7 +379,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         parent_job_id = runner.run_job(params=job)
 
         # 2a. Retry the job and fail because it's in progress
-        with self.assertRaises(CannotRetryJob):
+        expected_error = f"Error retrying job {parent_job_id} with status running: can only retry jobs with status 'error' or 'terminated'"
+        with self.assertRaisesRegex(CannotRetryJob, expected_regex=expected_error):
             runner.update_job_status(job_id=parent_job_id, status=Status.running.value)
             runner.retry(job_id=parent_job_id)
 
@@ -350,6 +402,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             ]
         )["job_states"]
 
+        self.check_retry_job_state(parent_job_id, retry_job_id)
+        self.check_retry_job_state(parent_job_id, retry_from_retry_id)
+        self.check_retry_job_state(parent_job_id, retry_from_original_again)
+
         for job in [original_job, retried_job, retried_job2, retried_job3]:
             if job == original_job:
                 assert original_job["retry_count"] == 3
@@ -365,6 +421,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             assert original_job[key] == retried_job[key]
 
         assert original_job["job_input"]["params"] == retried_job["job_input"]["params"]
+
+        # Some failure cases
 
         # TODO Retry a job that uses run_job_batch or kbparallels (Like metabat)
         # TODO Retry a job without an app_id
@@ -476,12 +534,16 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         assert len(parent_job["child_jobs"]) == 4
         assert parent_job["child_jobs"][-1] == retry_id
 
+        job = Job.objects.get(id=child_job_id)
+        retry_count = job.retry_count
+
         # Test to see if one input fails, so fail them all
         with self.assertRaises(expected_exception=RetryFailureException):
-            retry_id = runner.retry_multiple(
-                job_ids=[child_job_id, child_job_id, "fail"]
-            )
+            retry_id = runner.retry_multiple(job_ids=[child_job_id, "grail", "fail"])
             print(retry_id)
+        # Check to see other job wasn't retried
+        job.reload()
+        assert job.retry_count == retry_count
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)

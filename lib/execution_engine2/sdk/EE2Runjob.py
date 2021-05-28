@@ -6,6 +6,7 @@ the logic to retrieve info needed by the runnner to start the job
 """
 import os
 import time
+from collections import defaultdict
 from enum import Enum
 from typing import Optional, Dict, NamedTuple, Union, List, Any
 
@@ -44,7 +45,6 @@ from execution_engine2.utils.job_requirements_resolver import (
 )
 from execution_engine2.utils.job_requirements_resolver import RequirementsType
 
-
 _JOB_REQUIREMENTS = "job_reqs"
 _JOB_REQUIREMENTS_INCOMING = "job_requirements"
 _SCHEDULER_REQUIREMENTS = "scheduler_requirements"
@@ -82,7 +82,6 @@ class EE2RunJob:
         self.sdkmr = sdkmr  # type: SDKMethodRunner
         self.override_clientgroup = os.environ.get("OVERRIDE_CLIENT_GROUP", None)
         self.logger = self.sdkmr.get_logger()
-        self.catalog_cache = self.sdkmr.get_catalog_cache()
 
     def _init_job_rec(
         self,
@@ -322,26 +321,17 @@ class EE2RunJob:
 
     def _run_batch(self, parent_job: Job, params):
         child_jobs = []
-        step_four_time = time.time()
+
         for job_param in params:
             job_param[_PARENT_JOB_ID] = str(parent_job.id)
             try:
-                job_time = time.time()
                 child_jobs.append(str(self._run(params=job_param)))
-                self.logger.debug(
-                    f"Time spent submitting job {time.time() - job_time} "
-                )
-                self.logger.debug(
-                    f"Time spent submitting job so far {time.time() - step_four_time} "
-                )
             except Exception as e:
                 self.logger.debug(
                     msg=f"Failed to submit child job. Aborting entire batch job {e}"
                 )
                 self._abort_child_jobs(child_jobs)
                 raise e
-
-        self.logger.debug(f"Time spent step4 {time.time() - step_four_time} ")
 
         parent_job.child_jobs = child_jobs
         self.sdkmr.save_job(parent_job)
@@ -519,7 +509,7 @@ class EE2RunJob:
         # TODO Use and create a method in sdkmr?
         msg = (
             f"Couldn't update job record:{job_that_failed_operation} during retry. Aborting:{job_to_abort}"
-            f"Exception:{exception} "
+            f" Exception:{exception} "
         )
         self._safe_cancel(
             job_id=job_to_abort,
@@ -529,8 +519,16 @@ class EE2RunJob:
         self.logger.error(msg, exc_info=True, stack_info=True)
         raise RetryFailureException(msg)
 
-    def _validate_retry_presubmit(self, job_id: str, as_admin: bool):
-        """Validate retry request before attempting to contact scheduler"""
+    def _validate_retry_presubmit(self, job_id: str, as_admin: bool = False):
+        """
+        Validate retry request before attempting to contact scheduler
+
+        _validate doesn't do a recursive check if if the job has a retry parent,
+        but the _validate call on the recursion is guaranteed to pass because
+        the parent was retried once already so the _validate must have passed previously.
+        Since the parent job's state can't have changed it would just pass again.
+        """
+
         # Check to see if you still have permissions to the job and then optionally the parent job id
         job = self.sdkmr.get_job_with_permission(
             job_id, JobPermissions.WRITE, as_admin=as_admin
@@ -550,12 +548,12 @@ class EE2RunJob:
 
         if not self._retryable(job.status):
             raise CannotRetryJob(
-                f"Can only retry a cancelled or errored job_id:{job_id} status:{job.status}"
+                f"Error retrying job {job_id} with status {job.status}: can only retry jobs with status 'error' or 'terminated'"
             )
 
         return job, parent_job
 
-    def _retry(self, job_id: str, job: Job, parent_job: Job, as_admin: bool):
+    def _retry(self, job_id: str, job: Job, parent_job: Job, as_admin: bool = False):
         # Cannot retry a retried job, you must retry the retry_parent
         if job.retry_parent:
             return self.retry(str(job.retry_parent), as_admin=as_admin)
@@ -569,17 +567,7 @@ class EE2RunJob:
         retry_job_id = self.run(params=run_job_params, as_admin=as_admin)
 
         # Save that the job has been retried, and increment the count. Notify the parent(s)
-        # 1) Notify the retry_parent that it has been retried
-        try:
-            job.modify(inc__retry_count=1)
-        except Exception as e:
-            self._db_update_failure(
-                job_that_failed_operation=str(job.id),
-                job_to_abort=retry_job_id,
-                exception=e,
-            )
-
-        # 2) Notify the parent container that it has a new child..
+        # 1) Notify the parent container that it has a new child..
         if parent_job:
             try:
                 parent_job.modify(push__child_jobs=retry_job_id)
@@ -589,6 +577,16 @@ class EE2RunJob:
                     job_to_abort=retry_job_id,
                     exception=e,
                 )
+
+        # 2) Notify the retry_parent that it has been retried
+        try:
+            job.modify(inc__retry_count=1)
+        except Exception as e:
+            self._db_update_failure(
+                job_that_failed_operation=str(job.id),
+                job_to_abort=retry_job_id,
+                exception=e,
+            )
 
         # Should we compare the original and child job to make sure certain fields match,
         # to make sure the retried job is correctly submitted? Or save that for a unit test?
@@ -621,6 +619,17 @@ class EE2RunJob:
         """
         if not job_ids:
             raise ValueError("No job_ids provided to retry")
+
+        offending_ids = defaultdict(int)
+        for job_id in job_ids:
+            if job_ids.count(job_id) > 1:
+                offending_ids[job_id] += 1
+
+        if offending_ids.keys():
+            raise ValueError(
+                f"Retry of the same id in the same request is not supported."
+                f" Offending ids:{list(offending_ids.keys())} "
+            )
 
         # Check all inputs before attempting to start submitting jobs
         retried_jobs = []
