@@ -37,18 +37,15 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 * The job is submitted and upon successful submission, notifies the `retry_parent` and notifies the `parent_job_id` that a new `child_job` has been added
 * Jobs submitted by an administrator with a ResourceRequirements use resource requirements from the catalog / ee2 config exclusively
 
-
-### Batch Behavior
-* If a job has the attribute of `batch_job=True` the retry will fail, since there is no method to re-run. This is a bug, as it doesn't fail gracefully.
-* If a job has the attribute of `batch_job=True`, but is actually a child job, the parent will be notified of this new retried job
-* Multiple in-flight retries are allowed.
+### Batch Jobs Behavior
+* Adds child_job_id to parent_job_id.child_job_ids
 
 ## Retry_job behavior
 * Blocking and single submit to HTCondor. It should be fine as it returns relatively quickly
   
 ## Retry_jobs behavior
 * Submitting multiple jobs uses the `run_job` endpoint, and is blocking. This can cause issues if the network drops, and makes the narrative not aware of the state of the retry. Submitting 100 jobs currently takes 12 seconds, and that is a lot of time for things to go wrong. 
-
+* Multiple in-flight retries are allowed.
 
 ### Desired Behavior
 * Prevent multiple in-flight retries of the same original job to prevent the user from wasting their own resources (and the queues resources)
