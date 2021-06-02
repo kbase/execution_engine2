@@ -5,14 +5,15 @@ from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 
 
 class ee2_sdkmr_test_helper:
-    def __init__(self, mr: SDKMethodRunner, wsid: str = 9999):
-        self.user_id = mr.user_id
+    def __init__(self, user_id: str, wsid: str = 9999):
+        self.user_id = user_id
         self.ws_id = wsid
-        self.token = mr.token
-        self.method_runner = mr
 
     def create_job_rec(self):
-        """ Save a job, forgoing runjob.run"""
+        """
+        Save a job, forgoing runjob.run
+        Requires a MongoEngine connection
+        """
 
         job = Job()
 
@@ -53,7 +54,6 @@ class ee2_sdkmr_test_helper:
         job.job_output = None
         job.scheduler_id = "123"
 
-        with self.method_runner.get_mongo_util().mongo_engine_connection():
-            job.save()
+        job.save()
 
         return str(job.id)

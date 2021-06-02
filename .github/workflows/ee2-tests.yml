@@ -27,6 +27,9 @@ jobs:
         python -m pip install --upgrade pip
         pip install flake8 black pytest
         if [ -f requirements.txt ]; then pip install -r requirements-dev.txt; fi
+        cd /opt
+        git clone https://github.com/kbase/jars
+        cd -
     - name: Lint with flake8 and black
       run: |
         flake8 ./lib ./test
@@ -39,4 +42,5 @@ jobs:
         docker-compose up -d
         cp test/env/test.travis.env test.env
         make test-coverage
+        codecov
 

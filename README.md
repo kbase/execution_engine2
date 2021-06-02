@@ -40,6 +40,9 @@ cd /ee2
 make test-coverage
 ```
 
+Once the docker image is built, it does not need to be rebuilt after code changes to rerun tests.
+Just ensure the services are up, exec into the container, and run the tests.
+
 ## To run a specific test directory or specific file
 ```
 PYTHONPATH=.:lib:test pytest --cov-report=xml --cov lib/execution_engine2/ --verbose test/tests_for_db/
@@ -49,14 +52,87 @@ PYTHONPATH=.:lib:test pytest --cov-report=xml --cov lib/execution_engine2/ --ver
 ## To run a specific test file via PyCharm
 See [Testing with Pycharm](docs/testing_with_pycharm.md)
 
+## To run pre-commit hooks
 
+`exec` into the docker container as before and switch to the `/ee2` directory.
+
+```
+pip install pre-commit
+pre-commit install
+pre-commit run --all-files
+```
+
+To remove the pre commit hooks:
+```
+pre-commit uninstall
+```
+
+## Installing HTCondor Bindings from the mac
+* You may not be able to load without disabling the mac Security Gatekeeper with `sudo spctl --master-disable`
+* The HTCondor bindings only work on the Python.org install of python or your system install of python2.7. They will not work with anaconda. So download python from python.org
+* Download the mac bindings at https://research.cs.wisc.edu/htcondor/tarball/current/8.9.10/release/
+* Current version is [8.9.10](https://research.cs.wisc.edu/htcondor/tarball/current/8.9.10/release/condor-8.9.10-x86_64_MacOSX-unstripped.tar.gz)
+* Add <condor>/lib/python3 to PYTHONPATH.
+* `import htcondor`
   
 ## Test Running Options  
 ### PyCharm
 * Use a remote ssh debugger with the correct path mappings
 * Right click on the file you'd like to run and select run test
 
+## Develop
+
+* To add a bugfix or new feature:
+    * Create a new feature branch, branching from `develop`. Ask a repo owner for help if
+      necessary.
+    * If you're a repo owner you can push directly to this branch. If not, make pull requests to
+      the branch as necessary.
+    * Add:
+        * Feature / bugfix code
+        * Tests
+        * Documentation, if applicable
+        * Release notes, if applicable
+        * See the PR template in `worksflows/pull_request_template.md` for details
+    * Once the feature is complete, create a PR from the feature branch to `develop` and request a
+      review from person with EE2 knowledge via the Github interface and via Slack.
+    * When the PR is approved, squash and merge into `develop` and delete the feature branch.
+* To create a new release:
+    * Increment the version as per [semantic versioning](https://semver.org/) in `kbase.yml`.
+        * Update the release notes to the correct version, if necessary.
+    * Run `make compile`.
+    * Go through the process above to get the changes into `develop`.
+    * Make a PR from `develop` to `main`.
+    * Once the PR is apporoved, merge (no squash) to `main`.
+    * Tag the merge commit in GitHub with the semantic version from `kbase.yml`.
  
+## KBase Catalog interactions
+
+### Client Groups
+
+EE2 understands client group specifications in JSON and CSV formats. Both formats have special
+fields in common:
+* `request_cpus` - the number of CPUs to request
+* `request_memory` - the amount of memory, in MB, to request
+* `request_disk` - the amount of memory, in GB, to request
+* `client_group_regex` - boolean - treat the client group (see below) as a regular expression
+* `debug_mode` - boolean - run the job in debug mode
+
+The client group is handled differently for JSON and CSV:
+* The JSON format has the `clientgroup` field, which is optional.
+* The CSV format must have the client group in the first 'column' of the CSV and is required. The
+  remainder of the 'columns' must be in `key=value` format.
+
+Any fields other than the above are sent on to the scheduler as key value pairs.
+
+For example, to set the client group to `bigmem`, request 32 CPUs, 64GB of memory, and 1TB of disk,
+the following would be entered in the catalog UI:
+* CSV: `bigmem, request_cpus=32, request_memory=64000, request_disk=1000`
+* JSON: `{"client_group": "bigmem", "request_cpus" : "32", "request_memory" : "64000", "request_disk" : "1000"}`
+
+Note that the representation of this data in the catalog API is idiosyncratic - both the JSON and
+CSV data are split by commas into parts. EE2 will detect JSON entries and reconsitute them before
+deserialization.
+
 # Help  
   
 Contact @Tianhao-Gu, @bio_boris, @briehl

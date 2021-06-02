@@ -1,7 +1,11 @@
 import json
 import os.path
 import uuid
+import logging
+import socket
+import time
 from configparser import ConfigParser
+from contextlib import closing
 from datetime import datetime
 from typing import List, Dict
 
@@ -11,7 +15,12 @@ from dotenv import load_dotenv
 from lib.execution_engine2.db.models.models import Job, JobInput, Meta
 from lib.execution_engine2.db.models.models import Status
 from lib.execution_engine2.exceptions import MalformedTimestampException
-from lib.execution_engine2.utils.CondorTuples import CondorResources, JobInfo
+from lib.execution_engine2.utils.CondorTuples import JobInfo
+
+
+EE2_CONFIG_SECTION = "execution_engine2"
+KB_DEPLOY_ENV = "KB_DEPLOYMENT_CONFIG"
+DEFAULT_TEST_DEPLOY_CFG = "test/deploy.cfg"
 
 
 def bootstrap():
@@ -31,44 +40,93 @@ def get_example_job_as_dict(
     wsid: int = 123,
     authstrat: str = "kbaseworkspace",
     scheduler_id: str = None,
+    params: dict = None,
+    narrative_cell_info: dict = None,
+    source_ws_objects: list = None,
+    method_name: str = None,
+    app_id: str = None,
 ):
     job = (
         get_example_job(
-            user=user, wsid=wsid, authstrat=authstrat, scheduler_id=scheduler_id
+            user=user,
+            wsid=wsid,
+            authstrat=authstrat,
+            scheduler_id=scheduler_id,
+            params=params,
+            narrative_cell_info=narrative_cell_info,
+            source_ws_objects=source_ws_objects,
+            method_name=method_name,
+            app_id=app_id,
         )
         .to_mongo()
         .to_dict()
     )
-    job["method"] = job["job_input"]["app_id"]
+    # Copy fields to match run_job signature
+    job_input = job["job_input"]
+    job["meta"] = job_input["narrative_cell_info"]
+    job["narrative_cell_info"] = job_input["narrative_cell_info"]
+    job["params"] = job_input["params"]
+    job["source_ws_objects"] = job_input["source_ws_objects"]
+    job["method"] = job["job_input"]["method"]
     job["app_id"] = job["job_input"]["app_id"]
     job["service_ver"] = job["job_input"]["service_ver"]
     return job
+
+
+def get_example_job_input(wsid, params=None, method_name=None, app_id=None):
+    if params == None:
+        params = {}
+
+    job_input = JobInput()
+    job_input.wsid = wsid
+
+    job_input.method = method_name or "module.method"
+    job_input.params = params
+    job_input.service_ver = "dev"
+    job_input.app_id = app_id or "module/super_function"
+    job_input.source_ws_objects = ["1/2/3", "2/3/4", "3/5/6"]
+
+    m = Meta()
+    m.cell_id = "ApplePie"
+    job_input.narrative_cell_info = m
+
+    return job_input
 
 
 def get_example_job(
     user: str = "boris",
     wsid: int = 123,
     authstrat: str = "kbaseworkspace",
+    params: dict = None,
     scheduler_id: str = None,
+    narrative_cell_info: dict = None,
+    source_ws_objects: list = None,
+    method_name: str = None,
+    app_id: str = None,
+    status: str = None,
 ) -> Job:
     j = Job()
     j.user = user
     j.wsid = wsid
-    job_input = JobInput()
-    job_input.wsid = j.wsid
+    job_input = get_example_job_input(
+        params=params, wsid=wsid, method_name=method_name, app_id=app_id
+    )
 
-    job_input.method = "method"
-    job_input.requested_release = "requested_release"
-    job_input.params = {}
-    job_input.service_ver = "dev"
-    job_input.app_id = "super_module.super_function"
-
-    m = Meta()
-    m.cell_id = "ApplePie"
-    job_input.narrative_cell_info = m
     j.job_input = job_input
     j.status = "queued"
     j.authstrat = authstrat
+
+    if status:
+        j.status = status
+
+    if params:
+        job_input.params = params
+
+    if source_ws_objects:
+        job_input.source_ws_objects = source_ws_objects
+
+    if narrative_cell_info:
+        job_input.narrative_cell_info = narrative_cell_info
 
     if scheduler_id is None:
         scheduler_id = str(uuid.uuid4())
@@ -82,10 +140,14 @@ def get_example_job_as_dict_for_runjob(
     user=None, wsid=None, authstrat=None, scheduler_id=None
 ):
     job = get_example_job(
-        user=user, wsid=wsid, authstrat=authstrat, scheduler_id=scheduler_id
+        user=user,
+        wsid=wsid,
+        authstrat=authstrat,
+        scheduler_id=scheduler_id,
+        narrative_cell_info={},
     )
     job_dict = job.to_mongo().to_dict()
-    job_dict["method"] = job["job_input"]["app_id"]
+    job_dict["method"] = job["job_input"]["method"]
     job_dict["app_id"] = job["job_input"]["app_id"]
     job_dict["service_ver"] = job["job_input"]["service_ver"]
     return job_dict
@@ -353,14 +415,13 @@ def get_sample_condor_info(job=None, error=None):
     return JobInfo(info=job, error=error)
 
 
-def get_sample_job_params(method=None, wsid="123"):
-    if not method:
-        method = "default_method"
-
+def get_sample_job_params(
+    method="MEGAHIT.default_method", wsid=123, app_id="MEGAHIT/run_megahit"
+):
     job_params = {
         "wsid": wsid,
         "method": method,
-        "app_id": "MEGAHIT/run_megahit",
+        "app_id": app_id,
         "service_ver": "2.2.1",
         "params": [
             {
@@ -379,3 +440,104 @@ def get_sample_job_params(method=None, wsid="123"):
     }
 
     return job_params
+
+
+def assert_exception_correct(got: Exception, expected: Exception):
+    assert got.args == expected.args
+    assert type(got) == type(expected)
+
+
+def assert_close_to_now(time_):
+    """
+    Checks that a timestamp in seconds since the epoch is within a second of the current time.
+    """
+    now_ms = time.time()
+    assert now_ms + 1 > time_
+    assert now_ms - 1 < time_
+
+
+def find_free_port() -> int:
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(("", 0))
+        return s.getsockname()[1]
+
+
+class TestException(Exception):
+    __test__ = False
+
+
+def create_auth_user(auth_url, username, displayname):
+    ret = requests.post(
+        auth_url + "/testmode/api/V2/testmodeonly/user",
+        headers={"accept": "application/json"},
+        json={"user": username, "display": displayname},
+    )
+    if not ret.ok:
+        ret.raise_for_status()
+
+
+def create_auth_login_token(auth_url, username):
+    ret = requests.post(
+        auth_url + "/testmode/api/V2/testmodeonly/token",
+        headers={"accept": "application/json"},
+        json={"user": username, "type": "Login"},
+    )
+    if not ret.ok:
+        ret.raise_for_status()
+    return ret.json()["token"]
+
+
+def create_auth_role(auth_url, role, description):
+    ret = requests.post(
+        auth_url + "/testmode/api/V2/testmodeonly/customroles",
+        headers={"accept": "application/json"},
+        json={"id": role, "desc": description},
+    )
+    if not ret.ok:
+        ret.raise_for_status()
+
+
+def set_custom_roles(auth_url, user, roles):
+    ret = requests.put(
+        auth_url + "/testmode/api/V2/testmodeonly/userroles",
+        headers={"accept": "application/json"},
+        json={"user": user, "customroles": roles},
+    )
+    if not ret.ok:
+        ret.raise_for_status()
+
+
+def get_full_test_config() -> ConfigParser:
+    f"""
+    Gets the full configuration for ee2, including all sections of the config file.
+
+    If the {KB_DEPLOY_ENV} environment variable is set, loads the configuration from there.
+    Otherwise, the repo's {DEFAULT_TEST_DEPLOY_CFG} file is used.
+    """
+    config_file = os.environ.get(KB_DEPLOY_ENV, DEFAULT_TEST_DEPLOY_CFG)
+    logging.info(f"Loading config from {config_file}")
+
+    config_parser = ConfigParser()
+    config_parser.read(config_file)
+    if config_parser[EE2_CONFIG_SECTION].get("mongo-in-docker-compose"):
+        config_parser[EE2_CONFIG_SECTION]["mongo-host"] = config_parser[
+            EE2_CONFIG_SECTION
+        ]["mongo-in-docker-compose"]
+    return config_parser
+
+
+def get_ee2_test_config() -> Dict[str, str]:
+    f"""
+    Gets the configuration for the ee2 service, e.g. the {EE2_CONFIG_SECTION} section of the
+    deploy.cfg file.
+
+    If the {KB_DEPLOY_ENV} environment variable is set, loads the configuration from there.
+    Otherwise, the repo's {DEFAULT_TEST_DEPLOY_CFG} file is used.
+    """
+    cp = get_full_test_config()
+
+    cfg = {}
+    for nameval in cp.items(EE2_CONFIG_SECTION):
+        cfg[nameval[0]] = nameval[1]
+
+    return cfg

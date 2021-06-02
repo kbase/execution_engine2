@@ -8,19 +8,15 @@ The purpose of this class is to
 * Clients are only loaded if they are necessary
 
 """
-import json
-import os
 import time
 from datetime import datetime
 from enum import Enum
+from logging import Logger
 
 import dateutil
 
-from installed_clients.WorkspaceClient import Workspace
-from installed_clients.authclient import KBaseAuth
-from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from lib.execution_engine2.db.MongoUtil import MongoUtil
-from lib.execution_engine2.db.models.models import Job
+from execution_engine2.db.models.models import Job
 from lib.execution_engine2.exceptions import AuthError
 from lib.execution_engine2.sdk import (
     EE2Runjob,
@@ -30,11 +26,15 @@ from lib.execution_engine2.sdk import (
     EE2Logs,
 )
 from lib.execution_engine2.sdk.EE2Constants import KBASE_CONCIERGE_USERNAME
-from lib.execution_engine2.utils.CatalogUtils import CatalogUtils
 from lib.execution_engine2.utils.Condor import Condor
-from lib.execution_engine2.utils.EE2Logger import get_logger
+from execution_engine2.authorization.workspaceauth import WorkspaceAuth
+from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
+from execution_engine2.utils.clients import UserClientSet, ClientSet
+from lib.execution_engine2.utils.EE2Logger import get_logger as _get_logger
 from lib.execution_engine2.utils.KafkaUtils import KafkaClient
 from lib.execution_engine2.utils.SlackUtils import SlackClient
+from installed_clients.CatalogClient import Catalog
+from installed_clients.WorkspaceClient import Workspace
 
 
 class JobPermissions(Enum):
@@ -53,35 +53,29 @@ class SDKMethodRunner:
     """
     JOB_PERMISSION_CACHE_SIZE = 500
     JOB_PERMISSION_CACHE_EXPIRE_TIME = 300  # seconds
-    ADMIN_READ_ROLE = "EE2_ADMIN_RO"
-    ADMIN_WRITE_ROLE = "EE2_ADMIN"
 
     def __init__(
         self,
-        config,
-        user_id=None,
-        token=None,
+        user_clients: UserClientSet,
+        clients: ClientSet,
         job_permission_cache=None,
         admin_permissions_cache=None,
-        mongo_util=None,
     ):
-        self.deployment_config_fp = os.environ["KB_DEPLOYMENT_CONFIG"]
-        self.config = config
-        self.mongo_util = mongo_util
-        self.condor = None
-        self.workspace = None
-        self.workspace_auth = None
-        self.admin_roles = config.get("admin_roles", ["EE2_ADMIN", "EE2_ADMIN_RO"])
-        self.catalog_utils = CatalogUtils(
-            config["catalog-url"], config["catalog-token"]
-        )
-        self.workspace_url = config.get("workspace-url")
-        self.auth_url = config.get("auth-url")
-        self.auth = KBaseAuth(auth_url=config.get("auth-service-url"))
-        self.user_id = user_id
-        self.token = token
-        self.debug = SDKMethodRunner.parse_bool_from_string(config.get("debug"))
-        self.logger = get_logger()
+        if not user_clients:
+            raise ValueError("user_clients is required")
+        if not clients:
+            raise ValueError("clients is required")
+        self.mongo_util = clients.mongo_util
+        self.condor = clients.condor
+        self.catalog = clients.catalog
+        self.job_requirements_resolver = clients.requirements_resolver
+        self.workspace = user_clients.workspace
+        self.workspace_auth = user_clients.workspace_auth
+        self.auth = clients.auth
+        self.auth_admin = clients.auth_admin
+        self.user_id = user_clients.user_id
+        self.token = user_clients.token
+        self.logger = _get_logger()
 
         self.job_permission_cache = EE2Authentication.EE2Auth.get_cache(
             cache=job_permission_cache,
@@ -94,17 +88,13 @@ class SDKMethodRunner:
             expire=self.JOB_PERMISSION_CACHE_EXPIRE_TIME,
         )
 
-        self.is_admin = False
-        # self.roles = self.roles_cache.get_roles(user_id,token) or list()
         self._ee2_runjob = None
         self._ee2_status = None
         self._ee2_logs = None
         self._ee2_status_range = None
         self._ee2_auth = None
-        self.kafka_client = KafkaClient(config.get("kafka-host"))
-        self.slack_client = SlackClient(
-            config.get("slack-token"), debug=self.debug, endpoint=config.get("ee2-url")
-        )
+        self.kafka_client = clients.kafka_client
+        self.slack_client = clients.slack_client
 
     # Various Clients: TODO: Think about sending in just required clients, not entire SDKMR
 
@@ -133,27 +123,82 @@ class SDKMethodRunner:
             self._ee2_status = EE2Status.JobsStatus(self)
         return self._ee2_status
 
+    # A note on getters:
+    # Getters are commonly described as unpythonic. However, accessing instance variables
+    # directly, rather than via getters, causes significant problems when mocking a class in
+    # that instance variables cannot be detected by create_autospec with spec_set=True, and thus
+    # cannot be mocked in a rigorous way. The danger of not using spec_set=True is that if a
+    # mocked class's API changes, the unit tests will still pass. Thus the choice is between
+    # unpythonic getters or false positives in unit tests, and we choose the former.
+    # For more details: https://www.seanh.cc/2017/03/17/the-problem-with-mocks/
+
+    def get_workspace(self) -> Workspace:
+        """
+        Get the workspace client for this instance of SDKMR.
+        """
+        return self.workspace
+
     def get_workspace_auth(self) -> WorkspaceAuth:
-        if self.workspace_auth is None:
-            self.workspace_auth = WorkspaceAuth(
-                self.token, self.user_id, self.workspace_url
-            )
+        """
+        Get the workspace authorization client for this instance of SDKMR.
+        """
         return self.workspace_auth
 
+    def get_logger(self) -> Logger:
+        """
+        Get the logger for this instance of SDKMR.
+        """
+        # There's not really any way to meaningfully test this method without passing in the
+        # logger, which seems... overkill?
+        return self.logger
+
+    def get_catalog(self) -> Catalog:
+        """
+        Get the catalog client for this instance of SDKMR.
+        """
+        return self.catalog
+
+    def get_job_requirements_resolver(self) -> JobRequirementsResolver:
+        """
+        Get the job requirements resolver for this instance of SDKMR.
+        """
+        return self.job_requirements_resolver
+
+    def get_kafka_client(self) -> KafkaClient:
+        """
+        Get the Kafka client for this instance of SDKMR.
+        """
+        return self.kafka_client
+
+    def get_slack_client(self) -> SlackClient:
+        """
+        Get the Kafka client for this instance of SDKMR.
+        """
+        return self.slack_client
+
+    def get_user_id(self) -> str:
+        """
+        Get the user id of the user for this instance of SDKMR.
+        """
+        return self.user_id
+
+    def get_token(self) -> str:
+        """
+        Get the token of the user for this instance of SDKMR.
+        """
+        return self.token
+
     def get_mongo_util(self) -> MongoUtil:
-        if self.mongo_util is None:
-            self.mongo_util = MongoUtil(self.config)
+        """
+        Get the mongo utilities for this instance of SDKMR.
+        """
         return self.mongo_util
 
     def get_condor(self) -> Condor:
-        if self.condor is None:
-            self.condor = Condor(self.deployment_config_fp)
+        """
+        Get the Condor interface for this instance of SDKMR
+        """
         return self.condor
-
-    def get_workspace(self) -> Workspace:
-        if self.workspace is None:
-            self.workspace = Workspace(token=self.token, url=self.workspace_url)
-        return self.workspace
 
     # Permissions Decorators    #TODO Verify these actually work     #TODO add as_admin to these
 
@@ -190,11 +235,60 @@ class SDKMethodRunner:
                 "You are not the concierge user. This method is not for you"
             )
 
+    # The next few methods allow for unit testing the various EE2*.py classes.
+    # They could also be moved to the MongoUtil class, but there doesn't appear to be a need
+    # at this point since MongoEngine creates a global connection to MongoDB
+    # and makes it available to all the model objects.
+
+    def save_job(self, job: Job) -> str:
+        """
+        Save a job record to the Mongo database and return the job's ID as a string.
+        """
+        job.save()
+        return str(job.id)
+
+    def save_and_return_job(self, job: Job) -> Job:
+        """
+        Save a job record to the Mongo database and return the updated job.
+        """
+        job.save()
+        return job
+
+    def get_job_counts(self, job_filter):
+        """
+        Get the number of jobs matching a filter.
+
+        job_filter - a dict of keys to filter terms in the MongoEngine filter language.
+        """
+        return Job.objects.filter(**job_filter).count()
+
+    def get_jobs(self, job_filter, job_projection, sort_order, offset, limit):
+        """
+        Get jobs from the database.
+
+        job_filter - a dict of keys to filter terms in the MongoEngine filter language.
+        job_projection - a list of field names to include in the returned jobs.
+        sort_order - '+' to sort by job ID ascending, '-' descending.
+        offset - the number of jobs to skip before returning results.
+        limit - the maximum number of jobs to return.
+        """
+        # TODO Instead of SKIP use ID GT LT
+        #   https://www.codementor.io/arpitbhayani/fast-and-efficient-pagination-in-mongodb-9095flbqr
+        #   ^ this one is important - the workspace was DOSed by a single open narrative at one
+        #   point due to skip abuse, which is why it was removed
+        return (
+            Job.objects[:limit]
+            .filter(**job_filter)
+            .order_by(f"{sort_order}_id")
+            .skip(offset)
+            .only(*job_projection)
+        )
+
     # API ENDPOINTS
 
     # ENDPOINTS: Admin Related Endpoints
     def check_is_admin(self):
-        """ Authorization Required Read """
+        """Authorization Required Read"""
         # Check whether if at minimum, a read only admin"
         try:
             return self.check_as_admin(requested_perm=JobPermissions.READ)
@@ -205,67 +299,76 @@ class SDKMethodRunner:
         return self.get_ee2_auth().retrieve_admin_permissions()
 
     # ENDPOINTS: Running jobs and getting job input params
+
+    def retry_multiple(self, job_ids, as_admin=False):
+        """Authorization Required Read/Write"""
+        return self.get_runjob().retry_multiple(job_ids=job_ids, as_admin=as_admin)
+
+    def retry(self, job_id, as_admin=False):
+        """Authorization Required Read/Write"""
+        return self.get_runjob().retry(job_id=job_id, as_admin=as_admin)
+
     def run_job(self, params, as_admin=False):
-        """ Authorization Required Read/Write """
+        """Authorization Required Read/Write"""
         return self.get_runjob().run(params=params, as_admin=as_admin)
 
     def run_job_batch(self, params, batch_params, as_admin=False):
-        """ Authorization Required Read/Write """
+        """Authorization Required Read/Write"""
         return self.get_runjob().run_batch(
             params=params, batch_params=batch_params, as_admin=as_admin
         )
 
     def run_job_concierge(self, params, concierge_params):
-        """ Authorization Required : Be the kbaseconcierge user """
+        """Authorization Required : Be the kbaseconcierge user"""
         return self.get_runjob().run(params=params, concierge_params=concierge_params)
 
     def get_job_params(self, job_id, as_admin=False):
-        """ Authorization Required: Read """
+        """Authorization Required: Read"""
         return self.get_runjob().get_job_params(job_id=job_id, as_admin=as_admin)
 
     # ENDPOINTS: Adding and retrieving Logs
     def add_job_logs(self, job_id, log_lines, as_admin=False):
-        """ Authorization Required Read/Write """
+        """Authorization Required Read/Write"""
         return self.get_job_logs().add_job_logs(
             job_id=job_id, log_lines=log_lines, as_admin=as_admin
         )
 
     def view_job_logs(self, job_id, skip_lines=None, as_admin=False, limit=None):
-        """ Authorization Required Read """
+        """Authorization Required Read"""
         return self.get_job_logs().view_job_logs(
             job_id=job_id, skip_lines=skip_lines, as_admin=as_admin, limit=limit
         )
 
     # Endpoints: Changing a job's status
     def start_job(self, job_id, skip_estimation=True, as_admin=False):
-        """ Authorization Required Read/Write """
+        """Authorization Required Read/Write"""
         return self.get_jobs_status().start_job(
             job_id=job_id, skip_estimation=skip_estimation, as_admin=as_admin
         )
 
     # Endpoints: Changing a job's status
     def abandon_children(self, parent_job_id, child_job_ids, as_admin=False):
-        """ Authorization Required Read/Write """
+        """Authorization Required Read/Write"""
         return self.get_jobs_status().abandon_children(
             parent_job_id=parent_job_id, child_job_ids=child_job_ids, as_admin=as_admin
         )
 
     def update_job_status(self, job_id, status, as_admin=False):
         # TODO: Make this an ADMIN ONLY function? Why would anyone need to call this who is not an admin?
-        """ Authorization Required: Read/Write """
+        """Authorization Required: Read/Write"""
         return self.get_jobs_status().force_update_job_status(
             job_id=job_id, status=status, as_admin=as_admin
         )
 
     def cancel_job(self, job_id, terminated_code=None, as_admin=False):
         # TODO: Cancel Child Jobs as well
-        """ Authorization Required Read/Write """
+        """Authorization Required Read/Write"""
         return self.get_jobs_status().cancel_job(
             job_id=job_id, terminated_code=terminated_code, as_admin=as_admin
         )
 
     def handle_held_job(self, cluster_id):
-        """ Authorization Required Read/Write """
+        """Authorization Required Read/Write"""
         if self.check_as_admin(requested_perm=JobPermissions.WRITE):
             return self.get_jobs_status().handle_held_job(
                 cluster_id=cluster_id, as_admin=True
@@ -280,7 +383,7 @@ class SDKMethodRunner:
         job_output=None,
         as_admin=False,
     ):
-        """ Authorization Required Read/Write """
+        """Authorization Required Read/Write"""
 
         return self.get_jobs_status().finish_job(
             job_id=job_id,
@@ -294,7 +397,7 @@ class SDKMethodRunner:
     # Endpoints: Checking a job's status
 
     def check_job(self, job_id, exclude_fields=None, as_admin=False):
-        """ Authorization Required: Read """
+        """Authorization Required: Read"""
         check_permission = True
 
         if as_admin is True:
@@ -308,13 +411,13 @@ class SDKMethodRunner:
         )
 
     def check_job_canceled(self, job_id, as_admin=False):
-        """ Authorization Required: Read """
+        """Authorization Required: Read"""
         return self.get_jobs_status().check_job_canceled(
             job_id=job_id, as_admin=as_admin
         )
 
     def get_job_status_field(self, job_id, as_admin=False):
-        """ Authorization Required: Read """
+        """Authorization Required: Read"""
         return self.get_jobs_status().get_job_status(job_id=job_id, as_admin=as_admin)
 
     def check_job_batch(
@@ -324,7 +427,7 @@ class SDKMethodRunner:
         exclude_fields=None,
         as_admin=False,
     ):
-        """ Authorization Required: Read """
+        """Authorization Required: Read"""
 
         if as_admin is True:
             self.check_as_admin(requested_perm=JobPermissions.READ)
@@ -360,7 +463,7 @@ class SDKMethodRunner:
         return_list=1,
         as_admin=False,
     ):
-        """ Authorization Required: Read """
+        """Authorization Required: Read"""
         if as_admin:
             self.check_as_admin(requested_perm=JobPermissions.READ)
             check_permission = False
@@ -384,7 +487,7 @@ class SDKMethodRunner:
         ascending=None,
         as_admin=False,
     ):
-        """ Authorization Required: Read """
+        """Authorization Required: Read"""
         if as_admin:
             self.check_as_admin(requested_perm=JobPermissions.READ)
 
@@ -452,8 +555,7 @@ class SDKMethodRunner:
         if as_admin:
             self.check_as_admin(requested_perm=JobPermissions.READ)
         else:
-            ws_auth = self.get_workspace_auth()
-            if not ws_auth.can_read(workspace_id):
+            if not self.workspace_auth.can_read(workspace_id):
                 self.logger.debug(
                     f"User {self.user_id} doesn't have permission to read jobs in workspace {workspace_id}."
                 )
@@ -474,19 +576,6 @@ class SDKMethodRunner:
         )
 
         return job_states
-
-    @staticmethod
-    def parse_bool_from_string(str_or_bool):
-        if isinstance(str_or_bool, bool):
-            return str_or_bool
-
-        if isinstance(str_or_bool, int):
-            return str_or_bool
-
-        if isinstance(json.loads(str_or_bool.lower()), bool):
-            return json.loads(str_or_bool.lower())
-
-        raise Exception("Not a boolean value")
 
     @staticmethod
     def check_and_convert_time(time_input, assign_default_time=False):

@@ -1,4 +1,8 @@
 [ {
+  "module_name" : "execution_engine2",
+  "type" : "core",
+  "file_path" : "./execution_engine2.spec"
+}, {
   "module_name" : "FakeObjectsForTests",
   "type" : "sdk",
   "version_tag" : "release"
