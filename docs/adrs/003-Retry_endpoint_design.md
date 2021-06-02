@@ -5,7 +5,7 @@ Date: 2021-05-19
 
 ## Motivation for the Endpoint:
 
-The current requirement for the Batch/Bulk UI is to be able to retry jobs that have either "errored" out, or were cancelled.
+The current requirement for the Batch/Bulk UI is to be able to retry jobs that have either "errored" out, or were terminated.
 The UI allows you to retry either single jobs, or multiple jobs, and saves you from having to cancel and resubmit each job individually,
 which is not really possibly with the UI anyway.
 
@@ -35,6 +35,7 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 * EE2 looks up the job versions and parameters, and then submits the job to be retried, incrementing the `retry_count`
   of the job being retried, and the newly launched job gains a pointer to the `_PARENT_RETRY_JOB_ID`
 * The job is submitted and upon successful submission, notifies the `retry_parent` and notifies the `parent_job_id` that a new `child_job` has been added
+* Jobs submitted by an administrator with a ResourceRequirements use resource requirements from the catalog / ee2 config exclusively
 
 
 ### Batch Behavior
@@ -43,18 +44,20 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 * Multiple in-flight retries are allowed.
 
 ## Retry_job behavior
-* Blocking and single submit to HTCondor. It should be fine
+* Blocking and single submit to HTCondor. It should be fine as it returns relatively quickly
   
 ## Retry_jobs behavior
-* Submitting multiple jobs uses the `run_job` endpoint, and is blocking (NOT OK!)
+* Submitting multiple jobs uses the `run_job` endpoint, and is blocking. This can cause issues if the network drops, and makes the narrative not aware of the state of the retry. Submitting 100 jobs currently takes 12 seconds, and that is a lot of time for things to go wrong. 
+
 
 ### Desired Behavior
-* Prevent multiple in-flight retries to prevent the user from wasting their own resources (and the queues resources)
+* Prevent multiple in-flight retries of the same original job to prevent the user from wasting their own resources (and the queues resources)
 * Add retry_count to retried jobs as well to aid in more book-keeping in a new field called `retry_number`
 * Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
 * One single submission to HTCondor instead of multiple job submissions
-* Ability to gracefully handle jobs with children
-* Ability to handle database consistentcy during retry failure
+* Ability to handle database consistency during retry failure. (see thread https://github.com/kbase/execution_engine2/pull/383#discussion_r638341940)
+* Add failure conditions in the run() method and see if any of those should be checked prior to starting jobs
+* Prevent retry if resolving `retry_parent` results in two or more of the same job_ids in a retry_jobs request (see thread https://github.com/kbase/execution_engine2/pull/383#discussion_r640907736)
 
 
 ### Questions
@@ -80,6 +83,9 @@ Looks like the options are
 * (upgrade to Mongo 4.4 for better transaction support)
 
 
+##### Q: Do we want to support ResourceRequirements
+A: Probably not in the short term
+
 
 ### Sort of answered
 #### Q: how to prevent incorrect parent-child relationships being created -- should the client be allowed to specify a parent ID? Is it currently possible to add a new child to a parent job if the child is a new job, rather than an existing job ID / set of params that is being rerun?
@@ -100,7 +106,6 @@ A: Not necessarily relevant to this endpoint, more of a run_job_batch endpoint q
 Priority descending
 * Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
 * One single submission to HTCondor instead of multiple job submission ()
-* Ability to gracefully handle jobs with children (may require refactoring models)
 * Prevent multiple in-flight retries to prevent the user from wasting their own resources (and the queues resources)
 * Add retry_count to retried jobs as well to aid in more book-keeping in a new field called `retry_number`
 
@@ -110,8 +115,6 @@ Priority descending
 > Estimate 3-4 days
 * One single submission to HTCondor instead of multiple job submission ()
 > Dependent on run_job_batch to be threaded first : Estimate 1 day
-* Ability to gracefully handle jobs with children
-> (may require refactoring models. Especially when children spawn more jobs) : Estimate 3 day
 * Prevent multiple in-flight retries to prevent the user from wasting their own resources (and the queues resources)
 > Some sort of locking mechanism or something else : Estimate 3 day
 * Add retry_count to retried jobs as well to aid in more book-keeping in a new field called `retry_number`
