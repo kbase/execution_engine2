@@ -1,4 +1,4 @@
-# Retry Endpoint
+# Retry Endpoint Design (Round 2!)
 
 Date: 2021-05-19
 
