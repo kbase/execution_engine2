@@ -55,8 +55,7 @@ The job first needs to be submitted to ee2_runjob. It can fail there. Afterwards
 * Convenience endpoints that operate on the parent_job_id or list of child job ids may be out of scope (e.g. cancel all jobs with a certain status)
 
 ## Consequences
-
-Pending decision
+* Requires 2nd ADR
 
 ## Pros and Cons of the Alternatives
 
