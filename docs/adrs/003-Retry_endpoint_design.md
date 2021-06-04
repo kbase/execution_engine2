@@ -65,7 +65,7 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 A: Unknown TBD
 
 #### Q: Preventing the same params from being re-run
-A: We have decided to allow it
+A: We have decided to allow multiple jobs with the same params to be re-run in the same retry_jobs request.
 
 #### Q: Finding the most recent run of the job: I would very much like to avoid anything involving iterating over a chain of jobs before you can find the most recent run or the original run -- we can come up with better data structures than that!
 A: Unknown TBD, maybe the frontend does it?
