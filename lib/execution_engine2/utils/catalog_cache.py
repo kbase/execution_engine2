@@ -20,17 +20,14 @@ class CatalogCache:
 
     def get_catalog(self) -> Catalog:
         """Get the catalog client for this instance."""
-        # TODO unit test this method after switching to dependency injection
         return self._catalog
 
     def get_method_version_cache(self) -> Dict:
         """Get the _method_version_cache for this instance."""
-        # TODO unit test this method after switching to dependency injection
         return self._method_version_cache
 
     def get_job_resources_cache(self) -> Dict:
         """Get the _condor_resources_cache for this instance."""
-        # TODO unit test this method after switching to dependency injection
         return self._job_requirements_cache
 
     def get_git_commit_version(self, method, service_ver=None) -> str:
