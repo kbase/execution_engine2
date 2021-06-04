@@ -10,6 +10,7 @@ from enum import Enum
 from lib.installed_clients.CatalogClient import Catalog
 from execution_engine2.utils.catalog_cache import CatalogCache
 
+
 from execution_engine2.utils.arg_processing import (
     check_string as _check_string,
     not_falsy as _not_falsy,
@@ -158,7 +159,7 @@ class JobRequirementsResolver:
 
     def __init__(
         self,
-        catalog_cache: CatalogCache,
+        catalog: Catalog,
         cfgfile: Iterable[str],
         override_client_group: str = None,
     ):
@@ -170,7 +171,7 @@ class JobRequirementsResolver:
         override_client_group - if provided, this client group will be used for all jobs, ignoring
             all other sources of client group information.
         """
-        self._catalog_cache = _not_falsy(catalog_cache, "catalog_cache")
+        self._catalog = _not_falsy(catalog, "catalog")
         self._override_client_group = _check_string(
             override_client_group, "override_client_group", optional=True
         )
@@ -361,6 +362,7 @@ class JobRequirementsResolver:
     def resolve_requirements(
         self,
         method: str,
+        catalog_cache: CatalogCache,
         cpus: int = None,
         memory_MB: int = None,
         disk_GB: int = None,
@@ -378,6 +380,7 @@ class JobRequirementsResolver:
         the catalog and ee2 settings for the job.
 
         method - the method to be run in module.method format.
+        catalog_cache - a per request instance of a CatalogCache in order to speed up catalog lookups
         cpus - the number of CPUs required for the job.
         memory_MB - the amount of memory, in MB, required for the job.
         disk_GB - the amount of disk space, in GB, required for the job.
@@ -414,7 +417,7 @@ class JobRequirementsResolver:
 
         # the catalog could contain arbitrary scheduler requirements so we can't skip the
         # call even if all the arguments are provided
-        cat_reqs_all = self._get_catalog_reqs(module_name, function_name)
+        cat_reqs_all = self._get_catalog_reqs(module_name, function_name, catalog_cache)
         cat_reqs = self.normalize_job_reqs(
             cat_reqs_all,
             f"catalog method {module_name}.{function_name}",
@@ -466,9 +469,11 @@ class JobRequirementsResolver:
             raise IncorrectParamsException(f"No such clientgroup: {cg}")
         return cg
 
-    def _get_catalog_reqs(self, module_name, function_name):
+    def _get_catalog_reqs(
+        self, module_name: str, function_name: str, catalog_cache: CatalogCache
+    ):
         # could cache results for 30s or so to speed things up... YAGNI
-        group_config = self._catalog_cache.get_condor_resources(
+        group_config = catalog_cache.lookup_job_resource_requirements(
             module_name=module_name, function_name=function_name
         )
         # If group_config is empty, that means there's no clientgroup entry in the catalog

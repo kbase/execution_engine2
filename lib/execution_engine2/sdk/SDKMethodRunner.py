@@ -47,6 +47,7 @@ class JobPermissions(Enum):
 class SDKMethodRunner:
     """
     The execution engine 2 api calls functions from here.
+    The SDKMR is instantiated per call
     """
 
     """
@@ -69,8 +70,9 @@ class SDKMethodRunner:
         self.mongo_util = clients.mongo_util
         self.condor = clients.condor
         self.catalog = clients.catalog
-        self.catalog_cache = clients.catalog_cache
         self.job_requirements_resolver = clients.requirements_resolver
+        # Instantiate unauthenticated catalog client to use a new catalog_cache for each request
+        self.catalog_cache = CatalogCache(catalog=clients.catalog_no_auth)
         self.workspace = user_clients.workspace
         self.workspace_auth = user_clients.workspace_auth
         self.auth = clients.auth

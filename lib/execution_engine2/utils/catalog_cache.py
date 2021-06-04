@@ -6,12 +6,18 @@ from lib.installed_clients.CatalogClient import Catalog
 
 
 class CatalogCache:
+    """
+    Per call catalog cache used to speed up catalog lookups
+    Caches the "Method Version" and the "Job Resource Requirements"
+    """
+
     def __init__(self, catalog: Catalog):
         if not catalog:
             raise ValueError("Please provide instance of catalog client")
+
         self._catalog = catalog
         self._method_version_cache = defaultdict(dict)
-        self._condor_resources_cache = defaultdict(dict)
+        self._job_requirements_cache = defaultdict(dict)
 
     def get_catalog(self) -> Catalog:
         """Get the catalog client for this instance."""
@@ -23,10 +29,10 @@ class CatalogCache:
         # TODO unit test this method after switching to dependency injection
         return self._method_version_cache
 
-    def get_condor_resources_cache(self) -> Dict:
+    def get_job_resources_cache(self) -> Dict:
         """Get the _condor_resources_cache for this instance."""
         # TODO unit test this method after switching to dependency injection
-        return self._condor_resources_cache
+        return self._job_requirements_cache
 
     def get_git_commit_version(self, method, service_ver=None) -> str:
         """
@@ -65,9 +71,9 @@ class CatalogCache:
         # Retrieve from cache
         return mv_cache[method][service_ver]
 
-    def get_condor_resources(self, module_name, function_name) -> dict:
+    def lookup_job_resource_requirements(self, module_name, function_name) -> dict:
         """
-        Gets required condor resources and clientgroups for a job submission
+        Gets required job resources and clientgroups for a job submission
         :param module_name: Module name to lookup
         :param function_name: Function name to lookup
         :return: A cached lookup of unformatted resource requests from the catalog
@@ -75,7 +81,7 @@ class CatalogCache:
         # Structure of cache
         # { 'module_name' : {'function_name' : [group_config] }
         # }
-        cr_cache = self.get_condor_resources_cache()
+        cr_cache = self.get_job_resources_cache()
         # If not in the cache add it
         if module_name not in cr_cache or function_name not in cr_cache[module_name]:
             cr_cache[module_name][

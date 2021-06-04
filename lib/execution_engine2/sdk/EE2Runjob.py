@@ -404,7 +404,8 @@ class EE2RunJob:
 
             try:
                 job[_JOB_REQUIREMENTS] = jrr.resolve_requirements(
-                    job.get(_METHOD),
+                    method=job.get(_METHOD),
+                    catalog_cache=self.sdkmr.get_catalog_cache(),
                     cpus=norm.get(REQUEST_CPUS),
                     memory_MB=norm.get(REQUEST_MEMORY),
                     disk_GB=norm.get(REQUEST_DISK),
@@ -737,7 +738,8 @@ class EE2RunJob:
                 schd_reqs[key.strip()] = val.strip()
 
         return jrr.resolve_requirements(
-            method,
+            method=method,
+            catalog_cache=self.sdkmr.get_catalog_cache(),
             cpus=norm.get(REQUEST_CPUS),
             memory_MB=norm.get(REQUEST_MEMORY),
             disk_GB=norm.get(REQUEST_DISK),

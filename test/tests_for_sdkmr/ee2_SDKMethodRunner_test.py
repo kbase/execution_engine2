@@ -44,6 +44,7 @@ from test.utils_shared.test_utils import (
     assert_exception_correct,
 )
 from tests_for_db.mongo_test_helper import MongoTestHelper
+from execution_engine2.utils.catalog_cache import CatalogCache
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
@@ -278,7 +279,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         # runner.get_runjob = MagicMock(return_value="git_commit_goes_here")
 
         runner.get_condor = MagicMock(return_value=condor_mock)
-        runner.get_catalog_cache = MagicMock()
 
         fixed_rj = EE2RunJob(runner)
         # _get_module_git_commitfixed_rj._get_module_git_commit = MagicMock(return_value="hash_goes_here")

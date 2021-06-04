@@ -64,7 +64,8 @@ def get_client_mocks(config, config_path, *to_be_mocked):
         ret[KBaseAuth],
         ret[AdminAuthUtil],
         ret[Condor],
-        ret[Catalog],
+        ret[Catalog],  # This one is for "catalog"
+        ret[Catalog],  # This one is for "catalog_no_auth"
         ret[JobRequirementsResolver],
         ret[KafkaClient],
         ret[MongoUtil],

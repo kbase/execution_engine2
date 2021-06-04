@@ -87,8 +87,8 @@ def get_user_client_set(cfg: Dict[str, str], user_id: str, token: str):
 
 class ClientSet:
     """
+    There is only one instance of this class globally. The codebase effectively treats this as a singleton.
     Clients required by EE2 for communicating with other services.
-
     These are not user-specific and can be reused throughout the application.
     """
 
@@ -98,7 +98,7 @@ class ClientSet:
         auth_admin: AdminAuthUtil,
         condor: Condor,
         catalog: Catalog,
-        catalog_cache: CatalogCache,
+        catalog_no_auth: Catalog,
         requirements_resolver: JobRequirementsResolver,
         kafka_client: KafkaClient,
         mongo_util: MongoUtil,
@@ -112,7 +112,7 @@ class ClientSet:
         self.auth_admin = _not_falsy(auth_admin, "auth_admin")
         self.condor = _not_falsy(condor, "condor")
         self.catalog = _not_falsy(catalog, "catalog")
-        self.catalog_cache = _not_falsy(catalog_cache, "catalog_cache")
+        self.catalog_no_auth = _not_falsy(catalog_no_auth, "catalog_no_auth")
         self.requirements_resolver = _not_falsy(
             requirements_resolver, "requirements_resolver"
         )
@@ -134,7 +134,7 @@ def get_clients(
     AdminAuthUtil,
     Condor,
     Catalog,
-    CatalogCache,
+    Catalog,
     JobRequirementsResolver,
     KafkaClient,
     MongoUtil,
@@ -163,10 +163,9 @@ def get_clients(
     # token is needed for running log_exec_stats in EE2Status
     catalog = Catalog(cfg["catalog-url"], token=cfg["catalog-token"])
     # instance of catalog without creds is used here
-    unauthenticated_cc = Catalog(cfg["catalog-url"])
-    catalog_cache = CatalogCache(catalog=unauthenticated_cc)
+    catalog_no_auth = Catalog(cfg["catalog-url"])
     # use unauthenticated catalog instance
-    jrr = JobRequirementsResolver(catalog_cache, cfg_file, override_client_group)
+    jrr = JobRequirementsResolver(catalog_no_auth, cfg_file, override_client_group)
     auth_url = cfg["auth-url"]
     auth = KBaseAuth(auth_url=auth_url + "/api/legacy/KBase/Sessions/Login")
     # TODO using hardcoded roles for now to avoid possible bugs with mismatched cfg roles
@@ -189,7 +188,7 @@ def get_clients(
         auth_admin,
         condor,
         catalog,
-        catalog_cache,
+        catalog_no_auth,
         jrr,
         kafka_client,
         mongo_util,
