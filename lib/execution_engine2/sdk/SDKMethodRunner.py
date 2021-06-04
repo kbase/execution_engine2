@@ -70,9 +70,10 @@ class SDKMethodRunner:
         self.mongo_util = clients.mongo_util
         self.condor = clients.condor
         self.catalog = clients.catalog
-        self.job_requirements_resolver = clients.requirements_resolver
-        # Instantiate unauthenticated catalog client to use a new catalog_cache for each request
+        # Cache Instantiated on a per request basis
         self.catalog_cache = CatalogCache(catalog=clients.catalog_no_auth)
+        self.job_requirements_resolver = clients.requirements_resolver
+
         self.workspace = user_clients.workspace
         self.workspace_auth = user_clients.workspace_auth
         self.auth = clients.auth
@@ -164,7 +165,7 @@ class SDKMethodRunner:
 
     def get_catalog_cache(self) -> CatalogCache:
         """
-        Get the catalog client for this instance of SDKMR.
+        Get the catalog cache client for this instance of SDKMR.
         """
         return self.catalog_cache
 

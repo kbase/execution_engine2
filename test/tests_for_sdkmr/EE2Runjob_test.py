@@ -34,6 +34,7 @@ from execution_engine2.utils.SlackUtils import SlackClient
 from execution_engine2.db.MongoUtil import MongoUtil
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.CatalogClient import Catalog
+from utils.catalog_cache import CatalogCache
 from utils_shared.mock_utils import get_client_mocks, ALL_CLIENTS
 from utils_shared.test_utils import assert_exception_correct
 
@@ -95,6 +96,9 @@ def _set_up_mocks(user: str, token: str) -> Dict[Any, Any]:
     mocks[Workspace] = create_autospec(Workspace, spec_set=True, instance=True)
     mocks[WorkspaceAuth] = create_autospec(WorkspaceAuth, spec_set=True, instance=True)
     # Set up basic getter calls
+    sdkmr.get_catalog_cache.return_value = CatalogCache(
+        mocks[Catalog]
+    )  # should be unauthenticated catalog
     sdkmr.get_catalog.return_value = mocks[Catalog]
     sdkmr.get_condor.return_value = mocks[Condor]
     sdkmr.get_kafka_client.return_value = mocks[KafkaClient]
@@ -304,7 +308,9 @@ def test_run_job():
     # check mocks called as expected. The order here is the order that they're called in the code.
     jrr.normalize_job_reqs.assert_called_once_with({}, "input job")
     jrr.get_requirements_type.assert_called_once_with(**_EMPTY_JOB_REQUIREMENTS)
-    jrr.resolve_requirements.assert_called_once_with(_METHOD, **_EMPTY_JOB_REQUIREMENTS)
+    jrr.resolve_requirements.assert_called_once_with(
+        _METHOD, sdkmr.get_catalog_cache(), **_EMPTY_JOB_REQUIREMENTS
+    )
     _check_common_mock_calls(mocks, reqs, None, _APP)
 
 
@@ -381,7 +387,9 @@ def test_run_job_as_admin_with_job_requirements():
     sdkmr.check_as_admin.assert_called_once_with(JobPermissions.WRITE)
     jrr.normalize_job_reqs.assert_called_once_with(inc_reqs, "input job")
     jrr.get_requirements_type.assert_called_once_with(**req_args)
-    jrr.resolve_requirements.assert_called_once_with(_METHOD, **req_args)
+    jrr.resolve_requirements.assert_called_once_with(
+        _METHOD, sdkmr.get_catalog_cache(), **req_args
+    )
     _check_common_mock_calls(mocks, reqs, None, None)
 
 
@@ -456,6 +464,7 @@ def test_run_job_as_concierge_with_wsid():
 
     jrr.resolve_requirements.assert_called_once_with(
         _METHOD,
+        sdkmr.get_catalog_cache(),
         cpus=cpus,
         memory_MB=mem,
         disk_GB=disk,
@@ -544,6 +553,7 @@ def _run_as_concierge_empty_as_admin(concierge_params, app):
 
     jrr.resolve_requirements.assert_called_once_with(
         _METHOD,
+        sdkmr.get_catalog_cache(),
         cpus=None,
         memory_MB=None,
         disk_GB=None,
@@ -960,8 +970,8 @@ def test_run_job_batch_with_parent_job_wsid():
     )
     jrr.resolve_requirements.assert_has_calls(
         [
-            call(_METHOD_1, **_EMPTY_JOB_REQUIREMENTS),
-            call(_METHOD_2, **_EMPTY_JOB_REQUIREMENTS),
+            call(_METHOD_1, sdkmr.get_catalog_cache(), **_EMPTY_JOB_REQUIREMENTS),
+            call(_METHOD_2, sdkmr.get_catalog_cache(), **_EMPTY_JOB_REQUIREMENTS),
         ]
     )
     _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid)
@@ -1065,7 +1075,10 @@ def test_run_job_batch_as_admin_with_job_requirements():
         [call(**_EMPTY_JOB_REQUIREMENTS), call(**req_args)]
     )
     jrr.resolve_requirements.assert_has_calls(
-        [call(_METHOD_1, **_EMPTY_JOB_REQUIREMENTS), call(_METHOD_2, **req_args)]
+        [
+            call(_METHOD_1, sdkmr.get_catalog_cache(), **_EMPTY_JOB_REQUIREMENTS),
+            call(_METHOD_2, sdkmr.get_catalog_cache(), **req_args),
+        ]
     )
     _check_common_mock_calls_batch(mocks, reqs1, reqs2, None, wsid)
 
