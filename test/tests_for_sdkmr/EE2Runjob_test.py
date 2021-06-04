@@ -4,37 +4,39 @@ Unit tests for the EE2Runjob class.
 
 # Incomplete by a long way. Will add more unit tests as they come up.
 
-from pytest import raises
-from typing import List, Dict, Any
-from bson.objectid import ObjectId
 from logging import Logger
+from typing import List, Dict, Any
 from unittest.mock import create_autospec, call
+
+from bson.objectid import ObjectId
+from pytest import raises
+
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
+from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job, JobInput, JobRequirements, Meta
 from execution_engine2.exceptions import IncorrectParamsException, AuthError
 from execution_engine2.sdk.EE2Runjob import EE2RunJob, JobPermissions
+from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.sdk.job_submission_parameters import (
     JobSubmissionParameters,
     JobRequirements as ResolvedRequirements,
     AppInfo,
     UserCreds,
 )
-from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.utils.Condor import Condor, SubmissionInfo
 from execution_engine2.utils.KafkaUtils import (
     KafkaClient,
     KafkaQueueChange,
     KafkaCreateJob,
 )
+from execution_engine2.utils.SlackUtils import SlackClient
+from execution_engine2.utils.catalog_cache import CatalogCache
 from execution_engine2.utils.job_requirements_resolver import (
     JobRequirementsResolver,
     RequirementsType,
 )
-from execution_engine2.utils.SlackUtils import SlackClient
-from execution_engine2.db.MongoUtil import MongoUtil
-from installed_clients.WorkspaceClient import Workspace
 from installed_clients.CatalogClient import Catalog
-from utils.catalog_cache import CatalogCache
+from installed_clients.WorkspaceClient import Workspace
 from utils_shared.mock_utils import get_client_mocks, ALL_CLIENTS
 from utils_shared.test_utils import assert_exception_correct
 
