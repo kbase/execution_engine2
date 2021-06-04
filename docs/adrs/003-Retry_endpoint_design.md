@@ -35,7 +35,7 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 * EE2 looks up the job versions and parameters, and then submits the job to be retried, incrementing the `retry_count`
   of the job being retried, and the newly launched job gains a pointer to the `_PARENT_RETRY_JOB_ID`
 * The job is submitted and upon successful submission, notifies the `retry_parent` and notifies the `parent_job_id` that a new `child_job` has been added
-* Jobs submitted by an administrator with a ResourceRequirements use resource requirements from the catalog / ee2 config exclusively
+* Jobs submitted by an administrator with a ResourceRequirements use resource requirements from the catalog / ee2 config exclusively on retry
 
 ### Batch Jobs Behavior
 * Adds child_job_id to parent_job_id.child_job_ids
