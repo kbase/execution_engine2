@@ -13,6 +13,7 @@ from execution_engine2.utils.job_requirements_resolver import (
 )
 from execution_engine2.exceptions import IncorrectParamsException
 from installed_clients.CatalogClient import Catalog
+from execution_engine2.utils.catalog_cache import CatalogCache
 from utils_shared.test_utils import assert_exception_correct
 
 
@@ -679,7 +680,9 @@ def _resolve_requirements_from_spec(catalog_return):
 
     jrr = JobRequirementsResolver(catalog, spec)
 
-    assert jrr.resolve_requirements(" mod.meth  ") == JobRequirements(
+    assert jrr.resolve_requirements(
+        " mod.meth  ", catalog_cache=CatalogCache(catalog)
+    ) == JobRequirements(
         8,
         700,
         32,
@@ -704,7 +707,9 @@ def test_resolve_requirements_from_spec_with_override():
 
     jrr = JobRequirementsResolver(catalog, spec, "    cg1    ")
 
-    assert jrr.resolve_requirements(" module2. some_meth  ") == JobRequirements(
+    assert jrr.resolve_requirements(
+        " module2. some_meth  ", catalog_cache=CatalogCache(catalog)
+    ) == JobRequirements(
         4,
         2000,
         100,
@@ -729,7 +734,9 @@ def test_resolve_requirements_from_spec_with_override_and_user_client_group():
     jrr = JobRequirementsResolver(catalog, spec, "    cg2    ")
 
     assert jrr.resolve_requirements(
-        " module2. some_meth  ", client_group="  cg1"
+        " module2. some_meth  ",
+        client_group="  cg1",
+        catalog_cache=CatalogCache(catalog),
     ) == JobRequirements(
         4,
         2000,
@@ -763,7 +770,9 @@ def test_resolve_requirements_from_catalog_full_CSV():
 
     jrr = JobRequirementsResolver(catalog, spec)
 
-    assert jrr.resolve_requirements(" module2. some_meth  ") == JobRequirements(
+    assert jrr.resolve_requirements(
+        " module2. some_meth  ", catalog_cache=CatalogCache(catalog)
+    ) == JobRequirements(
         78,
         500,
         700,
@@ -797,7 +806,9 @@ def test_resolve_requirements_from_catalog_partial_JSON():
 
     jrr = JobRequirementsResolver(catalog, spec)
 
-    assert jrr.resolve_requirements(" module2. some_meth  ") == JobRequirements(
+    assert jrr.resolve_requirements(
+        " module2. some_meth  ", catalog_cache=CatalogCache(catalog)
+    ) == JobRequirements(
         4,
         300,
         100000,
@@ -838,6 +849,7 @@ def _resolve_requirements_from_user_full(bool_val):
 
     assert jrr.resolve_requirements(
         " module2. some_meth  ",
+        CatalogCache(catalog),
         42,
         789,
         1,
@@ -899,6 +911,7 @@ def test_resolve_requirements_from_user_partial():
     assert jrr.resolve_requirements(
         " module2. some_meth  ",
         cpus=42,
+        catalog_cache=CatalogCache(catalog),
         client_group="cg1",
         client_group_regex=True,
         scheduler_requirements={
@@ -1118,6 +1131,8 @@ def test_resolve_requirements_fail_input_clientgroup():
 
 
 def _resolve_requirements_fail(jrr, method, kwargs, expected):
+    # Workaround to avoid passing catalog multiple times
+    catalog_cache = CatalogCache(jrr._catalog)
     with raises(Exception) as got:
-        jrr.resolve_requirements(method, **kwargs)
+        jrr.resolve_requirements(method, catalog_cache, **kwargs)
     assert_exception_correct(got.value, expected)
