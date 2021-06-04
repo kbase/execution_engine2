@@ -73,10 +73,12 @@ class ee2_server_load_test(unittest.TestCase):
 
         return runner
 
-    def test_init_job_stress(self):
+    @patch("installed_clients.CatalogClient.Catalog.get_module_version", autospec=True)
+    def test_init_job_stress(self, cc_get_mod_ver):
         """
         testing initializing 3 different jobs in multiple theads.
         """
+        cc_get_mod_ver.return_value = {"git_commit_hash": "123"}
 
         thread_count = self.thread_count  # threads to test
 
@@ -446,11 +448,12 @@ class ee2_server_load_test(unittest.TestCase):
         jobs.delete()
         self.assertEqual(ori_job_count, Job.objects.count())
 
-    def test_check_jobs_stress(self):
+    @patch("installed_clients.CatalogClient.Catalog.get_module_version", autospec=True)
+    def test_check_jobs_stress(self, cc_get_mod_ver):
         """
         testing check jobs in multiple theads.
         """
-
+        cc_get_mod_ver.return_value = {"git_commit_hash": "123"}
         thread_count = self.thread_count  # threads to test
 
         ori_job_count = Job.objects.count()
