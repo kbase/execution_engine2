@@ -64,7 +64,7 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 #### Q: should the number of retries of a job be limited, and if so, where? e.g. a max_retries field in the parent job? wait and see whether people attempt to rerun jobs that have already failed nine zillion times?
 A: Unknown TBD
 
-#### Q: Preventing the same params from being re-run
+#### Q: Preventing the identical params from being re-run within a retry_jobs request
 A: We have decided to allow multiple jobs with the same params to be re-run in the same retry_jobs request.
 
 #### Q: Finding the most recent run of the job: I would very much like to avoid anything involving iterating over a chain of jobs before you can find the most recent run or the original run -- we can come up with better data structures than that!
