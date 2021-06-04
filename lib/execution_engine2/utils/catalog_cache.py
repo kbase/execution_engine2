@@ -1,6 +1,5 @@
-import json
 from collections import defaultdict
-from typing import List, Dict, TYPE_CHECKING
+from typing import Dict
 
 from lib.installed_clients.CatalogClient import Catalog
 

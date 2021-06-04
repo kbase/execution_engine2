@@ -469,8 +469,9 @@ class JobRequirementsResolver:
             raise IncorrectParamsException(f"No such clientgroup: {cg}")
         return cg
 
+    @staticmethod
     def _get_catalog_reqs(
-        self, module_name: str, function_name: str, catalog_cache: CatalogCache
+        module_name: str, function_name: str, catalog_cache: CatalogCache
     ):
         # could cache results for 30s or so to speed things up... YAGNI
         group_config = catalog_cache.lookup_job_resource_requirements(

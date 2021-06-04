@@ -8,18 +8,16 @@ from typing import Dict, Iterable
 from execution_engine2.authorization.roles import AdminAuthUtil
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.utils.arg_processing import not_falsy as _not_falsy
-from execution_engine2.utils.Condor import Condor
 from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
-from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
+from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.KafkaUtils import KafkaClient
 from execution_engine2.utils.SlackUtils import SlackClient
+from execution_engine2.utils.arg_processing import not_falsy as _not_falsy
 from execution_engine2.utils.arg_processing import parse_bool
-from execution_engine2.utils.catalog_cache import CatalogCache
-
-from installed_clients.authclient import KBaseAuth
+from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
+from installed_clients.authclient import KBaseAuth
 
 
 class UserClientSet:

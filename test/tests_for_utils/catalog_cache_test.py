@@ -24,7 +24,7 @@ def catalog():
 
 
 def test_cc_job_reqs(catalog):
-    """Test to see the job requirements cache is being used"""
+    """Test to see the job requirements cache is being used."""
     catalog_cache = CatalogCache(catalog=catalog)
 
     # Test Cache is called on second call
@@ -47,7 +47,7 @@ def test_cc_job_reqs(catalog):
 
 
 def test_cc_git_commit_version(catalog):
-    """Test to see the git commit cache is being used"""
+    """Test to see the git commit cache is being used."""
     catalog_cache = CatalogCache(catalog=catalog)
 
     # Test Cache is called on second call

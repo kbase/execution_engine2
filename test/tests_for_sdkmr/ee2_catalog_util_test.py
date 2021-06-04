@@ -1,11 +1,11 @@
 """
 Unit tests for the CatalogCache
 """
-import pytest
 import os
-from test.utils_shared.test_utils import read_config_into_dict
+
 from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.utils.clients import get_user_client_set, get_client_set
+from test.utils_shared.test_utils import read_config_into_dict
 
 
 class CatalogCacheHelper:
