@@ -54,7 +54,7 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 * One single submission to HTCondor instead of multiple job submissions
 * Ability to handle database consistency during retry failure. (see thread https://github.com/kbase/execution_engine2/pull/383#discussion_r638341940)
 * Add failure conditions in the run() method and see if any of those should be checked prior to starting jobs
-* Prevent retry if resolving `retry_parent` results in two or more of the same job_ids in a retry_jobs request (see thread https://github.com/kbase/execution_engine2/pull/383#discussion_r640907736)
+* Prevent retry if resolving `retry_parent` results in two or more of the same job_ids in a retry_jobs request (see thread https://github.com/kbase/execution_engine2/pull/383#discussion_r640907736)  ( Or silently just run the one retry job and report the results to both positions in the list )
 
 
 ### Questions
