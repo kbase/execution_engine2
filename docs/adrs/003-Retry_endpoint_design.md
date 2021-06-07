@@ -10,20 +10,19 @@ The UI allows you to retry either single jobs, or multiple jobs, and saves you f
 which is not currently implemented in the UI anyway.
 
 ### Motivation for the `code spike` for retry endpoint and follow up design ADR
-```
-As I mentioned, as the product owner, I find our ability to deliver functionality to be pretty awful. 
-We have invested so much effort in refactoring that its killed our timeline - we started in late July, and it is now almost May with no functioning bulk uploader, which was just the first deliverable.
-If we are going to refactor, we need to be able to do it in a timely fashion, and have it not kill the schedule any more than it has.
-I want to see the estimate for a quick and dirty solution that implements a proposed retry endpoint, that can be deployed ASAP, and then once the API contract has been established, and the functional MVP is done, we begin the cleanup of the backend code.
-Note that this is NOT business as usual, the usual way we do this is the nasty MVP gets deployed and then we don't go back until much later.
-Here, we get the API working so that it doesn't block dependencies, and we immediately start the refactoring. The refactor needs to be broken down into smallish chunks of ~3 days estimated work, and each merge should maintain functionality and incrementally improve the codebase.
-Tasks that take more than a couple of days are more likely to be far off in their estimate and this is how we mitigate the risk of poor estimation.
-```
+>As I mentioned, as the product owner, I find our ability to deliver functionality to be pretty awful. 
+>We have invested so much effort in refactoring that its killed our timeline - we started in late July, and it is now almost May with no functioning >bulk uploader, which was just the first deliverable.
+>If we are going to refactor, we need to be able to do it in a timely fashion, and have it not kill the schedule any more than it has.
+>I want to see the estimate for a quick and dirty solution that implements a proposed retry endpoint, that can be deployed ASAP, and then once the API >contract has been established, and the functional MVP is done, we begin the cleanup of the backend code.
+>Note that this is NOT business as usual, the usual way we do this is the nasty MVP gets deployed and then we don't go back until much later.
+>Here, we get the API working so that it doesn't block dependencies, and we immediately start the refactoring. The refactor needs to be broken down into >smallish chunks of ~3 days estimated work, and each merge should maintain functionality and incrementally improve the codebase.
+>Tasks that take more than a couple of days are more likely to be far off in their estimate and this is how we mitigate the risk of poor estimation.
+>
 
 
 ### High Level Behavior of the `retry` endpoint
 The current implementation of retry is to run jobs using the `retry_job` or `retry_jobs` endpoint. 
-The endpoint takes a job or list of job ids and then attempts to resubmit them to the queue, using the exact same set of parameters and version of the app.
+The endpoint takes a job or list of job ids and attempts to resubmit them to the queue, using the same parameters and version of the app as the original job.
 
 ### Current Behavior
 * Spec file is located at https://github.com/kbase/execution_engine2/blob/8baab8e3ac5212f4bbe59fd935980aa41b4ee06d/execution_engine2.spec#L201-L247
@@ -32,13 +31,14 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 * The retry will only continue if the status of the job to be retried is in [Status.terminated.value, Status.error.value]
 * If the job id points to a job that has already been retried, it will attempt to retry that job's `retry_parent` instead.
 * If the job id has never been retried, it becomes the `retry_parent` 
-* EE2 looks up the job versions and parameters, and then submits the job to be retried, incrementing the `retry_count`
-  of the job being retried, and the newly launched job gains a pointer to the `_PARENT_RETRY_JOB_ID`
+* EE2 looks up the method versions and parameters, and then submits the job to be retried, incrementing the `retry_count`
+  of the job being retried, and the newly launched job gains a field called `retry_parent` that contains the job id of the job from the original request.
+  
 * The job is submitted and upon successful submission, the child job adds the field `retry_parent` and notifies the `parent_job_id` that a new `child_job` has been added by appending itself to the `parent_job.child_jobs[]` field
 * Jobs submitted by an administrator with a ResourceRequirements use resource requirements from the catalog / ee2 config exclusively on retry. There is no way to specify ResourceRequirements with a retry at the moment.
 
 ### Batch Jobs Behavior
-* Adds child_job_id to parent_job_id.child_job_ids
+* Adds `child_job_id` to `parent_job_id.child_job_ids[]`
 
 ## Retry_job behavior
 * Blocking and single submit to HTCondor. It should be fine as it returns relatively quickly
@@ -53,7 +53,7 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 * Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
 * One single submission to HTCondor instead of multiple job submissions
 * Ability to handle database consistency during retry failure. (see thread https://github.com/kbase/execution_engine2/pull/383#discussion_r638341940)
-* Add failure conditions in the run() method and see if any of those should be checked prior to starting jobs
+* Add failure conditions in the `run()` method and see if any of those should be checked prior to starting jobs
 * Prevent retry if resolving `retry_parent` results in two or more of the same job_ids in a retry_jobs request (see thread https://github.com/kbase/execution_engine2/pull/383#discussion_r640907736)  ( Or silently just run the one retry job and report the results to both positions in the list )
 
 
@@ -65,7 +65,7 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 A: Unknown TBD
 
 #### Q: How do we prevent jobs with identical parameters from being rerun more than once within a retry_jobs request?
-A: We have decided to allow multiple jobs with the same params to be re-run in the same retry_jobs request.
+A: We have decided to allow multiple jobs with the same params to be re-run in the same `retry_jobs` request.
 
 #### Q: How do we find the most recent retry of a job?
 A: The client using the ee2 API would have to figure it out using the retry_parent and job creation date fields. Unless we added 
