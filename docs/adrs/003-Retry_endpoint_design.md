@@ -68,14 +68,14 @@ A: Unknown TBD
 A: We have decided to allow multiple jobs with the same params to be re-run in the same `retry_jobs` request.
 
 #### Q: How do we find the most recent retry of a job?
-A: The client using the ee2 API would have to figure it out using the retry_parent and job creation date fields. Unless we added 
+A: The client using the ee2 API would have to figure it out using the `retry_parent` and job creation date fields. Unless we added 
 
 #### Q: It might be best to always submit a git commit for the module, maybe?
 A: (This could be a narrative ticket)
 
 #### Q: How do we handle DB consistency during retry failure? 
 Looks like the options are
-* implement db integrity checks and two-phase commits for making the relationships between a job, its retry parent, and the batch container
+* implement db integrity checks and two-phase commits for making the relationships between a job, its `retry_parent`, and the batch container
 * accept that the db info may be incomplete and write workarounds into the clients
 * (upgrade to Mongo 4.4 for better transaction support)
 
@@ -86,7 +86,7 @@ A: Probably not in the short term
 
 ### Sort of answered
 #### Q: how to prevent incorrect parent-child relationships being created -- should the client be allowed to specify a parent ID? Is it currently possible to add a new child to a parent job if the child is a new job, rather than an existing job ID / set of params that is being rerun?
-A: Not necessarily relevant to this endpoint, more of a run_job_batch endpoint question. Currently the `retry_parent` and `parent_job_id` are looked up from the ee2 record on retry, and not specified in this endpoint.
+A: Not necessarily relevant to this endpoint, more of a `run_job_batch` endpoint question. Currently the `retry_parent` and `parent_job_id` are looked up from the ee2 record on retry, and not specified in this endpoint.
 
 #### Answered:
 
