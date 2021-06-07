@@ -7,7 +7,7 @@ Date: 2021-05-19
 
 The current requirement for the Batch/Bulk UI is to be able to retry jobs that have either "errored" out, or were terminated.
 The UI allows you to retry either single jobs, or multiple jobs, and saves you from having to cancel and resubmit each job individually,
-which is not really possibly with the UI anyway.
+which is not currently implemented in the UI anyway.
 
 ### Motivation for the `code spike` for retry endpoint and follow up design ADR
 ```
