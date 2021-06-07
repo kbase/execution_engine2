@@ -34,8 +34,8 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 * If the job id has never been retried, it becomes the `retry_parent` 
 * EE2 looks up the job versions and parameters, and then submits the job to be retried, incrementing the `retry_count`
   of the job being retried, and the newly launched job gains a pointer to the `_PARENT_RETRY_JOB_ID`
-* The job is submitted and upon successful submission, notifies the `retry_parent` and notifies the `parent_job_id` that a new `child_job` has been added
-* Jobs submitted by an administrator with a ResourceRequirements use resource requirements from the catalog / ee2 config exclusively on retry
+* The job is submitted and upon successful submission, the child job adds the field `retry_parent` and notifies the `parent_job_id` that a new `child_job` has been added by appending itself to the `parent_job.child_jobs[]` field
+* Jobs submitted by an administrator with a ResourceRequirements use resource requirements from the catalog / ee2 config exclusively on retry. There is no way to specify ResourceRequirements with a retry at the moment.
 
 ### Batch Jobs Behavior
 * Adds child_job_id to parent_job_id.child_job_ids
@@ -64,11 +64,11 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 #### Q: should the number of retries of a job be limited, and if so, where? e.g. a max_retries field in the parent job? wait and see whether people attempt to rerun jobs that have already failed nine zillion times?
 A: Unknown TBD
 
-#### Q: Preventing the identical params from being re-run within a retry_jobs request
+#### Q: How do we prevent jobs with identical parameters from being rerun more than once within a retry_jobs request?
 A: We have decided to allow multiple jobs with the same params to be re-run in the same retry_jobs request.
 
-#### Q: Finding the most recent run of the job: I would very much like to avoid anything involving iterating over a chain of jobs before you can find the most recent run or the original run -- we can come up with better data structures than that!
-A: Unknown TBD, maybe the frontend does it?
+#### Q: How do we find the most recent retry of a job?
+A: The client using the ee2 API would have to figure it out using the retry_parent and job creation date fields. Unless we added 
 
 #### Q: It might be best to always submit a git commit for the module, maybe?
 A: (This could be a narrative ticket)
