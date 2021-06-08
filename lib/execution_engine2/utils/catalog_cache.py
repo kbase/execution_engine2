@@ -8,9 +8,14 @@ class CatalogCache:
     """
     Per call catalog cache used to speed up catalog lookups
     Caches the "Method Version" and the "Job Resource Requirements"
+    There's no cache invalidation, and to refresh a cache entry you have to make a new cache
+    Cache is not thread safe
     """
 
     def __init__(self, catalog: Catalog):
+        """
+        :param catalog: Instance of catalog client. Does not require authentication
+        """
         if not catalog:
             raise ValueError("Please provide instance of catalog client")
 
@@ -35,7 +40,6 @@ class CatalogCache:
         If "service_ver" is "release|beta|dev", get git commit version for that version
         if "service_ver" is a semantic version, get commit version for that semantic version
         If "service_ver" is a git commit hash, see if that get commit is valid
-        self._catalog = Catalog(url=url, token=admin_token)
         Convenience wrapper for verifying a git commit hash, or getting git commit hash from a tag
         :param method: Method to look up
         :param service_ver: Version to look up
