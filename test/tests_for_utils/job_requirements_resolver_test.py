@@ -676,6 +676,7 @@ def _resolve_requirements_from_spec(catalog_return):
     catalog = create_autospec(Catalog, spec_set=True, instance=True)
     catalog.list_client_group_configs.return_value = catalog_return
     catalog_cache = create_autospec(CatalogCache, spec_set=True, instance=True)
+    catalog_cache.lookup_job_resource_requirements.return_value = catalog_return
 
     spec = _get_simple_deploy_spec_file_obj()
 
@@ -692,8 +693,8 @@ def _resolve_requirements_from_spec(catalog_return):
         debug_mode=True,
     )
 
-    catalog.list_client_group_configs.assert_called_once_with(
-        {"module_name": "mod", "function_name": "meth"}
+    catalog_cache.lookup_job_resource_requirements.assert_called_once_with(
+        module_name="mod", function_name="meth"
     )
 
 
