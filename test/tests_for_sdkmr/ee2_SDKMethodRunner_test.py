@@ -44,7 +44,6 @@ from test.utils_shared.test_utils import (
     assert_exception_correct,
 )
 from tests_for_db.mongo_test_helper import MongoTestHelper
-from execution_engine2.utils.catalog_cache import CatalogCache
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
@@ -160,6 +159,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         sdkmr = SDKMethodRunner(user_clients, clients_and_mocks[ClientSet])
 
+        assert sdkmr.get_catalog_cache() is sdkmr.catalog_cache
         assert sdkmr.get_workspace() is ws
         assert sdkmr.get_workspace_auth() is wsa
         assert sdkmr.get_user_id() == "user"

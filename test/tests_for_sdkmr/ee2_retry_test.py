@@ -6,8 +6,10 @@ from unittest.mock import create_autospec, MagicMock
 from pytest import raises
 
 from execution_engine2.exceptions import CannotRetryJob, RetryFailureException
+from execution_engine2.sdk.EE2Runjob import EE2RunJob
 from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from test.utils_shared.test_utils import assert_exception_correct
+from test.utils_shared.test_utils import get_example_job
 
 
 def test_retry_db_failures():
@@ -99,11 +101,6 @@ def test_validate_retry():
         "Cannot retry batch job parents. Must retry individual jobs"
     )
     assert_exception_correct(e.value, expected_exception)
-
-
-from execution_engine2.sdk.EE2Runjob import EE2RunJob
-
-from test.utils_shared.test_utils import get_example_job
 
 
 def test_retry_get_run_job_params_from_existing_job():

@@ -675,13 +675,14 @@ def test_resolve_requirements_from_spec():
 def _resolve_requirements_from_spec(catalog_return):
     catalog = create_autospec(Catalog, spec_set=True, instance=True)
     catalog.list_client_group_configs.return_value = catalog_return
+    catalog_cache = create_autospec(CatalogCache, spec_set=True, instance=True)
 
     spec = _get_simple_deploy_spec_file_obj()
 
     jrr = JobRequirementsResolver(catalog, spec)
 
     assert jrr.resolve_requirements(
-        " mod.meth  ", catalog_cache=CatalogCache(catalog)
+        " mod.meth  ", catalog_cache=catalog_cache
     ) == JobRequirements(
         8,
         700,

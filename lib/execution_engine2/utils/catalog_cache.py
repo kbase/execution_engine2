@@ -55,10 +55,10 @@ class CatalogCache:
         #    }
         # }
         mv_cache = self.get_method_version_cache()
-        if method is None:
+        if not method:
             raise ValueError("Must provide a method to lookup")
 
-        if service_ver is None:
+        if not service_ver:
             service_ver = "release"
 
         # If not in the cache add it
