@@ -4,25 +4,22 @@ Contains resolvers for job requirements.
 
 import json
 from configparser import ConfigParser
-from typing import Iterable, Dict, Union, Set
 from enum import Enum
+from typing import Iterable, Dict, Union, Set
 
-from lib.installed_clients.CatalogClient import Catalog
-from execution_engine2.utils.catalog_cache import CatalogCache
-
-
-from execution_engine2.utils.arg_processing import (
-    check_string as _check_string,
-    not_falsy as _not_falsy,
-)
-
-from execution_engine2.sdk.job_submission_parameters import JobRequirements
+from execution_engine2.exceptions import IncorrectParamsException
 from execution_engine2.sdk.EE2Constants import (
     EE2_CONFIG_SECTION,
     EE2_DEFAULT_SECTION,
     EE2_DEFAULT_CLIENT_GROUP,
 )
-from execution_engine2.exceptions import IncorrectParamsException
+from execution_engine2.sdk.job_submission_parameters import JobRequirements
+from execution_engine2.utils.arg_processing import (
+    check_string as _check_string,
+    not_falsy as _not_falsy,
+)
+from execution_engine2.utils.catalog_cache import CatalogCache
+from lib.installed_clients.CatalogClient import Catalog
 
 CLIENT_GROUP = "client_group"
 REQUEST_CPUS = "request_cpus"

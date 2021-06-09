@@ -1,15 +1,14 @@
 # This test only tests code that can be exercised without a network connection to services.
 # That code is tested in integration tests.
-from unittest.mock import create_autospec, MagicMock
+from unittest.mock import create_autospec
 
 import pytest
 
-from installed_clients.CatalogClient import Catalog
 from execution_engine2.utils.catalog_cache import CatalogCache
+from installed_clients.CatalogClient import Catalog
 from utils_shared.test_utils import (
     assert_exception_correct,
     CLIENT_GROUP_CONFIG,
-    MODULE_VERSION,
 )
 
 

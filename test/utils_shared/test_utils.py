@@ -1,25 +1,21 @@
 import json
-import os.path
-import uuid
 import logging
+import os.path
 import socket
 import time
+import uuid
 from configparser import ConfigParser
 from contextlib import closing
 from datetime import datetime
 from typing import List, Dict
-from unittest.mock import create_autospec
 
-import pytest
 import requests
 from dotenv import load_dotenv
 
-from CatalogClient import Catalog
 from execution_engine2.db.models.models import Job, JobInput, Meta
 from execution_engine2.db.models.models import Status
 from execution_engine2.exceptions import MalformedTimestampException
 from execution_engine2.utils.CondorTuples import JobInfo
-from execution_engine2.utils.catalog_cache import CatalogCache
 
 EE2_CONFIG_SECTION = "execution_engine2"
 KB_DEPLOY_ENV = "KB_DEPLOYMENT_CONFIG"
