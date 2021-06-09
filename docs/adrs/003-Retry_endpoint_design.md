@@ -70,8 +70,8 @@ A: We have decided to allow multiple jobs with the same params to be re-run in t
 #### Q: How do we find the most recent retry of a job?
 A: The client using the ee2 API would have to figure it out using the `retry_parent` and job creation date fields. Unless we added 
 
-#### Q: It might be best to always submit a git commit for the module, maybe?
-A: (This could be a narrative ticket)
+#### Q: How do we ensure that the app version is correctly run each time when submitting from the narrative?
+A: We would need to change the narrative to submit the git commit hash instead of a version tag
 
 #### Q: How do we handle DB consistency during retry failure? 
 Looks like the options are
