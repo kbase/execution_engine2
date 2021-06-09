@@ -484,7 +484,7 @@ class JobRequirementsResolver:
         if len(group_config) > 1:
             raise ValueError(
                 "Unexpected result from the Catalog service: more than one client group "
-                + f"configuration found for method {module_name}.{function_name}"
+                + f"configuration found for method {module_name}.{function_name} {group_config}"
             )
 
         resources_request = group_config[0].get(_CLIENT_GROUPS, None)
