@@ -52,7 +52,8 @@ def assert_call_count_and_return_val(
 
 def test_cc_job_reqs(catalog):
     """Test to see the job requirements cache is being used."""
-    catalog.list_client_group_configs.return_value = CLIENT_GROUP_CONFIG
+    test_return = {"Test1"}
+    catalog.list_client_group_configs.return_value = test_return
     catalog_cache = CatalogCache(catalog=catalog)
 
     # Test Cache is called on second call
@@ -60,51 +61,52 @@ def test_cc_job_reqs(catalog):
         module_name="test1", function_name="test1"
     )
     assert catalog.list_client_group_configs.call_count == 1
-    assert rv1 == CLIENT_GROUP_CONFIG
+    # Test to make sure it still returns values based on the catalog
+    assert rv1 == test_return
+
+    catalog.list_client_group_configs.return_value = CLIENT_GROUP_CONFIG
+    catalog_cache._method_version_cache["test1"]["test1"] = "Something else"
     rv2 = catalog_cache.lookup_job_resource_requirements(
         module_name="test1", function_name="test1"
     )
-    assert rv2 == CLIENT_GROUP_CONFIG
+    # Test to make sure the catalog cache is being used this time, even though the underlying catalog record changed
+    assert rv2 != CLIENT_GROUP_CONFIG
+    assert rv2 == test_return
+
+    # Test to see a new catalog call is made
     assert catalog.list_client_group_configs.call_count == 1
-    rv3 = catalog_cache.lookup_job_resource_requirements(
+    catalog_cache.lookup_job_resource_requirements(
         module_name="test1", function_name="test2"
     )
-    assert rv3 == CLIENT_GROUP_CONFIG
-    assert catalog.list_client_group_configs.call_count == 2
-    rv4 = catalog_cache.lookup_job_resource_requirements(
-        module_name="test1", function_name="test2"
-    )
-    assert rv4 == CLIENT_GROUP_CONFIG
     assert catalog.list_client_group_configs.call_count == 2
 
 
 def test_cc_git_commit_version(catalog):
     """Test to see the git commit cache is being used."""
     catalog_cache = CatalogCache(catalog=catalog)
-
-    catalog.get_module_version.return_value = MODULE_VERSION
+    catalog_git_return_1 = {"git_commit_hash": "1234"}
+    catalog_git_return_2 = {"git_commit_hash": "12345"}
+    catalog.get_module_version.return_value = catalog_git_return_1
 
     # Test Cache is called on second call
     version = catalog_cache.get_git_commit_version(method="method1", service_ver="any")
-    assert version == MODULE_VERSION["git_commit_hash"]
-    catalog_cache.get_git_commit_version(method="method1", service_ver="any")
-    assert catalog.get_module_version.call_count == 1
+
+    # Test to make sure return_value is correct
+    assert version == catalog_git_return_1["git_commit_hash"]
+
+    # Test to make sure same commit is returned regardless of underlying catalog data
+    catalog.get_module_version.return_value = catalog_git_return_2
+    version2 = catalog_cache.get_git_commit_version(method="method1", service_ver="any")
+    assert version2 == catalog_git_return_1["git_commit_hash"]
+
     catalog_cache.get_git_commit_version(method="method1", service_ver="any")
     assert catalog.get_module_version.call_count == 1
     catalog_cache.get_git_commit_version(
         method="method1",
     )
     assert catalog.get_module_version.call_count == 2
-    catalog_cache.get_git_commit_version(
-        method="method1",
-    )
-    assert catalog.get_module_version.call_count == 2
-    catalog_cache.get_git_commit_version(
-        method="method2",
-    )
-    assert catalog.get_module_version.call_count == 3
 
     # Test None defaults to release case
-    catalog_cache.get_git_commit_version(method="method5", service_ver=None)
-    assert None not in catalog_cache.get_method_version_cache()["method5"]
-    assert catalog_cache.get_method_version_cache()["method5"]["release"]
+    catalog_cache.get_git_commit_version(method="method3", service_ver=None)
+    assert None not in catalog_cache.get_method_version_cache()["method3"]
+    assert catalog_cache.get_method_version_cache()["method3"]["release"]
