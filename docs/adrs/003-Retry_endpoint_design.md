@@ -44,7 +44,13 @@ The endpoint takes a job or list of job ids and attempts to resubmit them to the
 * Blocking and single submit to HTCondor. It should be fine as it returns relatively quickly
   
 ## Retry_jobs behavior
-* Submitting multiple jobs uses the `run_job` endpoint, and is blocking. This can cause issues if the network drops, and makes the narrative not aware of the state of the retry. Submitting 100 jobs currently takes 12 seconds, and that is a lot of time for things to go wrong. 
+* Submitting multiple jobs for retry serially calls the same code path
+used for running a single job and blocks until all jobs have been
+submitted to the condor queue. This can cause issues if the
+network drops, and makes the narrative not aware of the state of
+the retry. Submitting 100 jobs currently takes 9 seconds, and that
+is a lot of time for things to go wrong. 
+* (Follow up: Hopefully the making the narrative aware of the state of the retry will be mitigated by the narrative backend. It just blocks on the call anyway, with the default service timeout, which I think is something wacky like half an hour. As long as the user doesn't kill the kernel at that time, all should be well. Of course, if it were me, and it looked frozen for more than a couple minutes, I'd probably restart. )
 * Multiple in-flight retries are allowed.
 
 ### Desired Behavior
