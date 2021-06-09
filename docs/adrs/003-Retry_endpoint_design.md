@@ -35,7 +35,7 @@ The endpoint takes a job or list of job ids and attempts to resubmit them to the
   of the job being retried, and the newly launched job gains a field called `retry_parent` that contains the job id of the job from the original request.
   
 * The job is submitted and upon successful submission, the child job adds the field `retry_parent` and notifies the `parent_job_id` that a new `child_job` has been added by appending itself to the `parent_job.child_jobs[]` field
-* Jobs submitted by an administrator with a ResourceRequirements use resource requirements from the catalog / ee2 config exclusively on retry. There is no way to specify ResourceRequirements with a retry at the moment.
+* There is no way to specify ResourceRequirements with a retry at the moment, even if the job was previously submitted by an administrator and had specfified ResourceRequirements. The retry will only use resource requirements from the catalog / ee2 config.
 
 ### Batch Jobs Behavior
 * Adds `child_job_id` to `parent_job_id.child_job_ids[]`
