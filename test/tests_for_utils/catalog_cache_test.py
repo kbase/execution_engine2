@@ -109,3 +109,28 @@ def test_cc_git_commit_version(catalog):
     catalog_cache.get_git_commit_version(method="method3", service_ver=None)
     assert None not in catalog_cache.get_method_version_cache()["method3"]
     assert catalog_cache.get_method_version_cache()["method3"]["release"]
+
+    # Test module_name = method.split(".")[0] and call count
+    call_count = catalog.get_module_version.call_count
+    catalog_cache.get_git_commit_version(
+        method="MEGAHIT.run_megahit", service_ver="dev"
+    )
+    catalog.get_module_version.assert_called_with(
+        {"module_name": "MEGAHIT", "version": "dev"}
+    )
+    assert catalog.get_module_version.call_count == call_count + 1
+
+    # Test that the catalog is not called, from cache now
+    catalog_cache.get_git_commit_version(
+        method="MEGAHIT.run_megahit", service_ver="dev"
+    )
+    assert catalog.get_module_version.call_count == call_count + 1
+
+    # Test that a new catalog call is made once more
+    catalog_cache.get_git_commit_version(
+        method="MEGAHIT.run_megahit2", service_ver="dev"
+    )
+    catalog.get_module_version.assert_called_with(
+        {"module_name": "MEGAHIT", "version": "dev"}
+    )
+    assert catalog.get_module_version.call_count == call_count + 2
