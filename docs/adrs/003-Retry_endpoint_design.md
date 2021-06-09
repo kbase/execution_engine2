@@ -68,7 +68,7 @@ A: Unknown TBD
 A: We have decided to allow multiple jobs with the same params to be re-run in the same `retry_jobs` request.
 
 #### Q: How do we find the most recent retry of a job?
-A: The client using the ee2 API would have to figure it out using the `retry_parent` and job creation date fields. Unless we added 
+A: The client using the ee2 API would have to figure it out using the `retry_parent` and job creation date fields. (Unless we added other fields to help with this)
 
 #### Q: How do we ensure that the app version is correctly run each time when submitting from the narrative?
 A: We would need to change the narrative to submit the git commit hash instead of a version tag
