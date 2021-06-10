@@ -16,7 +16,7 @@ from execution_engine2.utils.clients import ClientSet
 
 def _build_job_reqs(config, cfgfile, impls):
     with open(cfgfile) as cf:
-        return JobRequirementsResolver(impls[Catalog], cf)
+        return JobRequirementsResolver(cf)
 
 
 _CLASS_IMPLEMENTATION_BUILDERS = {

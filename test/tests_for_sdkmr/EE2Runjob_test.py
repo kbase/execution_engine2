@@ -97,10 +97,10 @@ def _set_up_mocks(user: str, token: str) -> Dict[Any, Any]:
     mocks[Logger] = create_autospec(Logger, spec_set=True, instance=True)
     mocks[Workspace] = create_autospec(Workspace, spec_set=True, instance=True)
     mocks[WorkspaceAuth] = create_autospec(WorkspaceAuth, spec_set=True, instance=True)
+    mocks[CatalogCache] = create_autospec(CatalogCache, spec_set=True, instance=True)
+
     # Set up basic getter calls
-    sdkmr.get_catalog_cache.return_value = CatalogCache(
-        mocks[Catalog]
-    )  # should be unauthenticated catalog
+    sdkmr.get_catalog_cache.return_value = mocks[CatalogCache]
     sdkmr.get_catalog.return_value = mocks[Catalog]
     sdkmr.get_condor.return_value = mocks[Condor]
     sdkmr.get_kafka_client.return_value = mocks[KafkaClient]
@@ -168,7 +168,8 @@ def _set_up_common_return_values(mocks):
     mocks[Workspace].get_object_info3.return_value = {
         "paths": [[_WS_REF_1], [_WS_REF_2]]
     }
-    mocks[Catalog].get_module_version.return_value = {"git_commit_hash": _GIT_COMMIT}
+    mocks[CatalogCache].lookup_git_commit_version.return_value = _GIT_COMMIT
+    mocks[SDKMethodRunner].get_catalog_cache.return_value = mocks[CatalogCache]
     mocks[SDKMethodRunner].save_job.return_value = _JOB_ID
     mocks[Condor].run_job.return_value = SubmissionInfo(_CLUSTER, {}, None)
     retjob = Job()
@@ -187,8 +188,8 @@ def _check_common_mock_calls(mocks, reqs, wsid, app=_APP):
     mocks[Workspace].get_object_info3.assert_called_once_with(
         {"objects": [{"ref": _WS_REF_1}, {"ref": _WS_REF_2}], "ignoreErrors": 1}
     )
-    mocks[Catalog].get_module_version.assert_called_once_with(
-        {"module_name": "lolcats", "version": "release"}
+    mocks[CatalogCache].lookup_git_commit_version.assert_called_once_with(
+        method="lolcats.lol_unto_death", service_ver=None
     )
 
     # initial job data save
@@ -742,11 +743,13 @@ def _set_up_common_return_values_batch(mocks):
     returned_parent_job = Job()
     returned_parent_job.id = ObjectId(_JOB_ID)
     returned_parent_job.user = _USER
-    mocks[SDKMethodRunner].save_and_return_job.return_value = returned_parent_job
-    mocks[Catalog].get_module_version.side_effect = [
-        {"git_commit_hash": _GIT_COMMIT_1},
-        {"git_commit_hash": _GIT_COMMIT_2},
+    mocks[CatalogCache].lookup_git_commit_version.side_effect = [
+        _GIT_COMMIT_1,
+        _GIT_COMMIT_2,
     ]
+    mocks[SDKMethodRunner].get_catalog_cache.return_value = mocks[CatalogCache]
+    mocks[SDKMethodRunner].save_and_return_job.return_value = returned_parent_job
+
     # create job1, update job1, create job2, update job2, update parent job
     mocks[SDKMethodRunner].save_job.side_effect = [
         _JOB_ID_1,
@@ -794,10 +797,10 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
     got_parent_job = sdkmr.save_and_return_job.call_args_list[0][0][0]
     assert_jobs_equal(got_parent_job, expected_parent_job)
 
-    mocks[Catalog].get_module_version.assert_has_calls(
+    mocks[CatalogCache].lookup_git_commit_version.assert_has_calls(
         [
-            call({"module_name": "module1", "version": "release"}),
-            call({"module_name": "module2", "version": "release"}),
+            call(method="module1.method1", service_ver=None),
+            call(method="module2.method2", service_ver=None),
         ]
     )
 

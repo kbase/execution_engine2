@@ -35,7 +35,7 @@ class CatalogCache:
         """Get the _condor_resources_cache for this instance."""
         return self._job_requirements_cache
 
-    def get_git_commit_version(self, method, service_ver=None) -> str:
+    def lookup_git_commit_version(self, method, service_ver=None) -> str:
         """
         If "service_ver" is "release|beta|dev", get git commit version for that version
         if "service_ver" is a semantic version, get commit version for that semantic version

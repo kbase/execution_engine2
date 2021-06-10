@@ -32,7 +32,7 @@ def test_fail_cc():
     # Test that a new catalog call is made once more
     with pytest.raises(ValueError) as e:
         catalog_cache = CatalogCache(catalog=catalog)
-        catalog_cache.get_git_commit_version(method=None, service_ver="dev")
+        catalog_cache.lookup_git_commit_version(method=None, service_ver="dev")
     assert_exception_correct(e.value, ValueError("Must provide a method to lookup"))
 
 
@@ -90,19 +90,23 @@ def test_cc_git_commit_version(catalog):
     method_version_cache = catalog_cache.get_method_version_cache()
 
     # Test Cache is called on second call
-    version = catalog_cache.get_git_commit_version(method="method1", service_ver="any")
+    version = catalog_cache.lookup_git_commit_version(
+        method="method1", service_ver="any"
+    )
 
     # Test to make sure return_value is correct
     assert version == catalog_git_return_1["git_commit_hash"]
 
     # Test to make sure same commit is returned regardless of underlying catalog data
     catalog.get_module_version.return_value = catalog_git_return_2
-    version2 = catalog_cache.get_git_commit_version(method="method1", service_ver="any")
+    version2 = catalog_cache.lookup_git_commit_version(
+        method="method1", service_ver="any"
+    )
     assert version2 == catalog_git_return_1["git_commit_hash"]
 
-    catalog_cache.get_git_commit_version(method="method1", service_ver="any")
+    catalog_cache.lookup_git_commit_version(method="method1", service_ver="any")
     assert catalog.get_module_version.call_count == 1
-    catalog_cache.get_git_commit_version(
+    catalog_cache.lookup_git_commit_version(
         method="method1",
     )
     assert catalog.get_module_version.call_count == 2
@@ -110,7 +114,7 @@ def test_cc_git_commit_version(catalog):
     assert method_version_cache["method1"] == {"any": "1234", "release": "12345"}
 
     # Test None defaults to release case
-    catalog_cache.get_git_commit_version(method="method3", service_ver=None)
+    catalog_cache.lookup_git_commit_version(method="method3", service_ver=None)
     catalog.get_module_version.assert_called_with(
         {"module_name": "method3", "version": "release"}
     )
@@ -120,7 +124,7 @@ def test_cc_git_commit_version(catalog):
 
     # Test module_name = method.split(".")[0] and call count
     call_count = catalog.get_module_version.call_count
-    catalog_cache.get_git_commit_version(
+    catalog_cache.lookup_git_commit_version(
         method="MEGAHIT.run_megahit", service_ver="dev"
     )
     catalog.get_module_version.assert_called_with(
@@ -129,13 +133,13 @@ def test_cc_git_commit_version(catalog):
     assert catalog.get_module_version.call_count == call_count + 1
 
     # Test that the catalog is not called, from cache now
-    catalog_cache.get_git_commit_version(
+    catalog_cache.lookup_git_commit_version(
         method="MEGAHIT.run_megahit", service_ver="dev"
     )
     assert catalog.get_module_version.call_count == call_count + 1
 
     # Test that a new catalog call is made once more
-    catalog_cache.get_git_commit_version(
+    catalog_cache.lookup_git_commit_version(
         method="MEGAHIT.run_megahit2", service_ver="dev"
     )
     catalog.get_module_version.assert_called_with(
