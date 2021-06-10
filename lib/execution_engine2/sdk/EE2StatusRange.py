@@ -210,10 +210,6 @@ class JobStatusRange:
         for job in jobs:
             mongo_rec = job.to_mongo().to_dict()
 
-            # Hack until job browser supports these keys
-            for key in retry_keys:
-                if key in mongo_rec:
-                    del mongo_rec[key]
 
             mongo_rec["_id"] = str(job.id)
             mongo_rec["job_id"] = str(job.id)
