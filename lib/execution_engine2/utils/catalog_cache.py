@@ -86,7 +86,7 @@ class CatalogCache:
         if module_name not in cr_cache or function_name not in cr_cache[module_name]:
             cr_cache[module_name][
                 function_name
-            ] = self._catalog.list_client_group_configs(
+            ] = self.get_catalog().list_client_group_configs(
                 {"module_name": module_name, "function_name": function_name}
             )
         # Retrieve from cache

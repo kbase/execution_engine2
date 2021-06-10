@@ -30,18 +30,6 @@ def test_fail_cc():
     )
 
 
-def test_cc_getters(catalog):
-    """Test getters"""
-    catalog_cache = CatalogCache(catalog)
-    assert catalog_cache.get_catalog() == catalog
-    assert (
-        catalog_cache.get_method_version_cache() == catalog_cache._method_version_cache
-    )
-    assert (
-        catalog_cache.get_job_resources_cache() == catalog_cache._job_requirements_cache
-    )
-
-
 def assert_call_count_and_return_val(
     mock, call_count, return_value, expected_return_value
 ):
@@ -54,6 +42,7 @@ def test_cc_job_reqs(catalog):
     test_return = {"Test1"}
     catalog.list_client_group_configs.return_value = test_return
     catalog_cache = CatalogCache(catalog=catalog)
+    job_reqs_cache = catalog_cache.get_job_resources_cache()
 
     # Test Cache is called on second call
     rv1 = catalog_cache.lookup_job_resource_requirements(
@@ -62,6 +51,7 @@ def test_cc_job_reqs(catalog):
     assert catalog.list_client_group_configs.call_count == 1
     # Test to make sure it still returns values based on the catalog
     assert rv1 == test_return
+    assert "test1" in job_reqs_cache and "test1" in job_reqs_cache["test1"]
 
     catalog.list_client_group_configs.return_value = CLIENT_GROUP_CONFIG
     catalog_cache._method_version_cache["test1"]["test1"] = "Something else"
@@ -78,6 +68,7 @@ def test_cc_job_reqs(catalog):
         module_name="test1", function_name="test2"
     )
     assert catalog.list_client_group_configs.call_count == 2
+    assert "test1" in job_reqs_cache and "test2" in job_reqs_cache["test1"]
 
 
 def test_cc_git_commit_version(catalog):
@@ -86,6 +77,7 @@ def test_cc_git_commit_version(catalog):
     catalog_git_return_1 = {"git_commit_hash": "1234"}
     catalog_git_return_2 = {"git_commit_hash": "12345"}
     catalog.get_module_version.return_value = catalog_git_return_1
+    method_version_cache = catalog_cache.get_method_version_cache()
 
     # Test Cache is called on second call
     version = catalog_cache.get_git_commit_version(method="method1", service_ver="any")
@@ -105,8 +97,14 @@ def test_cc_git_commit_version(catalog):
     )
     assert catalog.get_module_version.call_count == 2
 
+    assert method_version_cache["method1"] == {"any": "1234", "release": "12345"}
+
     # Test None defaults to release case
     catalog_cache.get_git_commit_version(method="method3", service_ver=None)
+    catalog.get_module_version.assert_called_with(
+        {"module_name": "method3", "version": "release"}
+    )
+
     assert None not in catalog_cache.get_method_version_cache()["method3"]
     assert catalog_cache.get_method_version_cache()["method3"]["release"]
 
@@ -133,4 +131,6 @@ def test_cc_git_commit_version(catalog):
     catalog.get_module_version.assert_called_with(
         {"module_name": "MEGAHIT", "version": "dev"}
     )
-    assert catalog.get_module_version.call_count == call_count + 2
+
+    assert method_version_cache["MEGAHIT.run_megahit"] == {"dev": "12345"}
+    assert method_version_cache["MEGAHIT.run_megahit2"] == {"dev": "12345"}
