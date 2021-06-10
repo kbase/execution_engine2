@@ -2,19 +2,16 @@
 import os
 import unittest
 from configparser import ConfigParser
-
 from unittest.mock import create_autospec
 
 import bson
 from mock import MagicMock
 from mock import patch
 
-from installed_clients.CatalogClient import Catalog
-from installed_clients.WorkspaceClient import Workspace
 from execution_engine2.authorization.roles import AdminAuthUtil
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
-from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
 from execution_engine2.db.models.models import Status
+from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
 from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.CondorTuples import SubmissionInfo
@@ -24,13 +21,13 @@ from execution_engine2.utils.clients import (
     get_client_set,
     get_user_client_set,
 )
+from installed_clients.CatalogClient import Catalog
+from installed_clients.WorkspaceClient import Workspace
+from test.utils_shared.mock_utils import get_client_mocks as _get_client_mocks
 from test.utils_shared.test_utils import (
     get_sample_job_params,
     get_sample_condor_info,
 )
-
-from test.utils_shared.mock_utils import get_client_mocks as _get_client_mocks
-
 
 # Cause any tests that contact external services (e.g. KBASE CI auth) as part of the test to
 # pass automatically.

@@ -19,7 +19,6 @@ from execution_engine2.utils.arg_processing import (
     not_falsy as _not_falsy,
 )
 from execution_engine2.utils.catalog_cache import CatalogCache
-from lib.installed_clients.CatalogClient import Catalog
 
 CLIENT_GROUP = "client_group"
 REQUEST_CPUS = "request_cpus"
