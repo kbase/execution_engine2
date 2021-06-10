@@ -29,12 +29,22 @@ def test_fail_cc():
         e.value, ValueError("Please provide instance of catalog client")
     )
 
+    # Test that a new catalog call is made once more
+    with pytest.raises(ValueError) as e:
+        catalog_cache = CatalogCache(catalog=catalog)
+        catalog_cache.get_git_commit_version(method=None, service_ver="dev")
+    assert_exception_correct(e.value, ValueError("Must provide a method to lookup"))
+
 
 def assert_call_count_and_return_val(
     mock, call_count, return_value, expected_return_value
 ):
     assert mock.call_count == call_count
     assert return_value == expected_return_value
+
+
+def test_get_catalog(catalog):
+    assert catalog == CatalogCache(catalog).get_catalog()
 
 
 def test_cc_job_reqs(catalog):

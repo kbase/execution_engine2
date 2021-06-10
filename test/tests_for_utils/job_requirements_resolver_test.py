@@ -12,7 +12,6 @@ from execution_engine2.utils.job_requirements_resolver import (
     RequirementsType,
 )
 from execution_engine2.exceptions import IncorrectParamsException
-from installed_clients.CatalogClient import Catalog
 from execution_engine2.utils.catalog_cache import CatalogCache
 from utils_shared.test_utils import assert_exception_correct
 
@@ -450,11 +449,10 @@ def _get_simple_deploy_spec_file_obj():
 
 
 def test_init():
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
 
     spec = _get_simple_deploy_spec_file_obj()
 
-    jrr = JobRequirementsResolver(catalog, spec)
+    jrr = JobRequirementsResolver(spec)
     assert jrr.get_default_client_group() == "cg2"
     assert jrr.get_override_client_group() is None
     assert jrr.get_configured_client_groups() == set(["cg1", "cg2"])
@@ -476,33 +474,23 @@ def test_init():
 
 
 def test_init_with_override():
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
 
     spec = _get_simple_deploy_spec_file_obj()
-    jrr = JobRequirementsResolver(catalog, spec, "  \t   ")
+    jrr = JobRequirementsResolver(spec, "  \t   ")
     assert jrr.get_override_client_group() is None
 
     spec = _get_simple_deploy_spec_file_obj()
-    jrr = JobRequirementsResolver(catalog, spec, "cg1")
+    jrr = JobRequirementsResolver(spec, "cg1")
     assert jrr.get_override_client_group() == "cg1"
 
 
 def test_init_fail_missing_input():
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
     _init_fail(
-        None,
-        _get_simple_deploy_spec_file_obj(),
-        None,
-        ValueError("catalog cannot be a value that evaluates to false"),
-    )
-    _init_fail(
-        catalog,
         None,
         None,
         ValueError("cfgfile cannot be a value that evaluates to false"),
     )
     _init_fail(
-        catalog,
         [],
         None,
         ValueError("cfgfile cannot be a value that evaluates to false"),
@@ -510,11 +498,9 @@ def test_init_fail_missing_input():
 
 
 def test_init_fail_no_override_in_config():
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
 
     spec = _get_simple_deploy_spec_file_obj()
     _init_fail(
-        catalog,
         spec,
         "cg3",
         ValueError("No deployment configuration entry for override client group 'cg3'"),
@@ -522,7 +508,6 @@ def test_init_fail_no_override_in_config():
 
 
 def test_init_fail_default_config_error():
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
 
     shared_spec = """
         [njs]
@@ -532,7 +517,6 @@ def test_init_fail_default_config_error():
         """
 
     _init_fail(
-        catalog,
         StringIO(shared_spec),
         None,
         IncorrectParamsException(
@@ -549,7 +533,6 @@ def test_init_fail_default_config_error():
         """
     )
     _init_fail(
-        catalog,
         spec,
         None,
         IncorrectParamsException(
@@ -566,7 +549,6 @@ def test_init_fail_default_config_error():
         """
     )
     _init_fail(
-        catalog,
         spec,
         None,
         ValueError("No deployment configuration entry for default client group 'njrs'"),
@@ -574,7 +556,6 @@ def test_init_fail_default_config_error():
 
 
 def test_init_fail_bad_config():
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
 
     shared_spec = """
         [DEFAULT]
@@ -591,7 +572,6 @@ def test_init_fail_bad_config():
     )
 
     _init_fail(
-        catalog,
         StringIO(spec),
         None,
         IncorrectParamsException(
@@ -610,7 +590,6 @@ def test_init_fail_bad_config():
     )
 
     _init_fail(
-        catalog,
         StringIO(spec),
         None,
         IncorrectParamsException(
@@ -629,7 +608,6 @@ def test_init_fail_bad_config():
     )
 
     _init_fail(
-        catalog,
         StringIO(spec),
         None,
         IncorrectParamsException(
@@ -639,16 +617,15 @@ def test_init_fail_bad_config():
     )
 
 
-def _init_fail(catalog, spec, override, expected):
+def _init_fail(spec, override, expected):
     with raises(Exception) as got:
-        JobRequirementsResolver(catalog, spec, override)
+        JobRequirementsResolver(spec, override)
     assert_exception_correct(got.value, expected)
 
 
 def test_get_configured_client_group_spec_fail():
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
 
-    jrr = JobRequirementsResolver(catalog, _get_simple_deploy_spec_file_obj())
+    jrr = JobRequirementsResolver(_get_simple_deploy_spec_file_obj())
 
     with raises(Exception) as got:
         jrr.get_configured_client_group_spec("cg4")
@@ -684,10 +661,10 @@ def test_resolve_requirements_from_spec():
 
 
 def _resolve_requirements_from_spec(catalog_return):
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+
     catalog_cache = get_catalog_cache_mock(catalog_return)
     spec = _get_simple_deploy_spec_file_obj()
-    jrr = JobRequirementsResolver(catalog, spec)
+    jrr = JobRequirementsResolver(spec)
 
     assert jrr.resolve_requirements(" mod.meth  ", catalog_cache) == JobRequirements(
         8,
@@ -706,10 +683,10 @@ def test_resolve_requirements_from_spec_with_override():
     """
     Test that an override ignores client group information from the catalog and deploy config.
     """
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+
     catalog_cache = get_catalog_cache_mock(catalog_return=[{"client_groups": ["cg2"]}])
     spec = _get_simple_deploy_spec_file_obj()
-    jrr = JobRequirementsResolver(catalog, spec, "    cg1    ")
+    jrr = JobRequirementsResolver(spec, "    cg1    ")
     assert jrr.resolve_requirements(
         " module2. some_meth  ", catalog_cache
     ) == JobRequirements(
@@ -728,10 +705,10 @@ def test_resolve_requirements_from_spec_with_override_and_user_client_group():
     Test that a user providing a client group ignores client group information from all other
     sources.
     """
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+
     catalog_cache = get_catalog_cache_mock(catalog_return=[{"client_groups": ["cg2"]}])
     spec = _get_simple_deploy_spec_file_obj()
-    jrr = JobRequirementsResolver(catalog, spec, "    cg2    ")
+    jrr = JobRequirementsResolver(spec, "    cg2    ")
 
     assert jrr.resolve_requirements(
         " module2. some_meth  ",
@@ -749,7 +726,6 @@ def test_resolve_requirements_from_spec_with_override_and_user_client_group():
 
 
 def test_resolve_requirements_from_catalog_full_CSV():
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
     return_value = [
         {
             "client_groups": [
@@ -764,12 +740,12 @@ def test_resolve_requirements_from_catalog_full_CSV():
             ]
         }
     ]
-    catalog.list_client_group_configs.return_value = return_value
+
     catalog_cache = get_catalog_cache_mock(return_value)
 
     spec = _get_simple_deploy_spec_file_obj()
 
-    jrr = JobRequirementsResolver(catalog, spec)
+    jrr = JobRequirementsResolver(spec)
 
     assert jrr.resolve_requirements(
         " module2. some_meth  ", catalog_cache
@@ -791,7 +767,7 @@ def test_resolve_requirements_from_catalog_full_CSV():
 
 
 def test_resolve_requirements_from_catalog_partial_JSON():
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+
     return_value = [
         {
             "client_groups": [
@@ -806,7 +782,7 @@ def test_resolve_requirements_from_catalog_partial_JSON():
 
     spec = _get_simple_deploy_spec_file_obj()
 
-    jrr = JobRequirementsResolver(catalog, spec)
+    jrr = JobRequirementsResolver(spec)
 
     assert jrr.resolve_requirements(
         " module2. some_meth  ", catalog_cache
@@ -829,7 +805,7 @@ def test_resolve_requirements_from_user_full():
 
 
 def _resolve_requirements_from_user_full(bool_val):
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+
     return_value = [
         {
             "client_groups": [
@@ -847,7 +823,7 @@ def _resolve_requirements_from_user_full(bool_val):
     catalog_cache = get_catalog_cache_mock(return_value)
     spec = _get_simple_deploy_spec_file_obj()
 
-    jrr = JobRequirementsResolver(catalog, spec)
+    jrr = JobRequirementsResolver(spec)
 
     assert jrr.resolve_requirements(
         " module2. some_meth  ",
@@ -891,7 +867,7 @@ def test_resolve_requirements_from_user_partial():
 
     Also tests that special keys are removed from the scheduler requirements.
     """
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+
     return_value = [
         {
             "client_groups": [
@@ -909,7 +885,7 @@ def test_resolve_requirements_from_user_partial():
 
     spec = _get_simple_deploy_spec_file_obj()
 
-    jrr = JobRequirementsResolver(catalog, spec)
+    jrr = JobRequirementsResolver(spec)
 
     assert jrr.resolve_requirements(
         " module2. some_meth  ",
@@ -944,8 +920,8 @@ def test_resolve_requirements_from_user_partial():
 
 
 def test_resolve_requirements_fail_illegal_inputs():
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
-    jrr = JobRequirementsResolver(catalog, _get_simple_deploy_spec_file_obj())
+
+    jrr = JobRequirementsResolver(_get_simple_deploy_spec_file_obj())
     catalog_cache = get_catalog_cache_mock()
 
     _resolve_requirements_fail(
@@ -1022,11 +998,11 @@ def test_resolve_requirements_fail_illegal_inputs():
 
 
 def test_resolve_requirements_fail_catalog_multiple_entries():
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+
     return_value = [{"client_groups": ["cg2"]}, {}]
     catalog_cache = get_catalog_cache_mock(return_value)
 
-    jrr = JobRequirementsResolver(catalog, _get_simple_deploy_spec_file_obj())
+    jrr = JobRequirementsResolver(_get_simple_deploy_spec_file_obj())
     _resolve_requirements_fail(
         jrr,
         catalog_cache,
@@ -1044,10 +1020,10 @@ def test_resolve_requirements_fail_catalog_multiple_entries():
 
 
 def test_resolve_requirements_fail_catalog_bad_JSON():
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+
     return_value = [{"client_groups": ['{"foo": "bar", "baz":}']}]
     catalog_cache = get_catalog_cache_mock(return_value)
-    jrr = JobRequirementsResolver(catalog, _get_simple_deploy_spec_file_obj())
+    jrr = JobRequirementsResolver(_get_simple_deploy_spec_file_obj())
     _resolve_requirements_fail(
         jrr,
         catalog_cache,
@@ -1064,11 +1040,11 @@ def test_resolve_requirements_fail_catalog_bad_JSON():
 
 
 def test_resolve_requirements_fail_catalog_bad_CSV():
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+
     return_value = [{"client_groups": ["cg", "foo is bar"]}]
     catalog_cache = get_catalog_cache_mock(return_value)
 
-    jrr = JobRequirementsResolver(catalog, _get_simple_deploy_spec_file_obj())
+    jrr = JobRequirementsResolver(_get_simple_deploy_spec_file_obj())
     _resolve_requirements_fail(
         jrr,
         catalog_cache,
@@ -1086,10 +1062,10 @@ def test_resolve_requirements_fail_catalog_bad_CSV():
 
 
 def test_resolve_requirements_fail_catalog_normalize():
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+
     return_value = [{"client_groups": ["cg", "request_memory=72TB"]}]
     catalog_cache = get_catalog_cache_mock(return_value)
-    jrr = JobRequirementsResolver(catalog, _get_simple_deploy_spec_file_obj())
+    jrr = JobRequirementsResolver(_get_simple_deploy_spec_file_obj())
     _resolve_requirements_fail(
         jrr,
         catalog_cache,
@@ -1105,10 +1081,10 @@ def test_resolve_requirements_fail_catalog_normalize():
 
 
 def test_resolve_requirements_fail_catalog_clientgroup():
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+
     return_value = [{"client_groups": ["cg", "request_memory=72"]}]
     catalog_cache = get_catalog_cache_mock(return_value)
-    jrr = JobRequirementsResolver(catalog, _get_simple_deploy_spec_file_obj())
+    jrr = JobRequirementsResolver(_get_simple_deploy_spec_file_obj())
     _resolve_requirements_fail(
         jrr,
         catalog_cache,
@@ -1124,10 +1100,10 @@ def test_resolve_requirements_fail_catalog_clientgroup():
 
 
 def test_resolve_requirements_fail_input_clientgroup():
-    catalog = create_autospec(Catalog, spec_set=True, instance=True)
+
     catalog_cache = get_catalog_cache_mock([])
 
-    jrr = JobRequirementsResolver(catalog, _get_simple_deploy_spec_file_obj())
+    jrr = JobRequirementsResolver(_get_simple_deploy_spec_file_obj())
     _resolve_requirements_fail(
         jrr,
         catalog_cache,

@@ -156,19 +156,15 @@ class JobRequirementsResolver:
 
     def __init__(
         self,
-        catalog: Catalog,
         cfgfile: Iterable[str],
         override_client_group: str = None,
     ):
         """
         Create the resolver.
-
-        catalog - a catalog client pointing at the relevant KBase catalog service.
         cfgfile - the configuration file as an open file object or other iterable.
         override_client_group - if provided, this client group will be used for all jobs, ignoring
             all other sources of client group information.
         """
-        self._catalog = _not_falsy(catalog, "catalog")
         self._override_client_group = _check_string(
             override_client_group, "override_client_group", optional=True
         )
