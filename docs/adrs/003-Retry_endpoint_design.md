@@ -74,8 +74,7 @@ is a lot of time for things to go wrong.
 
 ### Questions
 
-#To Be Answered
-
+#### Answered:
 #### Q: should the number of retries of a job be limited, and if so, where? e.g. a max_retries field in the parent job? wait and see whether people attempt to rerun jobs that have already failed nine zillion times?
 A: Make a ticket for this and add to backlog
 
@@ -99,7 +98,6 @@ Looks like the options are
 A: Probably not in the short term
 
 
-### Sort of answered
 #### Q: how to prevent incorrect parent-child relationships being created -- should the client be allowed to specify a parent ID? Is it currently possible to add a new child to a parent job if the child is a new job, rather than an existing job ID / set of params that is being rerun?
 A: Not necessarily relevant to this endpoint, more of a `run_job_batch` endpoint question. Currently the `retry_parent` and `parent_job_id` are looked up from the ee2 record on retry, and not specified in this endpoint.
 
@@ -113,6 +111,9 @@ A: Not necessarily relevant to this endpoint, more of a `run_job_batch` endpoint
     Should there be a maximum retry count? Or a warning that more retries are not likely to help?  (Unknown TBD)
     Can a job in states other than failed or canceled be retried? Or should the user be required to cancel a job before it can be retried? (Job must be in Error/Cancel state)
 
+
+#TODO
+MAKE TICKETS AND UPDATE BELOW
 
 # Work estimation
 Priority descending
