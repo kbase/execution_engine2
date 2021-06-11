@@ -54,13 +54,15 @@ is a lot of time for things to go wrong.
 * Multiple in-flight retries are allowed.
 
 ### Desired Behavior
+* Create a retry_jobs field, and a toggle to have a list of retried jobs and to ensure DB consistency
 * Prevent multiple in-flight retries of the same original job to prevent the user from wasting their own resources (and the queues resources)
-* Add retry_count to retried jobs as well to aid in more book-keeping in a new field called `retry_number`
-* Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
-* One single submission to HTCondor instead of multiple job submissions
 * Ability to handle database consistency during retry failure. (see thread https://github.com/kbase/execution_engine2/pull/383#discussion_r638341940)
 * Add failure conditions in the `run()` method and see if any of those should be checked prior to starting jobs
 * Prevent retry if resolving `retry_parent` results in two or more of the same job_ids in a retry_jobs request (see thread https://github.com/kbase/execution_engine2/pull/383#discussion_r640907736)  ( Or silently just run the one retry job and report the results to both positions in the list )
+
+### Can be done with RunJob changes
+* * Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
+* * One single submission to HTCondor instead of multiple job submissions
 
 
 ### Questions
