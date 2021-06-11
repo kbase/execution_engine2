@@ -54,9 +54,7 @@ is a lot of time for things to go wrong.
 * Multiple in-flight retries are allowed.
 
 ### Desired Behavior
-* Create a retry_jobs field, and a toggle to have a list of retried jobs and to ensure DB consistency
-* Prevent multiple in-flight retries of the same original job to prevent the user from wasting their own resources (and the queues resources)
-* Ability to handle database consistency during retry failure. (see thread https://github.com/kbase/execution_engine2/pull/383#discussion_r638341940)
+* Create a retry_jobs field, and a toggle to have a list of retried jobs and to ensure DB consistency ( Ability to handle database consistency during retry failure. (see thread https://github.com/kbase/execution_engine2/pull/383#discussion_r638341940))
 * Add failure conditions in the `run()` method and see if any of those should be checked prior to starting jobs
 * Prevent retry if resolving `retry_parent` results in two or more of the same job_ids in a retry_jobs request (see thread https://github.com/kbase/execution_engine2/pull/383#discussion_r640907736)  ( Or silently just run the one retry job and report the results to both positions in the list )
 
@@ -64,13 +62,16 @@ is a lot of time for things to go wrong.
 * * Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
 * * One single submission to HTCondor instead of multiple job submissions
 
+#### Won't do
+* Prevent multiple in-flight retries of the same original job to prevent the user from wasting their own resources (and the queues resources)
+* Add retry_number field
 
 ### Questions
 
 #To Be Answered
 
 #### Q: should the number of retries of a job be limited, and if so, where? e.g. a max_retries field in the parent job? wait and see whether people attempt to rerun jobs that have already failed nine zillion times?
-A: Unknown TBD
+A: Make a ticket for this and add to backlog
 
 #### Q: How do we prevent jobs with identical parameters from being rerun more than once within a retry_jobs request?
 A: We have decided to allow multiple jobs with the same params to be re-run in the same `retry_jobs` request.
