@@ -169,7 +169,6 @@ def _set_up_common_return_values(mocks):
         "paths": [[_WS_REF_1], [_WS_REF_2]]
     }
     mocks[CatalogCache].lookup_git_commit_version.return_value = _GIT_COMMIT
-    mocks[SDKMethodRunner].get_catalog_cache.return_value = mocks[CatalogCache]
     mocks[SDKMethodRunner].save_job.return_value = _JOB_ID
     mocks[Condor].run_job.return_value = SubmissionInfo(_CLUSTER, {}, None)
     retjob = Job()
@@ -312,7 +311,7 @@ def test_run_job():
     jrr.normalize_job_reqs.assert_called_once_with({}, "input job")
     jrr.get_requirements_type.assert_called_once_with(**_EMPTY_JOB_REQUIREMENTS)
     jrr.resolve_requirements.assert_called_once_with(
-        _METHOD, sdkmr.get_catalog_cache(), **_EMPTY_JOB_REQUIREMENTS
+        _METHOD, mocks[CatalogCache], **_EMPTY_JOB_REQUIREMENTS
     )
     _check_common_mock_calls(mocks, reqs, None, _APP)
 
@@ -391,7 +390,7 @@ def test_run_job_as_admin_with_job_requirements():
     jrr.normalize_job_reqs.assert_called_once_with(inc_reqs, "input job")
     jrr.get_requirements_type.assert_called_once_with(**req_args)
     jrr.resolve_requirements.assert_called_once_with(
-        _METHOD, sdkmr.get_catalog_cache(), **req_args
+        _METHOD, mocks[CatalogCache], **req_args
     )
     _check_common_mock_calls(mocks, reqs, None, None)
 
@@ -467,7 +466,7 @@ def test_run_job_as_concierge_with_wsid():
 
     jrr.resolve_requirements.assert_called_once_with(
         _METHOD,
-        sdkmr.get_catalog_cache(),
+        mocks[CatalogCache],
         cpus=cpus,
         memory_MB=mem,
         disk_GB=disk,
@@ -556,7 +555,7 @@ def _run_as_concierge_empty_as_admin(concierge_params, app):
 
     jrr.resolve_requirements.assert_called_once_with(
         _METHOD,
-        sdkmr.get_catalog_cache(),
+        mocks[CatalogCache],
         cpus=None,
         memory_MB=None,
         disk_GB=None,
@@ -747,7 +746,7 @@ def _set_up_common_return_values_batch(mocks):
         _GIT_COMMIT_1,
         _GIT_COMMIT_2,
     ]
-    mocks[SDKMethodRunner].get_catalog_cache.return_value = mocks[CatalogCache]
+
     mocks[SDKMethodRunner].save_and_return_job.return_value = returned_parent_job
 
     # create job1, update job1, create job2, update job2, update parent job
@@ -975,8 +974,8 @@ def test_run_job_batch_with_parent_job_wsid():
     )
     jrr.resolve_requirements.assert_has_calls(
         [
-            call(_METHOD_1, sdkmr.get_catalog_cache(), **_EMPTY_JOB_REQUIREMENTS),
-            call(_METHOD_2, sdkmr.get_catalog_cache(), **_EMPTY_JOB_REQUIREMENTS),
+            call(_METHOD_1, mocks[CatalogCache], **_EMPTY_JOB_REQUIREMENTS),
+            call(_METHOD_2, mocks[CatalogCache], **_EMPTY_JOB_REQUIREMENTS),
         ]
     )
     _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid)
@@ -1081,8 +1080,8 @@ def test_run_job_batch_as_admin_with_job_requirements():
     )
     jrr.resolve_requirements.assert_has_calls(
         [
-            call(_METHOD_1, sdkmr.get_catalog_cache(), **_EMPTY_JOB_REQUIREMENTS),
-            call(_METHOD_2, sdkmr.get_catalog_cache(), **req_args),
+            call(_METHOD_1, mocks[CatalogCache], **_EMPTY_JOB_REQUIREMENTS),
+            call(_METHOD_2, mocks[CatalogCache], **req_args),
         ]
     )
     _check_common_mock_calls_batch(mocks, reqs1, reqs2, None, wsid)
