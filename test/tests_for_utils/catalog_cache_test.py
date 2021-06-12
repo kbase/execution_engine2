@@ -68,13 +68,13 @@ def test_cc_job_reqs(catalog):
     )
 
     catalog.list_client_group_configs.return_value = CLIENT_GROUP_CONFIG
-    catalog_cache._method_version_cache["test1"]["test1"] = "Something else"
+    catalog_cache._job_requirements_cache["test1"]["test1"] = "Something else"
     rv2 = catalog_cache.lookup_job_resource_requirements(
         module_name="test1", function_name="test1"
     )
     # Test to make sure the catalog cache is being used this time, even though the underlying catalog record changed
     assert rv2 != CLIENT_GROUP_CONFIG
-    assert rv2 == test_return
+    assert rv2 == "Something else"
     catalog.list_client_group_configs.assert_called_with(
         {"module_name": "test1", "function_name": "test1"}
     )
