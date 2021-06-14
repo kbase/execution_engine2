@@ -122,8 +122,8 @@ class EE2RunJob:
         inputs.params = params.get("params")
 
         # Catalog git commit
-        params[_SERVICE_VER] = self._get_module_git_commit(
-            params.get(_METHOD), params.get(_SERVICE_VER)
+        params[_SERVICE_VER] = self.sdkmr.get_catalog_cache().lookup_git_commit_version(
+            method=params.get(_METHOD), service_ver=params.get(_SERVICE_VER)
         )
         inputs.service_ver = params.get(_SERVICE_VER)
         inputs.app_id = params.get(_APP_ID)
@@ -163,17 +163,6 @@ class EE2RunJob:
             message=KafkaCreateJob(job_id=job_id, user=user_id)
         )
         return job_id
-
-    def _get_module_git_commit(self, method, service_ver=None) -> Optional[str]:
-        module_name = method.split(".")[0]
-        if not service_ver:
-            service_ver = "release"
-        self.logger.debug(f"Getting commit for {module_name} {service_ver}")
-        module_version = self.sdkmr.get_catalog().get_module_version(
-            {"module_name": module_name, "version": service_ver}
-        )
-        git_commit_hash = module_version.get("git_commit_hash")
-        return git_commit_hash
 
     def _check_ws_objects(self, source_objects) -> None:
         """
@@ -415,7 +404,8 @@ class EE2RunJob:
 
             try:
                 job[_JOB_REQUIREMENTS] = jrr.resolve_requirements(
-                    job.get(_METHOD),
+                    method=job.get(_METHOD),
+                    catalog_cache=self.sdkmr.get_catalog_cache(),
                     cpus=norm.get(REQUEST_CPUS),
                     memory_MB=norm.get(REQUEST_MEMORY),
                     disk_GB=norm.get(REQUEST_DISK),
@@ -748,7 +738,8 @@ class EE2RunJob:
                 schd_reqs[key.strip()] = val.strip()
 
         return jrr.resolve_requirements(
-            method,
+            method=method,
+            catalog_cache=self.sdkmr.get_catalog_cache(),
             cpus=norm.get(REQUEST_CPUS),
             memory_MB=norm.get(REQUEST_MEMORY),
             disk_GB=norm.get(REQUEST_DISK),

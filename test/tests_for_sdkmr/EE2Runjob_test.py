@@ -4,36 +4,39 @@ Unit tests for the EE2Runjob class.
 
 # Incomplete by a long way. Will add more unit tests as they come up.
 
-from pytest import raises
-from typing import List, Dict, Any
-from bson.objectid import ObjectId
 from logging import Logger
+from typing import List, Dict, Any
 from unittest.mock import create_autospec, call
+
+from bson.objectid import ObjectId
+from pytest import raises
+
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
+from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job, JobInput, JobRequirements, Meta
 from execution_engine2.exceptions import IncorrectParamsException, AuthError
 from execution_engine2.sdk.EE2Runjob import EE2RunJob, JobPermissions
+from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.sdk.job_submission_parameters import (
     JobSubmissionParameters,
     JobRequirements as ResolvedRequirements,
     AppInfo,
     UserCreds,
 )
-from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.utils.Condor import Condor, SubmissionInfo
 from execution_engine2.utils.KafkaUtils import (
     KafkaClient,
     KafkaQueueChange,
     KafkaCreateJob,
 )
+from execution_engine2.utils.SlackUtils import SlackClient
+from execution_engine2.utils.catalog_cache import CatalogCache
 from execution_engine2.utils.job_requirements_resolver import (
     JobRequirementsResolver,
     RequirementsType,
 )
-from execution_engine2.utils.SlackUtils import SlackClient
-from execution_engine2.db.MongoUtil import MongoUtil
-from installed_clients.WorkspaceClient import Workspace
 from installed_clients.CatalogClient import Catalog
+from installed_clients.WorkspaceClient import Workspace
 from utils_shared.mock_utils import get_client_mocks, ALL_CLIENTS
 from utils_shared.test_utils import assert_exception_correct
 
@@ -94,7 +97,10 @@ def _set_up_mocks(user: str, token: str) -> Dict[Any, Any]:
     mocks[Logger] = create_autospec(Logger, spec_set=True, instance=True)
     mocks[Workspace] = create_autospec(Workspace, spec_set=True, instance=True)
     mocks[WorkspaceAuth] = create_autospec(WorkspaceAuth, spec_set=True, instance=True)
+    mocks[CatalogCache] = create_autospec(CatalogCache, spec_set=True, instance=True)
+
     # Set up basic getter calls
+    sdkmr.get_catalog_cache.return_value = mocks[CatalogCache]
     sdkmr.get_catalog.return_value = mocks[Catalog]
     sdkmr.get_condor.return_value = mocks[Condor]
     sdkmr.get_kafka_client.return_value = mocks[KafkaClient]
@@ -162,7 +168,7 @@ def _set_up_common_return_values(mocks):
     mocks[Workspace].get_object_info3.return_value = {
         "paths": [[_WS_REF_1], [_WS_REF_2]]
     }
-    mocks[Catalog].get_module_version.return_value = {"git_commit_hash": _GIT_COMMIT}
+    mocks[CatalogCache].lookup_git_commit_version.return_value = _GIT_COMMIT
     mocks[SDKMethodRunner].save_job.return_value = _JOB_ID
     mocks[Condor].run_job.return_value = SubmissionInfo(_CLUSTER, {}, None)
     retjob = Job()
@@ -181,8 +187,8 @@ def _check_common_mock_calls(mocks, reqs, wsid, app=_APP):
     mocks[Workspace].get_object_info3.assert_called_once_with(
         {"objects": [{"ref": _WS_REF_1}, {"ref": _WS_REF_2}], "ignoreErrors": 1}
     )
-    mocks[Catalog].get_module_version.assert_called_once_with(
-        {"module_name": "lolcats", "version": "release"}
+    mocks[CatalogCache].lookup_git_commit_version.assert_called_once_with(
+        method="lolcats.lol_unto_death", service_ver=None
     )
 
     # initial job data save
@@ -304,7 +310,9 @@ def test_run_job():
     # check mocks called as expected. The order here is the order that they're called in the code.
     jrr.normalize_job_reqs.assert_called_once_with({}, "input job")
     jrr.get_requirements_type.assert_called_once_with(**_EMPTY_JOB_REQUIREMENTS)
-    jrr.resolve_requirements.assert_called_once_with(_METHOD, **_EMPTY_JOB_REQUIREMENTS)
+    jrr.resolve_requirements.assert_called_once_with(
+        _METHOD, mocks[CatalogCache], **_EMPTY_JOB_REQUIREMENTS
+    )
     _check_common_mock_calls(mocks, reqs, None, _APP)
 
 
@@ -381,7 +389,9 @@ def test_run_job_as_admin_with_job_requirements():
     sdkmr.check_as_admin.assert_called_once_with(JobPermissions.WRITE)
     jrr.normalize_job_reqs.assert_called_once_with(inc_reqs, "input job")
     jrr.get_requirements_type.assert_called_once_with(**req_args)
-    jrr.resolve_requirements.assert_called_once_with(_METHOD, **req_args)
+    jrr.resolve_requirements.assert_called_once_with(
+        _METHOD, mocks[CatalogCache], **req_args
+    )
     _check_common_mock_calls(mocks, reqs, None, None)
 
 
@@ -456,6 +466,7 @@ def test_run_job_as_concierge_with_wsid():
 
     jrr.resolve_requirements.assert_called_once_with(
         _METHOD,
+        mocks[CatalogCache],
         cpus=cpus,
         memory_MB=mem,
         disk_GB=disk,
@@ -544,6 +555,7 @@ def _run_as_concierge_empty_as_admin(concierge_params, app):
 
     jrr.resolve_requirements.assert_called_once_with(
         _METHOD,
+        mocks[CatalogCache],
         cpus=None,
         memory_MB=None,
         disk_GB=None,
@@ -730,11 +742,13 @@ def _set_up_common_return_values_batch(mocks):
     returned_parent_job = Job()
     returned_parent_job.id = ObjectId(_JOB_ID)
     returned_parent_job.user = _USER
-    mocks[SDKMethodRunner].save_and_return_job.return_value = returned_parent_job
-    mocks[Catalog].get_module_version.side_effect = [
-        {"git_commit_hash": _GIT_COMMIT_1},
-        {"git_commit_hash": _GIT_COMMIT_2},
+    mocks[CatalogCache].lookup_git_commit_version.side_effect = [
+        _GIT_COMMIT_1,
+        _GIT_COMMIT_2,
     ]
+
+    mocks[SDKMethodRunner].save_and_return_job.return_value = returned_parent_job
+
     # create job1, update job1, create job2, update job2, update parent job
     mocks[SDKMethodRunner].save_job.side_effect = [
         _JOB_ID_1,
@@ -782,10 +796,10 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
     got_parent_job = sdkmr.save_and_return_job.call_args_list[0][0][0]
     assert_jobs_equal(got_parent_job, expected_parent_job)
 
-    mocks[Catalog].get_module_version.assert_has_calls(
+    mocks[CatalogCache].lookup_git_commit_version.assert_has_calls(
         [
-            call({"module_name": "module1", "version": "release"}),
-            call({"module_name": "module2", "version": "release"}),
+            call(method="module1.method1", service_ver=None),
+            call(method="module2.method2", service_ver=None),
         ]
     )
 
@@ -960,8 +974,8 @@ def test_run_job_batch_with_parent_job_wsid():
     )
     jrr.resolve_requirements.assert_has_calls(
         [
-            call(_METHOD_1, **_EMPTY_JOB_REQUIREMENTS),
-            call(_METHOD_2, **_EMPTY_JOB_REQUIREMENTS),
+            call(_METHOD_1, mocks[CatalogCache], **_EMPTY_JOB_REQUIREMENTS),
+            call(_METHOD_2, mocks[CatalogCache], **_EMPTY_JOB_REQUIREMENTS),
         ]
     )
     _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid)
@@ -1065,7 +1079,10 @@ def test_run_job_batch_as_admin_with_job_requirements():
         [call(**_EMPTY_JOB_REQUIREMENTS), call(**req_args)]
     )
     jrr.resolve_requirements.assert_has_calls(
-        [call(_METHOD_1, **_EMPTY_JOB_REQUIREMENTS), call(_METHOD_2, **req_args)]
+        [
+            call(_METHOD_1, mocks[CatalogCache], **_EMPTY_JOB_REQUIREMENTS),
+            call(_METHOD_2, mocks[CatalogCache], **req_args),
+        ]
     )
     _check_common_mock_calls_batch(mocks, reqs1, reqs2, None, wsid)
 

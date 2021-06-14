@@ -1,13 +1,15 @@
 """
 Unit tests for the Retry Code
 """
+from unittest.mock import create_autospec, MagicMock
+
+from pytest import raises
+
 from execution_engine2.exceptions import CannotRetryJob, RetryFailureException
 from execution_engine2.sdk.EE2Runjob import EE2RunJob
 from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-
-from test.utils_shared.test_utils import get_example_job, assert_exception_correct
-from unittest.mock import create_autospec, MagicMock
-from pytest import raises
+from test.utils_shared.test_utils import assert_exception_correct
+from test.utils_shared.test_utils import get_example_job
 
 
 def test_retry_db_failures():

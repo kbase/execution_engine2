@@ -8,17 +8,16 @@ from typing import Dict, Iterable
 from execution_engine2.authorization.roles import AdminAuthUtil
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.utils.arg_processing import not_falsy as _not_falsy
-from execution_engine2.utils.Condor import Condor
 from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
-from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
+from execution_engine2.utils.Condor import Condor
 from execution_engine2.utils.KafkaUtils import KafkaClient
 from execution_engine2.utils.SlackUtils import SlackClient
+from execution_engine2.utils.arg_processing import not_falsy as _not_falsy
 from execution_engine2.utils.arg_processing import parse_bool
-
-from installed_clients.authclient import KBaseAuth
+from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
+from installed_clients.authclient import KBaseAuth
 
 
 class UserClientSet:
@@ -86,8 +85,8 @@ def get_user_client_set(cfg: Dict[str, str], user_id: str, token: str):
 
 class ClientSet:
     """
+    There is only one instance of this class globally. The codebase effectively treats this as a singleton.
     Clients required by EE2 for communicating with other services.
-
     These are not user-specific and can be reused throughout the application.
     """
 
@@ -97,6 +96,7 @@ class ClientSet:
         auth_admin: AdminAuthUtil,
         condor: Condor,
         catalog: Catalog,
+        catalog_no_auth: Catalog,
         requirements_resolver: JobRequirementsResolver,
         kafka_client: KafkaClient,
         mongo_util: MongoUtil,
@@ -110,6 +110,7 @@ class ClientSet:
         self.auth_admin = _not_falsy(auth_admin, "auth_admin")
         self.condor = _not_falsy(condor, "condor")
         self.catalog = _not_falsy(catalog, "catalog")
+        self.catalog_no_auth = _not_falsy(catalog_no_auth, "catalog_no_auth")
         self.requirements_resolver = _not_falsy(
             requirements_resolver, "requirements_resolver"
         )
@@ -130,6 +131,7 @@ def get_clients(
     KBaseAuth,
     AdminAuthUtil,
     Condor,
+    Catalog,
     Catalog,
     JobRequirementsResolver,
     KafkaClient,
@@ -158,10 +160,9 @@ def get_clients(
     # TODO check keys are present - make some general methods for dealing with this
     # token is needed for running log_exec_stats in EE2Status
     catalog = Catalog(cfg["catalog-url"], token=cfg["catalog-token"])
-    # make a separate, hidden catalog instance
-    jrr = JobRequirementsResolver(
-        Catalog(cfg["catalog-url"]), cfg_file, override_client_group
-    )
+    # instance of catalog without creds is used here
+    catalog_no_auth = Catalog(cfg["catalog-url"])
+    jrr = JobRequirementsResolver(cfg_file, override_client_group)
     auth_url = cfg["auth-url"]
     auth = KBaseAuth(auth_url=auth_url + "/api/legacy/KBase/Sessions/Login")
     # TODO using hardcoded roles for now to avoid possible bugs with mismatched cfg roles
@@ -184,6 +185,7 @@ def get_clients(
         auth_admin,
         condor,
         catalog,
+        catalog_no_auth,
         jrr,
         kafka_client,
         mongo_util,

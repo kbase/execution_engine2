@@ -25,16 +25,17 @@ from lib.execution_engine2.sdk import (
     EE2Status,
     EE2Logs,
 )
-from lib.execution_engine2.sdk.EE2Constants import KBASE_CONCIERGE_USERNAME
-from lib.execution_engine2.utils.Condor import Condor
+from execution_engine2.sdk.EE2Constants import KBASE_CONCIERGE_USERNAME
+from execution_engine2.utils.Condor import Condor
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.utils.job_requirements_resolver import JobRequirementsResolver
 from execution_engine2.utils.clients import UserClientSet, ClientSet
-from lib.execution_engine2.utils.EE2Logger import get_logger as _get_logger
-from lib.execution_engine2.utils.KafkaUtils import KafkaClient
-from lib.execution_engine2.utils.SlackUtils import SlackClient
+from execution_engine2.utils.EE2Logger import get_logger as _get_logger
+from execution_engine2.utils.KafkaUtils import KafkaClient
+from execution_engine2.utils.SlackUtils import SlackClient
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
+from execution_engine2.utils.catalog_cache import CatalogCache
 
 
 class JobPermissions(Enum):
@@ -46,6 +47,7 @@ class JobPermissions(Enum):
 class SDKMethodRunner:
     """
     The execution engine 2 api calls functions from here.
+    The SDKMR is instantiated per call
     """
 
     """
@@ -68,7 +70,10 @@ class SDKMethodRunner:
         self.mongo_util = clients.mongo_util
         self.condor = clients.condor
         self.catalog = clients.catalog
+        # Cache Instantiated on a per request basis
+        self.catalog_cache = CatalogCache(catalog=clients.catalog_no_auth)
         self.job_requirements_resolver = clients.requirements_resolver
+
         self.workspace = user_clients.workspace
         self.workspace_auth = user_clients.workspace_auth
         self.auth = clients.auth
@@ -157,6 +162,12 @@ class SDKMethodRunner:
         Get the catalog client for this instance of SDKMR.
         """
         return self.catalog
+
+    def get_catalog_cache(self) -> CatalogCache:
+        """
+        Get the catalog cache client for this instance of SDKMR.
+        """
+        return self.catalog_cache
 
     def get_job_requirements_resolver(self) -> JobRequirementsResolver:
         """
