@@ -84,6 +84,8 @@ def _run_minimal(user):
                 "status": created_state,
                 "updated": 1000000000,
                 "user": expected_user,
+                "retry_ids": [],
+                "retry_saved_toggle": False,
             }
         ],
         "limit": 2000,
