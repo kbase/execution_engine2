@@ -55,6 +55,7 @@ _METHOD = "method"
 _APP_ID = "app_id"
 _PARENT_JOB_ID = "parent_job_id"
 _PARENT_RETRY_JOB_ID = "retry_parent"
+_RETRY_IDS = "retry_ids"
 _WORKSPACE_ID = "wsid"
 _SOURCE_WS_OBJECTS = "source_ws_objects"
 _SERVICE_VER = "service_ver"
@@ -579,15 +580,19 @@ class EE2RunJob:
                     exception=e,
                 )
 
-        # 2) Notify the retry_parent that it has been retried
+        # 2) Notify the retry_parent that it has been retried by adding a retry id
         try:
-            job.modify(inc__retry_count=1)
+            job.modify(push__retry_ids=retry_job_id)
         except Exception as e:
             self._db_update_failure(
                 job_that_failed_operation=str(job.id),
                 job_to_abort=retry_job_id,
                 exception=e,
             )
+        # If the retry_ids is updated and if present, the child_jobs, is updated, set toggle to true
+        retry_job = self.sdkmr.get_mongo_util().get_job(job_id=retry_job_id)
+        retry_job.retry_saved_toggle = True
+        self.sdkmr.save_job(retry_job)
 
         # Should we compare the original and child job to make sure certain fields match,
         # to make sure the retried job is correctly submitted? Or save that for a unit test?
