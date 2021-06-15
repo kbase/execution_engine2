@@ -97,6 +97,11 @@ MONGO_EE2_JOBS_COL = "ee2_jobs"
 _MOD = "mod.meth"
 _APP = "mod/app"
 
+# Note (For pycharm, ensure mongo entry is pointing to localhost and uncomment the following)
+from test.utils_shared.test_utils import bootstrap
+
+bootstrap()
+
 
 @fixture(scope="module")
 def config() -> Dict[str, str]:
@@ -528,6 +533,8 @@ def _check_mongo_job(
             },
         },
         "child_jobs": [],
+        "retry_ids": [],
+        "retry_saved_toggle": False,
         "batch_job": False,
         "scheduler_id": "123",
         "scheduler_type": "condor",
@@ -1243,6 +1250,8 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
                 },
             },
             "child_jobs": [],
+            "retry_ids": [],
+            "retry_saved_toggle": False,
             "batch_job": False,
             "scheduler_id": "123",
             "scheduler_type": "condor",
@@ -1272,6 +1281,8 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
                 "narrative_cell_info": {},
             },
             "child_jobs": [],
+            "retry_ids": [],
+            "retry_saved_toggle": False,
             "batch_job": False,
             "scheduler_id": "456",
             "scheduler_type": "condor",
@@ -1299,6 +1310,8 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             },
             "child_jobs": [job_id_1, job_id_2],
             "batch_job": True,
+            "retry_ids": [],
+            "retry_saved_toggle": False,
         }
         assert parent_job == expected_parent_job
 
@@ -1430,6 +1443,8 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             "batch_job": False,
             "scheduler_id": "123",
             "scheduler_type": "condor",
+            "retry_ids": [],
+            "retry_saved_toggle": False,
         }
         assert job1 == expected_job1
 
@@ -1455,6 +1470,8 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             "batch_job": False,
             "scheduler_id": "456",
             "scheduler_type": "condor",
+            "retry_ids": [],
+            "retry_saved_toggle": False,
         }
         assert job2 == expected_job2
 
@@ -1474,6 +1491,8 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             },
             "child_jobs": [job_id_1, job_id_2],
             "batch_job": True,
+            "retry_ids": [],
+            "retry_saved_toggle": False,
         }
         assert parent_job == expected_parent_job
 
