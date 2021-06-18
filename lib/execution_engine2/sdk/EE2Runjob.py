@@ -191,7 +191,7 @@ class EE2RunJob:
                     f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {wsid}."
                 )
 
-    def _check_workspace_permissions_list(self, wsids):
+    def _check_workspace_permissions_list(self, wsids) -> None:
         perms = self.sdkmr.get_workspace_auth().can_write_list(wsids)
         bad_ws = [key for key in perms.keys() if perms[key] is False]
         if bad_ws:
@@ -349,17 +349,15 @@ class EE2RunJob:
                     "Provided an empty parameter dict to run_batch params"
                 )
 
-    def _preflight_batch(self, params, as_admin, parent_wsid=None):
+    def _preflight_batch(self, params, as_admin=False, parent_wsid=None):
         self._check_batch_params(params)
         if as_admin:
             self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
         else:
-            self._check_workspace_permissions_list(
-                list(
-                    set([workspace.get("wsid") for workspace in params] + [parent_wsid])
-                )
-            )
-
+            wsids = [workspace.get("wsid") for workspace in params]
+            if parent_wsid:
+                wsids.append(parent_wsid)
+            self._check_workspace_permissions_list(list(set(wsids)))
         self._handle_job_requirements(params=params, as_admin=as_admin)
         self._check_job_arguments(params, has_parent_job=True)
 
@@ -474,7 +472,7 @@ class EE2RunJob:
             raise error
         raise IncorrectParamsException(f"{error_prefix}{error.args[0]}") from error
 
-    def _check_job_arguments(self, jobs, has_parent_job=False):
+    def _check_job_arguments(self, jobs, has_parent_job=False) -> None:
         # perform sanity checks before creating any jobs, including the parent job for batch jobs
         for i, job in enumerate(jobs):
             # Could make an argument checker method, or a class that doesn't require a job id.
@@ -737,13 +735,16 @@ class EE2RunJob:
         Modifies job run requests to have normalized Job Requirements
         :return:
         """
+        if not isinstance(params, list):
+            raise Exception("params must be a list")
+
         begin_preflight = time.time()
 
         if as_admin:
             self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
         else:
             self._check_workspace_permissions_list(
-                list(set([workspace.get("wsid") for workspace in params]))
+                list(set([param.get("wsid") for param in params]))
             )
 
         self._handle_job_requirements(

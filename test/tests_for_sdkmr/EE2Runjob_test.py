@@ -6,9 +6,10 @@ Unit tests for the EE2Runjob class.
 
 from logging import Logger
 from typing import List, Dict, Any
-from unittest.mock import create_autospec, call
+from unittest.mock import create_autospec, call, Mock
 
 from bson.objectid import ObjectId
+from mock.mock import MagicMock
 from pytest import raises
 
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
@@ -269,6 +270,49 @@ def _create_reqs_dict(
     if merge_with:
         ret.update(merge_with)
     return ret
+
+
+def _setup_test_preflight_batch_logic():
+    mocks = _set_up_mocks(_USER, _TOKEN)
+    sdkmr = mocks[SDKMethodRunner]
+    _set_up_common_return_values(mocks)
+    rj = EE2RunJob(sdkmr)
+    rj._check_workspace_permissions_list = MagicMock()
+    rj._handle_job_requirements = MagicMock()
+    rj._check_job_arguments = MagicMock()
+    rj._run = MagicMock()
+    params = {
+        "method": _METHOD,
+        "app_id": _APP,
+        "source_ws_objects": [_WS_REF_1, _WS_REF_2],
+        "wsid": "123",
+    }
+    jrr = mocks[JobRequirementsResolver]
+    jrr.normalize_job_reqs.return_value = {}
+    jrr.get_requirements_type.return_value = RequirementsType.STANDARD
+    return rj, params
+
+
+def test_preflight_logics():
+    rj, params = _setup_test_preflight_batch_logic()
+    # Check regular preflight
+    rj._preflight([params])
+    rj._check_workspace_permissions_list.assert_called_once_with([params.get("wsid")])
+    rj._handle_job_requirements.assert_called_once_with(
+        as_admin=False, concierge_params=None, params=[params]
+    )
+    rj._check_job_arguments.assert_called_once_with([params])
+
+    # Check Batch preflight
+    rj2, params2 = _setup_test_preflight_batch_logic()
+    rj2._preflight_batch([params, params2])
+    rj2._check_workspace_permissions_list.assert_called_once_with([params2.get("wsid")])
+    rj2._handle_job_requirements.assert_called_once_with(
+        as_admin=False, params=[params, params2]
+    )
+    rj2._check_job_arguments.assert_called_once_with(
+        [params, params2], has_parent_job=True
+    )
 
 
 def test_run_job():
