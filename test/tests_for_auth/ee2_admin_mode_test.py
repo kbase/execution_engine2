@@ -159,7 +159,7 @@ class EE2TestAdminMode(unittest.TestCase):
 
         job_id = runner.run_job(params=job_params_1, as_admin=False)
         self.assertTrue(bson.objectid.ObjectId.is_valid(job_id))
-        ws_auth.can_write.assert_called_once_with(self.ws_id)
+        ws_auth.can_write_list.assert_called_once_with([self.ws_id])
 
         # RUNJOB BUT ATTEMPT TO BE AN ADMIN
         with self.assertRaisesRegexp(

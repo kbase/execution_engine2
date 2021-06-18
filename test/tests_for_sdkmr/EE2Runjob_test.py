@@ -14,7 +14,11 @@ from pytest import raises
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job, JobInput, JobRequirements, Meta
-from execution_engine2.exceptions import IncorrectParamsException, AuthError
+from execution_engine2.exceptions import (
+    IncorrectParamsException,
+    AuthError,
+    MissingRunJobParamsException,
+)
 from execution_engine2.sdk.EE2Runjob import EE2RunJob, JobPermissions
 from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.sdk.job_submission_parameters import (
@@ -461,7 +465,7 @@ def test_run_job_as_concierge_with_wsid():
 
     # check mocks called as expected. The order here is the order that they're called in the code.
     sdkmr.check_as_concierge.assert_called_once_with()
-    wsauth.can_write.assert_called_once_with(wsid)
+    wsauth.can_write_list.assert_called_once_with([wsid])
     jrr.normalize_job_reqs.assert_called_once_with(conc_params, "concierge parameters")
 
     jrr.resolve_requirements.assert_called_once_with(
@@ -616,7 +620,11 @@ def test_run_job_and_run_job_batch_fail_illegal_arguments():
     Tests both the run() and run_batch() methods.
     """
     _run_and_run_batch_fail_illegal_arguments(
-        {}, IncorrectParamsException("Missing input parameter: method ID")
+        {},
+        MissingRunJobParamsException("Must provide run job parameters"),
+        MissingRunJobParamsException(
+            "Provided an empty parameter dict to run_batch params"
+        ),
     )
     _run_and_run_batch_fail_illegal_arguments(
         {"method": "foo.bar", "wsid": 0},
@@ -646,11 +654,17 @@ def test_run_job_and_run_job_batch_fail_illegal_arguments():
     )
 
 
-def _run_and_run_batch_fail_illegal_arguments(params, expected):
+def _run_and_run_batch_fail_illegal_arguments(params, expected, batch_expected=None):
     mocks = _set_up_mocks(_USER, _TOKEN)
     jrr = mocks[JobRequirementsResolver]
     jrr.resolve_requirements.return_value = ResolvedRequirements(1, 1, 1, "cg")
-    _run_and_run_batch_fail(mocks[SDKMethodRunner], params, expected)
+    _run_and_run_batch_fail(
+        mocks[SDKMethodRunner],
+        params,
+        expected,
+        batch_expected=batch_expected,
+        as_admin=True,
+    )
 
 
 def test_run_job_and_run_job_batch_fail_arg_normalization():
@@ -701,7 +715,11 @@ def test_run_job_and_run_job_batch_fail_resolve_requirements():
     jrr.get_requirements_type.return_value = RequirementsType.STANDARD
     e = "Unrecognized method: 'None'. Please input module_name.function_name"
     jrr.resolve_requirements.side_effect = IncorrectParamsException(e)
-    _run_and_run_batch_fail(mocks[SDKMethodRunner], {}, IncorrectParamsException(e))
+    _run_and_run_batch_fail(
+        mocks[SDKMethodRunner],
+        {"method": "module_name.function_name"},
+        IncorrectParamsException(e),
+    )
 
 
 def test_run_job_and_run_job_batch_fail_workspace_objects_check():
@@ -723,13 +741,15 @@ def test_run_job_and_run_job_batch_fail_workspace_objects_check():
     )
 
 
-def _run_and_run_batch_fail(sdkmr, params, expected, as_admin=True):
+def _run_and_run_batch_fail(
+    sdkmr, params, expected, batch_expected=None, as_admin=True
+):
     rj = EE2RunJob(sdkmr)
     with raises(Exception) as got:
         rj.run(params, as_admin=as_admin)
     assert_exception_correct(got.value, expected)
 
-    _run_batch_fail(rj, [params], {}, as_admin, expected)
+    _run_batch_fail(rj, [params], {}, as_admin, expected, batch_expected)
 
 
 def _set_up_common_return_values_batch(mocks):
@@ -1131,6 +1151,15 @@ def test_run_job_batch_fail_illegal_arguments():
         [job, job, {}],
         {},
         True,
+        MissingRunJobParamsException(
+            "Provided an empty parameter dict to run_batch params"
+        ),
+    )
+    _run_batch_fail(
+        rj,
+        [job, job, {"methodd": "oops"}],
+        {},
+        True,
         IncorrectParamsException("Job #3: Missing input parameter: method ID"),
     )
     _run_batch_fail(
@@ -1270,10 +1299,16 @@ def test_run_job_batch_fail_parent_id_included():
     )
 
 
-def _run_batch_fail(run_job, params, batch_params, as_admin, expected):
+def _run_batch_fail(
+    run_job, params, batch_params, as_admin, expected, batch_expected=None
+):
     with raises(Exception) as got:
         run_job.run_batch(params, batch_params, as_admin=as_admin)
-    assert_exception_correct(got.value, expected)
+
+    if batch_expected:
+        assert_exception_correct(got.value, batch_expected)
+    else:
+        assert_exception_correct(got.value, expected)
 
 
 def assert_jobs_equal(got_job: Job, expected_job: Job):

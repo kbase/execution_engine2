@@ -98,6 +98,11 @@ _MOD = "mod.meth"
 _APP = "mod/app"
 
 
+from test.utils_shared.test_utils import bootstrap
+
+bootstrap()
+
+
 @fixture(scope="module")
 def config() -> Dict[str, str]:
     yield get_ee2_test_config()

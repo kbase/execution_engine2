@@ -21,6 +21,7 @@ from execution_engine2.db.models.models import (
 )
 from execution_engine2.exceptions import (
     IncorrectParamsException,
+    MissingRunJobParamsException,
     AuthError,
     CannotRetryJob,
     RetryFailureException,
@@ -224,7 +225,7 @@ class EE2RunJob:
             error=f"{exception}",
         )
 
-    def _prepare_to_run(self, params, concierge_params=None) -> JobSubmissionParameters:
+    def _prepare_to_run(self, params) -> JobSubmissionParameters:
         """
         Creates a job record and creates the job submission params
         """
@@ -319,10 +320,10 @@ class EE2RunJob:
         )
         return j
 
-    def _run_batch(self, parent_job: Job, params):
+    def _run_batch(self, parent_job: Job, params: List[Dict]):
         child_jobs = []
 
-        for job_param in params:
+        for i, job_param in enumerate(params):
             job_param[_PARENT_JOB_ID] = str(parent_job.id)
             try:
                 child_jobs.append(str(self._run(params=job_param)))
@@ -349,6 +350,12 @@ class EE2RunJob:
         """
         if type(params) != list:
             raise IncorrectParamsException("params must be a list")
+        for item in params:
+            if not item:
+                raise MissingRunJobParamsException(
+                    "Provided an empty parameter dict to run_batch params"
+                )
+
         wsid = batch_params.get(_WORKSPACE_ID)
         meta = batch_params.get(_META)
 
@@ -381,6 +388,7 @@ class EE2RunJob:
         {CLIENT_GROUP_REGEX}, {BILL_TO_USER}, {IGNORE_CONCURRENCY_LIMITS},
         {_SCHEDULER_REQUIREMENTS}, and {DEBUG_MODE}. Adds the {_JOB_REQUIREMENTS} field to the
         param dicts, which holds the job requirements object.
+        This helper contacts the Catalog Service
         """
         # could add a cache in the job requirements resolver to avoid making the same
         # catalog call over and over if all the jobs have the same method
@@ -487,6 +495,7 @@ class EE2RunJob:
                 )
             # This is also an opportunity for caching
             # although most likely jobs aren't operating on the same object
+            # TODO Maybe remove this check to speed up submission time? Or move it into the thread and let some jobs succeed?
             self._check_ws_objects(source_objects=job.get(_SOURCE_WS_OBJECTS))
 
     @staticmethod
@@ -691,8 +700,74 @@ class EE2RunJob:
         # Then the next fields are job inputs top level requirements, app run parameters, and scheduler resource requirements
         return run_job_params
 
+    def _check_workspace_perms(
+        self, params: List[Dict], as_admin: bool = False
+    ) -> None:
+        """
+        Check to see if user doesn't have permission to any of the requested workspaces
+        """
+        begin_preflight = time.time()
+        if as_admin:
+            self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
+        else:
+            self._check_workspace_permissions_list(
+                list(set([workspace.get("wsid") for workspace in params]))
+            )
+        end_ws_check = time.time()
+        self.logger.debug(msg=f"end_ws_check = {end_ws_check - begin_preflight}s")
+
+    def _handle_job_requirements(
+        self, params: List[Dict], concierge_params: Dict = None, as_admin: bool = False
+    ) -> None:
+        """
+        Modifies params in place with job requirements
+
+        :param params: SpecialRunJobParamsParams object (See spec file)
+        :param params: RunJobParams object (See spec file)
+        :param concierge_params: a single concierge param dict to over-write requirements for all jobs
+        :param as_admin: as_admin checked previously, not verified here
+        :return:
+        """
+        begin_hjr = time.time()
+        if concierge_params:
+            self.sdkmr.check_as_concierge()
+            # we don't check requirements type because the concierge can do what they like
+            for param in params:
+                param[_JOB_REQUIREMENTS] = self._get_job_reqs_from_concierge_params(
+                    param.get(_METHOD), concierge_params
+                )
+        else:
+            #  , following modifies job requests in place & contacts catalog service
+            self._add_job_requirements(params, bool(as_admin))
+        end_hjr = time.time()
+        self.logger.debug(msg=f"end_add_job_reqs  = {end_hjr - begin_hjr}s")
+
+    def _preflight(
+        self, params: List[Dict], concierge_params: Dict = None, as_admin: bool = False
+    ) -> List[Dict]:
+        """
+        Checks to perform any records are written to the db
+        Modifies job run requests to have normalized Job Requirements
+        :return:
+        """
+        begin_preflight = time.time()
+        self._check_workspace_perms(params=params, as_admin=as_admin)
+        self._handle_job_requirements(
+            params=params, concierge_params=concierge_params, as_admin=as_admin
+        )
+        end_add_job_reqs = time.time()
+        self._check_job_arguments(params)
+        end_check_job_arguments = time.time()
+        self.logger.debug(
+            msg=f"end_check_job_arguments = {end_check_job_arguments - end_add_job_reqs}s"
+        )
+        self.logger.debug(
+            msg=f"end_preflight = {end_check_job_arguments - begin_preflight}s"
+        )
+        return params
+
     def run(
-        self, params=None, as_admin=False, concierge_params: Dict = None
+        self, params: Dict, concierge_params: Dict = None, as_admin: bool = False
     ) -> Optional[str]:
         """
         :param params: SpecialRunJobParamsParams object (See spec file)
@@ -701,22 +776,12 @@ class EE2RunJob:
         :param concierge_params: Allows you to specify request_cpu, request_memory, request_disk, clientgroup
         :return: The condor job id
         """
-        if as_admin:
-            self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
-        else:
-            self._check_workspace_permissions(params.get(_WORKSPACE_ID))
+        if not params:
+            raise MissingRunJobParamsException("Must provide run job parameters")
 
-        if concierge_params:
-            self.sdkmr.check_as_concierge()
-            # we don't check requirements type because the concierge can do what they like
-            params[_JOB_REQUIREMENTS] = self._get_job_reqs_from_concierge_params(
-                params.get(_METHOD), concierge_params
-            )
-        else:
-            # as_admin checked above
-            self._add_job_requirements([params], bool(as_admin))
-        self._check_job_arguments([params])
-
+        params = self._preflight(
+            params=[params], concierge_params=concierge_params, as_admin=as_admin
+        )[0]
         return self._run(params=params)
 
     def _get_job_reqs_from_concierge_params(

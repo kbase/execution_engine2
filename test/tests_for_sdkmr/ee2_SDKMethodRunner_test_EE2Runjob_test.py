@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import requests_mock
 from mock import MagicMock
-
+from bson import ObjectId
 from execution_engine2.exceptions import CannotRetryJob, RetryFailureException
 from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.utils.clients import (
@@ -231,6 +231,23 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    def test_run_job1(self, rq_mock, condor_mock):
+        rq_mock.add_matcher(
+            run_job_adapter(
+                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
+            )
+        )
+        runner = self.getRunner()
+        rj = runner.get_runjob()
+
+        j1 = get_example_job_as_dict(
+            user=self.user_id, wsid=self.ws_id, source_ws_objects=[]
+        )
+
+        rj._preflight([j1, j1])
+
+    @requests_mock.Mocker()
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_run_job(self, rq_mock, condor_mock):
         rq_mock.add_matcher(
             run_job_adapter(
@@ -240,12 +257,13 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner = self.getRunner()
         runner.get_condor = MagicMock(return_value=condor_mock)
         job = get_example_job_as_dict(user=self.user_id, wsid=self.ws_id)
+        runner.workspace.get_object_info3 = MagicMock(return_value={"paths": []})
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-
         job_id = runner.run_job(params=job)
-        print(f"Job id is {job_id} ")
+        # Check to make sure the id returned is a jobid
+        assert ObjectId(job_id)
 
     @staticmethod
     def check_retry_job_state(job_id: str, retry_job_id: str):
