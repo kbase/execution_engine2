@@ -56,7 +56,7 @@ def test_retry_db_failures():
         assert_exception_correct(e.value, expected_exception)
     assert rj._safe_cancel.call_count == 1
 
-    rj.run = MagicMock(return_value=retry_job)
+    rj.run_one_job = MagicMock(return_value=retry_job)
     # One DB failure
     rj._db_update_failure = MagicMock(side_effect=Exception("Boom!"))
     with raises(Exception):

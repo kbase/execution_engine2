@@ -339,6 +339,30 @@ class EE2RunJob:
 
         return child_jobs
 
+    @staticmethod
+    def _check_batch_params(params):
+        if type(params) != list:
+            raise IncorrectParamsException("params must be a list")
+        for item in params:
+            if not item:
+                raise MissingRunJobParamsException(
+                    "Provided an empty parameter dict to run_batch params"
+                )
+
+    def _preflight_batch(self, params, as_admin, parent_wsid=None):
+        self._check_batch_params(params)
+        if as_admin:
+            self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
+        else:
+            self._check_workspace_permissions_list(
+                list(
+                    set([workspace.get("wsid") for workspace in params] + [parent_wsid])
+                )
+            )
+
+        self._handle_job_requirements(params=params, as_admin=as_admin)
+        self._check_job_arguments(params, has_parent_job=True)
+
     def run_batch(
         self, params, batch_params, as_admin=False
     ) -> Dict[str, Union[Job, List[str]]]:
@@ -348,32 +372,11 @@ class EE2RunJob:
         :param as_admin: Allows you to run jobs in other people's workspaces
         :return: A list of condor job ids or a failure notification
         """
-        if type(params) != list:
-            raise IncorrectParamsException("params must be a list")
-        for item in params:
-            if not item:
-                raise MissingRunJobParamsException(
-                    "Provided an empty parameter dict to run_batch params"
-                )
-
-        wsid = batch_params.get(_WORKSPACE_ID)
-        meta = batch_params.get(_META)
-
-        if as_admin:
-            self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
-        else:
-            # Make sure you aren't running a job in someone elses workspace
-            self._check_workspace_permissions(wsid)
-            # this is very odd. Why check the parent wsid again if there's no wsid in the job?
-            # also, what if the parent wsid is None?
-            # also also, why not just put all the wsids in one list and make one ws call?
-            wsids = [job_input.get(_WORKSPACE_ID, wsid) for job_input in params]
-            self._check_workspace_permissions_list(wsids)
-
-        self._add_job_requirements(params, bool(as_admin))  # as_admin checked above
-        self._check_job_arguments(params, has_parent_job=True)
-
-        parent_job = self._create_parent_job(wsid=wsid, meta=meta)
+        parent_wsid = batch_params.get(_WORKSPACE_ID)
+        self._preflight_batch(params=params, as_admin=as_admin, parent_wsid=parent_wsid)
+        parent_job = self._create_parent_job(
+            wsid=parent_wsid, meta=batch_params.get(_META)
+        )
         children_jobs = self._run_batch(parent_job=parent_job, params=params)
 
         return {_PARENT_JOB_ID: str(parent_job.id), "child_job_ids": children_jobs}
@@ -574,7 +577,7 @@ class EE2RunJob:
         )
         # Submit job to job scheduler or fail and not count it as a retry attempt
         run_job_params[_PARENT_RETRY_JOB_ID] = job_id
-        retry_job_id = self.run(params=run_job_params, as_admin=as_admin)
+        retry_job_id = self.run_one_job(params=run_job_params, as_admin=as_admin)
 
         # Save that the job has been retried, and increment the count. Notify the parent(s)
         # 1) Notify the parent container that it has a new child..
@@ -700,22 +703,6 @@ class EE2RunJob:
         # Then the next fields are job inputs top level requirements, app run parameters, and scheduler resource requirements
         return run_job_params
 
-    def _check_workspace_perms(
-        self, params: List[Dict], as_admin: bool = False
-    ) -> None:
-        """
-        Check to see if user doesn't have permission to any of the requested workspaces
-        """
-        begin_preflight = time.time()
-        if as_admin:
-            self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
-        else:
-            self._check_workspace_permissions_list(
-                list(set([workspace.get("wsid") for workspace in params]))
-            )
-        end_ws_check = time.time()
-        self.logger.debug(msg=f"end_ws_check = {end_ws_check - begin_preflight}s")
-
     def _handle_job_requirements(
         self, params: List[Dict], concierge_params: Dict = None, as_admin: bool = False
     ) -> None:
@@ -751,7 +738,14 @@ class EE2RunJob:
         :return:
         """
         begin_preflight = time.time()
-        self._check_workspace_perms(params=params, as_admin=as_admin)
+
+        if as_admin:
+            self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
+        else:
+            self._check_workspace_permissions_list(
+                list(set([workspace.get("wsid") for workspace in params]))
+            )
+
         self._handle_job_requirements(
             params=params, concierge_params=concierge_params, as_admin=as_admin
         )
@@ -766,7 +760,7 @@ class EE2RunJob:
         )
         return params
 
-    def run(
+    def run_one_job(
         self, params: Dict, concierge_params: Dict = None, as_admin: bool = False
     ) -> Optional[str]:
         """
@@ -778,7 +772,6 @@ class EE2RunJob:
         """
         if not params:
             raise MissingRunJobParamsException("Must provide run job parameters")
-
         params = self._preflight(
             params=[params], concierge_params=concierge_params, as_admin=as_admin
         )[0]

@@ -321,7 +321,7 @@ class SDKMethodRunner:
 
     def run_job(self, params, as_admin=False):
         """Authorization Required Read/Write"""
-        return self.get_runjob().run(params=params, as_admin=as_admin)
+        return self.get_runjob().run_one_job(params=params, as_admin=as_admin)
 
     def run_job_batch(self, params, batch_params, as_admin=False):
         """Authorization Required Read/Write"""
@@ -331,7 +331,9 @@ class SDKMethodRunner:
 
     def run_job_concierge(self, params, concierge_params):
         """Authorization Required : Be the kbaseconcierge user"""
-        return self.get_runjob().run(params=params, concierge_params=concierge_params)
+        return self.get_runjob().run_one_job(
+            params=params, concierge_params=concierge_params
+        )
 
     def get_job_params(self, job_id, as_admin=False):
         """Authorization Required: Read"""

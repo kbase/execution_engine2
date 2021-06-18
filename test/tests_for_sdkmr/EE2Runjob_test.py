@@ -309,7 +309,7 @@ def test_run_job():
         "app_id": _APP,
         "source_ws_objects": [_WS_REF_1, _WS_REF_2],
     }
-    assert rj.run(params) == _JOB_ID
+    assert rj.run_one_job(params) == _JOB_ID
 
     # check mocks called as expected. The order here is the order that they're called in the code.
     jrr.normalize_job_reqs.assert_called_once_with({}, "input job")
@@ -387,7 +387,7 @@ def test_run_job_as_admin_with_job_requirements():
         "source_ws_objects": [_WS_REF_1, _WS_REF_2],
         "job_requirements": inc_reqs,
     }
-    assert rj.run(params, as_admin=True) == _JOB_ID
+    assert rj.run_one_job(params, as_admin=True) == _JOB_ID
 
     # check mocks called as expected. The order here is the order that they're called in the code.
     sdkmr.check_as_admin.assert_called_once_with(JobPermissions.WRITE)
@@ -461,7 +461,7 @@ def test_run_job_as_concierge_with_wsid():
             "requirements_list": ["  foo   =   bar   ", "baz=bat"],
         },
     )
-    assert rj.run(params, concierge_params=conc_params) == _JOB_ID
+    assert rj.run_one_job(params, concierge_params=conc_params) == _JOB_ID
 
     # check mocks called as expected. The order here is the order that they're called in the code.
     sdkmr.check_as_concierge.assert_called_once_with()
@@ -548,7 +548,10 @@ def _run_as_concierge_empty_as_admin(concierge_params, app):
         "app_id": app,
         "source_ws_objects": [_WS_REF_1, _WS_REF_2],
     }
-    assert rj.run(params, concierge_params=concierge_params, as_admin=True) == _JOB_ID
+    assert (
+        rj.run_one_job(params, concierge_params=concierge_params, as_admin=True)
+        == _JOB_ID
+    )
 
     # check mocks called as expected. The order here is the order that they're called in the code.
     sdkmr.check_as_admin.assert_called_once_with(JobPermissions.WRITE)
@@ -604,7 +607,7 @@ def _run_fail_concierge_params(concierge_params, expected):
         "app_id": _APP,
     }
     with raises(Exception) as got:
-        rj.run(params, concierge_params=concierge_params)
+        rj.run_one_job(params, concierge_params=concierge_params)
     assert_exception_correct(got.value, expected)
 
 
@@ -746,7 +749,7 @@ def _run_and_run_batch_fail(
 ):
     rj = EE2RunJob(sdkmr)
     with raises(Exception) as got:
-        rj.run(params, as_admin=as_admin)
+        rj.run_one_job(params, as_admin=as_admin)
     assert_exception_correct(got.value, expected)
 
     _run_batch_fail(rj, [params], {}, as_admin, expected, batch_expected)
