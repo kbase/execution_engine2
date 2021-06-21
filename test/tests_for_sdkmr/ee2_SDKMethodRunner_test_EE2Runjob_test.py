@@ -7,8 +7,9 @@ from configparser import ConfigParser
 from unittest.mock import patch
 
 import requests_mock
-from mock import MagicMock
 from bson import ObjectId
+from mock import MagicMock
+
 from execution_engine2.exceptions import CannotRetryJob, RetryFailureException
 from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.utils.clients import (
