@@ -192,15 +192,20 @@ class EE2RunJob:
                 )
 
     def _check_workspace_permissions_list(self, wsids) -> None:
-        perms = self.sdkmr.get_workspace_auth().can_write_list(wsids)
-        bad_ws = [key for key in perms.keys() if perms[key] is False]
-        if bad_ws:
-            self.logger.debug(
-                f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {bad_ws}."
-            )
-            raise PermissionError(
-                f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {bad_ws}."
-            )
+        """
+        Raise exception if you don't have permissions to run a job in any of these workspaces
+        """
+        unique_not_none_wsids = [wsid for wsid in list(set(wsids)) if wsid]
+        perms = self.sdkmr.get_workspace_auth().can_write_list(unique_not_none_wsids)
+        if unique_not_none_wsids:
+            bad_ws = [key for key in perms.keys() if perms[key] is False]
+            if bad_ws:
+                self.logger.debug(
+                    f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {bad_ws}."
+                )
+                raise PermissionError(
+                    f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {bad_ws}."
+                )
 
     def _finish_created_job(
         self, job_id, exception, error_code=None, error_message=None
@@ -343,6 +348,7 @@ class EE2RunJob:
     def _check_batch_params(params):
         if type(params) != list:
             raise IncorrectParamsException("params must be a list")
+
         for item in params:
             if not item:
                 raise MissingRunJobParamsException(
@@ -354,10 +360,10 @@ class EE2RunJob:
         if as_admin:
             self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
         else:
-            wsids = [workspace.get("wsid") for workspace in params]
+            wsids = [param.get("wsid") for param in params if params.get("wsid")]
             if parent_wsid:
                 wsids.append(parent_wsid)
-            self._check_workspace_permissions_list(list(set(wsids)))
+            self._check_workspace_permissions_list(wsids)
         self._handle_job_requirements(params=params, as_admin=as_admin)
         self._check_job_arguments(params, has_parent_job=True)
 
@@ -744,7 +750,7 @@ class EE2RunJob:
             self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
         else:
             self._check_workspace_permissions_list(
-                list(set([param.get("wsid") for param in params]))
+                [param.get("wsid") for param in params]
             )
 
         self._handle_job_requirements(
