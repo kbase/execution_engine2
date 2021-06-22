@@ -246,7 +246,7 @@ class ee2_server_load_test(unittest.TestCase):
     si = SubmissionInfo(clusterid="test", submit="job", error=None)
 
     @patch.object(Condor, "run_job", return_value=si)
-    @patch.object(WorkspaceAuth, "can_write_list", return_value=True)
+    @patch.object(WorkspaceAuth, "can_write_list", return_value={})
     @patch(
         "installed_clients.CatalogClient.Catalog.list_client_group_configs",
         autospec=True,
@@ -279,7 +279,7 @@ class ee2_server_load_test(unittest.TestCase):
             self.impl.retry_job(ctx=self.ctx, params={"job_id": job_id})
 
     @patch.object(Condor, "run_job", return_value=si)
-    @patch.object(WorkspaceAuth, "can_write", return_value=True)
+    @patch.object(WorkspaceAuth, "can_write_list", return_value={})
     @patch(
         "installed_clients.CatalogClient.Catalog.list_client_group_configs",
         autospec=True,
