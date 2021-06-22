@@ -355,12 +355,14 @@ class EE2RunJob:
                     "Provided an empty parameter dict to run_batch params"
                 )
 
-    def _preflight_batch(self, params, as_admin=False, parent_wsid=None):
+    def _preflight_batch(self, params: List[Dict], as_admin=False, parent_wsid=None):
         self._check_batch_params(params)
         if as_admin:
             self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
         else:
-            wsids = [param.get("wsid") for param in params if params.get("wsid")]
+            wsids = [
+                job_param.get("wsid") for job_param in params if job_param.get("wsid")
+            ]
             if parent_wsid:
                 wsids.append(parent_wsid)
             self._check_workspace_permissions_list(wsids)
@@ -368,8 +370,8 @@ class EE2RunJob:
         self._check_job_arguments(params, has_parent_job=True)
 
     def run_batch(
-        self, params, batch_params, as_admin=False
-    ) -> Dict[str, Union[Job, List[str]]]:
+        self, params: List[Dict], batch_params: Dict, as_admin: bool = False
+    ) -> Dict[str, List[str]]:
         """
         :param params: List of RunJobParams (See Spec File)
         :param batch_params: List of Batch Params, such as wsid (See Spec file)
