@@ -739,8 +739,8 @@ class EE2RunJob:
         self, params: List[Dict], concierge_params: Dict = None, as_admin: bool = False
     ) -> List[Dict]:
         """
-        Checks to perform any records are written to the db
-        Modifies job run requests to have normalized Job Requirements
+        Checks to perform before any records are written to the db
+        Modifies job run requests in place to have normalized Job Requirements
         :return:
         """
         if not isinstance(params, list):
