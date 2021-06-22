@@ -12,15 +12,6 @@ from test.utils_shared.test_utils import assert_exception_correct
 from test.utils_shared.test_utils import get_example_job
 
 
-def test_preflight():
-    sdkmr = create_autospec(SDKMethodRunner, instance=True, spec_set=True)
-    # Passing case with nothing to assert, all goes well
-    good_job = get_example_job(status="error")
-    sdkmr.get_job_with_permission = MagicMock(return_value=good_job)
-    rj = EE2RunJob(sdkmr=sdkmr)
-    rj.run_one_job({"method": "1"})
-
-
 def test_retry_db_failures():
     """
     * Test correct db update failure message, and that cancel_job is called

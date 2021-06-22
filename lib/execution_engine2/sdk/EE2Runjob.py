@@ -25,6 +25,7 @@ from execution_engine2.exceptions import (
     AuthError,
     CannotRetryJob,
     RetryFailureException,
+    MissingRunJobParamsForBatchException,
 )
 from execution_engine2.sdk.EE2Constants import CONCIERGE_CLIENTGROUP
 from execution_engine2.sdk.job_submission_parameters import (
@@ -351,9 +352,7 @@ class EE2RunJob:
 
         for item in params:
             if not item:
-                raise MissingRunJobParamsException(
-                    "Provided an empty parameter dict to run_batch params"
-                )
+                raise MissingRunJobParamsForBatchException()
 
     def _preflight_batch(self, params: List[Dict], as_admin=False, parent_wsid=None):
         self._check_batch_params(params)

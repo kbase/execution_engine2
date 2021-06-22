@@ -19,6 +19,7 @@ from execution_engine2.exceptions import (
     IncorrectParamsException,
     AuthError,
     MissingRunJobParamsException,
+    MissingRunJobParamsForBatchException,
 )
 from execution_engine2.sdk.EE2Runjob import EE2RunJob, JobPermissions
 from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
@@ -305,8 +306,11 @@ def test_preflight_logics():
 
     # Check Batch preflight
     rj2, params2 = _setup_test_preflight_batch_logic()
+    params2["wsid"] = "1234"
     rj2._preflight_batch([params, params2])
-    rj2._check_workspace_permissions_list.assert_called_once_with([params2.get("wsid")])
+    rj2._check_workspace_permissions_list.assert_called_once_with(
+        [params.get("wsid"), params2.get("wsid")]
+    )
     rj2._handle_job_requirements.assert_called_once_with(
         as_admin=False, params=[params, params2]
     )
@@ -669,9 +673,7 @@ def test_run_job_and_run_job_batch_fail_illegal_arguments():
     _run_and_run_batch_fail_illegal_arguments(
         {},
         MissingRunJobParamsException("Must provide run job parameters"),
-        MissingRunJobParamsException(
-            "Provided an empty parameter dict to run_batch params"
-        ),
+        MissingRunJobParamsForBatchException(),
     )
     _run_and_run_batch_fail_illegal_arguments(
         {"method": "foo.bar", "wsid": 0},
@@ -1029,9 +1031,10 @@ def test_run_job_batch_with_parent_job_wsid():
     }
 
     # check mocks called as expected. The order here is the order that they're called in the code.
-    mocks[WorkspaceAuth].can_write.assert_called_once_with(parent_wsid)
     # this seems like a bug. See comments in the run_batch method
-    mocks[WorkspaceAuth].can_write_list.assert_called_once_with([parent_wsid, wsid])
+    mocks[WorkspaceAuth].can_write_list.assert_called_once_with(
+        list(set([parent_wsid, wsid]))
+    )
     jrr = mocks[JobRequirementsResolver]
     jrr.normalize_job_reqs.assert_has_calls(
         [call({}, "input job"), call({}, "input job")]
@@ -1194,13 +1197,7 @@ def test_run_job_batch_fail_illegal_arguments():
     job = {"method": "foo.bar"}
 
     _run_batch_fail(
-        rj,
-        [job, job, {}],
-        {},
-        True,
-        MissingRunJobParamsException(
-            "Provided an empty parameter dict to run_batch params"
-        ),
+        rj, [job, job, {}], {}, True, MissingRunJobParamsForBatchException()
     )
     _run_batch_fail(
         rj,
@@ -1309,15 +1306,15 @@ def test_run_job_batch_fail_resolve_requirements():
     jrr = mocks[JobRequirementsResolver]
     jrr.normalize_job_reqs.return_value = {}
     jrr.get_requirements_type.return_value = RequirementsType.STANDARD
-    e = "Unrecognized method: 'None'. Please input module_name.function_name"
+    e = MissingRunJobParamsForBatchException()
     jr = ResolvedRequirements(cpus=4, memory_MB=4, disk_GB=4, client_group="cg")
-    jrr.resolve_requirements.side_effect = [jr, IncorrectParamsException(e)]
+    jrr.resolve_requirements.side_effect = [jr, e]
     _run_batch_fail(
         EE2RunJob(mocks[SDKMethodRunner]),
         [{}, {"method": "foo.bar"}],
         {},
         False,
-        IncorrectParamsException("Job #2: " + e),
+        e,
     )
 
 
