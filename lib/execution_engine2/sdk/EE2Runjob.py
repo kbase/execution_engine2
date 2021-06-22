@@ -330,8 +330,7 @@ class EE2RunJob:
 
     def _run_batch(self, parent_job: Job, params: List[Dict]):
         child_jobs = []
-
-        for i, job_param in enumerate(params):
+        for job_param in params:
             job_param[_PARENT_JOB_ID] = str(parent_job.id)
             try:
                 child_jobs.append(str(self._run(params=job_param)))
