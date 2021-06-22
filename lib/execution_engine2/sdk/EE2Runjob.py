@@ -197,8 +197,10 @@ class EE2RunJob:
         Raise exception if you don't have permissions to run a job in any of these workspaces
         """
         unique_not_none_wsids = [wsid for wsid in list(set(wsids)) if wsid]
-        perms = self.sdkmr.get_workspace_auth().can_write_list(unique_not_none_wsids)
         if unique_not_none_wsids:
+            perms = self.sdkmr.get_workspace_auth().can_write_list(
+                unique_not_none_wsids
+            )
             bad_ws = [key for key in perms.keys() if perms[key] is False]
             if bad_ws:
                 self.logger.debug(
