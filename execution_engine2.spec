@@ -459,7 +459,6 @@
         retry_count - int - generated field based on length of retry_ids
         retry_ids - list - list of jobs that are retried based off of this job
         retry_parent - str - job_id of the parent this retry is based off of. Not available on a retry_parent itself
-        retry_saved_toggle - bool - Marked true when all retry steps/txns have completed
 
         parent_job_id - str - job_id taken from job_input.parent_job_id
         batch_job - bool - whether or not this is a batch parent container
