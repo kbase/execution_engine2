@@ -312,7 +312,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             parent_job_id1,
             parent_job_id2,
         )
-        fail_msg = f"Retry of the same id in the same request is not supported. Offending ids:{[parent_job_id1,parent_job_id2]} "
+        fail_msg = f"Retry of the same id in the same request is not supported. Offending ids:{[parent_job_id1, parent_job_id2]} "
 
         with self.assertRaises(ValueError) as e:
             runner.retry_multiple(retry_candidates)
@@ -419,6 +419,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             else:
                 assert job["retry_parent"] == parent_job_id
                 assert j.retry_saved_toggle
+
+        assert [
+            retried_job["job_id"],
+            retried_job2["job_id"],
+            retried_job3["job_id"],
+        ] == original_job["retry_ids"]
 
         # 4. Get jobs and ensure they contain the same keys and params
         same_keys = ["user", "authstrat", "wsid", "scheduler_type", "job_input"]

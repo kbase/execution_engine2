@@ -589,10 +589,16 @@ class EE2RunJob:
                 job_to_abort=retry_job_id,
                 exception=e,
             )
-        # If the retry_ids is updated and if present, the child_jobs, is updated, set toggle to true
-        retry_job = self.sdkmr.get_mongo_util().get_job(job_id=retry_job_id)
-        retry_job.retry_saved_toggle = True
-        self.sdkmr.save_job(retry_job)
+        # 3) If the retry_ids is updated and if present, the child_jobs, is updated, set toggle to true
+        try:
+            retry_job = self.sdkmr.get_mongo_util().get_job(job_id=retry_job_id)
+            retry_job.modify(set__retry_saved_toggle=True)
+        except Exception:
+            self.logger.error(
+                f"Couldn't toggle job retry state for {retry_job_id} ",
+                exc_info=True,
+                stack_info=True,
+            )
 
         # Should we compare the original and child job to make sure certain fields match,
         # to make sure the retried job is correctly submitted? Or save that for a unit test?
