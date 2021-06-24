@@ -112,7 +112,6 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
             "queued": 1623781529017,
             "retry_count": 0,
             "retry_ids": [],
-            "retry_saved_toggle": False,
             "scheduler_id": "test",
             "scheduler_type": "condor",
             "status": "queued",

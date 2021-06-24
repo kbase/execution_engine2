@@ -572,7 +572,7 @@ class EE2RunJob:
         # 1) Notify the parent container that it has a new child..
         if parent_job:
             try:
-                parent_job.modify(push__child_jobs=retry_job_id)
+                parent_job.modify(add_to_set__child_jobs=retry_job_id)
             except Exception as e:
                 self._db_update_failure(
                     job_that_failed_operation=str(parent_job.id),
@@ -582,7 +582,7 @@ class EE2RunJob:
 
         # 2) Notify the retry_parent that it has been retried by adding a retry id
         try:
-            job.modify(push__retry_ids=retry_job_id)
+            job.modify(add_to_set__retry_ids=retry_job_id)
         except Exception as e:
             self._db_update_failure(
                 job_that_failed_operation=str(job.id),
