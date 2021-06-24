@@ -265,7 +265,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 assert job[item] == retry_job[item]
 
         assert retry_job.retry_parent == job_id
-        assert job.retry_count > 0
+        assert len(job.retry_ids) > 0
+        assert retry_job_id in job.retry_ids
+        assert not job.retry_saved_toggle and retry_job.retry_saved_toggle
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
@@ -310,7 +312,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             parent_job_id1,
             parent_job_id2,
         )
-        fail_msg = f"Retry of the same id in the same request is not supported. Offending ids:{[parent_job_id1,parent_job_id2]} "
+        fail_msg = f"Retry of the same id in the same request is not supported. Offending ids:{[parent_job_id1, parent_job_id2]} "
 
         with self.assertRaises(ValueError) as e:
             runner.retry_multiple(retry_candidates)
@@ -323,6 +325,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             parent_job_id3,
             parent_job_id4,
         )
+        check_job = runner.check_job(parent_job_id1)
+        assert check_job["retry_ids"] == []
+        assert check_job["retry_count"] == 0
         retry_job_ids = runner.retry_multiple(retry_candidates)
 
         assert len(retry_job_ids) == len(retry_candidates)
@@ -407,10 +412,19 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         self.check_retry_job_state(parent_job_id, retry_from_original_again)
 
         for job in [original_job, retried_job, retried_job2, retried_job3]:
+            j = Job.objects.get(id=job["job_id"])
             if job == original_job:
                 assert original_job["retry_count"] == 3
+                assert not j.retry_saved_toggle
             else:
                 assert job["retry_parent"] == parent_job_id
+                assert j.retry_saved_toggle
+
+        assert [
+            retried_job["job_id"],
+            retried_job2["job_id"],
+            retried_job3["job_id"],
+        ] == original_job["retry_ids"]
 
         # 4. Get jobs and ensure they contain the same keys and params
         same_keys = ["user", "authstrat", "wsid", "scheduler_type", "job_input"]
@@ -529,21 +543,21 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner.update_job_status(job_id=child_job_id, status=Status.terminated.value)
         parent_job = runner.check_job(job_id=parent_job_id)
         assert len(parent_job["child_jobs"]) == 3
+
         retry_id = runner.retry(job_id=child_job_id)["retry_id"]
+        self.check_retry_job_state(child_job_id, retry_id)
         parent_job = runner.check_job(job_id=parent_job_id)
         assert len(parent_job["child_jobs"]) == 4
         assert parent_job["child_jobs"][-1] == retry_id
 
-        job = Job.objects.get(id=child_job_id)
-        retry_count = job.retry_count
+        job = runner.check_job(job_id=child_job_id)
+        retry_count = job["retry_count"]
 
         # Test to see if one input fails, so fail them all
         with self.assertRaises(expected_exception=RetryFailureException):
-            retry_id = runner.retry_multiple(job_ids=[child_job_id, "grail", "fail"])
-            print(retry_id)
+            runner.retry_multiple(job_ids=[child_job_id, "grail", "fail"])
         # Check to see other job wasn't retried
-        job.reload()
-        assert job.retry_count == retry_count
+        assert retry_count == runner.check_job(job_id=child_job_id)["retry_count"]
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)

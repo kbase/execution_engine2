@@ -28,19 +28,27 @@ NOTE 5: EE2 posting to Slack always fails silently in tests. Currently slack cal
 import os
 import tempfile
 import time
-import htcondor
-
-from bson import ObjectId
 from configparser import ConfigParser
-from threading import Thread
 from pathlib import Path
-import pymongo
-from pytest import fixture, raises
+from threading import Thread
 from typing import Dict
 from unittest.mock import patch, create_autospec, ANY, call
 
+import htcondor
+import pymongo
+from bson import ObjectId
+from pytest import fixture, raises
+
+from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
+from installed_clients.WorkspaceClient import Workspace
+from installed_clients.baseclient import ServerError
+from installed_clients.execution_engine2Client import execution_engine2 as ee2client
+from test.utils_shared.test_utils import bootstrap
 from tests_for_integration.auth_controller import AuthController
 from tests_for_integration.workspace_controller import WorkspaceController
+
+# in the future remove this
+from tests_for_utils.Condor_test import _get_common_sub
 from utils_shared.test_utils import (
     get_full_test_config,
     get_ee2_test_config,
@@ -54,13 +62,8 @@ from utils_shared.test_utils import (
     assert_close_to_now,
     assert_exception_correct,
 )
-from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
-from installed_clients.baseclient import ServerError
-from installed_clients.execution_engine2Client import execution_engine2 as ee2client
-from installed_clients.WorkspaceClient import Workspace
 
-# in the future remove this
-from tests_for_utils.Condor_test import _get_common_sub
+bootstrap()
 
 KEEP_TEMP_FILES = False
 TEMP_DIR = Path("test_temp_can_delete")
@@ -528,6 +531,8 @@ def _check_mongo_job(
             },
         },
         "child_jobs": [],
+        "retry_ids": [],
+        "retry_saved_toggle": False,
         "batch_job": False,
         "scheduler_id": "123",
         "scheduler_type": "condor",
@@ -1243,6 +1248,8 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
                 },
             },
             "child_jobs": [],
+            "retry_ids": [],
+            "retry_saved_toggle": False,
             "batch_job": False,
             "scheduler_id": "123",
             "scheduler_type": "condor",
@@ -1272,6 +1279,8 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
                 "narrative_cell_info": {},
             },
             "child_jobs": [],
+            "retry_ids": [],
+            "retry_saved_toggle": False,
             "batch_job": False,
             "scheduler_id": "456",
             "scheduler_type": "condor",
@@ -1299,6 +1308,8 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             },
             "child_jobs": [job_id_1, job_id_2],
             "batch_job": True,
+            "retry_ids": [],
+            "retry_saved_toggle": False,
         }
         assert parent_job == expected_parent_job
 
@@ -1430,6 +1441,8 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             "batch_job": False,
             "scheduler_id": "123",
             "scheduler_type": "condor",
+            "retry_ids": [],
+            "retry_saved_toggle": False,
         }
         assert job1 == expected_job1
 
@@ -1455,6 +1468,8 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             "batch_job": False,
             "scheduler_id": "456",
             "scheduler_type": "condor",
+            "retry_ids": [],
+            "retry_saved_toggle": False,
         }
         assert job2 == expected_job2
 
@@ -1474,6 +1489,8 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             },
             "child_jobs": [job_id_1, job_id_2],
             "batch_job": True,
+            "retry_ids": [],
+            "retry_saved_toggle": False,
         }
         assert parent_job == expected_parent_job
 
