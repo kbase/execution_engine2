@@ -86,9 +86,9 @@ class EE2RunJob:
         self.logger = self.sdkmr.get_logger()
 
     def _init_job_rec(
-            self,
-            user_id: str,
-            params: Dict,
+        self,
+        user_id: str,
+        params: Dict,
     ) -> str:
         f"""
         Save an initial job record to the db and send a message to kafka
@@ -211,7 +211,7 @@ class EE2RunJob:
                 )
 
     def _finish_created_job(
-            self, job_id, exception, error_code=None, error_message=None
+        self, job_id, exception, error_code=None, error_message=None
     ):
         """
         :param job_id:
@@ -268,7 +268,7 @@ class EE2RunJob:
             raise e
 
         if submission_info.error is not None and isinstance(
-                submission_info.error, Exception
+            submission_info.error, Exception
         ):
             self._finish_created_job(exception=submission_info.error, job_id=job_id)
             raise submission_info.error
@@ -355,7 +355,14 @@ class EE2RunJob:
             if not item:
                 raise MissingRunJobParamsForBatchException()
 
-    def preflight(self, params, batch_params=None, concierge_params=None, has_parent_batch_job=False, as_admin=False):
+    def preflight(
+        self,
+        params,
+        batch_params=None,
+        concierge_params=None,
+        has_parent_batch_job=False,
+        as_admin=False,
+    ):
         """
 
         :param params: A list of job parameters
@@ -371,7 +378,9 @@ class EE2RunJob:
             if not isinstance(dict, batch_params):
                 raise Exception("batch params must be a mapping")
             if not has_parent_batch_job:
-                raise Exception("batch preflight requires a parent_job_id, which was not provided")
+                raise Exception(
+                    "batch preflight requires a parent_job_id, which was not provided"
+                )
         if as_admin:
             self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
         else:
@@ -389,10 +398,8 @@ class EE2RunJob:
         )
         return params
 
-
-
     def run_batch(
-            self, params: List[Dict], batch_params: Dict, as_admin: bool = False
+        self, params: List[Dict], batch_params: Dict, as_admin: bool = False
     ) -> Dict[str, List[str]]:
         """
         :param params: List of RunJobParams (See Spec File)
@@ -401,7 +408,13 @@ class EE2RunJob:
         :return: A mapping containing a parent job_id and a list of child_job_ids
         """
         parent_wsid = batch_params.get(_WORKSPACE_ID)
-        self.preflight(params=params, batch_params=batch_params, concierge_params=None, has_parent_batch_job=True, as_admin=as_admin)
+        self.preflight(
+            params=params,
+            batch_params=batch_params,
+            concierge_params=None,
+            has_parent_batch_job=True,
+            as_admin=as_admin,
+        )
         parent_job = self._create_parent_job(
             wsid=parent_wsid, meta=batch_params.get(_META)
         )
@@ -461,7 +474,7 @@ class EE2RunJob:
                 self._rethrow_incorrect_params_with_error_prefix(e, pre)
 
     def _check_job_requirements_vs_admin(
-            self, jrr, norm, job_reqs, is_write_admin, err_prefix
+        self, jrr, norm, job_reqs, is_write_admin, err_prefix
     ):
         # just a helper method for _add_job_requirements to make that method a bit shorter.
         # treat it as part of that method
@@ -496,7 +509,7 @@ class EE2RunJob:
         return putative_str
 
     def _rethrow_incorrect_params_with_error_prefix(
-            self, error: IncorrectParamsException, error_prefix: str
+        self, error: IncorrectParamsException, error_prefix: str
     ):
         if not error_prefix:
             raise error
@@ -534,9 +547,9 @@ class EE2RunJob:
         return status in [Status.terminated.value, Status.error.value]
 
     def _safe_cancel(
-            self,
-            job_id: str,
-            terminated_code: TerminatedCode,
+        self,
+        job_id: str,
+        terminated_code: TerminatedCode,
     ):
         try:
             self.sdkmr.cancel_job(job_id=job_id, terminated_code=terminated_code.value)
@@ -544,7 +557,7 @@ class EE2RunJob:
             self.logger.error(f"Couldn't cancel {job_id} due to {e}")
 
     def _db_update_failure(
-            self, job_that_failed_operation: str, job_to_abort: str, exception: Exception
+        self, job_that_failed_operation: str, job_to_abort: str, exception: Exception
     ):
         """Attempt to cancel created/queued/running retried job and then raise exception"""
         # TODO Use and create a method in sdkmr?
@@ -648,7 +661,7 @@ class EE2RunJob:
         )
 
     def retry_multiple(
-            self, job_ids, as_admin=False
+        self, job_ids, as_admin=False
     ) -> List[Dict[str, Union[str, Any]]]:
         """
         #TODO Add new job requirements/cgroups as an optional param
@@ -732,7 +745,7 @@ class EE2RunJob:
         return run_job_params
 
     def _handle_job_requirements(
-            self, params: List[Dict], concierge_params: Dict = None, as_admin: bool = False
+        self, params: List[Dict], concierge_params: Dict = None, as_admin: bool = False
     ) -> None:
         """
         Modifies params in place with job requirements
@@ -757,7 +770,7 @@ class EE2RunJob:
         self.logger.debug(msg=f"end_add_job_reqs  = {end_hjr - begin_hjr}s")
 
     def run_one_job(
-            self, params: Dict, concierge_params: Dict = None, as_admin: bool = False
+        self, params: Dict, concierge_params: Dict = None, as_admin: bool = False
     ) -> Optional[str]:
         """
         Request a single ee2 job submission.
@@ -770,12 +783,16 @@ class EE2RunJob:
         if not params:
             raise MissingRunJobParamsException("Must provide run job parameters")
         params = self.preflight(
-            params=[params], batch_params=None, concierge_params=concierge_params, as_admin=as_admin, has_parent_batch_job=False
+            params=[params],
+            batch_params=None,
+            concierge_params=concierge_params,
+            as_admin=as_admin,
+            has_parent_batch_job=False,
         )[0]
         return self._run(params=params)
 
     def _get_job_reqs_from_concierge_params(
-            self, method: str, concierge_params: Dict[str, Any]
+        self, method: str, concierge_params: Dict[str, Any]
     ) -> ResolvedRequirements:
         jrr = self.sdkmr.get_job_requirements_resolver()
         norm = jrr.normalize_job_reqs(concierge_params, "concierge parameters")
