@@ -6,7 +6,7 @@ Unit tests for the EE2Runjob class.
 
 from logging import Logger
 from typing import List, Dict, Any
-from unittest.mock import create_autospec, call, Mock
+from unittest.mock import create_autospec, call
 
 from bson.objectid import ObjectId
 from mock.mock import MagicMock

@@ -19,19 +19,15 @@ class ExecutionEngineException(Exception):
 
 
 class IncorrectParamsException(ExecutionEngineValueError):
-    pass
+    """Wrong parameters were provided"""
 
 
 class MissingRunJobParamsForBatchException(ExecutionEngineValueError):
     """Provided an empty (RunJobParams) parameter mapping to run_batch params"""
 
-    pass
-
 
 class MissingRunJobParamsException(ExecutionEngineValueError):
-    """Provided an empty (RunJobParams) parameter mapping to run_batch params"""
-
-    pass
+    """Provided an empty (RunJobParams) parameter mapping"""
 
 
 class InvalidStatusTransitionException(ExecutionEngineValueError):
@@ -39,7 +35,7 @@ class InvalidStatusTransitionException(ExecutionEngineValueError):
 
 
 class InvalidOperationForStatusException(ExecutionEngineValueError):
-    pass
+    """The current operation is not valid for this job status"""
 
 
 class MissingCondorRequirementsException(ExecutionEngineValueError):
