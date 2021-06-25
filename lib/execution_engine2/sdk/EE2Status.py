@@ -474,6 +474,7 @@ class JobsStatus:
                 del mongo_rec["_id"]
                 mongo_rec["retry_count"] = len(job["retry_ids"])
                 mongo_rec["job_id"] = str(job.id)
+                # Parent batch_jobs do not currently have a job input
                 mongo_rec["parent_job_id"] = (
                     job.job_input.parent_job_id if job.job_input else None
                 )

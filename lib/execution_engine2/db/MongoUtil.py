@@ -232,13 +232,13 @@ class MongoUtil:
                     if not isinstance(exclude_fields, list):
                         raise ValueError("Please input a list type exclude_fields")
                     jobs = (
-                        Job.objects(id__in=job_ids)
+                        Job.objects.in_bulk(job_ids)
                         .exclude(*exclude_fields)
                         .order_by("{}_id".format(sort_id_indicator))
                     )
 
                 else:
-                    jobs = Job.objects(id__in=job_ids).order_by(
+                    jobs = Job.objects.in_bulk(job_ids).order_by(
                         "{}_id".format(sort_id_indicator)
                     )
             except Exception:
