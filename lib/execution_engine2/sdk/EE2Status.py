@@ -474,7 +474,7 @@ class JobsStatus:
                 del mongo_rec["_id"]
                 mongo_rec["retry_count"] = len(job["retry_ids"])
                 mongo_rec["job_id"] = str(job.id)
-                mongo_rec["parent_job_id"] = job.job_input.parent_job_id
+                mongo_rec["parent_job_id"] = job.job_input.parent_job_id if job_job.input else None
                 mongo_rec["created"] = int(job.id.generation_time.timestamp() * 1000)
                 mongo_rec["updated"] = int(job.updated * 1000)
                 if job.estimating:
