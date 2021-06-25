@@ -322,12 +322,12 @@ class Job(Document):
     condor_job_ads = DynamicField()
     child_jobs = ListField()  # Only parent container should have child jobs
     # batch_parent_container = BooleanField(default=False) # Only parent container should have this
-
-    # Only present when a job has been retried and on the retry_parent
-    retry_count = IntField(min_value=0)
-
+    retry_ids = ListField()  # The retry_parent has been used to launch these jobs
     # Only present on a retried job, not it's parent. If attempting to retry this job, use its parent instead
     retry_parent = StringField()
+    retry_saved_toggle = BooleanField(
+        default=False
+    )  # Marked true when all retry steps have completed
 
     meta = {"collection": "ee2_jobs"}
 

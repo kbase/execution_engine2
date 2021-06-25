@@ -67,6 +67,8 @@ def test_retry_db_failures():
     rj._db_update_failure = MagicMock()
     rj._retry(job_id=retry_job.id, job=retry_job, parent_job=parent_job)
 
+    assert not retry_job.retry_saved_toggle
+
 
 def test_validate_retry():
     sdkmr = create_autospec(SDKMethodRunner, instance=True, spec_set=True)
@@ -121,6 +123,8 @@ def test_retry_get_run_job_params_from_existing_job():
         "job_input",
         "child_jobs",
         "batch_job",
+        "retry_ids",
+        "retry_saved_toggle",
     ]
     expected_unequal_keys = [
         "updated",

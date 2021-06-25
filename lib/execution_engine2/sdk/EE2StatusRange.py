@@ -204,14 +204,13 @@ class JobStatusRange:
         str(job_id)
         float(created/queued/estimating/running/finished/updated/) (Time in MS)
         """
-        retry_keys = ["retry_parent", "retried", "retry_count"]
+        hidden_keys = ["retry_saved_toggle"]
 
         job_states = []
         for job in jobs:
             mongo_rec = job.to_mongo().to_dict()
 
-            # Hack until job browser supports these keys
-            for key in retry_keys:
+            for key in hidden_keys:
                 if key in mongo_rec:
                     del mongo_rec[key]
 

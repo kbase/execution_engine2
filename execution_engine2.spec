@@ -428,6 +428,7 @@
         wsid - int - optional id of the workspace where the job is bound
         authstrat - string - what strategy used to authenticate the job
         job_input - object - inputs to the job (from the run_job call)  ## TODO - verify
+        job_output - object - outputs from the job (from the run_job call) ## TODO - verify
         updated - int - timestamp since epoch in milliseconds of the last time the status was updated
         running - int - timestamp since epoch in milliseconds of when it entered the running state
         created - int - timestamp since epoch in milliseconds when the job was created
@@ -452,18 +453,34 @@
         errormsg - string - message (e.g. stacktrace) accompanying an errored job
         error - object - the JSON-RPC error package that accompanies the error code and message
 
-            terminated_code - int - internal reason why a job was terminated, one of:
-                0 - user cancellation
-                1 - admin cancellation
-                2 - terminated by some automatic process
+        #TODO, add these to the structure?
+        condor_job_ads - dict - condor related job information
 
-            @optional error
-            @optional error_code
-            @optional errormsg
-            @optional terminated_code
-            @optional estimating
-            @optional running
-            @optional finished
+        retry_count - int - generated field based on length of retry_ids
+        retry_ids - list - list of jobs that are retried based off of this job
+        retry_parent - str - job_id of the parent this retry is based off of. Not available on a retry_parent itself
+
+        parent_job_id - str - job_id taken from job_input.parent_job_id
+        batch_job - bool - whether or not this is a batch parent container
+        child_jobs - array - Only parent container should have child job ids
+
+        scheduler_type - str - scheduler, such as awe or condor
+        scheduler_id - str - scheduler generated id
+        scheduler_estimator_id - str - id for the job spawned for estimation
+
+
+        terminated_code - int - internal reason why a job was terminated, one of:
+            0 - user cancellation
+            1 - admin cancellation
+            2 - terminated by some automatic process
+
+        @optional error
+        @optional error_code
+        @optional errormsg
+        @optional terminated_code
+        @optional estimating
+        @optional running
+        @optional finished
         */
 
 
@@ -484,6 +501,7 @@
             int error_code;
             string errormsg;
             int terminated_code;
+
         } JobState;
 
         /*
