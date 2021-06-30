@@ -1,3 +1,5 @@
+import copy
+
 from collections import defaultdict
 from typing import Dict
 
@@ -90,4 +92,4 @@ class CatalogCache:
                 {"module_name": module_name, "function_name": function_name}
             )
         # Retrieve from cache
-        return cr_cache[module_name][function_name]
+        return copy.deepcopy(cr_cache[module_name][function_name])

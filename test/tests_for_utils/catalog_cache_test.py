@@ -91,6 +91,39 @@ def test_cc_job_reqs(catalog):
     )
 
 
+def test_cc_job_reqs_internal_mutation(catalog):
+    """
+    Tests that if a client alters the job requirements returned from the cache, it does not
+    affect the cache internals.
+    """
+    catalog.list_client_group_configs.return_value = [{"client_groups": ["kb_upload"]}]
+
+    cc = CatalogCache(catalog)
+
+    # call #1. Depending on the implementation, the catalog info may be returned directly
+    # or added to the cache and the cache entry returned.
+    assert cc.lookup_job_resource_requirements(
+        "kb_uploadmethods", "import_reads_from_staging"
+    ) == [{"client_groups": ["kb_upload"]}]
+
+    # call #2. Regardless of the implementation, this data should be coming from the cache.
+    cgs = cc.lookup_job_resource_requirements("kb_uploadmethods", "import_reads_from_staging")
+    assert cgs == [{"client_groups": ["kb_upload"]}]
+
+    # Mutate the cache if the cache implementation allows it
+    cgs[0]["client_groups"].pop(0)  # The job requirements resolver does this
+
+    # call #3. Confirm that the cache was not mutated
+    assert cc.lookup_job_resource_requirements(
+        "kb_uploadmethods", "import_reads_from_staging"
+    ) == [{"client_groups": ["kb_upload"]}]
+
+    # check there was only one call to the cache
+    catalog.list_client_group_configs.assert_called_once_with(
+        {"module_name": "kb_uploadmethods", "function_name": "import_reads_from_staging"}
+    )
+
+
 def test_cc_git_commit_version(catalog):
     """Test to see the git commit cache is being used."""
     catalog_cache = CatalogCache(catalog=catalog)
