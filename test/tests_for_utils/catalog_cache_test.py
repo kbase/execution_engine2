@@ -107,7 +107,9 @@ def test_cc_job_reqs_internal_mutation(catalog):
     ) == [{"client_groups": ["kb_upload"]}]
 
     # call #2. Regardless of the implementation, this data should be coming from the cache.
-    cgs = cc.lookup_job_resource_requirements("kb_uploadmethods", "import_reads_from_staging")
+    cgs = cc.lookup_job_resource_requirements(
+        "kb_uploadmethods", "import_reads_from_staging"
+    )
     assert cgs == [{"client_groups": ["kb_upload"]}]
 
     # Mutate the cache if the cache implementation allows it
@@ -120,7 +122,10 @@ def test_cc_job_reqs_internal_mutation(catalog):
 
     # check there was only one call to the cache
     catalog.list_client_group_configs.assert_called_once_with(
-        {"module_name": "kb_uploadmethods", "function_name": "import_reads_from_staging"}
+        {
+            "module_name": "kb_uploadmethods",
+            "function_name": "import_reads_from_staging",
+        }
     )
 
 
