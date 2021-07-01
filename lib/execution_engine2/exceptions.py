@@ -1,19 +1,33 @@
 class ExecutionEngineValueError(ValueError):
-    """Base Class for ee2 exceptions"""
+    """
+    Base Class for ee2 value exceptions
+    Subclass exceptions use docstring as default message
+    """
 
-    pass
+    def __init__(self, msg=None, *args, **kwargs):
+        super().__init__(msg or self.__doc__, *args, **kwargs)
 
 
 class ExecutionEngineException(Exception):
-    pass
+    """
+    Base Class for ee2 exceptions
+    Subclass exceptions use docstring as default message
+    """
+
+    def __init__(self, msg=None, *args, **kwargs):
+        super().__init__(msg or self.__doc__, *args, **kwargs)
 
 
 class IncorrectParamsException(ExecutionEngineValueError):
-    pass
+    """Wrong parameters were provided"""
+
+
+class InvalidParameterForBatch(ExecutionEngineValueError):
+    """Workspace ids are not allowed in RunJobParams in Batch Mode"""
 
 
 class MissingRunJobParamsException(ExecutionEngineValueError):
-    """Missing a required run_job_parameter"""
+    """Provided an empty (RunJobParams) parameter mapping"""
 
 
 class InvalidStatusTransitionException(ExecutionEngineValueError):
@@ -21,7 +35,7 @@ class InvalidStatusTransitionException(ExecutionEngineValueError):
 
 
 class InvalidOperationForStatusException(ExecutionEngineValueError):
-    pass
+    """The current operation is not valid for this job status"""
 
 
 class MissingCondorRequirementsException(ExecutionEngineValueError):

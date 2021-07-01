@@ -9,7 +9,11 @@ from unittest.mock import patch
 import requests_mock
 from mock import MagicMock
 
-from execution_engine2.exceptions import CannotRetryJob, RetryFailureException
+from execution_engine2.exceptions import (
+    CannotRetryJob,
+    RetryFailureException,
+    InvalidParameterForBatch,
+)
 from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.utils.clients import (
     get_client_set,
@@ -452,7 +456,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
         runner = self.getRunner()
         runner.workspace.get_object_info3 = MagicMock(return_value={"paths": []})
-        runner.workspace_auth.can_write = MagicMock(return_value=True)
         runner.get_condor = MagicMock(return_value=condor_mock)
 
         quast_params = {
@@ -517,25 +520,38 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner.get_condor = MagicMock(return_value=condor_mock)
         runner.workspace.get_object_info3 = MagicMock(return_value={"paths": []})
         job = get_example_job_as_dict(
-            user=self.user_id, wsid=self.ws_id, source_ws_objects=[]
+            user=self.user_id, wsid=None, source_ws_objects=[]
         )
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-        jobs = [job, job, job]
-        job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
+        jobs = [copy.deepcopy(job), copy.deepcopy(job), copy.deepcopy(job)]
+        job_ids = runner.run_job_batch(
+            params=copy.deepcopy(jobs), batch_params={"wsid": self.ws_id}
+        )
 
         assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
         assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
         assert len(job_ids["child_job_ids"]) == len(jobs)
 
-        # Test that you can't run a job in someone elses workspace
-        with self.assertRaises(PermissionError):
-            job_bad = get_example_job(user=self.user_id, wsid=1234).to_mongo().to_dict()
-            job_bad["method"] = job["job_input"]["app_id"]
+        with self.assertRaises(InvalidParameterForBatch):
+            job_bad = (
+                get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
+            )
+            job_bad["method"] = job["job_input"]["method"]
             job_bad["app_id"] = job["job_input"]["app_id"]
             job_bad["service_ver"] = job["job_input"]["service_ver"]
-            jobs = [job, job_bad]
+            jobs = [copy.deepcopy(job), job_bad]
             runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
+
+        # Test that you can't run a job in someone elses workspace
+        no_perms_ws = 111970
+        with self.assertRaises(PermissionError):
+            job_bad = get_example_job(user=self.user_id, wsid=None).to_mongo().to_dict()
+            job_bad["method"] = job["job_input"]["method"]
+            job_bad["app_id"] = job["job_input"]["app_id"]
+            job_bad["service_ver"] = job["job_input"]["service_ver"]
+            jobs = [copy.deepcopy(job), job_bad]
+            runner.run_job_batch(params=jobs, batch_params={"wsid": no_perms_ws})
 
         # Squeeze in a retry test here
         parent_job_id = job_ids["parent_job_id"]

@@ -4,6 +4,7 @@ Unit tests for the EE2Runjob class.
 
 # Incomplete by a long way. Will add more unit tests as they come up.
 
+import copy
 from logging import Logger
 from typing import List, Dict, Any
 from unittest.mock import create_autospec, call
@@ -14,7 +15,11 @@ from pytest import raises
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job, JobInput, JobRequirements, Meta
-from execution_engine2.exceptions import IncorrectParamsException, AuthError
+from execution_engine2.exceptions import (
+    IncorrectParamsException,
+    AuthError,
+    InvalidParameterForBatch,
+)
 from execution_engine2.sdk.EE2Runjob import EE2RunJob, JobPermissions
 from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.sdk.job_submission_parameters import (
@@ -615,12 +620,21 @@ def test_run_job_and_run_job_batch_fail_illegal_arguments():
 
     Tests both the run() and run_batch() methods.
     """
+    # These are extremely annoying to debug as they don't raise a stacktrace if a different exception type was thrown
+    # or let you know that it was an entirely different exception, or if the exception happened in the bulk version of the run
+
     _run_and_run_batch_fail_illegal_arguments(
         {}, IncorrectParamsException("Missing input parameter: method ID")
     )
     _run_and_run_batch_fail_illegal_arguments(
         {"method": "foo.bar", "wsid": 0},
         IncorrectParamsException("wsid must be at least 1"),
+        InvalidParameterForBatch(),
+    )
+    _run_and_run_batch_fail_illegal_arguments(
+        {"method": "foo.bar", "wsid": -1},
+        IncorrectParamsException("wsid must be at least 1"),
+        InvalidParameterForBatch(),
     )
     _run_and_run_batch_fail_illegal_arguments(
         {"method": "foo.bar", "source_ws_objects": {"a": "b"}},
@@ -646,11 +660,11 @@ def test_run_job_and_run_job_batch_fail_illegal_arguments():
     )
 
 
-def _run_and_run_batch_fail_illegal_arguments(params, expected):
+def _run_and_run_batch_fail_illegal_arguments(params, expected, batch_expected=None):
     mocks = _set_up_mocks(_USER, _TOKEN)
     jrr = mocks[JobRequirementsResolver]
     jrr.resolve_requirements.return_value = ResolvedRequirements(1, 1, 1, "cg")
-    _run_and_run_batch_fail(mocks[SDKMethodRunner], params, expected)
+    _run_and_run_batch_fail(mocks[SDKMethodRunner], params, expected, batch_expected)
 
 
 def test_run_job_and_run_job_batch_fail_arg_normalization():
@@ -723,12 +737,16 @@ def test_run_job_and_run_job_batch_fail_workspace_objects_check():
     )
 
 
-def _run_and_run_batch_fail(sdkmr, params, expected, as_admin=True):
+def _run_and_run_batch_fail(
+    sdkmr, params, expected, batch_expected=None, as_admin=True
+):
     rj = EE2RunJob(sdkmr)
     with raises(Exception) as got:
         rj.run(params, as_admin=as_admin)
     assert_exception_correct(got.value, expected)
 
+    if batch_expected:
+        expected = batch_expected
     _run_batch_fail(rj, [params], {}, as_admin, expected)
 
 
@@ -812,6 +830,7 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
         app=_APP_1,
         git_commit=_GIT_COMMIT_1,
         source_ws_objects=[_WS_REF_1, _WS_REF_2],
+        wsid=parent_wsid,
         parent_job_id=_JOB_ID,
     )
     got_job_1 = sdkmr.save_job.call_args_list[0][0][0]
@@ -822,7 +841,7 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
         method=_METHOD_2,
         app=_APP_2,
         git_commit=_GIT_COMMIT_2,
-        wsid=wsid,
+        wsid=parent_wsid,
         parent_job_id=_JOB_ID,
     )
     # index 2 because job 1 is updated with save_job before this job is created
@@ -836,6 +855,7 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
         UserCreds(_USER, _TOKEN),
         parent_job_id=_JOB_ID,
         source_ws_objects=[_WS_REF_1, _WS_REF_2],
+        wsid=parent_wsid,
     )
     jsp_expected_2 = JobSubmissionParameters(
         _JOB_ID_2,
@@ -843,7 +863,7 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
         reqs2,
         UserCreds(_USER, _TOKEN),
         parent_job_id=_JOB_ID,
-        wsid=wsid,
+        wsid=parent_wsid,
     )
     mocks[Condor].run_job.assert_has_calls(
         [call(params=jsp_expected_1), call(params=jsp_expected_2)]
@@ -906,6 +926,10 @@ def test_run_job_batch_with_parent_job_wsid():
     potential code paths or provide all the possible run inputs, such as job parameters, cell
     metadata, etc.
     """
+    # When an assertion is failed, this test doesn't show you where failed in PyCharm, so use
+    # Additional arguments `--no-cov -s` or run from cmd line
+    # PYTHONPATH=.:lib:test pytest test/tests_for_sdkmr/EE2Runjob_test.py::test_run_job_batch_with_parent_job_wsid --no-cov
+
     # set up variables
     parent_wsid = 89
     wsid = 32
@@ -956,6 +980,11 @@ def test_run_job_batch_with_parent_job_wsid():
             "wsid": wsid,
         },
     ]
+    with raises(InvalidParameterForBatch) as got:
+        rj.run_batch(copy.deepcopy(params), {"wsid": parent_wsid})
+    assert_exception_correct(got.value, InvalidParameterForBatch())
+
+    params[1]["wsid"] = None
     assert rj.run_batch(params, {"wsid": parent_wsid}) == {
         "parent_job_id": _JOB_ID,
         "child_job_ids": [_JOB_ID_1, _JOB_ID_2],
@@ -963,8 +992,7 @@ def test_run_job_batch_with_parent_job_wsid():
 
     # check mocks called as expected. The order here is the order that they're called in the code.
     mocks[WorkspaceAuth].can_write.assert_called_once_with(parent_wsid)
-    # this seems like a bug. See comments in the run_batch method
-    mocks[WorkspaceAuth].can_write_list.assert_called_once_with([parent_wsid, wsid])
+
     jrr = mocks[JobRequirementsResolver]
     jrr.normalize_job_reqs.assert_has_calls(
         [call({}, "input job"), call({}, "input job")]
@@ -1061,7 +1089,6 @@ def test_run_job_batch_as_admin_with_job_requirements():
         {
             "method": _METHOD_2,
             "app_id": _APP_2,
-            "wsid": wsid,
             "job_requirements": inc_reqs,
         },
     ]
@@ -1138,7 +1165,7 @@ def test_run_job_batch_fail_illegal_arguments():
         [job, {"method": "foo.bar", "wsid": 0}],
         {},
         True,
-        IncorrectParamsException("Job #2: wsid must be at least 1"),
+        InvalidParameterForBatch(),
     )
     _run_batch_fail(
         rj,
