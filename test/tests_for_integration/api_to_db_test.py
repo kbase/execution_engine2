@@ -100,7 +100,6 @@ MONGO_EE2_JOBS_COL = "ee2_jobs"
 _MOD = "mod.meth"
 _APP = "mod/app"
 
-
 from test.utils_shared.test_utils import bootstrap
 
 bootstrap()
@@ -1150,6 +1149,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
     """
     A test of the run_job method.
     """
+    batch_wsid = 1
     _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN, "foo")  # ws 1
     _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN, "bar")  # ws 2
     # need to get the mock objects first so spec_set can do its magic before we mock out
@@ -1188,15 +1188,16 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
                 "cell_id": "cid",
                 "thiskey": "getssilentlydropped",
             },
+            "wsid": None,
         }
         job2_params = {
             "method": "mod2.meth2",
             "app_id": "mod2/app2",
-            "wsid": 1,
+            "wsid": None,
             "params": [{"baz": "bat"}, 3.14],
         }
         job_batch_params = {
-            "wsid": 2,
+            "wsid": batch_wsid,
             "meta": {
                 "run_id": "rid2",
                 "token_id": "tid2",
@@ -1234,6 +1235,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             "authstrat": "kbaseworkspace",
             "status": "queued",
             "job_input": {
+                "wsid": batch_wsid,
                 "method": _MOD,
                 "params": [{"foo": "bar"}, 42],
                 "service_ver": "somehash",
@@ -1258,6 +1260,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             "batch_job": False,
             "scheduler_id": "123",
             "scheduler_type": "condor",
+            "wsid": batch_wsid,
         }
         assert job1 == expected_job1
 
@@ -1265,10 +1268,9 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             "_id": ObjectId(job_id_2),
             "user": USER_NO_ADMIN,
             "authstrat": "kbaseworkspace",
-            "wsid": 1,
             "status": "queued",
             "job_input": {
-                "wsid": 1,
+                "wsid": batch_wsid,
                 "method": "mod2.meth2",
                 "params": [{"baz": "bat"}, 3.14],
                 "service_ver": "somehash2",
@@ -1283,6 +1285,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
                 },
                 "narrative_cell_info": {},
             },
+            "wsid": batch_wsid,
             "child_jobs": [],
             "retry_ids": [],
             "retry_saved_toggle": False,
@@ -1290,14 +1293,23 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             "scheduler_id": "456",
             "scheduler_type": "condor",
         }
+
+        job2_wsid = job2.get("wsid")
+        job2_input_wsid = job2.get("job_input").get("wsid")
+        expected_job_wsid = expected_job2.get("wsid")
+        expected_jobinput_wsid = expected_job2.get("job_input").get("wsid")
+
+        assert job2_wsid == expected_job_wsid
+        assert job2_input_wsid == expected_jobinput_wsid
+
         assert job2 == expected_job2
+        # Assertion error here is that the expected job has "wsid" in two places, even though expected job
 
         parent_job = _get_mongo_job(mongo_client, parent_job_id, has_queued=False)
         expected_parent_job = {
             "_id": ObjectId(parent_job_id),
             "user": USER_NO_ADMIN,
             "authstrat": "kbaseworkspace",
-            "wsid": 2,
             "status": "created",
             "job_input": {
                 "method": "batch",
@@ -1311,11 +1323,21 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
                     "cell_id": "cid2",
                 },
             },
+            "wsid": batch_wsid,
             "child_jobs": [job_id_1, job_id_2],
             "batch_job": True,
             "retry_ids": [],
             "retry_saved_toggle": False,
         }
+
+        pjw = parent_job.get("wsid")
+        pjjw = parent_job.get("job_input").get("wsid")
+
+        epj = expected_parent_job.get("wsid")
+        epjj = expected_parent_job.get("job_input").get("wsid")
+
+        assert pjw == epj
+        assert pjjw == epjj
         assert parent_job == expected_parent_job
 
         expected_sub_1 = _get_condor_sub_for_rj_param_set(
@@ -1585,10 +1607,20 @@ def test_run_job_batch_fail_no_workspace_access_for_batch(ee2_port, ws_controlle
     _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 2}, err)
 
 
-def test_run_job_batch_fail_no_workspace_access_for_job(ee2_port):
+def test_run_job_batch_fail_no_workspace_allowed_in_job_inputs(ee2_port):
     params = [
         {"method": _MOD},
         {"method": _MOD, "wsid": 1},
+    ]
+    # this error could probably use some cleanup
+    err = "Workspace ids not allowed in RunJobParams in Batch Mode"
+    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+
+
+def test_run_job_batch_fail_no_workspace_access_for_job(ee2_port):
+    params = [
+        {"method": _MOD},
+        {"method": _MOD},
     ]
     # this error could probably use some cleanup
     err = (
