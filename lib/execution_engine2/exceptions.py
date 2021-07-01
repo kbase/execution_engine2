@@ -22,8 +22,8 @@ class IncorrectParamsException(ExecutionEngineValueError):
     """Wrong parameters were provided"""
 
 
-class MissingRunJobParamsForBatchException(ExecutionEngineValueError):
-    """Provided an empty (RunJobParams) parameter mapping to run_batch params"""
+class InvalidParameterForBatch(ExecutionEngineValueError):
+    """Workspace ids not allowed in RunJobParams in Batch Mode"""
 
 
 class MissingRunJobParamsException(ExecutionEngineValueError):

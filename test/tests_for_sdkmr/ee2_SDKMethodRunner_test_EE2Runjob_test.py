@@ -10,7 +10,11 @@ import requests_mock
 from bson import ObjectId
 from mock import MagicMock
 
-from execution_engine2.exceptions import CannotRetryJob, RetryFailureException
+from execution_engine2.exceptions import (
+    CannotRetryJob,
+    RetryFailureException,
+    InvalidParameterForBatch,
+)
 from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.utils.clients import (
     get_client_set,
@@ -249,7 +253,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         assert ObjectId(job_id)
         rj = runner.get_runjob()
         # Run preflight
-        params = rj._preflight([job])
+        params = rj.preflight([job])
         assert params == [job]
 
     @staticmethod
@@ -507,6 +511,9 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         # TODO Retry a job without an app_id
         # TODO Check narrative_cell_info
 
+    #        with self.assertRaises(InvalidParameterForBatch):
+    #        runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
+
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_run_job_batch(self, rq_mock, condor_mock):
@@ -522,12 +529,16 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         runner.get_condor = MagicMock(return_value=condor_mock)
         runner.workspace.get_object_info3 = MagicMock(return_value={"paths": []})
         job = get_example_job_as_dict(
-            user=self.user_id, wsid=self.ws_id, source_ws_objects=[]
+            user=self.user_id, wsid=None, source_ws_objects=[]
         )
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
         jobs = [job, job, job]
-        job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
+
+        # with self.assertRaises(InvalidParameterForBatch):
+        job_ids = runner.run_job_batch(
+            params=copy.deepcopy(jobs), batch_params={"wsid": self.ws_id}
+        )
 
         assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
         assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
@@ -535,12 +546,14 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         # Test that you can't run a job in someone elses workspace
         with self.assertRaises(PermissionError):
-            job_bad = get_example_job(user=self.user_id, wsid=1234).to_mongo().to_dict()
-            job_bad["method"] = job["job_input"]["app_id"]
+            job_bad = get_example_job(user=self.user_id, wsid=None).to_mongo().to_dict()
+            job_bad["method"] = job["job_input"]["method"]
             job_bad["app_id"] = job["job_input"]["app_id"]
             job_bad["service_ver"] = job["job_input"]["service_ver"]
             jobs = [job, job_bad]
-            runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
+            runner.run_job_batch(
+                params=copy.deepcopy(jobs), batch_params={"wsid": 12345}
+            )
 
         # Squeeze in a retry test here
         parent_job_id = job_ids["parent_job_id"]

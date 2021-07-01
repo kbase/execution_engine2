@@ -144,7 +144,7 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         )
         runner = self.getRunner()
         runner.get_condor = MagicMock(return_value=condor_mock)
-        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=self.ws_id)
+        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
@@ -229,7 +229,7 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         )
         runner = self.getRunner()  # type: SDKMethodRunner
         runner.get_condor = MagicMock(return_value=condor_mock)
-        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=self.ws_id)
+        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
@@ -257,7 +257,7 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         )
         runner = self.getRunner()  # type: SDKMethodRunner
         runner.get_condor = MagicMock(return_value=condor_mock)
-        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=self.ws_id)
+        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
@@ -293,7 +293,7 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         )
         runner = self.getRunner()  # type: SDKMethodRunner
         runner.get_condor = MagicMock(return_value=condor_mock)
-        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=self.ws_id)
+        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)

@@ -9,6 +9,7 @@ import time
 from collections import defaultdict
 from enum import Enum
 from typing import Optional, Dict, NamedTuple, Union, List, Any
+import copy
 
 from execution_engine2.db.models.models import (
     Job,
@@ -25,7 +26,7 @@ from execution_engine2.exceptions import (
     AuthError,
     CannotRetryJob,
     RetryFailureException,
-    MissingRunJobParamsForBatchException,
+    InvalidParameterForBatch,
 )
 from execution_engine2.sdk.EE2Constants import CONCIERGE_CLIENTGROUP
 from execution_engine2.sdk.job_submission_parameters import (
@@ -347,56 +348,79 @@ class EE2RunJob:
 
         return child_jobs
 
-    @staticmethod
-    def _check_batch_params(params):
-        if type(params) != list:
-            raise IncorrectParamsException("params must be a list")
+    def _handle_wsids(self, params, batch_params, is_a_batch_job, as_admin=False):
+        """
+        Checks for workspace permissions
+        Adds wsids into jobs based on Batch Parameters
+        Modifies Params in Place
+        """
+        if as_admin:
+            self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
+        else:
+            wsids = list(
+                set(
+                    [
+                        job_param.get("wsid")
+                        for job_param in params
+                        if "wsid" in job_param and job_param.get("wsid") is not None
+                    ]
+                )
+            )
 
-        for item in params:
-            if not item:
-                raise MissingRunJobParamsForBatchException()
+            if len(wsids) > 0 and is_a_batch_job:
+                raise InvalidParameterForBatch(
+                    "Workspace ids not allowed in RunJobParams in Batch Mode"
+                )
+
+            batch_params_wsid = None
+            if is_a_batch_job and batch_params and "wsid" in batch_params:
+                batch_params_wsid = batch_params.get("wsid")
+                wsids.append(batch_params_wsid)
+
+            if batch_params_wsid:
+                for param in params:
+                    param["wsid"] = batch_params_wsid
+
+            self._check_workspace_permissions_list(wsids)
 
     def preflight(
         self,
         params,
         batch_params=None,
         concierge_params=None,
-        has_parent_batch_job=False,
+        is_a_batch_job=False,
         as_admin=False,
     ):
         """
 
-        :param params: A list of job parameters
-        :param batch_params:  A single mapping of batch parameters
+        :param params: A list of RunJobParams
+        :param batch_params:  A single, optional mapping of batch parameters
         :param concierge_params: A single mapping of concierge parameters
-        :param has_parent_batch_job: Whether or not this is a batch job, not to be confused with kbparallels jobs
+        :param is_a_batch_job: Whether or not this is a batch job, not to be confused with kbparallels jobs
         :param as_admin: Whether or not to bypass the ws permissions checks
         :return:
         """
         if not isinstance(params, list):
-            raise Exception("params must be a list")
-        if batch_params:
-            if not isinstance(dict, batch_params):
-                raise Exception("batch params must be a mapping")
-            if not has_parent_batch_job:
-                raise Exception(
-                    "batch preflight requires a parent_job_id, which was not provided"
-                )
-        if as_admin:
-            self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
-        else:
-            wsids = [
-                job_param.get("wsid") for job_param in params if job_param.get("wsid")
-            ]
-            if batch_params.get("wsid"):
-                wsids.append(batch_params.get("wsid"))
-            self._check_workspace_permissions_list(wsids)
+            raise IncorrectParamsException("RunJobParams must be a list of mappings")
 
-        self._handle_job_requirements(params=params, as_admin=as_admin)
-        self._check_job_arguments(params, has_parent_job=has_parent_batch_job)
+        for param in params:
+            if not isinstance(param, dict):
+                raise IncorrectParamsException(
+                    f"RunJobParam must be a mapping, got {type(params)}"
+                )
+            if not param:
+                raise MissingRunJobParamsException()
+
+        self._handle_wsids(
+            params=params,
+            batch_params=batch_params,
+            is_a_batch_job=is_a_batch_job,
+            as_admin=as_admin,
+        )
         self._handle_job_requirements(
             params=params, concierge_params=concierge_params, as_admin=as_admin
         )
+        self._check_job_arguments(params, has_parent_job=is_a_batch_job)
         return params
 
     def run_batch(
@@ -408,14 +432,14 @@ class EE2RunJob:
         :param as_admin: Allows you to run jobs in other people's workspaces
         :return: A mapping containing a parent job_id and a list of child_job_ids
         """
-        parent_wsid = batch_params.get(_WORKSPACE_ID)
         self.preflight(
             params=params,
             batch_params=batch_params,
             concierge_params=None,
-            has_parent_batch_job=True,
+            is_a_batch_job=True,
             as_admin=as_admin,
         )
+        parent_wsid = batch_params.get(_WORKSPACE_ID) if batch_params else None
         parent_job = self._create_parent_job(
             wsid=parent_wsid, meta=batch_params.get(_META)
         )
@@ -540,7 +564,8 @@ class EE2RunJob:
                 )
             # This is also an opportunity for caching
             # although most likely jobs aren't operating on the same object
-            # TODO Maybe remove this check to speed up submission time? Or move it into the thread and let some jobs succeed?
+            # TODO Maybe remove this check to speed up submission time?
+            #  Or move it into the thread and let some jobs succeed while others fail due to bad ws_obj_ids?
             self._check_ws_objects(source_objects=job.get(_SOURCE_WS_OBJECTS))
 
     @staticmethod
@@ -791,14 +816,12 @@ class EE2RunJob:
         :param concierge_params: Allows you to specify request_cpu, request_memory, request_disk, clientgroup
         :return: The condor job id
         """
-        if not params:
-            raise MissingRunJobParamsException("Must provide run job parameters")
         params = self.preflight(
             params=[params],
             batch_params=None,
             concierge_params=concierge_params,
             as_admin=as_admin,
-            has_parent_batch_job=False,
+            is_a_batch_job=False,
         )[0]
         return self._run(params=params)
 
