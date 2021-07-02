@@ -367,8 +367,8 @@ class EE2RunJob:
         self.preflight(
             runjob_params=params,
             batch_params=batch_params,
-            as_admin=as_admin,
             new_batch_job=True,
+            as_admin=as_admin,
         )
 
         self._add_job_requirements(params, bool(as_admin))  # as_admin checked above
@@ -709,13 +709,6 @@ class EE2RunJob:
         # Then the next fields are job inputs top level requirements, app run parameters, and scheduler resource requirements
         return run_job_params
 
-    def _check_batch_params(self, batch_params, is_batch_job):
-        if is_batch_job:
-            if batch_params is not None and not isinstance(batch_params, dict):
-                raise IncorrectParamsException(
-                    f"Batch params must be a mapping. Got {type(batch_params)}"
-                )
-
     def _check_ws_perms(
         self, runjob_params, new_batch_job, batch_params, as_admin=False
     ):
@@ -743,9 +736,8 @@ class EE2RunJob:
                 "runjob_params must be a mapping or a list of mappings"
             )
 
-    def _propogate_wsid_for_new_batch_jobs(
-        self, runjob_params, batch_params, new_batch_job
-    ):
+    @staticmethod
+    def _propagate_wsid_for_new_batch_jobs(runjob_params, batch_params, new_batch_job):
         """
         For batch jobs, check to make sure the job params do not provide a wsid other than None or 0
         Then Modify the run job params to use the batch params wsid, which may be set to None
@@ -763,12 +755,7 @@ class EE2RunJob:
                 runjob_params[i]["wsid"] = batch_wsid
 
     def preflight(
-        self,
-        runjob_params,
-        batch_params=None,
-        concierge_params=None,
-        new_batch_job=False,
-        as_admin=False,
+        self, runjob_params, batch_params=None, new_batch_job=False, as_admin=False
     ):
         if batch_params and not new_batch_job:
             raise Exception(
@@ -777,7 +764,7 @@ class EE2RunJob:
         if batch_params == runjob_params:
             raise Exception("RunJobParams and BatchParams cannot be identical")
 
-        self._propogate_wsid_for_new_batch_jobs(
+        self._propagate_wsid_for_new_batch_jobs(
             runjob_params=runjob_params,
             batch_params=batch_params,
             new_batch_job=new_batch_job,
@@ -800,9 +787,7 @@ class EE2RunJob:
         :return: The condor job id
         """
 
-        self.preflight(
-            runjob_params=params, concierge_params=concierge_params, as_admin=as_admin
-        )
+        self.preflight(runjob_params=params, as_admin=as_admin)
 
         if concierge_params:
             self.sdkmr.check_as_concierge()
