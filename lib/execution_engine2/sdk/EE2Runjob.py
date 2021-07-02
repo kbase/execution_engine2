@@ -4,7 +4,6 @@ All functions related to running a job, and starting a job, including the initia
 the logic to retrieve info needed by the runnner to start the job
 
 """
-import copy
 import os
 import time
 from collections import defaultdict
