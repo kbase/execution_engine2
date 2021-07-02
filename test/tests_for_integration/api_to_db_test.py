@@ -39,7 +39,7 @@ import pymongo
 from bson import ObjectId
 from pytest import fixture, raises
 
-from exceptions import InvalidParameterForBatch
+from execution_engine2.exceptions import InvalidParameterForBatch
 from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.baseclient import ServerError
