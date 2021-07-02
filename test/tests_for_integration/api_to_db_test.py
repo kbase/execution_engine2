@@ -39,6 +39,7 @@ import pymongo
 from bson import ObjectId
 from pytest import fixture, raises
 
+from exceptions import InvalidParameterForBatch
 from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.baseclient import ServerError
@@ -453,6 +454,7 @@ def _get_condor_sub_for_rj_param_set(
     parent_job_id="totallywrongid",
     app_id=_APP,
     app_module="mod",
+    wsid=1,
 ):
     expected_sub = _get_common_sub(job_id)
     expected_sub.update(
@@ -464,7 +466,7 @@ def _get_condor_sub_for_rj_param_set(
             "+KB_FUNCTION_NAME": '"meth"',
             "+KB_APP_ID": f'"{app_id}"' if app_id else "",
             "+KB_APP_MODULE_NAME": f'"{app_module}"' if app_module else "",
-            "+KB_WSID": '"1"',
+            "+KB_WSID": f'"{wsid}"',
             "+KB_SOURCE_WS_OBJECTS": '"1/1/1,1/2/1"',
             "request_cpus": f"{cpu}",
             "request_memory": f"{mem}MB",
@@ -1187,11 +1189,12 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
         job2_params = {
             "method": "mod2.meth2",
             "app_id": "mod2/app2",
-            "wsid": 1,
+            # "wsid": 1,
             "params": [{"baz": "bat"}, 3.14],
         }
+        job_batch_wsid = 2
         job_batch_params = {
-            "wsid": 2,
+            "wsid": job_batch_wsid,
             "meta": {
                 "run_id": "rid2",
                 "token_id": "tid2",
@@ -1229,6 +1232,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             "authstrat": "kbaseworkspace",
             "status": "queued",
             "job_input": {
+                "wsid": job_batch_wsid,
                 "method": _MOD,
                 "params": [{"foo": "bar"}, 42],
                 "service_ver": "somehash",
@@ -1247,6 +1251,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
                     "cell_id": "cid",
                 },
             },
+            "wsid": job_batch_wsid,
             "child_jobs": [],
             "retry_ids": [],
             "retry_saved_toggle": False,
@@ -1254,16 +1259,24 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             "scheduler_id": "123",
             "scheduler_type": "condor",
         }
+        job_wsid = job1.get("wsid")
+        expected_job_wsid = expected_job1.get("wsid")
+
+        job_input_wsid = job1.get("wsid")
+        expected_job_input_wsid = expected_job1.get("wsid")
+
+        assert job_wsid == expected_job_wsid
+        assert job_input_wsid == expected_job_input_wsid
         assert job1 == expected_job1
 
         expected_job2 = {
             "_id": ObjectId(job_id_2),
             "user": USER_NO_ADMIN,
             "authstrat": "kbaseworkspace",
-            "wsid": 1,
+            "wsid": job_batch_wsid,
             "status": "queued",
             "job_input": {
-                "wsid": 1,
+                "wsid": job_batch_wsid,
                 "method": "mod2.meth2",
                 "params": [{"baz": "bat"}, 3.14],
                 "service_ver": "somehash2",
@@ -1292,9 +1305,10 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             "_id": ObjectId(parent_job_id),
             "user": USER_NO_ADMIN,
             "authstrat": "kbaseworkspace",
-            "wsid": 2,
+            "wsid": job_batch_wsid,
             "status": "created",
             "job_input": {
+                # "wsid": job_batch_wsid,
                 "method": "batch",
                 "service_ver": "batch",
                 "app_id": "batch",
@@ -1324,8 +1338,9 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             parent_job_id=parent_job_id,
             app_id=None,
             app_module=None,
+            wsid=job_batch_wsid,
         )
-        expected_sub_1["+KB_WSID"] = ""
+        expected_sub_1["+KB_WSID"] = f'"{job_batch_wsid}"'
         expected_sub_2 = _get_condor_sub_for_rj_param_set(
             job_id_2,
             USER_NO_ADMIN,
@@ -1335,6 +1350,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             mem=2000,
             disk=100,
             parent_job_id=parent_job_id,
+            wsid=job_batch_wsid,
         )
         expected_sub_2.update(
             {
@@ -1395,7 +1411,8 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
                 "debug_mode": True,
             },
         }
-        job_batch_params = {"wsid": 1, "as_admin": "foo"}
+        job_batch_wsid = 1
+        job_batch_params = {"wsid": job_batch_wsid, "as_admin": "foo"}
         ee2 = ee2client(f"http://localhost:{ee2_port}", token=TOKEN_WRITE_ADMIN)
         ret = ee2.run_job_batch([job1_params, job2_params], job_batch_params)
         parent_job_id = ret["parent_job_id"]
@@ -1424,7 +1441,9 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             "user": USER_WRITE_ADMIN,
             "authstrat": "kbaseworkspace",
             "status": "queued",
+            "wsid": job_batch_wsid,
             "job_input": {
+                "wsid": job_batch_wsid,
                 "method": _MOD,
                 "service_ver": "somehash",
                 "source_ws_objects": [],
@@ -1451,7 +1470,9 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             "user": USER_WRITE_ADMIN,
             "authstrat": "kbaseworkspace",
             "status": "queued",
+            "wsid": job_batch_wsid,
             "job_input": {
+                "wsid": job_batch_wsid,
                 "method": "mod2.meth2",
                 "service_ver": "somehash2",
                 "source_ws_objects": [],
@@ -1478,9 +1499,10 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             "_id": ObjectId(parent_job_id),
             "user": USER_WRITE_ADMIN,
             "authstrat": "kbaseworkspace",
-            "wsid": 1,
+            "wsid": job_batch_wsid,
             "status": "created",
             "job_input": {
+                # "wsid": job_batch_wsid,
                 "method": "batch",
                 "service_ver": "batch",
                 "app_id": "batch",
@@ -1505,8 +1527,12 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             parent_job_id=parent_job_id,
             app_id=None,
             app_module=None,
+            wsid=job_batch_wsid,
         )
-        expected_sub_1.update({"+KB_SOURCE_WS_OBJECTS": "", "+KB_WSID": ""})
+        expected_sub_1.update(
+            {"+KB_SOURCE_WS_OBJECTS": "", "+KB_WSID": f'"{job_batch_wsid}"'}
+        )
+
         expected_sub_2 = _get_condor_sub_for_rj_param_set(
             job_id_2,
             USER_WRITE_ADMIN,
@@ -1518,11 +1544,12 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             parent_job_id=parent_job_id,
             app_id=None,
             app_module=None,
+            wsid=job_batch_wsid,
         )
         expected_sub_2.update(
             {
                 "+KB_SOURCE_WS_OBJECTS": "",
-                "+KB_WSID": "",
+                "+KB_WSID": f'"{job_batch_wsid}"',
                 "+AccountingGroup": '"forrest_gump"',
                 "+KB_MODULE_NAME": '"mod2"',
                 "+KB_FUNCTION_NAME": '"meth2"',
@@ -1580,10 +1607,20 @@ def test_run_job_batch_fail_no_workspace_access_for_batch(ee2_port, ws_controlle
     _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 2}, err)
 
 
-def test_run_job_batch_fail_no_workspace_access_for_job(ee2_port):
+def test_run_job_batch_fail_no_allowed_wsid(ee2_port):
     params = [
         {"method": _MOD},
         {"method": _MOD, "wsid": 1},
+    ]
+    # this error could probably use some cleanup
+    err = InvalidParameterForBatch().__doc__
+    _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
+
+
+def test_run_job_batch_fail_no_workspace_access_for_job(ee2_port):
+    params = [
+        {"method": _MOD},
+        {"method": _MOD},
     ]
     # this error could probably use some cleanup
     err = (

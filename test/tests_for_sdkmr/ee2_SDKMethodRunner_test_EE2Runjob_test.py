@@ -522,40 +522,62 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job = get_example_job_as_dict(
             user=self.user_id, wsid=None, source_ws_objects=[]
         )
+        job2 = get_example_job_as_dict(
+            user=self.user_id, wsid=None, source_ws_objects=[]
+        )
+        job3 = get_example_job_as_dict(
+            user=self.user_id, wsid=None, source_ws_objects=[]
+        )
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-        jobs = [copy.deepcopy(job), copy.deepcopy(job), copy.deepcopy(job)]
+        jobs = [job, job2, job3]
         job_ids = runner.run_job_batch(
             params=copy.deepcopy(jobs), batch_params={"wsid": self.ws_id}
         )
+
+        for job in runner.check_jobs(
+            job_ids=job_ids["child_job_ids"] + [job_ids["parent_job_id"]]
+        )["job_states"]:
+            assert job.get("wsid") == self.ws_id
+            # Job input is forced to assume the batch wsid
+            if job["job_id"] != job_ids["parent_job_id"]:
+                assert job.get("job_input", {}).get("wsid") == self.ws_id
 
         assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
         assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
         assert len(job_ids["child_job_ids"]) == len(jobs)
 
         with self.assertRaises(InvalidParameterForBatch):
+            job_good = get_example_job_as_dict(
+                user=self.user_id, wsid=None, source_ws_objects=[]
+            )
             job_bad = (
                 get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
             )
             job_bad["method"] = job["job_input"]["method"]
             job_bad["app_id"] = job["job_input"]["app_id"]
             job_bad["service_ver"] = job["job_input"]["service_ver"]
-            jobs = [copy.deepcopy(job), job_bad]
+            jobs = [job_good, job_bad]
             runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
         # Test that you can't run a job in someone elses workspace
         no_perms_ws = 111970
         with self.assertRaises(PermissionError):
+            job_good = get_example_job_as_dict(
+                user=self.user_id, wsid=None, source_ws_objects=[]
+            )
             job_bad = get_example_job(user=self.user_id, wsid=None).to_mongo().to_dict()
             job_bad["method"] = job["job_input"]["method"]
             job_bad["app_id"] = job["job_input"]["app_id"]
             job_bad["service_ver"] = job["job_input"]["service_ver"]
-            jobs = [copy.deepcopy(job), job_bad]
+            jobs = [job_good, job_bad]
             runner.run_job_batch(params=jobs, batch_params={"wsid": no_perms_ws})
 
-        # Squeeze in a retry test here
+        # Check wsids
         parent_job_id = job_ids["parent_job_id"]
         child_job_id = job_ids["child_job_ids"][0]
+
+        # Squeeze in a retry test here
         runner.update_job_status(job_id=child_job_id, status=Status.terminated.value)
         parent_job = runner.check_job(job_id=parent_job_id)
         assert len(parent_job["child_jobs"]) == 3

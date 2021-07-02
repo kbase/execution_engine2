@@ -760,9 +760,8 @@ class EE2RunJob:
                 runjob_param_wsid = runjob_param.get("wsid")
                 if runjob_param_wsid or runjob_param_wsid == 0:
                     raise InvalidParameterForBatch()
-                else:
-                    # Do we do a deepcopy here in case the params point to the same obj?
-                    runjob_params[i]["wsid"] = batch_wsid
+                # Do we do a deepcopy here in case the params point to the same obj?
+                runjob_params[i]["wsid"] = batch_wsid
 
     def preflight(
         self,
