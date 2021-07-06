@@ -162,6 +162,7 @@ class EE2RunJob:
         if parent_retry_job_id:
             job.retry_parent = str(parent_retry_job_id)
 
+        # TODO: Should we move kafka message into this save function?
         if save_to_db:
             job_id = self.sdkmr.save_job(job)
             self.sdkmr.get_kafka_client().send_kafka_message(

@@ -430,6 +430,12 @@ class MongoUtil:
         with self.mongo_engine_connection():
             return Job.objects.insert(doc_or_docs=jobs_to_insert, load_bulk=False)
 
+        # TODO: Send Kafka messages here or elsewhere
+        # job_id = self.sdkmr.save_job(job)
+        # self.sdkmr.get_kafka_client().send_kafka_message(
+        #     message=KafkaCreateJob(job_id=job_id, user=user_id)
+        # )
+
     def insert_one(self, doc):
         """
         insert a doc into collection
