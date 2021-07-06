@@ -775,6 +775,14 @@ def _set_up_common_return_values_batch(mocks):
         None,
         None,
     ]
+    mocks[SDKMethodRunner].save_jobs.side_effect = [
+        [_JOB_ID_1],
+        [None],
+        [_JOB_ID_2],
+        [None],
+        [None],
+    ]
+
     mocks[Condor].run_job.side_effect = [
         SubmissionInfo(_CLUSTER_1, {}, None),
         SubmissionInfo(_CLUSTER_2, {}, None),

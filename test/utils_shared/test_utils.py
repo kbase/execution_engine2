@@ -451,6 +451,7 @@ def assert_close_to_now(time_):
     Checks that a timestamp in seconds since the epoch is within a second of the current time.
     """
     now_ms = time.time()
+    # Uh, what should be done about this test causing failures?
     assert now_ms + 1 > time_
     assert now_ms - 1 < time_
 

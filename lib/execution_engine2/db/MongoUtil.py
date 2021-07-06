@@ -3,15 +3,15 @@ import subprocess
 import time
 import traceback
 from contextlib import contextmanager
-from typing import Dict
+from typing import Dict, List
 
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
 from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
 
-from lib.execution_engine2.db.models.models import JobLog, Job, Status, TerminatedCode
-from lib.execution_engine2.exceptions import (
+from execution_engine2.db.models.models import JobLog, Job, Status, TerminatedCode
+from execution_engine2.exceptions import (
     RecordNotFoundException,
     InvalidStatusTransitionException,
 )
@@ -419,6 +419,16 @@ class MongoUtil:
     @contextmanager
     def mongo_engine_connection(self):
         yield self.me_connection
+
+    def insert_jobs(self, jobs_to_insert) -> List[str]:
+        """
+        Insert multiple job records
+        :param jobs_to_insert:
+        :return: List of job ids
+        """
+        # TODO Look at pymongo write_concerns that may be useful
+        with self.mongo_engine_connection():
+            return Job.objects.insert(doc_or_docs=jobs_to_insert, load_bulk=False)
 
     def insert_one(self, doc):
         """

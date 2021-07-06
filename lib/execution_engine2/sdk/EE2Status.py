@@ -10,8 +10,8 @@ from execution_engine2.exceptions import (
     ChildrenNotFoundError,
 )
 from execution_engine2.sdk.EE2Constants import JobError
-from lib.execution_engine2.authorization.authstrategy import can_read_jobs
-from lib.execution_engine2.db.models.models import (
+from execution_engine2.authorization.authstrategy import can_read_jobs
+from execution_engine2.db.models.models import (
     Job,
     JobOutput,
     Status,
@@ -19,7 +19,7 @@ from lib.execution_engine2.db.models.models import (
     TerminatedCode,
 )
 from execution_engine2.utils.arg_processing import parse_bool
-from lib.execution_engine2.utils.KafkaUtils import (
+from execution_engine2.utils.KafkaUtils import (
     KafkaCancelJob,
     KafkaCondorCommand,
     KafkaFinishJob,

@@ -12,6 +12,7 @@ import time
 from datetime import datetime
 from enum import Enum
 from logging import Logger
+from typing import List
 
 import dateutil
 
@@ -250,6 +251,10 @@ class SDKMethodRunner:
     # They could also be moved to the MongoUtil class, but there doesn't appear to be a need
     # at this point since MongoEngine creates a global connection to MongoDB
     # and makes it available to all the model objects.
+
+    def save_jobs(self, jobs: List[Job]) -> str:
+        job_ids = self.get_mongo_util().insert_jobs(jobs_to_insert=jobs)
+        return [str(job_id) for job_id in job_ids]
 
     def save_job(self, job: Job) -> str:
         """
