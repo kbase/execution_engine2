@@ -199,7 +199,7 @@ def _check_common_mock_calls(mocks, reqs, wsid, app=_APP, parent_job_id=None):
         app=app,
         wsid=wsid,
         parent_job_id=parent_job_id,
-        source_ws_objects=[_WS_REF_1, _WS_REF_2]
+        source_ws_objects=[_WS_REF_1, _WS_REF_2],
     )
     assert len(sdkmr.save_job.call_args_list) == 2
     got_job = sdkmr.save_job.call_args_list[0][0][0]
@@ -402,7 +402,9 @@ def test_run_job_as_admin_with_job_requirements_and_parent_job():
     jrr.resolve_requirements.assert_called_once_with(
         _METHOD, mocks[CatalogCache], **req_args
     )
-    _check_common_mock_calls(mocks, reqs, None, None, parent_job_id="thisislikesoooofake")
+    _check_common_mock_calls(
+        mocks, reqs, None, None, parent_job_id="thisislikesoooofake"
+    )
 
 
 def test_run_job_as_concierge_with_wsid():

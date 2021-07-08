@@ -274,9 +274,7 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
             child_job_ids=job_ids["child_job_ids"][0:2],
         )
 
-        job_status = runner.check_jobs(job_ids=[job_ids["batch_id"]])[
-            "job_states"
-        ][0]
+        job_status = runner.check_jobs(job_ids=[job_ids["batch_id"]])["job_states"][0]
 
         for job_id in job_ids["child_job_ids"][0:2]:
             assert job_id not in job_status["child_jobs"]
