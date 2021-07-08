@@ -108,7 +108,7 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
                 "source_ws_objects": [],
                 "wsid": 9999,
             },
-            "parent_job_id": None,
+            "batch_id": None,
             "queued": 1623781529017,
             "retry_count": 0,
             "retry_ids": [],
@@ -236,13 +236,13 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
 
         jobs = [job, job, job]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
-        assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
+        assert "batch_id" in job_ids and isinstance(job_ids["batch_id"], str)
         assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
         assert len(job_ids["child_job_ids"]) == len(jobs)
 
-        runner.cancel_job(job_id=job_ids["parent_job_id"])
+        runner.cancel_job(job_id=job_ids["batch_id"])
         job_status = runner.check_jobs(
-            job_ids=[job_ids["parent_job_id"]] + job_ids["child_job_ids"]
+            job_ids=[job_ids["batch_id"]] + job_ids["child_job_ids"]
         )
         for job in job_status["job_states"]:
             assert job["status"] == Status.terminated.value
@@ -265,16 +265,16 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         jobs = [job, job, job]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
-        assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
+        assert "batch_id" in job_ids and isinstance(job_ids["batch_id"], str)
         assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
         assert len(job_ids["child_job_ids"]) == len(jobs)
 
         runner.abandon_children(
-            parent_job_id=job_ids["parent_job_id"],
+            batch_id=job_ids["batch_id"],
             child_job_ids=job_ids["child_job_ids"][0:2],
         )
 
-        job_status = runner.check_jobs(job_ids=[job_ids["parent_job_id"]])[
+        job_status = runner.check_jobs(job_ids=[job_ids["batch_id"]])[
             "job_states"
         ][0]
 
@@ -301,7 +301,7 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         jobs = [job, job, job]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
-        job_status = runner.check_job_batch(parent_job_id=job_ids["parent_job_id"])
+        job_status = runner.check_job_batch(batch_id=job_ids["batch_id"])
         parent_job_state = job_status["parent_jobstate"]
         child_jobstates = job_status["child_jobstates"]
 

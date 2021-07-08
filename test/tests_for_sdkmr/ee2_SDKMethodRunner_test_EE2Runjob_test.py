@@ -524,7 +524,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         jobs = [job, job, job]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
-        assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
+        assert "batch_id" in job_ids and isinstance(job_ids["batch_id"], str)
         assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
         assert len(job_ids["child_job_ids"]) == len(jobs)
 
@@ -538,7 +538,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
         # Squeeze in a retry test here
-        parent_job_id = job_ids["parent_job_id"]
+        parent_job_id = job_ids["batch_id"]
         child_job_id = job_ids["child_job_ids"][0]
         runner.update_job_status(job_id=child_job_id, status=Status.terminated.value)
         parent_job = runner.check_job(job_id=parent_job_id)

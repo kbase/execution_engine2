@@ -165,6 +165,8 @@ class JobInput(EmbeddedDocument):
     service_ver = StringField(required=True)
     app_id = StringField()
     source_ws_objects = ListField()
+    # this ID is for jobs submitted via run_job with a parent_job_id field included by the
+    # client. For this case, the parent job is not updated at all.
     parent_job_id = StringField()
     requirements = EmbeddedDocumentField(JobRequirements)
     narrative_cell_info = EmbeddedDocumentField(Meta, required=True)
@@ -320,6 +322,11 @@ class Job(Document):
     job_input = EmbeddedDocumentField(JobInput, required=True)
     job_output = DynamicField()
     condor_job_ads = DynamicField()
+    # this is the ID of the parent job created as part of run_job_batch. Only child jobs
+    # in a "true" batch job maintained by EE2 should have this field. Parent jobs will
+    # be updated with the child ID in child_jobs, unlike "fake" batch jobs that are created
+    # outside of the EE2 codebase using the 'parent_job_id' field.
+    batch_id = StringField()
     child_jobs = ListField()  # Only parent container should have child jobs
     # batch_parent_container = BooleanField(default=False) # Only parent container should have this
     retry_ids = ListField()  # The retry_parent has been used to launch these jobs

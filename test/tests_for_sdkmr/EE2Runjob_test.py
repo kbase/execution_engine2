@@ -123,6 +123,7 @@ def _create_job(
     app=_APP,
     state=_CREATED_STATE,
     git_commit=_GIT_COMMIT,
+    batch_id=None,
     parent_job_id=None,
     source_ws_objects=None,
     wsid=None,
@@ -131,6 +132,7 @@ def _create_job(
     job.user = user
     job.status = state
     job.wsid = wsid
+    job.batch_id = batch_id
     ji = JobInput()
     ji.method = method
     ji.app_id = app
@@ -177,7 +179,7 @@ def _set_up_common_return_values(mocks):
     mocks[MongoUtil].get_job.return_value = retjob
 
 
-def _check_common_mock_calls(mocks, reqs, wsid, app=_APP):
+def _check_common_mock_calls(mocks, reqs, wsid, app=_APP, parent_job_id=None):
     """
     Check that mocks are called as expected when those calls are similar or the same for
     several tests.
@@ -193,7 +195,11 @@ def _check_common_mock_calls(mocks, reqs, wsid, app=_APP):
 
     # initial job data save
     expected_job = _create_job(
-        reqs, app=app, wsid=wsid, source_ws_objects=[_WS_REF_1, _WS_REF_2]
+        reqs,
+        app=app,
+        wsid=wsid,
+        parent_job_id=parent_job_id,
+        source_ws_objects=[_WS_REF_1, _WS_REF_2]
     )
     assert len(sdkmr.save_job.call_args_list) == 2
     got_job = sdkmr.save_job.call_args_list[0][0][0]
@@ -206,6 +212,7 @@ def _check_common_mock_calls(mocks, reqs, wsid, app=_APP):
         reqs,
         UserCreds(_USER, _TOKEN),
         wsid=wsid,
+        parent_job_id=parent_job_id,
         source_ws_objects=[_WS_REF_1, _WS_REF_2],
     )
     mocks[Condor].run_job.assert_called_once_with(params=jsp_expected)
@@ -316,7 +323,7 @@ def test_run_job():
     _check_common_mock_calls(mocks, reqs, None, _APP)
 
 
-def test_run_job_as_admin_with_job_requirements():
+def test_run_job_as_admin_with_job_requirements_and_parent_job():
     """
     A basic unit test of the run() method with an administrative user and job requirements.
 
@@ -325,6 +332,8 @@ def test_run_job_as_admin_with_job_requirements():
     metadata, etc.
 
     Does not include an app_id.
+
+    Does include a parent job id.
     """
 
     # Set up data variables
@@ -382,6 +391,7 @@ def test_run_job_as_admin_with_job_requirements():
         "method": _METHOD,
         "source_ws_objects": [_WS_REF_1, _WS_REF_2],
         "job_requirements": inc_reqs,
+        "parent_job_id": "thisislikesoooofake",
     }
     assert rj.run(params, as_admin=True) == _JOB_ID
 
@@ -392,7 +402,7 @@ def test_run_job_as_admin_with_job_requirements():
     jrr.resolve_requirements.assert_called_once_with(
         _METHOD, mocks[CatalogCache], **req_args
     )
-    _check_common_mock_calls(mocks, reqs, None, None)
+    _check_common_mock_calls(mocks, reqs, None, None, parent_job_id="thisislikesoooofake")
 
 
 def test_run_job_as_concierge_with_wsid():
@@ -812,7 +822,7 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
         app=_APP_1,
         git_commit=_GIT_COMMIT_1,
         source_ws_objects=[_WS_REF_1, _WS_REF_2],
-        parent_job_id=_JOB_ID,
+        batch_id=_JOB_ID,
     )
     got_job_1 = sdkmr.save_job.call_args_list[0][0][0]
     assert_jobs_equal(got_job_1, expected_job_1)
@@ -823,7 +833,7 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
         app=_APP_2,
         git_commit=_GIT_COMMIT_2,
         wsid=wsid,
-        parent_job_id=_JOB_ID,
+        batch_id=_JOB_ID,
     )
     # index 2 because job 1 is updated with save_job before this job is created
     got_job_2 = sdkmr.save_job.call_args_list[2][0][0]
@@ -957,7 +967,7 @@ def test_run_job_batch_with_parent_job_wsid():
         },
     ]
     assert rj.run_batch(params, {"wsid": parent_wsid}) == {
-        "parent_job_id": _JOB_ID,
+        "batch_id": _JOB_ID,
         "child_job_ids": [_JOB_ID_1, _JOB_ID_2],
     }
 
@@ -1066,7 +1076,7 @@ def test_run_job_batch_as_admin_with_job_requirements():
         },
     ]
     assert rj.run_batch(params, {}, as_admin=True) == {
-        "parent_job_id": _JOB_ID,
+        "batch_id": _JOB_ID,
         "child_job_ids": [_JOB_ID_1, _JOB_ID_2],
     }
 
@@ -1324,6 +1334,7 @@ def assert_jobs_equal(got_job: Job, expected_job: Job):
         "condor_job_ads",
         "child_jobs",
         "batch_job",
+        "batch_id",
     ]
 
     _assert_field_subset_equal(got_job, expected_job, job_fields)

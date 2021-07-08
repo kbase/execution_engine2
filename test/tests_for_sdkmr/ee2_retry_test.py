@@ -60,12 +60,12 @@ def test_retry_db_failures():
     # One DB failure
     rj._db_update_failure = MagicMock(side_effect=Exception("Boom!"))
     with raises(Exception):
-        rj._retry(job_id=retry_job.id, job=retry_job, parent_job=parent_job)
+        rj._retry(job_id=retry_job.id, job=retry_job, batch_parent=parent_job)
     assert rj._db_update_failure.call_count == 1
 
     # Two db failures
     rj._db_update_failure = MagicMock()
-    rj._retry(job_id=retry_job.id, job=retry_job, parent_job=parent_job)
+    rj._retry(job_id=retry_job.id, job=retry_job, batch_parent=parent_job)
 
     assert not retry_job.retry_saved_toggle
 
