@@ -798,6 +798,7 @@ class EE2RunJob:
         :return: The condor job id
         """
 
+        # TODO Test this
         if type(params) != dict:
             raise IncorrectParamsException("params must be a mapping")
 
