@@ -717,12 +717,10 @@ class EE2RunJob:
         """
         if as_admin:
             return self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
-        # Batch params have the next highest
+        # Batch Param runs
         if new_batch_job:
             if batch_params:
                 return self._check_workspace_permissions(batch_params.get("wsid"))
-            # No ws perms to check
-            return
         # Single job runs
         elif isinstance(runjob_params, dict):
             return self._check_workspace_permissions(runjob_params.get("wsid"))
@@ -739,7 +737,7 @@ class EE2RunJob:
     @staticmethod
     def _propagate_wsid_for_new_batch_jobs(runjob_params, batch_params, new_batch_job):
         """
-        For batch jobs, check to make sure the job params do not provide a wsid other than None or 0
+        For batch jobs, check to make sure the job params do not provide a wsid other than None
         Then Modify the run job params to use the batch params wsid, which may be set to None
         """
         if batch_params is None:
@@ -747,16 +745,16 @@ class EE2RunJob:
 
         if new_batch_job:
             batch_wsid = batch_params.get("wsid")
-            for i, runjob_param in enumerate(runjob_params):
-                runjob_param_wsid = runjob_param.get("wsid")
-                if runjob_param_wsid or runjob_param_wsid == 0:
+            for runjob_param in runjob_params:
+                if runjob_param.get("wsid") is not None:
                     raise InvalidParameterForBatch()
                 # Do we do a deepcopy here in case the params point to the same obj?
-                runjob_params[i]["wsid"] = batch_wsid
+                runjob_param["wsid"] = batch_wsid
 
     def preflight(
         self, runjob_params, batch_params=None, new_batch_job=False, as_admin=False
     ):
+
         if batch_params and not new_batch_job:
             raise Exception(
                 "Programming error, you forgot to set the new_batch_job flag to True"
