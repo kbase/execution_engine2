@@ -193,6 +193,7 @@ class EE2RunJob:
                 )
 
     def _check_workspace_permissions_list(self, wsids):
+        # TODO Cover this in tests once you can execute multiple independent runs
         unique_not_none_not_zero_wsids = [wsid for wsid in set(wsids) if wsid]
         if unique_not_none_not_zero_wsids:
             perms = self.sdkmr.get_workspace_auth().can_write_list(

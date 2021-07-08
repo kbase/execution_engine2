@@ -76,11 +76,16 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         cls.sdkmr_test_helper = ee2_sdkmr_test_helper(cls.user_id)
 
     def getRunner(self) -> SDKMethodRunner:
+        """
         # Initialize these clients from None
+        # Set up some mocks
+        """
         runner = copy.copy(self.__class__.method_runner)  # type : SDKMethodRunner
         runner.get_jobs_status()
         runner.get_runjob()
         runner.get_job_logs()
+        runner.get_workspace()
+        runner.workspace.get_object_info3 = MagicMock(return_value={"paths": []})
         return runner
 
     def create_job_rec(self):
@@ -246,10 +251,25 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job = get_example_job_as_dict(user=self.user_id, wsid=self.ws_id)
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
-        condor_mock.run_job = MagicMock(return_value=si)
 
-        job_id = runner.run_job(params=job)
-        print(f"Job id is {job_id} ")
+        # OK
+        condor_mock.run_job = MagicMock(return_value=si)
+        runner.run_job(params=job)
+
+        # Condor Failure Case Coverage
+        condor_mock.run_job = MagicMock(return_value=si, side_effect=Exception("fail"))
+        with self.assertRaises(expected_exception=Exception):
+            runner.run_job(params=job)
+
+        # Condor Failure Case Coverage #2
+        with self.assertRaisesRegex(
+            expected_exception=RuntimeError,
+            expected_regex="Condor job not ran, and error not found. Something went wrong",
+        ):
+            si = SubmissionInfo(clusterid=None, submit=job, error=None)
+            condor_mock.run_job = MagicMock(return_value=si)
+            runner.get_runjob()._finish_created_job = MagicMock(return_value=None)
+            runner.run_job(params=job)
 
     @staticmethod
     def check_retry_job_state(job_id: str, retry_job_id: str):
@@ -284,7 +304,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
         runner = self.getRunner()
         runner.get_condor = MagicMock(return_value=condor_mock)
-        runner.workspace.get_object_info3 = MagicMock(return_value={"paths": []})
+
         job = get_example_job_as_dict(
             user=self.user_id, wsid=self.ws_id, source_ws_objects=[]
         )
@@ -379,7 +399,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
         runner = self.getRunner()
         runner.get_condor = MagicMock(return_value=condor_mock)
-        runner.workspace.get_object_info3 = MagicMock(return_value={"paths": []})
+
         job = get_example_job_as_dict(
             user=self.user_id, wsid=self.ws_id, source_ws_objects=[]
         )
@@ -455,7 +475,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             )
         )
         runner = self.getRunner()
-        runner.workspace.get_object_info3 = MagicMock(return_value={"paths": []})
+
         runner.get_condor = MagicMock(return_value=condor_mock)
 
         quast_params = {
@@ -518,7 +538,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
         runner = self.getRunner()
         runner.get_condor = MagicMock(return_value=condor_mock)
-        runner.workspace.get_object_info3 = MagicMock(return_value={"paths": []})
+
         job = get_example_job_as_dict(
             user=self.user_id, wsid=None, source_ws_objects=[]
         )
