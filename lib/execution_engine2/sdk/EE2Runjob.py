@@ -542,9 +542,9 @@ class EE2RunJob:
             job_id, JobPermissions.WRITE, as_admin=as_admin
         )  # type: Job
 
-        batch_parent = None
+        batch_job = None
         if job.batch_id:
-            batch_parent = self.sdkmr.get_job_with_permission(
+            batch_job = self.sdkmr.get_job_with_permission(
                 job.batch_id, JobPermissions.WRITE, as_admin=as_admin
             )
 
@@ -558,9 +558,9 @@ class EE2RunJob:
                 f"Error retrying job {job_id} with status {job.status}: can only retry jobs with status 'error' or 'terminated'"
             )
 
-        return job, batch_parent
+        return job, batch_job
 
-    def _retry(self, job_id: str, job: Job, batch_parent: Job, as_admin: bool = False):
+    def _retry(self, job_id: str, job: Job, batch_job: Job, as_admin: bool = False):
         # Cannot retry a retried job, you must retry the retry_parent
         if job.retry_parent:
             return self.retry(str(job.retry_parent), as_admin=as_admin)
@@ -577,12 +577,12 @@ class EE2RunJob:
         # 1) Notify the batch container that it has a new child. Note that the parent jobs of
         # 'manual' batch jobs using the job_input.parent_job_id field *are not* modified to
         # include their children, so we don't do that here either.
-        if batch_parent:
+        if batch_job:
             try:
-                batch_parent.modify(add_to_set__child_jobs=retry_job_id)
+                batch_job.modify(add_to_set__child_jobs=retry_job_id)
             except Exception as e:
                 self._db_update_failure(
-                    job_that_failed_operation=str(batch_parent.id),
+                    job_that_failed_operation=str(batch_job.id),
                     job_to_abort=retry_job_id,
                     exception=e,
                 )
@@ -618,11 +618,11 @@ class EE2RunJob:
         :param as_admin: Run with admin permission
         :return: The child job id that has been retried
         """
-        job, batch_parent = self._validate_retry_presubmit(
+        job, batch_job = self._validate_retry_presubmit(
             job_id=job_id, as_admin=as_admin
         )
         return self._retry(
-            job_id=job_id, job=job, batch_parent=batch_parent, as_admin=as_admin
+            job_id=job_id, job=job, batch_job=batch_job, as_admin=as_admin
         )
 
     def retry_multiple(
@@ -653,14 +653,14 @@ class EE2RunJob:
         # Check all inputs before attempting to start submitting jobs
         retried_jobs = []
         jobs = []
-        batch_parents = []
+        batch_jobs = []
         for job_id in job_ids:
             try:
-                job, batch_parent = self._validate_retry_presubmit(
+                job, batch_job = self._validate_retry_presubmit(
                     job_id=job_id, as_admin=as_admin
                 )
                 jobs.append(job)
-                batch_parents.append(batch_parent)
+                batch_jobs.append(batch_job)
             except Exception as e:
                 raise RetryFailureException(e)
 
@@ -671,7 +671,7 @@ class EE2RunJob:
                     self._retry(
                         job_id=job_id,
                         job=jobs[i],
-                        batch_parent=batch_parents[i],
+                        batch_job=batch_jobs[i],
                         as_admin=as_admin,
                     )
                 )

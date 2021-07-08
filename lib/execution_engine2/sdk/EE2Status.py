@@ -579,7 +579,7 @@ class JobsStatus:
         job.update(pull_all__child_jobs=child_job_ids)
         job.reload()
 
-        return {"parent_job_id": batch_id, "child_jobs": job.child_jobs}
+        return {"batch_id": batch_id, "child_job_ids": job.child_jobs}
 
     def start_job(self, job_id, skip_estimation=True, as_admin=False):
         """

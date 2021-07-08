@@ -511,12 +511,12 @@
         funcdef check_job(CheckJobParams params) returns (JobState job_state) authentication required;
 
         /*
-            parent_job - state of parent job
-            job_states - states of child jobs
+            batch_jobstate - state of parent job of the batch
+            child_jobstates - states of child jobs
             IDEA: ADD aggregate_states - count of all available child job states, even if they are zero
         */
         typedef structure {
-            JobState parent_jobstate;
+            JobState batch_jobstate;
             list<JobState> child_jobstates;
         } CheckJobBatchResults;
 

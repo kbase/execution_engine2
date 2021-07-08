@@ -462,7 +462,7 @@ class SDKMethodRunner:
                 return_list=1,
             )["job_states"]
         return {
-            "parent_jobstate": parent_job_status,  # change to batch_jobstate?
+            "batch_jobstate": parent_job_status,
             "child_jobstates": child_job_states,
         }
 

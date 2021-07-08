@@ -269,10 +269,14 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
         assert len(job_ids["child_job_ids"]) == len(jobs)
 
-        runner.abandon_children(
+        res = runner.abandon_children(
             batch_id=job_ids["batch_id"],
             child_job_ids=job_ids["child_job_ids"][0:2],
         )
+        assert res == {
+            "batch_id": job_ids["batch_id"],
+            "child_job_ids": job_ids["child_job_ids"][2:],
+        }
 
         job_status = runner.check_jobs(job_ids=[job_ids["batch_id"]])["job_states"][0]
 
@@ -300,7 +304,7 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
         job_status = runner.check_job_batch(batch_id=job_ids["batch_id"])
-        parent_job_state = job_status["parent_jobstate"]
+        parent_job_state = job_status["batch_jobstate"]
         child_jobstates = job_status["child_jobstates"]
 
         assert len(child_jobstates) == len(jobs)
