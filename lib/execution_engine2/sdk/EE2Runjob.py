@@ -752,9 +752,19 @@ class EE2RunJob:
                 runjob_param["wsid"] = batch_wsid
 
     def preflight(
-        self, runjob_params, batch_params=None, new_batch_job=False, as_admin=False
-    ):
+        self,
+        runjob_params,
+        batch_params: dict = None,
+        new_batch_job: bool = False,
+        as_admin: bool = False,
+    ) -> None:
+        """
 
+        :param runjob_params: List of RunJobParams or a single RunJobParams mapping
+        :param batch_params: Optional mapping for Batch Jobs
+        :param new_batch_job: Whether or not this is a new batch job
+        :param as_admin: For checking ws permissions as an admin or not
+        """
         if batch_params and not new_batch_job:
             raise Exception(
                 "Programming error, you forgot to set the new_batch_job flag to True"
