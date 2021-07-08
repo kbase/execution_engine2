@@ -626,6 +626,7 @@ def test_run_job_and_run_job_batch_fail_illegal_arguments():
     _run_and_run_batch_fail_illegal_arguments(
         {}, IncorrectParamsException("Missing input parameter: method ID")
     )
+
     _run_and_run_batch_fail_illegal_arguments(
         {"method": "foo.bar", "wsid": 0},
         IncorrectParamsException("wsid must be at least 1"),
@@ -1114,10 +1115,34 @@ def test_run_job_batch_as_admin_with_job_requirements():
     _check_common_mock_calls_batch(mocks, reqs1, reqs2, None, wsid)
 
 
-def test_run_batch_fail_params_not_list():
+def test_run_batch_preflight_failures():
     mocks = _set_up_mocks(_USER, _TOKEN)
     sdkmr = mocks[SDKMethodRunner]
+    rj = EE2RunJob(sdkmr)
+    with raises(Exception) as got:
+        rj.preflight(runjob_params=[], batch_params=[])
 
+    assert_exception_correct(
+        got.value,
+        expected=IncorrectParamsException(
+            "RunJobParams and BatchParams cannot be identical"
+        ),
+    )
+
+    with raises(Exception) as got:
+        rj.preflight(runjob_params=[], batch_params={"batch": "batch"})
+
+    assert_exception_correct(
+        got.value,
+        expected=IncorrectParamsException(
+            "Programming error, you forgot to set the new_batch_job flag to True"
+        ),
+    )
+
+
+def test_run_batch_fail_params_not_list_or_batch_not_mapping():
+    mocks = _set_up_mocks(_USER, _TOKEN)
+    sdkmr = mocks[SDKMethodRunner]
     rj = EE2RunJob(sdkmr)
     for params in [
         None,
@@ -1131,6 +1156,10 @@ def test_run_batch_fail_params_not_list():
         _run_batch_fail(
             rj, params, {}, True, IncorrectParamsException("params must be a list")
         )
+
+    _run_batch_fail(
+        rj, [], [], True, IncorrectParamsException("batch params must be a mapping")
+    )
 
 
 # Note the next few tests are specifically testing that errors for multiple jobs have the

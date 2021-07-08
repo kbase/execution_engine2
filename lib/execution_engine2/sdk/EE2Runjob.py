@@ -767,11 +767,13 @@ class EE2RunJob:
         :param as_admin: For checking ws permissions as an admin or not
         """
         if batch_params and not new_batch_job:
-            raise Exception(
+            raise IncorrectParamsException(
                 "Programming error, you forgot to set the new_batch_job flag to True"
             )
         if batch_params == runjob_params:
-            raise Exception("RunJobParams and BatchParams cannot be identical")
+            raise IncorrectParamsException(
+                "RunJobParams and BatchParams cannot be identical"
+            )
 
         self._propagate_wsid_for_new_batch_jobs(
             runjob_params=runjob_params,

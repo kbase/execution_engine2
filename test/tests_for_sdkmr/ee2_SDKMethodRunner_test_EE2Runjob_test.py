@@ -258,6 +258,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         # Condor Failure Case Coverage
         condor_mock.run_job = MagicMock(return_value=si, side_effect=Exception("fail"))
+        runner.get_runjob()._finish_created_job = MagicMock(return_value=None)
+
         with self.assertRaises(expected_exception=Exception):
             runner.run_job(params=job)
 
@@ -268,7 +270,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         ):
             si = SubmissionInfo(clusterid=None, submit=job, error=None)
             condor_mock.run_job = MagicMock(return_value=si)
-            runner.get_runjob()._finish_created_job = MagicMock(return_value=None)
             runner.run_job(params=job)
 
     @staticmethod
