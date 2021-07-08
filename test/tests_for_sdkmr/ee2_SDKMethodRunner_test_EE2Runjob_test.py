@@ -538,17 +538,17 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
         # Squeeze in a retry test here
-        parent_job_id = job_ids["batch_id"]
+        batch_id = job_ids["batch_id"]
         child_job_id = job_ids["child_job_ids"][0]
         runner.update_job_status(job_id=child_job_id, status=Status.terminated.value)
-        parent_job = runner.check_job(job_id=parent_job_id)
-        assert len(parent_job["child_jobs"]) == 3
+        batch_job = runner.check_job(job_id=batch_id)
+        assert len(batch_job["child_jobs"]) == 3
 
         retry_id = runner.retry(job_id=child_job_id)["retry_id"]
         self.check_retry_job_state(child_job_id, retry_id)
-        parent_job = runner.check_job(job_id=parent_job_id)
-        assert len(parent_job["child_jobs"]) == 4
-        assert parent_job["child_jobs"][-1] == retry_id
+        batch_job = runner.check_job(job_id=batch_id)
+        assert len(batch_job["child_jobs"]) == 4
+        assert batch_job["child_jobs"][-1] == retry_id
 
         job = runner.check_job(job_id=child_job_id)
         retry_count = job["retry_count"]

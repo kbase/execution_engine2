@@ -322,12 +322,12 @@ class Job(Document):
     job_input = EmbeddedDocumentField(JobInput, required=True)
     job_output = DynamicField()
     condor_job_ads = DynamicField()
-    # this is the ID of the parent job created as part of run_job_batch. Only child jobs
-    # in a "true" batch job maintained by EE2 should have this field. Parent jobs will
+    # this is the ID of the coordinating job created as part of run_job_batch. Only child jobs
+    # in a "true" batch job maintained by EE2 should have this field. Coordinating jobs will
     # be updated with the child ID in child_jobs, unlike "fake" batch jobs that are created
     # outside of the EE2 codebase using the 'parent_job_id' field.
     batch_id = StringField()
-    child_jobs = ListField()  # Only parent container should have child jobs
+    child_jobs = ListField()  # Only coordinating jobs should have child jobs
     # batch_parent_container = BooleanField(default=False) # Only parent container should have this
     retry_ids = ListField()  # The retry_parent has been used to launch these jobs
     # Only present on a retried job, not it's parent. If attempting to retry this job, use its parent instead

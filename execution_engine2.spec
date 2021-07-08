@@ -460,7 +460,7 @@
         retry_ids - list - list of jobs that are retried based off of this job
         retry_parent - str - job_id of the parent this retry is based off of. Not available on a retry_parent itself
 
-        batch_id - str - the parent of the job, if the job is a child job created via run_job_batch
+        batch_id - str - the coordinating job, if the job is a child job created via run_job_batch
         batch_job - bool - whether or not this is a batch parent container
         child_jobs - array - Only parent container should have child job ids
 
@@ -511,7 +511,7 @@
         funcdef check_job(CheckJobParams params) returns (JobState job_state) authentication required;
 
         /*
-            batch_jobstate - state of parent job of the batch
+            batch_jobstate - state of the coordinating job for the batch
             child_jobstates - states of child jobs
             IDEA: ADD aggregate_states - count of all available child job states, even if they are zero
         */
