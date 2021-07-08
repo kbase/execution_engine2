@@ -798,6 +798,9 @@ class EE2RunJob:
         :return: The condor job id
         """
 
+        if type(params) != dict:
+            raise IncorrectParamsException("params must be a mapping")
+
         self.preflight(runjob_params=params, as_admin=as_admin)
 
         if concierge_params:
