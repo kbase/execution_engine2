@@ -711,7 +711,11 @@ class EE2RunJob:
         return run_job_params
 
     def _check_ws_perms(
-        self, runjob_params, new_batch_job, batch_params, as_admin=False
+        self,
+        runjob_params: Union[dict, list],
+        new_batch_job: bool,
+        batch_params: dict,
+        as_admin: bool = False,
     ):
         """
         Check a single job, a single batch job, or a retry_multiple request with a mix of different jobs.
@@ -730,22 +734,17 @@ class EE2RunJob:
             return self._check_workspace_permissions_list(
                 [job_param.get("wsid") for job_param in runjob_params]
             )
-        else:
-            raise IncorrectParamsException(
-                "runjob_params must be a mapping or a list of mappings"
-            )
 
     @staticmethod
-    def _propagate_wsid_for_new_batch_jobs(runjob_params, batch_params, new_batch_job):
+    def _propagate_wsid_for_new_batch_jobs(
+        runjob_params: dict, batch_params: dict, new_batch_job: bool
+    ):
         """
         For batch jobs, check to make sure the job params do not provide a wsid other than None
         Then Modify the run job params to use the batch params wsid, which may be set to None
         """
-        if batch_params is None:
-            batch_params = {}
-
         if new_batch_job:
-            batch_wsid = batch_params.get("wsid")
+            batch_wsid = batch_params.get("wsid") if batch_params else None
             for runjob_param in runjob_params:
                 if runjob_param.get("wsid") is not None:
                     raise InvalidParameterForBatch()
