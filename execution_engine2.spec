@@ -181,12 +181,12 @@
         } BatchParams;
 
         typedef structure {
-            job_id parent_job_id;
+            job_id batch_id;
             list<job_id> child_job_ids;
         } BatchSubmission;
 
         typedef structure {
-            job_id parent_job_id;
+            job_id batch_id;
             list<job_id> child_job_ids;
             boolean as_admin;
         } AbandonChildren;
@@ -460,7 +460,7 @@
         retry_ids - list - list of jobs that are retried based off of this job
         retry_parent - str - job_id of the parent this retry is based off of. Not available on a retry_parent itself
 
-        parent_job_id - str - job_id taken from job_input.parent_job_id
+        batch_id - str - the coordinating job, if the job is a child job created via run_job_batch
         batch_job - bool - whether or not this is a batch parent container
         child_jobs - array - Only parent container should have child job ids
 
@@ -501,6 +501,7 @@
             int error_code;
             string errormsg;
             int terminated_code;
+            string batch_id;
 
         } JobState;
 
@@ -510,12 +511,12 @@
         funcdef check_job(CheckJobParams params) returns (JobState job_state) authentication required;
 
         /*
-            parent_job - state of parent job
-            job_states - states of child jobs
+            batch_jobstate - state of the coordinating job for the batch
+            child_jobstates - states of child jobs
             IDEA: ADD aggregate_states - count of all available child job states, even if they are zero
         */
         typedef structure {
-            JobState parent_jobstate;
+            JobState batch_jobstate;
             list<JobState> child_jobstates;
         } CheckJobBatchResults;
 

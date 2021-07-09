@@ -1205,7 +1205,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
         }
         ee2 = ee2client(f"http://localhost:{ee2_port}", token=TOKEN_NO_ADMIN)
         ret = ee2.run_job_batch([job1_params, job2_params], job_batch_params)
-        parent_job_id = ret["parent_job_id"]
+        batch_id = ret["batch_id"]
         job_id_1, job_id_2 = ret["child_job_ids"]
 
         # check that mocks were called correctly
@@ -1231,13 +1231,13 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             "user": USER_NO_ADMIN,
             "authstrat": "kbaseworkspace",
             "status": "queued",
+            "batch_id": batch_id,
             "job_input": {
                 "wsid": job_batch_wsid,
                 "method": _MOD,
                 "params": [{"foo": "bar"}, 42],
                 "service_ver": "somehash",
                 "source_ws_objects": ["1/1/1", "1/2/1"],
-                "parent_job_id": parent_job_id,
                 "requirements": {
                     "clientgroup": "njs",
                     "cpu": 8,
@@ -1275,6 +1275,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             "authstrat": "kbaseworkspace",
             "wsid": job_batch_wsid,
             "status": "queued",
+            "batch_id": batch_id,
             "job_input": {
                 "wsid": job_batch_wsid,
                 "method": "mod2.meth2",
@@ -1282,7 +1283,6 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
                 "service_ver": "somehash2",
                 "app_id": "mod2/app2",
                 "source_ws_objects": [],
-                "parent_job_id": parent_job_id,
                 "requirements": {
                     "clientgroup": "bigmem",
                     "cpu": 4,
@@ -1300,9 +1300,9 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
         }
         assert job2 == expected_job2
 
-        parent_job = _get_mongo_job(mongo_client, parent_job_id, has_queued=False)
+        parent_job = _get_mongo_job(mongo_client, batch_id, has_queued=False)
         expected_parent_job = {
-            "_id": ObjectId(parent_job_id),
+            "_id": ObjectId(batch_id),
             "user": USER_NO_ADMIN,
             "authstrat": "kbaseworkspace",
             "wsid": job_batch_wsid,
@@ -1335,7 +1335,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             cpu=8,
             mem=5,
             disk=30,
-            parent_job_id=parent_job_id,
+            parent_job_id=batch_id,
             app_id=None,
             app_module=None,
             wsid=job_batch_wsid,
@@ -1349,7 +1349,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             cpu=4,
             mem=2000,
             disk=100,
-            parent_job_id=parent_job_id,
+            parent_job_id=batch_id,
             wsid=job_batch_wsid,
         )
         expected_sub_2.update(
@@ -1415,7 +1415,7 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
         job_batch_params = {"wsid": job_batch_wsid, "as_admin": "foo"}
         ee2 = ee2client(f"http://localhost:{ee2_port}", token=TOKEN_WRITE_ADMIN)
         ret = ee2.run_job_batch([job1_params, job2_params], job_batch_params)
-        parent_job_id = ret["parent_job_id"]
+        batch_id = ret["batch_id"]
         job_id_1, job_id_2 = ret["child_job_ids"]
 
         # check that mocks were called correctly
@@ -1442,12 +1442,12 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             "authstrat": "kbaseworkspace",
             "status": "queued",
             "wsid": job_batch_wsid,
+            "batch_id": batch_id,
             "job_input": {
                 "wsid": job_batch_wsid,
                 "method": _MOD,
                 "service_ver": "somehash",
                 "source_ws_objects": [],
-                "parent_job_id": parent_job_id,
                 "requirements": {
                     "clientgroup": "bigmem",
                     "cpu": 4,
@@ -1471,12 +1471,12 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             "authstrat": "kbaseworkspace",
             "status": "queued",
             "wsid": job_batch_wsid,
+            "batch_id": batch_id,
             "job_input": {
                 "wsid": job_batch_wsid,
                 "method": "mod2.meth2",
                 "service_ver": "somehash2",
                 "source_ws_objects": [],
-                "parent_job_id": parent_job_id,
                 "requirements": {
                     "clientgroup": "extreme",
                     "cpu": 32,
@@ -1494,9 +1494,9 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
         }
         assert job2 == expected_job2
 
-        parent_job = _get_mongo_job(mongo_client, parent_job_id, has_queued=False)
+        parent_job = _get_mongo_job(mongo_client, batch_id, has_queued=False)
         expected_parent_job = {
-            "_id": ObjectId(parent_job_id),
+            "_id": ObjectId(batch_id),
             "user": USER_WRITE_ADMIN,
             "authstrat": "kbaseworkspace",
             "wsid": job_batch_wsid,
@@ -1524,7 +1524,7 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             cpu=4,
             mem=2000,
             disk=100,
-            parent_job_id=parent_job_id,
+            parent_job_id=batch_id,
             app_id=None,
             app_module=None,
             wsid=job_batch_wsid,
@@ -1541,7 +1541,7 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             cpu=32,
             mem=42,
             disk=8,
-            parent_job_id=parent_job_id,
+            parent_job_id=batch_id,
             app_id=None,
             app_module=None,
             wsid=job_batch_wsid,
