@@ -801,7 +801,7 @@ def _set_up_common_return_values_batch(mocks):
     mocks[MongoUtil].get_job.side_effect = [retjob_1, retjob_2]
 
 
-def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
+def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
     """
     Check that mocks are called as expected when those calls are similar or the same for
     several tests.
@@ -1019,7 +1019,7 @@ def test_run_job_batch_with_parent_job_wsid():
             call(_METHOD_2, mocks[CatalogCache], **_EMPTY_JOB_REQUIREMENTS),
         ]
     )
-    _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid)
+    _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid)
 
 
 def test_run_job_batch_as_admin_with_job_requirements():
@@ -1032,7 +1032,6 @@ def test_run_job_batch_as_admin_with_job_requirements():
     metadata, etc.
     """
     # set up variables
-    wsid = 32
     cpus = 89
     mem = 3
     disk = 10000
@@ -1124,7 +1123,7 @@ def test_run_job_batch_as_admin_with_job_requirements():
             call(_METHOD_2, mocks[CatalogCache], **req_args),
         ]
     )
-    _check_common_mock_calls_batch(mocks, reqs1, reqs2, None, wsid)
+    _check_common_mock_calls_batch(mocks, reqs1, reqs2, None)
 
 
 def test_run_batch_preflight_failures():
@@ -1132,7 +1131,7 @@ def test_run_batch_preflight_failures():
     sdkmr = mocks[SDKMethodRunner]
     rj = EE2RunJob(sdkmr)
     with raises(Exception) as got:
-        rj.preflight(runjob_params=[], batch_params=[])
+        rj._preflight(runjob_params=[], batch_params=[])
 
     assert_exception_correct(
         got.value,
@@ -1142,7 +1141,7 @@ def test_run_batch_preflight_failures():
     )
 
     with raises(Exception) as got:
-        rj.preflight(runjob_params=[], batch_params={"batch": "batch"})
+        rj._preflight(runjob_params=[], batch_params={"batch": "batch"})
 
     assert_exception_correct(
         got.value,

@@ -1189,7 +1189,6 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
         job2_params = {
             "method": "mod2.meth2",
             "app_id": "mod2/app2",
-            # "wsid": 1,
             "params": [{"baz": "bat"}, 3.14],
         }
         job_batch_wsid = 2
@@ -1308,7 +1307,6 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             "wsid": job_batch_wsid,
             "status": "created",
             "job_input": {
-                # "wsid": job_batch_wsid,
                 "method": "batch",
                 "service_ver": "batch",
                 "app_id": "batch",
@@ -1502,7 +1500,6 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             "wsid": job_batch_wsid,
             "status": "created",
             "job_input": {
-                # "wsid": job_batch_wsid,
                 "method": "batch",
                 "service_ver": "batch",
                 "app_id": "batch",
@@ -1613,7 +1610,7 @@ def test_run_job_batch_fail_no_allowed_wsid(ee2_port):
         {"method": _MOD, "wsid": 1},
     ]
     # this error could probably use some cleanup
-    err = InvalidParameterForBatch().__doc__
+    err = "Workspace ids are not allowed in RunJobParams in Batch Mode"
     _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
 
 

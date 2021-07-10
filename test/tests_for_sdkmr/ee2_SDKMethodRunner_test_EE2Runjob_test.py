@@ -266,7 +266,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         # Condor Failure Case Coverage #2
         with self.assertRaisesRegex(
             expected_exception=RuntimeError,
-            expected_regex="Condor job not ran, and error not found. Something went wrong",
+            expected_regex="Condor job not run, and error not found. Something went wrong",
         ):
             si = SubmissionInfo(clusterid=None, submit=job, error=None)
             condor_mock.run_job = MagicMock(return_value=si)
@@ -557,11 +557,11 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
 
         for job in runner.check_jobs(
-            job_ids=job_ids["child_job_ids"] + [job_ids["parent_job_id"]]
+            job_ids=job_ids["child_job_ids"] + [job_ids["batch_id"]]
         )["job_states"]:
             assert job.get("wsid") == self.ws_id
             # Job input is forced to assume the batch wsid
-            if job["job_id"] != job_ids["parent_job_id"]:
+            if job["job_id"] != job_ids["batch_id"]:
                 assert job.get("job_input", {}).get("wsid") == self.ws_id
 
         assert "batch_id" in job_ids and isinstance(job_ids["batch_id"], str)
@@ -575,9 +575,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             job_bad = (
                 get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
             )
-            job_bad["method"] = job["job_input"]["method"]
-            job_bad["app_id"] = job["job_input"]["app_id"]
-            job_bad["service_ver"] = job["job_input"]["service_ver"]
             jobs = [job_good, job_bad]
             runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
@@ -588,9 +585,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 user=self.user_id, wsid=None, source_ws_objects=[]
             )
             job_bad = get_example_job(user=self.user_id, wsid=None).to_mongo().to_dict()
-            job_bad["method"] = job["job_input"]["method"]
-            job_bad["app_id"] = job["job_input"]["app_id"]
-            job_bad["service_ver"] = job["job_input"]["service_ver"]
             jobs = [job_good, job_bad]
             runner.run_job_batch(params=jobs, batch_params={"wsid": no_perms_ws})
 

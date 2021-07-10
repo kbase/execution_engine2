@@ -277,7 +277,7 @@ class EE2RunJob:
             self._finish_created_job(exception=submission_info.error, job_id=job_id)
             raise submission_info.error
         if condor_job_id is None:
-            error_msg = "Condor job not ran, and error not found. Something went wrong"
+            error_msg = "Condor job not run, and error not found. Something went wrong"
             self._finish_created_job(job_id=job_id, exception=RuntimeError(error_msg))
             raise RuntimeError(error_msg)
 
@@ -371,7 +371,7 @@ class EE2RunJob:
         wsid = batch_params.get(_WORKSPACE_ID)
         meta = batch_params.get(_META)
 
-        self.preflight(
+        self._preflight(
             runjob_params=params,
             batch_params=batch_params,
             new_batch_job=True,
@@ -758,15 +758,15 @@ class EE2RunJob:
                 # Do we do a deepcopy here in case the params point to the same obj?
                 runjob_param["wsid"] = batch_wsid
 
-    def preflight(
+    def _preflight(
         self,
-        runjob_params,
+        runjob_params: Union[dict, list],
         batch_params: dict = None,
         new_batch_job: bool = False,
         as_admin: bool = False,
     ) -> None:
         """
-
+        Propagate and check ws permissions for job(s)
         :param runjob_params: List of RunJobParams or a single RunJobParams mapping
         :param batch_params: Optional mapping for Batch Jobs
         :param new_batch_job: Whether or not this is a new batch job
@@ -808,7 +808,7 @@ class EE2RunJob:
         if type(params) != dict:
             raise IncorrectParamsException("params must be a mapping")
 
-        self.preflight(runjob_params=params, as_admin=as_admin)
+        self._preflight(runjob_params=params, as_admin=as_admin)
 
         if concierge_params:
             self.sdkmr.check_as_concierge()
