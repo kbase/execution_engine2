@@ -1189,7 +1189,6 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
         job2_params = {
             "method": "mod2.meth2",
             "app_id": "mod2/app2",
-            # "wsid": 1,
             "params": [{"baz": "bat"}, 3.14],
         }
         job_batch_wsid = 2
@@ -1205,7 +1204,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
         }
         ee2 = ee2client(f"http://localhost:{ee2_port}", token=TOKEN_NO_ADMIN)
         ret = ee2.run_job_batch([job1_params, job2_params], job_batch_params)
-        parent_job_id = ret["parent_job_id"]
+        batch_id = ret["batch_id"]
         job_id_1, job_id_2 = ret["child_job_ids"]
 
         # check that mocks were called correctly
@@ -1231,13 +1230,13 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             "user": USER_NO_ADMIN,
             "authstrat": "kbaseworkspace",
             "status": "queued",
+            "batch_id": batch_id,
             "job_input": {
                 "wsid": job_batch_wsid,
                 "method": _MOD,
                 "params": [{"foo": "bar"}, 42],
                 "service_ver": "somehash",
                 "source_ws_objects": ["1/1/1", "1/2/1"],
-                "parent_job_id": parent_job_id,
                 "requirements": {
                     "clientgroup": "njs",
                     "cpu": 8,
@@ -1275,6 +1274,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             "authstrat": "kbaseworkspace",
             "wsid": job_batch_wsid,
             "status": "queued",
+            "batch_id": batch_id,
             "job_input": {
                 "wsid": job_batch_wsid,
                 "method": "mod2.meth2",
@@ -1282,7 +1282,6 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
                 "service_ver": "somehash2",
                 "app_id": "mod2/app2",
                 "source_ws_objects": [],
-                "parent_job_id": parent_job_id,
                 "requirements": {
                     "clientgroup": "bigmem",
                     "cpu": 4,
@@ -1300,15 +1299,14 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
         }
         assert job2 == expected_job2
 
-        parent_job = _get_mongo_job(mongo_client, parent_job_id, has_queued=False)
+        parent_job = _get_mongo_job(mongo_client, batch_id, has_queued=False)
         expected_parent_job = {
-            "_id": ObjectId(parent_job_id),
+            "_id": ObjectId(batch_id),
             "user": USER_NO_ADMIN,
             "authstrat": "kbaseworkspace",
             "wsid": job_batch_wsid,
             "status": "created",
             "job_input": {
-                # "wsid": job_batch_wsid,
                 "method": "batch",
                 "service_ver": "batch",
                 "app_id": "batch",
@@ -1335,7 +1333,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             cpu=8,
             mem=5,
             disk=30,
-            parent_job_id=parent_job_id,
+            parent_job_id=batch_id,
             app_id=None,
             app_module=None,
             wsid=job_batch_wsid,
@@ -1349,11 +1347,226 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             cpu=4,
             mem=2000,
             disk=100,
-            parent_job_id=parent_job_id,
+            parent_job_id=batch_id,
             wsid=job_batch_wsid,
         )
         expected_sub_2.update(
             {
+                "+KB_MODULE_NAME": '"mod2"',
+                "+KB_FUNCTION_NAME": '"meth2"',
+                "+KB_APP_ID": '"mod2/app2"',
+                "+KB_APP_MODULE_NAME": '"mod2"',
+                "+KB_SOURCE_WS_OBJECTS": "",
+            }
+        )
+        _check_batch_htc_calls(
+            sub_init, schedd_init, sub, schedd, txn, expected_sub_1, expected_sub_2
+        )
+
+
+def test_run_job_batch_with_no_batch_wsid(ee2_port, ws_controller, mongo_client):
+    """
+    A test of the run_job method.
+    """
+    _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN, "foo")  # ws 1
+    _set_up_workspace_objects(ws_controller, TOKEN_NO_ADMIN, "bar")  # ws 2
+    # need to get the mock objects first so spec_set can do its magic before we mock out
+    # the classes in the context manager
+    sub, schedd, txn = _get_htc_mocks()
+    # seriously black you're killing me here. This is readable?
+    with patch("htcondor.Submit", spec_set=True, autospec=True) as sub_init, patch(
+        "htcondor.Schedd", spec_set=True, autospec=True
+    ) as schedd_init, patch(
+        CAT_LIST_CLIENT_GROUPS, spec_set=True, autospec=True
+    ) as list_cgroups, patch(
+        CAT_GET_MODULE_VERSION, spec_set=True, autospec=True
+    ) as get_mod_ver:
+        # set up the rest of the mocks
+        _finish_htc_mocks(sub_init, schedd_init, sub, schedd, txn)
+        sub.queue.side_effect = [123, 456]
+        list_cgroups.side_effect = [
+            [{"client_groups": ['{"request_cpus":8,"request_memory":5}']}],
+            [{"client_groups": ['{"client_group":"bigmem"}']}],
+        ]
+        get_mod_ver.side_effect = [
+            {"git_commit_hash": "somehash"},
+            {"git_commit_hash": "somehash2"},
+        ]
+
+        # run the method
+        job1_params = {
+            "method": _MOD,
+            "source_ws_objects": ["1/1/1", "1/2/1"],
+            "params": [{"foo": "bar"}, 42],
+            "service_ver": "beta",
+            "meta": {
+                "run_id": "rid",
+                "token_id": "tid",
+                "tag": "yourit",
+                "cell_id": "cid",
+                "thiskey": "getssilentlydropped",
+            },
+        }
+        job2_params = {
+            "method": "mod2.meth2",
+            "app_id": "mod2/app2",
+            "params": [{"baz": "bat"}, 3.14],
+        }
+
+        job_batch_params = {
+            "meta": {
+                "run_id": "rid2",
+                "token_id": "tid2",
+                "tag": "yourit2",
+                "cell_id": "cid2",
+                "thiskey": "getssilentlydropped2",
+            },
+        }
+        ee2 = ee2client(f"http://localhost:{ee2_port}", token=TOKEN_NO_ADMIN)
+        ret = ee2.run_job_batch([job1_params, job2_params], job_batch_params)
+        batch_id = ret["batch_id"]
+        job_id_1, job_id_2 = ret["child_job_ids"]
+
+        # check that mocks were called correctly
+        # Since these are class methods, the first argument is self, which we ignore
+        get_mod_ver.assert_has_calls(
+            [
+                call(ANY, {"module_name": "mod", "version": "beta"}),
+                call(ANY, {"module_name": "mod2", "version": "release"}),
+            ]
+        )
+        list_cgroups.assert_has_calls(
+            [
+                call(ANY, {"module_name": "mod", "function_name": "meth"}),
+                call(ANY, {"module_name": "mod2", "function_name": "meth2"}),
+            ]
+        )
+
+        job1 = _get_mongo_job(mongo_client, job_id_1)
+        job2 = _get_mongo_job(mongo_client, job_id_2)
+
+        expected_job1 = {
+            "_id": ObjectId(job_id_1),
+            "user": USER_NO_ADMIN,
+            "authstrat": "kbaseworkspace",
+            "status": "queued",
+            "batch_id": batch_id,
+            "job_input": {
+                "method": _MOD,
+                "params": [{"foo": "bar"}, 42],
+                "service_ver": "somehash",
+                "source_ws_objects": ["1/1/1", "1/2/1"],
+                "requirements": {
+                    "clientgroup": "njs",
+                    "cpu": 8,
+                    "memory": 5,
+                    "disk": 30,
+                },
+                "narrative_cell_info": {
+                    "run_id": "rid",
+                    "token_id": "tid",
+                    "tag": "yourit",
+                    "cell_id": "cid",
+                },
+            },
+            "child_jobs": [],
+            "retry_ids": [],
+            "retry_saved_toggle": False,
+            "batch_job": False,
+            "scheduler_id": "123",
+            "scheduler_type": "condor",
+        }
+        job_wsid = job1.get("wsid")
+        expected_job_wsid = expected_job1.get("wsid")
+
+        job_input_wsid = job1.get("wsid")
+        expected_job_input_wsid = expected_job1.get("wsid")
+
+        assert job_wsid == expected_job_wsid
+        assert job_input_wsid == expected_job_input_wsid
+        assert job1 == expected_job1
+
+        expected_job2 = {
+            "_id": ObjectId(job_id_2),
+            "user": USER_NO_ADMIN,
+            "authstrat": "kbaseworkspace",
+            "status": "queued",
+            "batch_id": batch_id,
+            "job_input": {
+                "method": "mod2.meth2",
+                "params": [{"baz": "bat"}, 3.14],
+                "service_ver": "somehash2",
+                "app_id": "mod2/app2",
+                "source_ws_objects": [],
+                "requirements": {
+                    "clientgroup": "bigmem",
+                    "cpu": 4,
+                    "memory": 2000,
+                    "disk": 100,
+                },
+                "narrative_cell_info": {},
+            },
+            "child_jobs": [],
+            "retry_ids": [],
+            "retry_saved_toggle": False,
+            "batch_job": False,
+            "scheduler_id": "456",
+            "scheduler_type": "condor",
+        }
+        assert job2 == expected_job2
+
+        parent_job = _get_mongo_job(mongo_client, batch_id, has_queued=False)
+        expected_parent_job = {
+            "_id": ObjectId(batch_id),
+            "user": USER_NO_ADMIN,
+            "authstrat": "kbaseworkspace",
+            "status": "created",
+            "job_input": {
+                "method": "batch",
+                "service_ver": "batch",
+                "app_id": "batch",
+                "source_ws_objects": [],
+                "narrative_cell_info": {
+                    "run_id": "rid2",
+                    "token_id": "tid2",
+                    "tag": "yourit2",
+                    "cell_id": "cid2",
+                },
+            },
+            "child_jobs": [job_id_1, job_id_2],
+            "batch_job": True,
+            "retry_ids": [],
+            "retry_saved_toggle": False,
+        }
+        assert parent_job == expected_parent_job
+
+        expected_sub_1 = _get_condor_sub_for_rj_param_set(
+            job_id_1,
+            USER_NO_ADMIN,
+            TOKEN_NO_ADMIN,
+            clientgroup="njs",
+            cpu=8,
+            mem=5,
+            disk=30,
+            parent_job_id=batch_id,
+            app_id=None,
+            app_module=None,
+        )
+        expected_sub_1["+KB_WSID"] = ""
+        expected_sub_2 = _get_condor_sub_for_rj_param_set(
+            job_id_2,
+            USER_NO_ADMIN,
+            TOKEN_NO_ADMIN,
+            clientgroup="bigmem",
+            cpu=4,
+            mem=2000,
+            disk=100,
+            parent_job_id=batch_id,
+        )
+
+        expected_sub_2.update(
+            {
+                "+KB_WSID": "",
                 "+KB_MODULE_NAME": '"mod2"',
                 "+KB_FUNCTION_NAME": '"meth2"',
                 "+KB_APP_ID": '"mod2/app2"',
@@ -1415,7 +1628,7 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
         job_batch_params = {"wsid": job_batch_wsid, "as_admin": "foo"}
         ee2 = ee2client(f"http://localhost:{ee2_port}", token=TOKEN_WRITE_ADMIN)
         ret = ee2.run_job_batch([job1_params, job2_params], job_batch_params)
-        parent_job_id = ret["parent_job_id"]
+        batch_id = ret["batch_id"]
         job_id_1, job_id_2 = ret["child_job_ids"]
 
         # check that mocks were called correctly
@@ -1442,12 +1655,12 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             "authstrat": "kbaseworkspace",
             "status": "queued",
             "wsid": job_batch_wsid,
+            "batch_id": batch_id,
             "job_input": {
                 "wsid": job_batch_wsid,
                 "method": _MOD,
                 "service_ver": "somehash",
                 "source_ws_objects": [],
-                "parent_job_id": parent_job_id,
                 "requirements": {
                     "clientgroup": "bigmem",
                     "cpu": 4,
@@ -1471,12 +1684,12 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             "authstrat": "kbaseworkspace",
             "status": "queued",
             "wsid": job_batch_wsid,
+            "batch_id": batch_id,
             "job_input": {
                 "wsid": job_batch_wsid,
                 "method": "mod2.meth2",
                 "service_ver": "somehash2",
                 "source_ws_objects": [],
-                "parent_job_id": parent_job_id,
                 "requirements": {
                     "clientgroup": "extreme",
                     "cpu": 32,
@@ -1494,15 +1707,14 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
         }
         assert job2 == expected_job2
 
-        parent_job = _get_mongo_job(mongo_client, parent_job_id, has_queued=False)
+        parent_job = _get_mongo_job(mongo_client, batch_id, has_queued=False)
         expected_parent_job = {
-            "_id": ObjectId(parent_job_id),
+            "_id": ObjectId(batch_id),
             "user": USER_WRITE_ADMIN,
             "authstrat": "kbaseworkspace",
             "wsid": job_batch_wsid,
             "status": "created",
             "job_input": {
-                # "wsid": job_batch_wsid,
                 "method": "batch",
                 "service_ver": "batch",
                 "app_id": "batch",
@@ -1524,7 +1736,7 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             cpu=4,
             mem=2000,
             disk=100,
-            parent_job_id=parent_job_id,
+            parent_job_id=batch_id,
             app_id=None,
             app_module=None,
             wsid=job_batch_wsid,
@@ -1541,7 +1753,7 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
             cpu=32,
             mem=42,
             disk=8,
-            parent_job_id=parent_job_id,
+            parent_job_id=batch_id,
             app_id=None,
             app_module=None,
             wsid=job_batch_wsid,
@@ -1613,7 +1825,7 @@ def test_run_job_batch_fail_no_allowed_wsid(ee2_port):
         {"method": _MOD, "wsid": 1},
     ]
     # this error could probably use some cleanup
-    err = InvalidParameterForBatch().__doc__
+    err = "Workspace ids are not allowed in RunJobParams in Batch Mode"
     _run_job_batch_fail(ee2_port, TOKEN_NO_ADMIN, params, {"wsid": 1}, err)
 
 

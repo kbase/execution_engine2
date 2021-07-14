@@ -76,11 +76,16 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         cls.sdkmr_test_helper = ee2_sdkmr_test_helper(cls.user_id)
 
     def getRunner(self) -> SDKMethodRunner:
+        """
         # Initialize these clients from None
+        # Set up some mocks
+        """
         runner = copy.copy(self.__class__.method_runner)  # type : SDKMethodRunner
         runner.get_jobs_status()
         runner.get_runjob()
         runner.get_job_logs()
+        runner.get_workspace()
+        runner.workspace.get_object_info3 = MagicMock(return_value={"paths": []})
         return runner
 
     def create_job_rec(self):
@@ -246,10 +251,26 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job = get_example_job_as_dict(user=self.user_id, wsid=self.ws_id)
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
-        condor_mock.run_job = MagicMock(return_value=si)
 
-        job_id = runner.run_job(params=job)
-        print(f"Job id is {job_id} ")
+        # OK
+        condor_mock.run_job = MagicMock(return_value=si)
+        runner.run_job(params=job)
+
+        # Condor Failure Case Coverage
+        condor_mock.run_job = MagicMock(return_value=si, side_effect=Exception("fail"))
+        runner.get_runjob()._finish_created_job = MagicMock(return_value=None)
+
+        with self.assertRaises(expected_exception=Exception):
+            runner.run_job(params=job)
+
+        # Condor Failure Case Coverage #2
+        with self.assertRaisesRegex(
+            expected_exception=RuntimeError,
+            expected_regex="Condor job not run, and error not found. Something went wrong",
+        ):
+            si = SubmissionInfo(clusterid=None, submit=job, error=None)
+            condor_mock.run_job = MagicMock(return_value=si)
+            runner.run_job(params=job)
 
     @staticmethod
     def check_retry_job_state(job_id: str, retry_job_id: str):
@@ -284,7 +305,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
         runner = self.getRunner()
         runner.get_condor = MagicMock(return_value=condor_mock)
-        runner.workspace.get_object_info3 = MagicMock(return_value={"paths": []})
+
         job = get_example_job_as_dict(
             user=self.user_id, wsid=self.ws_id, source_ws_objects=[]
         )
@@ -379,7 +400,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
         runner = self.getRunner()
         runner.get_condor = MagicMock(return_value=condor_mock)
-        runner.workspace.get_object_info3 = MagicMock(return_value={"paths": []})
+
         job = get_example_job_as_dict(
             user=self.user_id, wsid=self.ws_id, source_ws_objects=[]
         )
@@ -455,7 +476,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             )
         )
         runner = self.getRunner()
-        runner.workspace.get_object_info3 = MagicMock(return_value={"paths": []})
+
         runner.get_condor = MagicMock(return_value=condor_mock)
 
         quast_params = {
@@ -518,7 +539,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
         runner = self.getRunner()
         runner.get_condor = MagicMock(return_value=condor_mock)
-        runner.workspace.get_object_info3 = MagicMock(return_value={"paths": []})
+
         job = get_example_job_as_dict(
             user=self.user_id, wsid=None, source_ws_objects=[]
         )
@@ -536,14 +557,14 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
 
         for job in runner.check_jobs(
-            job_ids=job_ids["child_job_ids"] + [job_ids["parent_job_id"]]
+            job_ids=job_ids["child_job_ids"] + [job_ids["batch_id"]]
         )["job_states"]:
             assert job.get("wsid") == self.ws_id
             # Job input is forced to assume the batch wsid
-            if job["job_id"] != job_ids["parent_job_id"]:
+            if job["job_id"] != job_ids["batch_id"]:
                 assert job.get("job_input", {}).get("wsid") == self.ws_id
 
-        assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
+        assert "batch_id" in job_ids and isinstance(job_ids["batch_id"], str)
         assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
         assert len(job_ids["child_job_ids"]) == len(jobs)
 
@@ -554,9 +575,6 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             job_bad = (
                 get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
             )
-            job_bad["method"] = job["job_input"]["method"]
-            job_bad["app_id"] = job["job_input"]["app_id"]
-            job_bad["service_ver"] = job["job_input"]["service_ver"]
             jobs = [job_good, job_bad]
             runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
@@ -567,26 +585,23 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 user=self.user_id, wsid=None, source_ws_objects=[]
             )
             job_bad = get_example_job(user=self.user_id, wsid=None).to_mongo().to_dict()
-            job_bad["method"] = job["job_input"]["method"]
-            job_bad["app_id"] = job["job_input"]["app_id"]
-            job_bad["service_ver"] = job["job_input"]["service_ver"]
             jobs = [job_good, job_bad]
             runner.run_job_batch(params=jobs, batch_params={"wsid": no_perms_ws})
 
         # Check wsids
-        parent_job_id = job_ids["parent_job_id"]
+        batch_id = job_ids["batch_id"]
         child_job_id = job_ids["child_job_ids"][0]
 
         # Squeeze in a retry test here
         runner.update_job_status(job_id=child_job_id, status=Status.terminated.value)
-        parent_job = runner.check_job(job_id=parent_job_id)
-        assert len(parent_job["child_jobs"]) == 3
+        batch_job = runner.check_job(job_id=batch_id)
+        assert len(batch_job["child_jobs"]) == 3
 
         retry_id = runner.retry(job_id=child_job_id)["retry_id"]
         self.check_retry_job_state(child_job_id, retry_id)
-        parent_job = runner.check_job(job_id=parent_job_id)
-        assert len(parent_job["child_jobs"]) == 4
-        assert parent_job["child_jobs"][-1] == retry_id
+        batch_job = runner.check_job(job_id=batch_id)
+        assert len(batch_job["child_jobs"]) == 4
+        assert batch_job["child_jobs"][-1] == retry_id
 
         job = runner.check_job(job_id=child_job_id)
         retry_count = job["retry_count"]

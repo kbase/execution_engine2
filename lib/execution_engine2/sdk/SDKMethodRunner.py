@@ -363,10 +363,10 @@ class SDKMethodRunner:
         )
 
     # Endpoints: Changing a job's status
-    def abandon_children(self, parent_job_id, child_job_ids, as_admin=False):
+    def abandon_children(self, batch_id, child_job_ids, as_admin=False):
         """Authorization Required Read/Write"""
         return self.get_jobs_status().abandon_children(
-            parent_job_id=parent_job_id, child_job_ids=child_job_ids, as_admin=as_admin
+            batch_id=batch_id, child_job_ids=child_job_ids, as_admin=as_admin
         )
 
     def update_job_status(self, job_id, status, as_admin=False):
@@ -438,7 +438,7 @@ class SDKMethodRunner:
 
     def check_job_batch(
         self,
-        parent_job_id,
+        batch_id,
         check_permission=True,
         exclude_fields=None,
         as_admin=False,
@@ -453,7 +453,7 @@ class SDKMethodRunner:
             raise ValueError("You can't exclude child jobs from this endpoint")
 
         parent_job_status = self.get_jobs_status().check_job(
-            job_id=parent_job_id,
+            job_id=batch_id,
             check_permission=check_permission,
             exclude_fields=exclude_fields,
         )
@@ -467,7 +467,7 @@ class SDKMethodRunner:
                 return_list=1,
             )["job_states"]
         return {
-            "parent_jobstate": parent_job_status,
+            "batch_jobstate": parent_job_status,
             "child_jobstates": child_job_states,
         }
 

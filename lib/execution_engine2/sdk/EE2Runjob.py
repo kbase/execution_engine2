@@ -54,6 +54,7 @@ _APP_PARAMS = "params"  # application parameters
 _REQUIREMENTS_LIST = "requirements_list"
 _METHOD = "method"
 _APP_ID = "app_id"
+_BATCH_ID = "batch_id"
 _PARENT_JOB_ID = "parent_job_id"
 _PARENT_RETRY_JOB_ID = "retry_parent"
 _RETRY_IDS = "retry_ids"
@@ -89,11 +90,9 @@ class EE2RunJob:
         self,
         user_id: str,
         params: Dict,
-        save_to_db: bool = True,
-    ) -> Union[str, Job]:
+    ) -> str:
         f"""
         Save an initial job record to the db and send a message to kafka
-        Or return a validated Job object without saving it
 
         *** Expected OPTIONAL Parameters ***
         {_WORKSPACE_ID} (The workspace id)
@@ -101,6 +100,7 @@ class EE2RunJob:
         {_SERVICE_VER} (app version)
         {_APP_ID} (app UI)
         {_SOURCE_WS_OBJECTS} (collected workspace objects for this app)
+        {_BATCH_ID} (parent of the job for EE2 batch jobs, the parent should be updated)
         {_PARENT_JOB_ID} (parent of this job, doesn't update/notify the parent)
         {_META} (narrative cell information)
 
@@ -161,16 +161,13 @@ class EE2RunJob:
         parent_retry_job_id = params.get(_PARENT_RETRY_JOB_ID)
         if parent_retry_job_id:
             job.retry_parent = str(parent_retry_job_id)
+        job.batch_id = str(params.get(_BATCH_ID)) if params.get(_BATCH_ID) else None
 
-        # TODO: Should we move kafka message into this save function?
-        if save_to_db:
-            job_id = self.sdkmr.save_job(job)
-            self.sdkmr.get_kafka_client().send_kafka_message(
-                message=KafkaCreateJob(job_id=job_id, user=user_id)
-            )
-            return job_id
-        else:
-            return job
+        job_id = self.sdkmr.save_job(job)
+        self.sdkmr.get_kafka_client().send_kafka_message(
+            message=KafkaCreateJob(job_id=job_id, user=user_id)
+        )
+        return job_id
 
     def _check_ws_objects(self, source_objects) -> None:
         """
@@ -199,6 +196,7 @@ class EE2RunJob:
                 )
 
     def _check_workspace_permissions_list(self, wsids):
+        # TODO Cover this in tests once you can execute multiple independent runs
         unique_not_none_not_zero_wsids = [wsid for wsid in set(wsids) if wsid]
         if unique_not_none_not_zero_wsids:
             perms = self.sdkmr.get_workspace_auth().can_write_list(
@@ -236,79 +234,36 @@ class EE2RunJob:
             error=f"{exception}",
         )
 
-    def _prepare_to_run_multiple(self, runjob_params) -> List[JobSubmissionParameters]:
-        jobs_to_insert = list()
-
-        for runjob_param in runjob_params:
-            jobs_to_insert.append(
-                self._init_job_rec(
-                    self.sdkmr.get_user_id(), runjob_param, save_to_db=False
-                )
-            )
-        # TODO Handle if only some objects got inserted and rollback?
-        # TODO check to see if returned number of job ids matches params, and cancel or delete jobs if it doesn't!
-        inserted_job_ids = self.sdkmr.save_jobs(jobs=jobs_to_insert)
-
-        job_submission_params = list()
-
-        if len(inserted_job_ids) != len(runjob_params):
-            raise Exception("Didn't insert all of the jobs")
-
-        # TODO Handle failure on JobSubmissionParameters failure and delete/rollback db entries
-        for i, rjp in enumerate(runjob_params):
-
-            jsp = JobSubmissionParameters(
-                inserted_job_ids[i],
-                AppInfo(rjp[_METHOD], rjp.get(_APP_ID)),
-                rjp[_JOB_REQUIREMENTS],
-                UserCreds(self.sdkmr.get_user_id(), self.sdkmr.get_token()),
-                parent_job_id=rjp.get(_PARENT_JOB_ID),
-                wsid=rjp.get(_WORKSPACE_ID),
-                source_ws_objects=rjp.get(_SOURCE_WS_OBJECTS),
-            )
-            job_submission_params.append(jsp)
-
-        return job_submission_params
-
-    def _prepare_to_run(
-        self, runjob_params, concierge_params=None
-    ) -> JobSubmissionParameters:
+    def _prepare_to_run(self, params, concierge_params=None) -> JobSubmissionParameters:
         """
         Creates a job record and creates the job submission params
         """
 
-        job_id = self._init_job_rec(self.sdkmr.get_user_id(), runjob_params)
+        job_id = self._init_job_rec(self.sdkmr.get_user_id(), params)
 
         self.logger.debug(
-            f"User {self.sdkmr.get_user_id()} attempting to run job {runjob_params[_METHOD]} {runjob_params}"
+            f"User {self.sdkmr.get_user_id()} attempting to run job {params[_METHOD]} {params}"
         )
 
         return JobSubmissionParameters(
             job_id,
-            AppInfo(runjob_params[_METHOD], runjob_params.get(_APP_ID)),
-            runjob_params[_JOB_REQUIREMENTS],
+            AppInfo(params[_METHOD], params.get(_APP_ID)),
+            params[_JOB_REQUIREMENTS],
             UserCreds(self.sdkmr.get_user_id(), self.sdkmr.get_token()),
-            parent_job_id=runjob_params.get(_PARENT_JOB_ID),
-            wsid=runjob_params.get(_WORKSPACE_ID),
-            source_ws_objects=runjob_params.get(_SOURCE_WS_OBJECTS),
+            # a job should have a parent ID or a batch ID or nothing, but never both
+            # Do we want to distinguish between the two cases in the sub params?
+            # It's informational only for Condor
+            parent_job_id=params.get(_BATCH_ID) or params.get(_PARENT_JOB_ID),
+            wsid=params.get(_WORKSPACE_ID),
+            source_ws_objects=params.get(_SOURCE_WS_OBJECTS),
         )
 
-    def _run_multiple(self, params) -> List[str]:
-        job_submit_params = self._prepare_to_run_multiple(runjob_params=params)
-        # TODO Multiple submit htcondor in one txn
-        # TODO Error handling
-        for jsp in job_submit_params:
-            self._run_submit(job_submit_params=jsp)
-        return [jsp.job_id for jsp in job_submit_params]
-
     def _run(self, params):
-        job_submit_params = self._prepare_to_run(runjob_params=params)
-        return self._run_submit(job_submit_params=job_submit_params)
+        job_params = self._prepare_to_run(params=params)
+        job_id = job_params.job_id
 
-    def _run_submit(self, job_submit_params: JobSubmissionParameters):
-        job_id = job_submit_params.job_id
         try:
-            submission_info = self.sdkmr.get_condor().run_job(params=job_submit_params)
+            submission_info = self.sdkmr.get_condor().run_job(params=job_params)
             condor_job_id = submission_info.clusterid
             self.logger.debug(f"Submitted job id and got '{condor_job_id}'")
         except Exception as e:
@@ -322,7 +277,7 @@ class EE2RunJob:
             self._finish_created_job(exception=submission_info.error, job_id=job_id)
             raise submission_info.error
         if condor_job_id is None:
-            error_msg = "Condor job not ran, and error not found. Something went wrong"
+            error_msg = "Condor job not run, and error not found. Something went wrong"
             self._finish_created_job(job_id=job_id, exception=RuntimeError(error_msg))
             raise RuntimeError(error_msg)
 
@@ -344,7 +299,7 @@ class EE2RunJob:
                 # TODO Maybe add a retry here?
                 self.logger.error(f"Couldn't cancel child job {e}")
 
-    def _create_parent_job(self, wsid, meta):
+    def _create_batch_job(self, wsid, meta):
         """
         This creates the parent job for all children to mark as their ancestor
         :param params:
@@ -377,26 +332,22 @@ class EE2RunJob:
         )
         return j
 
-    def _run_batch(self, parent_job: Job, params):
-        """Save to the db and submit to htcondor after preflight checks have passed"""
+    def _run_batch(self, batch_job: Job, params):
+        child_jobs = []
 
         for job_param in params:
-            job_param[_PARENT_JOB_ID] = str(parent_job.id)
+            job_param[_BATCH_ID] = str(batch_job.id)
+            try:
+                child_jobs.append(str(self._run(params=job_param)))
+            except Exception as e:
+                self.logger.debug(
+                    msg=f"Failed to submit child job. Aborting entire batch job {e}"
+                )
+                self._abort_child_jobs(child_jobs)
+                raise e
 
-        child_jobs = self._run_multiple(params=params)
-
-        # TODO Fix error handling
-        # try:
-        #     child_jobs.append(str(self._run(params=job_param)))
-        # except Exception as e:
-        #     self.logger.debug(
-        #         msg=f"Failed to submit child job. Aborting entire batch job {e}"
-        #     )
-        #     self._abort_child_jobs(child_jobs)
-        #     raise e
-
-        parent_job.child_jobs = child_jobs
-        self.sdkmr.save_job(parent_job)
+        batch_job.child_jobs = child_jobs
+        self.sdkmr.save_job(batch_job)
 
         return child_jobs
 
@@ -420,17 +371,20 @@ class EE2RunJob:
         wsid = batch_params.get(_WORKSPACE_ID)
         meta = batch_params.get(_META)
 
-        self.preflight(
+        self._preflight(
             runjob_params=params,
             batch_params=batch_params,
             new_batch_job=True,
             as_admin=as_admin,
         )
 
-        parent_job = self._create_parent_job(wsid=wsid, meta=meta)
-        children_jobs = self._run_batch(parent_job=parent_job, params=params)
+        self._add_job_requirements(params, bool(as_admin))  # as_admin checked above
+        self._check_job_arguments(params, batch_job=True)
 
-        return {_PARENT_JOB_ID: str(parent_job.id), "child_job_ids": children_jobs}
+        batch_job = self._create_batch_job(wsid=wsid, meta=meta)
+        children_jobs = self._run_batch(batch_job=batch_job, params=params)
+
+        return {_BATCH_ID: str(batch_job.id), "child_job_ids": children_jobs}
 
     # modifies the jobs in place
     def _add_job_requirements(self, jobs: List[Dict[str, Any]], is_write_admin: bool):
@@ -524,7 +478,7 @@ class EE2RunJob:
             raise error
         raise IncorrectParamsException(f"{error_prefix}{error.args[0]}") from error
 
-    def _check_job_arguments(self, jobs, has_parent_job=False):
+    def _check_job_arguments(self, jobs, batch_job=False):
         # perform sanity checks before creating any jobs, including the parent job for batch jobs
         for i, job in enumerate(jobs):
             # Could make an argument checker method, or a class that doesn't require a job id.
@@ -542,7 +496,7 @@ class EE2RunJob:
                 )
             except IncorrectParamsException as e:
                 self._rethrow_incorrect_params_with_error_prefix(e, pre)
-            if has_parent_job and job.get(_PARENT_JOB_ID):
+            if batch_job and job.get(_PARENT_JOB_ID):
                 raise IncorrectParamsException(
                     f"{pre}batch jobs may not specify a parent job ID"
                 )
@@ -595,12 +549,11 @@ class EE2RunJob:
         job = self.sdkmr.get_job_with_permission(
             job_id, JobPermissions.WRITE, as_admin=as_admin
         )  # type: Job
-        job_input = job.job_input  # type: JobInput
 
-        parent_job = None
-        if job_input.parent_job_id:
-            parent_job = self.sdkmr.get_job_with_permission(
-                job_input.parent_job_id, JobPermissions.WRITE, as_admin=as_admin
+        batch_job = None
+        if job.batch_id:
+            batch_job = self.sdkmr.get_job_with_permission(
+                job.batch_id, JobPermissions.WRITE, as_admin=as_admin
             )
 
         if job.batch_job:
@@ -613,9 +566,9 @@ class EE2RunJob:
                 f"Error retrying job {job_id} with status {job.status}: can only retry jobs with status 'error' or 'terminated'"
             )
 
-        return job, parent_job
+        return job, batch_job
 
-    def _retry(self, job_id: str, job: Job, parent_job: Job, as_admin: bool = False):
+    def _retry(self, job_id: str, job: Job, batch_job: Job, as_admin: bool = False):
         # Cannot retry a retried job, you must retry the retry_parent
         if job.retry_parent:
             return self.retry(str(job.retry_parent), as_admin=as_admin)
@@ -629,13 +582,15 @@ class EE2RunJob:
         retry_job_id = self.run(params=run_job_params, as_admin=as_admin)
 
         # Save that the job has been retried, and increment the count. Notify the parent(s)
-        # 1) Notify the parent container that it has a new child..
-        if parent_job:
+        # 1) Notify the batch container that it has a new child. Note that the parent jobs of
+        # 'manual' batch jobs using the job_input.parent_job_id field *are not* modified to
+        # include their children, so we don't do that here either.
+        if batch_job:
             try:
-                parent_job.modify(add_to_set__child_jobs=retry_job_id)
+                batch_job.modify(add_to_set__child_jobs=retry_job_id)
             except Exception as e:
                 self._db_update_failure(
-                    job_that_failed_operation=str(parent_job.id),
+                    job_that_failed_operation=str(batch_job.id),
                     job_to_abort=retry_job_id,
                     exception=e,
                 )
@@ -671,11 +626,11 @@ class EE2RunJob:
         :param as_admin: Run with admin permission
         :return: The child job id that has been retried
         """
-        job, parent_job = self._validate_retry_presubmit(
+        job, batch_job = self._validate_retry_presubmit(
             job_id=job_id, as_admin=as_admin
         )
         return self._retry(
-            job_id=job_id, job=job, parent_job=parent_job, as_admin=as_admin
+            job_id=job_id, job=job, batch_job=batch_job, as_admin=as_admin
         )
 
     def retry_multiple(
@@ -706,14 +661,14 @@ class EE2RunJob:
         # Check all inputs before attempting to start submitting jobs
         retried_jobs = []
         jobs = []
-        parent_jobs = []
+        batch_jobs = []
         for job_id in job_ids:
             try:
-                job, parent_job = self._validate_retry_presubmit(
+                job, batch_job = self._validate_retry_presubmit(
                     job_id=job_id, as_admin=as_admin
                 )
                 jobs.append(job)
-                parent_jobs.append(parent_job)
+                batch_jobs.append(batch_job)
             except Exception as e:
                 raise RetryFailureException(e)
 
@@ -724,7 +679,7 @@ class EE2RunJob:
                     self._retry(
                         job_id=job_id,
                         job=jobs[i],
-                        parent_job=parent_jobs[i],
+                        batch_job=batch_jobs[i],
                         as_admin=as_admin,
                     )
                 )
@@ -763,19 +718,21 @@ class EE2RunJob:
         return run_job_params
 
     def _check_ws_perms(
-        self, runjob_params, new_batch_job, batch_params, as_admin=False
+        self,
+        runjob_params: Union[dict, list],
+        new_batch_job: bool,
+        batch_params: dict,
+        as_admin: bool = False,
     ):
         """
         Check a single job, a single batch job, or a retry_multiple request with a mix of different jobs.
         """
         if as_admin:
             return self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
-        # Batch params have the next highest
+        # Batch Param runs
         if new_batch_job:
             if batch_params:
                 return self._check_workspace_permissions(batch_params.get("wsid"))
-            # No ws perms to check
-            return
         # Single job runs
         elif isinstance(runjob_params, dict):
             return self._check_workspace_permissions(runjob_params.get("wsid"))
@@ -784,43 +741,45 @@ class EE2RunJob:
             return self._check_workspace_permissions_list(
                 [job_param.get("wsid") for job_param in runjob_params]
             )
-        else:
-            raise IncorrectParamsException(
-                "runjob_params must be a mapping or a list of mappings"
-            )
 
     @staticmethod
-    def _propagate_wsid_for_new_batch_jobs(runjob_params, batch_params, new_batch_job):
+    def _propagate_wsid_for_new_batch_jobs(
+        runjob_params: dict, batch_params: dict, new_batch_job: bool
+    ):
         """
-        For batch jobs, check to make sure the job params do not provide a wsid other than None or 0
+        For batch jobs, check to make sure the job params do not provide a wsid other than None
         Then Modify the run job params to use the batch params wsid, which may be set to None
         """
-        if batch_params is None:
-            batch_params = {}
-
         if new_batch_job:
-            batch_wsid = batch_params.get("wsid")
-            for i, runjob_param in enumerate(runjob_params):
-                runjob_param_wsid = runjob_param.get("wsid")
-                if runjob_param_wsid or runjob_param_wsid == 0:
+            batch_wsid = batch_params.get("wsid") if batch_params else None
+            for runjob_param in runjob_params:
+                if runjob_param.get("wsid") is not None:
                     raise InvalidParameterForBatch()
                 # Do we do a deepcopy here in case the params point to the same obj?
-                runjob_params[i]["wsid"] = batch_wsid
+                runjob_param["wsid"] = batch_wsid
 
-    def preflight(
+    def _preflight(
         self,
-        runjob_params,
-        batch_params=None,
-        concierge_params=None,
-        new_batch_job=False,
-        as_admin=False,
-    ):
+        runjob_params: Union[dict, list],
+        batch_params: dict = None,
+        new_batch_job: bool = False,
+        as_admin: bool = False,
+    ) -> None:
+        """
+        Propagate and check ws permissions for job(s)
+        :param runjob_params: List of RunJobParams or a single RunJobParams mapping
+        :param batch_params: Optional mapping for Batch Jobs
+        :param new_batch_job: Whether or not this is a new batch job
+        :param as_admin: For checking ws permissions as an admin or not
+        """
         if batch_params and not new_batch_job:
-            raise Exception(
+            raise IncorrectParamsException(
                 "Programming error, you forgot to set the new_batch_job flag to True"
             )
         if batch_params == runjob_params:
-            raise Exception("RunJobParams and BatchParams cannot be identical")
+            raise IncorrectParamsException(
+                "RunJobParams and BatchParams cannot be identical"
+            )
 
         self._propagate_wsid_for_new_batch_jobs(
             runjob_params=runjob_params,
@@ -833,32 +792,6 @@ class EE2RunJob:
             batch_params=batch_params,
             as_admin=as_admin,
         )
-        if type(runjob_params) == dict:
-            if concierge_params:
-                self.sdkmr.check_as_concierge()
-                # we don't check requirements type because the concierge can do what they like
-                runjob_params[
-                    _JOB_REQUIREMENTS
-                ] = self._get_job_reqs_from_concierge_params(
-                    runjob_params.get(_METHOD), concierge_params
-                )
-            else:
-                # as_admin checked above
-                self._add_job_requirements([runjob_params], bool(as_admin))
-            if new_batch_job:
-                raise Exception(
-                    "Batch jobs require a list of RunJobParams, not just a mapping."
-                )
-
-            self._check_job_arguments([runjob_params])
-        elif type(runjob_params) == list:
-            self._add_job_requirements(
-                runjob_params,
-                bool(as_admin),
-            )
-            self._check_job_arguments(runjob_params, has_parent_job=new_batch_job)
-        else:
-            raise Exception("RunJobParams must be a mapping or a list of mappings")
 
     def run(
         self, params=None, as_admin=False, concierge_params: Dict = None
@@ -870,12 +803,23 @@ class EE2RunJob:
         :param concierge_params: Allows you to specify request_cpu, request_memory, request_disk, clientgroup
         :return: The condor job id
         """
-        self.preflight(
-            runjob_params=params,
-            concierge_params=concierge_params,
-            as_admin=as_admin,
-            new_batch_job=False,
-        )
+
+        # TODO Test this
+        if type(params) != dict:
+            raise IncorrectParamsException("params must be a mapping")
+
+        self._preflight(runjob_params=params, as_admin=as_admin)
+
+        if concierge_params:
+            self.sdkmr.check_as_concierge()
+            # we don't check requirements type because the concierge can do what they like
+            params[_JOB_REQUIREMENTS] = self._get_job_reqs_from_concierge_params(
+                params.get(_METHOD), concierge_params
+            )
+        else:
+            # as_admin checked above
+            self._add_job_requirements([params], bool(as_admin))
+        self._check_job_arguments([params])
         return self._run(params=params)
 
     def _get_job_reqs_from_concierge_params(
@@ -958,6 +902,8 @@ class EE2RunJob:
         job_params["service_ver"] = job_input.service_ver
         job_params[_APP_ID] = job_input.app_id
         job_params[_WORKSPACE_ID] = job_input.wsid
+        # This is specfically the data in the job params, which includes any manually submitted
+        # parent job information but does not include batch job information
         job_params[_PARENT_JOB_ID] = job_input.parent_job_id
         job_params[_SOURCE_WS_OBJECTS] = job_input.source_ws_objects
 
