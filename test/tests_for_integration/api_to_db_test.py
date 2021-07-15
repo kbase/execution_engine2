@@ -1258,14 +1258,7 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             "scheduler_id": "123",
             "scheduler_type": "condor",
         }
-        job_wsid = job1.get("wsid")
-        expected_job_wsid = expected_job1.get("wsid")
 
-        job_input_wsid = job1.get("wsid")
-        expected_job_input_wsid = expected_job1.get("wsid")
-
-        assert job_wsid == expected_job_wsid
-        assert job_input_wsid == expected_job_input_wsid
         assert job1 == expected_job1
 
         expected_job2 = {
@@ -1476,14 +1469,7 @@ def test_run_job_batch_with_no_batch_wsid(ee2_port, ws_controller, mongo_client)
             "scheduler_id": "123",
             "scheduler_type": "condor",
         }
-        job_wsid = job1.get("wsid")
-        expected_job_wsid = expected_job1.get("wsid")
 
-        job_input_wsid = job1.get("wsid")
-        expected_job_input_wsid = expected_job1.get("wsid")
-
-        assert job_wsid == expected_job_wsid
-        assert job_input_wsid == expected_job_input_wsid
         assert job1 == expected_job1
 
         expected_job2 = {
