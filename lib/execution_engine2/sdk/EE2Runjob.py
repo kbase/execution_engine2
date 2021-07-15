@@ -741,9 +741,10 @@ class EE2RunJob:
             return self._check_workspace_permissions_list(
                 [job_param.get("wsid") for job_param in runjob_params]
             )
-        raise IncorrectParamsException(
-            "Runjob params must be an instance of a dict, or a list of dicts"
-        )
+        else:
+            raise IncorrectParamsException(
+                "Runjob params must be an instance of a dict, or a list of dicts"
+            )
 
     @staticmethod
     def _propagate_wsid_for_new_batch_jobs(
