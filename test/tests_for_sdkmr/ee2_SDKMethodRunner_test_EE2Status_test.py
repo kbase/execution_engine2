@@ -229,12 +229,14 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         )
         runner = self.getRunner()  # type: SDKMethodRunner
         runner.get_condor = MagicMock(return_value=condor_mock)
-        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=self.ws_id)
+        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
+        job2 = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
+        job3 = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
 
-        jobs = [job, job, job]
+        jobs = [job, job2, job3]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
         assert "batch_id" in job_ids and isinstance(job_ids["batch_id"], str)
         assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
@@ -257,12 +259,14 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         )
         runner = self.getRunner()  # type: SDKMethodRunner
         runner.get_condor = MagicMock(return_value=condor_mock)
-        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=self.ws_id)
+        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
+        job2 = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
+        job3 = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
 
-        jobs = [job, job, job]
+        jobs = [job, job2, job3]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
         assert "batch_id" in job_ids and isinstance(job_ids["batch_id"], str)
@@ -295,12 +299,14 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         )
         runner = self.getRunner()  # type: SDKMethodRunner
         runner.get_condor = MagicMock(return_value=condor_mock)
-        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=self.ws_id)
+        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
+        job2 = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
+        job3 = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
 
-        jobs = [job, job, job]
+        jobs = [job, job2, job3]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
         job_status = runner.check_job_batch(batch_id=job_ids["batch_id"])

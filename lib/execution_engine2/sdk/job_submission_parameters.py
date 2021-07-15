@@ -252,3 +252,6 @@ class JobSubmissionParameters:
 
     def __hash__(self):
         return hash(self._params())
+
+    def __repr__(self):
+        return str(self._params())

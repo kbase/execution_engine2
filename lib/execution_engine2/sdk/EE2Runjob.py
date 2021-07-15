@@ -24,6 +24,7 @@ from execution_engine2.exceptions import (
     AuthError,
     CannotRetryJob,
     RetryFailureException,
+    InvalidParameterForBatch,
 )
 from execution_engine2.sdk.EE2Constants import CONCIERGE_CLIENTGROUP
 from execution_engine2.sdk.job_submission_parameters import (
@@ -195,15 +196,20 @@ class EE2RunJob:
                 )
 
     def _check_workspace_permissions_list(self, wsids):
-        perms = self.sdkmr.get_workspace_auth().can_write_list(wsids)
-        bad_ws = [key for key in perms.keys() if perms[key] is False]
-        if bad_ws:
-            self.logger.debug(
-                f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {bad_ws}."
+        # TODO Cover this in tests once you can execute multiple independent runs
+        unique_not_none_not_zero_wsids = [wsid for wsid in set(wsids) if wsid]
+        if unique_not_none_not_zero_wsids:
+            perms = self.sdkmr.get_workspace_auth().can_write_list(
+                unique_not_none_not_zero_wsids
             )
-            raise PermissionError(
-                f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {bad_ws}."
-            )
+            bad_ws = [key for key in perms.keys() if perms[key] is False]
+            if bad_ws:
+                self.logger.debug(
+                    f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {bad_ws}."
+                )
+                raise PermissionError(
+                    f"User {self.sdkmr.user_id} doesn't have permission to run jobs in workspace {bad_ws}."
+                )
 
     def _finish_created_job(
         self, job_id, exception, error_code=None, error_message=None
@@ -271,7 +277,7 @@ class EE2RunJob:
             self._finish_created_job(exception=submission_info.error, job_id=job_id)
             raise submission_info.error
         if condor_job_id is None:
-            error_msg = "Condor job not ran, and error not found. Something went wrong"
+            error_msg = "Condor job not run, and error not found. Something went wrong"
             self._finish_created_job(job_id=job_id, exception=RuntimeError(error_msg))
             raise RuntimeError(error_msg)
 
@@ -349,26 +355,28 @@ class EE2RunJob:
         self, params, batch_params, as_admin=False
     ) -> Dict[str, Union[Job, List[str]]]:
         """
+        Warning: modifies params in place
         :param params: List of RunJobParams (See Spec File)
-        :param batch_params: List of Batch Params, such as wsid (See Spec file)
+        :param batch_params: Mapping of Batch Params, such as {wsid, as_admin} (See Spec file)
         :param as_admin: Allows you to run jobs in other people's workspaces
         :return: A list of condor job ids or a failure notification
         """
+
         if type(params) != list:
             raise IncorrectParamsException("params must be a list")
+
+        if type(batch_params) != dict:
+            raise IncorrectParamsException("batch params must be a mapping")
+
         wsid = batch_params.get(_WORKSPACE_ID)
         meta = batch_params.get(_META)
 
-        if as_admin:
-            self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
-        else:
-            # Make sure you aren't running a job in someone elses workspace
-            self._check_workspace_permissions(wsid)
-            # this is very odd. Why check the parent wsid again if there's no wsid in the job?
-            # also, what if the parent wsid is None?
-            # also also, why not just put all the wsids in one list and make one ws call?
-            wsids = [job_input.get(_WORKSPACE_ID, wsid) for job_input in params]
-            self._check_workspace_permissions_list(wsids)
+        self._preflight(
+            runjob_params=params,
+            batch_params=batch_params,
+            new_batch_job=True,
+            as_admin=as_admin,
+        )
 
         self._add_job_requirements(params, bool(as_admin))  # as_admin checked above
         self._check_job_arguments(params, batch_job=True)
@@ -709,20 +717,102 @@ class EE2RunJob:
         # Then the next fields are job inputs top level requirements, app run parameters, and scheduler resource requirements
         return run_job_params
 
+    def _check_ws_perms(
+        self,
+        runjob_params: Union[dict, list],
+        new_batch_job: bool,
+        batch_params: dict,
+        as_admin: bool = False,
+    ):
+        """
+        Check a single job, a single batch job, or a retry_multiple request with a mix of different jobs.
+        """
+        if as_admin:
+            return self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
+        # Batch Param runs
+        if new_batch_job:
+            if batch_params:
+                return self._check_workspace_permissions(batch_params.get("wsid"))
+        # Single job runs
+        elif isinstance(runjob_params, dict):
+            return self._check_workspace_permissions(runjob_params.get("wsid"))
+        # Multiple independent job runs, think retry_multiple()
+        elif isinstance(runjob_params, list):
+            return self._check_workspace_permissions_list(
+                [job_param.get("wsid") for job_param in runjob_params]
+            )
+        else:
+            raise IncorrectParamsException(
+                "Runjob params must be an instance of a dict, or a list of dicts"
+            )
+
+    @staticmethod
+    def _propagate_wsid_for_new_batch_jobs(
+        runjob_params: dict, batch_params: dict, new_batch_job: bool
+    ):
+        """
+        For batch jobs, check to make sure the job params do not provide a wsid other than None
+        Then Modify the run job params to use the batch params wsid, which may be set to None
+        """
+        if new_batch_job:
+            batch_wsid = batch_params.get("wsid") if batch_params else None
+            for runjob_param in runjob_params:
+                if runjob_param.get("wsid") is not None:
+                    raise InvalidParameterForBatch()
+                # Do we do a deepcopy here in case the params point to the same obj?
+                runjob_param["wsid"] = batch_wsid
+
+    def _preflight(
+        self,
+        runjob_params: Union[dict, list],
+        batch_params: dict = None,
+        new_batch_job: bool = False,
+        as_admin: bool = False,
+    ) -> None:
+        """
+        Propagate and check ws permissions for job(s)
+        :param runjob_params: List of RunJobParams or a single RunJobParams mapping
+        :param batch_params: Optional mapping for Batch Jobs
+        :param new_batch_job: Whether or not this is a new batch job
+        :param as_admin: For checking ws permissions as an admin or not
+        """
+        if batch_params and not new_batch_job:
+            raise IncorrectParamsException(
+                "Programming error, you forgot to set the new_batch_job flag to True"
+            )
+        if batch_params == runjob_params:
+            raise IncorrectParamsException(
+                "RunJobParams and BatchParams cannot be identical"
+            )
+
+        self._propagate_wsid_for_new_batch_jobs(
+            runjob_params=runjob_params,
+            batch_params=batch_params,
+            new_batch_job=new_batch_job,
+        )
+        self._check_ws_perms(
+            runjob_params=runjob_params,
+            new_batch_job=new_batch_job,
+            batch_params=batch_params,
+            as_admin=as_admin,
+        )
+
     def run(
         self, params=None, as_admin=False, concierge_params: Dict = None
     ) -> Optional[str]:
         """
-        :param params: SpecialRunJobParamsParams object (See spec file)
+        Warning: modifies params in place
         :param params: RunJobParams object (See spec file)
         :param as_admin: Allows you to run jobs in other people's workspaces
         :param concierge_params: Allows you to specify request_cpu, request_memory, request_disk, clientgroup
         :return: The condor job id
         """
-        if as_admin:
-            self.sdkmr.check_as_admin(requested_perm=JobPermissions.WRITE)
-        else:
-            self._check_workspace_permissions(params.get(_WORKSPACE_ID))
+
+        # TODO Test this
+        if type(params) != dict:
+            raise IncorrectParamsException("params must be a mapping")
+
+        self._preflight(runjob_params=params, as_admin=as_admin)
 
         if concierge_params:
             self.sdkmr.check_as_concierge()
@@ -734,7 +824,6 @@ class EE2RunJob:
             # as_admin checked above
             self._add_job_requirements([params], bool(as_admin))
         self._check_job_arguments([params])
-
         return self._run(params=params)
 
     def _get_job_reqs_from_concierge_params(
