@@ -455,17 +455,9 @@ class MongoUtil:
         """
         # TODO Look at pymongo write_concerns that may be useful
         # TODO see if pymongo is faster
-
-        inserted = Job.objects.insert(doc_or_docs=jobs_to_insert, load_bulk=False)
-
-        return inserted
-        # TODO: Send Kafka messages here or elsewhere
-        # job_id = self.sdkmr.save_job(job)
-        # self.sdkmr.get_kafka_client().send_kafka_message(
-        #     message=KafkaCreateJob(job_id=job_id, user=user_id)
-        # )
-
         # TODO: Think about error handling
+        inserted = Job.objects.insert(doc_or_docs=jobs_to_insert, load_bulk=False)
+        return inserted
 
     def insert_one(self, doc):
         """

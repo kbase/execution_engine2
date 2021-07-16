@@ -378,9 +378,11 @@ class EE2RunJob:
             condor_job_ids.append(condor_job_id)
 
         self.logger.error(f"It took {time.time() - begin} to submit jobs to condor")
+        # It took 4.836009502410889 to submit jobs to condor
 
         update_time = time.time()
         self._update_to_queued_multiple(job_ids=job_ids, scheduler_ids=condor_job_ids)
+        # It took 1.9239885807037354 to update jobs
         self.logger.error(f"It took {time.time() - update_time} to update jobs ")
 
         return job_ids
