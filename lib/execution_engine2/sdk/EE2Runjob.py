@@ -5,6 +5,7 @@ the logic to retrieve info needed by the runnner to start the job
 
 """
 import os
+import threading
 import time
 from collections import defaultdict
 from enum import Enum
@@ -259,27 +260,12 @@ class EE2RunJob:
         )
         return self._generate_job_submission_params(job_id, params)
 
-    def _run_multiple(self, runjob_params):
+    def _submit_multiple_jobs_wrapper(self, job_ids, runjob_params):
         """
-        Get the job records, bulk save them, then submit to condor.
-        If any condor submission fails, abort all of the jobs
-        :return:
+        Generate job submission params
+        Notify kafka of the created jobs
+        Submit to HTCondor
         """
-        # Save records to db
-        init_job_rec = time.time()
-        job_records = []
-        for runjob_param in runjob_params:
-            job_records.append(
-                self._init_job_rec(self.sdkmr.get_user_id(), runjob_param, save=False)
-            )
-        self.logger.debug(f"init_job_rec = {time.time() - init_job_rec}")
-
-        save_jobs = time.time()
-        job_ids = self.sdkmr.save_jobs(job_records)
-
-        self.logger.debug(f"save_jobs = {time.time() - save_jobs}")
-        self.logger.debug(f"init and save save_jobs = {time.time() - init_job_rec}")
-
         # Generate job submission params
         gen_sub_time = time.time()
         job_submission_params = []
@@ -313,6 +299,40 @@ class EE2RunJob:
         except Exception as e:
             self._abort_multiple_jobs(job_ids)
             raise e
+
+    def _run_multiple(self, runjob_params, thread=True):
+        """
+        Get the job records, bulk save them, then submit to condor.
+        If any condor submission fails, abort all of the jobs
+        :return:
+        """
+        # Save records to db
+        init_job_rec = time.time()
+        job_records = []
+        for runjob_param in runjob_params:
+            job_records.append(
+                self._init_job_rec(self.sdkmr.get_user_id(), runjob_param, save=False)
+            )
+        self.logger.debug(f"init_job_rec = {time.time() - init_job_rec}")
+
+        save_jobs = time.time()
+        job_ids = self.sdkmr.save_jobs(job_records)
+        self.logger.debug(f"save_jobs = {time.time() - save_jobs}")
+        self.logger.debug(f"init and save save_jobs = {time.time() - init_job_rec}")
+
+        if thread:
+            x = threading.Thread(
+                target=self._submit_multiple_jobs_wrapper,
+                kwargs={"runjob_params": runjob_params, "job_ids": job_ids},
+                daemon=True,
+            )
+            x.start()
+        else:
+            self._submit_multiple_jobs_wrapper(
+                runjob_params=runjob_params, job_ids=job_ids
+            )
+
+        return job_ids
 
     def _update_to_queued_multiple(self, job_ids, scheduler_ids):
         # TODO Unused
