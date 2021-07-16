@@ -266,28 +266,45 @@ class EE2RunJob:
         :return:
         """
         # Save records to db
+        init_job_rec = time.time()
         job_records = []
         for runjob_param in runjob_params:
             job_records.append(
                 self._init_job_rec(self.sdkmr.get_user_id(), runjob_param, save=False)
             )
+        print("init_job_rec = ", time.time() - init_job_rec)
+
+        save_jobs = time.time()
         job_ids = self.sdkmr.save_jobs(job_records)
 
+        print("save_jobs = ", time.time() - save_jobs)
+        print("init and save save_jobs  = ", time.time() - init_job_rec)
+
         # Generate job submission params
+        gen_sub_time = time.time()
         job_submission_params = []
         for i, job_id in enumerate(job_ids):
             job_submission_params.append(
                 self._generate_job_submission_params(job_id, runjob_params[i])
             )
             assert job_id == job_submission_params[i].job_id
+        print("gen_sub_time = ", time.time() - gen_sub_time)
+
+        kafku = time.time()
+        for job_id in job_ids:
             self.sdkmr.get_kafka_client().send_kafka_message(
                 message=KafkaCreateJob(
                     job_id=str(job_id), user=self.sdkmr.get_user_id()
                 )
             )
+        print("kafku = ", time.time() - kafku)
+
         # Submit to Condor
+        condor_time = time.time()
         try:
-            return self._submit_multiple(job_submission_params)
+            submission_ids = self._submit_multiple(job_submission_params)
+            print("condor_time = ", time.time() - condor_time)
+            return submission_ids
         except Exception as e:
             self._abort_multiple_jobs(job_ids)
             raise e
@@ -433,11 +450,17 @@ class EE2RunJob:
         return j
 
     def _run_batch(self, batch_job: Job, params):
+
         for job_param in params:
             job_param[_BATCH_ID] = str(batch_job.id)
+        run_multiple = time.time()
         child_jobs = self._run_multiple(params)
+        print("Run multiple=", time.time() - run_multiple)
+
+        batch_save = time.time()
         batch_job.child_jobs = child_jobs
         self.sdkmr.save_job(batch_job)
+        print("batch_save batch_save=", time.time() - batch_save)
 
         return child_jobs
 
@@ -461,17 +484,30 @@ class EE2RunJob:
         wsid = batch_params.get(_WORKSPACE_ID)
         meta = batch_params.get(_META)
 
+        preflight_begin = time.time()
         self._preflight(
             runjob_params=params,
             batch_params=batch_params,
             new_batch_job=True,
             as_admin=as_admin,
         )
-
+        print("Preflight took", time.time() - preflight_begin)
+        ajr = time.time()
         self._add_job_requirements(params, bool(as_admin))  # as_admin checked above
-        self._check_job_arguments(params, batch_job=True)
+        print("ajr", time.time() - ajr)
 
+        cja = time.time()
+        self._check_job_arguments(params, batch_job=True)
+        print("cja", time.time() - cja)
+
+        cbj = time.time()
         batch_job = self._create_batch_job(wsid=wsid, meta=meta)
+        print("cbj", time.time() - cbj)
+
+        print(
+            "Total time for presubmit (-preflight_begin) ",
+            time.time() - preflight_begin,
+        )
         children_jobs = self._run_batch(batch_job=batch_job, params=params)
 
         return {_BATCH_ID: str(batch_job.id), "child_job_ids": children_jobs}
