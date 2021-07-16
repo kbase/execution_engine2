@@ -293,6 +293,7 @@ class EE2RunJob:
             f"init and gen_sub_time save_jobs = {time.time() - gen_sub_time}"
         )
 
+        # Takes 2.5200018882751465 for 100, can shave off 2.5 secs by making this async
         kafku = time.time()
         for job_id in job_ids:
             self.sdkmr.get_kafka_client().send_kafka_message(
@@ -344,6 +345,7 @@ class EE2RunJob:
         Submit multiple jobs. If any of the submissions are a failure, raise exception in order
         to fail all submitted jobs, rather than allowing the submissions to continue
         """
+        begin = time.time()
         job_ids = []
         condor_job_ids = []
         for job_submit_param in job_submission_params:
@@ -354,7 +356,7 @@ class EE2RunJob:
                     params=job_submit_param
                 )
                 condor_job_id = submission_info.clusterid
-                self.logger.debug(f"Submitted job id and got '{condor_job_id}'")
+
             except Exception as e:
                 self.logger.error(e)
                 self._finish_created_job(job_id=job_id, exception=e)
@@ -375,7 +377,11 @@ class EE2RunJob:
                 raise RuntimeError(error_msg)
             condor_job_ids.append(condor_job_id)
 
+        self.logger.error(f"It took {time.time() - begin} to submit jobs to condor")
+
+        update_time = time.time()
         self._update_to_queued_multiple(job_ids=job_ids, scheduler_ids=condor_job_ids)
+        self.logger.error(f"It took {time.time() - update_time} to update jobs ")
 
         return job_ids
 
@@ -386,7 +392,6 @@ class EE2RunJob:
         try:
             submission_info = self.sdkmr.get_condor().run_job(params=job_params)
             condor_job_id = submission_info.clusterid
-            self.logger.debug(f"Submitted job id and got '{condor_job_id}'")
         except Exception as e:
             self.logger.error(e)
             self._finish_created_job(job_id=job_id, exception=e)
