@@ -788,6 +788,11 @@ def _set_up_common_return_values_batch(mocks):
         None,
         None,
     ]
+
+    mocks[SDKMethodRunner].save_jobs.side_effect = [
+        [_JOB_ID_1, _JOB_ID_2],
+    ]
+
     mocks[Condor].run_job.side_effect = [
         SubmissionInfo(_CLUSTER_1, {}, None),
         SubmissionInfo(_CLUSTER_2, {}, None),
@@ -834,7 +839,7 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
         ]
     )
 
-    assert len(sdkmr.save_job.call_args_list) == 5
+    assert len(sdkmr.save_job.call_args_list) == 3
 
     # initial child jobs data save
     expected_job_1 = _create_job(
@@ -846,7 +851,7 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
         wsid=parent_wsid,
         batch_id=_JOB_ID,
     )
-    got_job_1 = sdkmr.save_job.call_args_list[0][0][0]
+    got_job_1 = sdkmr.save_jobs.call_args_list[0][0][0][0]
     assert_jobs_equal(got_job_1, expected_job_1)
 
     expected_job_2 = _create_job(
@@ -857,8 +862,8 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
         wsid=parent_wsid,
         batch_id=_JOB_ID,
     )
-    # index 2 because job 1 is updated with save_job before this job is created
-    got_job_2 = sdkmr.save_job.call_args_list[2][0][0]
+    # index 1 because save_jobs returns a list of two jobs
+    got_job_2 = sdkmr.save_jobs.call_args_list[0][0][0][1]
     assert_jobs_equal(got_job_2, expected_job_2)
 
     jsp_expected_1 = JobSubmissionParameters(
@@ -886,15 +891,15 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
     mocks[MongoUtil].get_job.assert_has_calls([call(_JOB_ID_1), call(_JOB_ID_2)])
 
     # update to queued state
-    got_queued_job_1 = sdkmr.save_job.call_args_list[1][0][0]
-    got_queued_job_2 = sdkmr.save_job.call_args_list[3][0][0]
+    got_queued_job_1 = sdkmr.save_job.call_args_list[0][0][0]
+    got_queued_job_2 = sdkmr.save_job.call_args_list[1][0][0]
     _check_queued_job_save(got_queued_job_1, _JOB_ID_1, _CLUSTER_1)
     _check_queued_job_save(got_queued_job_2, _JOB_ID_2, _CLUSTER_2)
 
     mocks[KafkaClient].send_kafka_message.assert_has_calls(
         [
-            call(KafkaCreateJob(job_id=_JOB_ID, user=_USER)),  # parent job
-            call(KafkaCreateJob(job_id=_JOB_ID_1, user=_USER)),
+            # call(KafkaCreateJob(job_id=_JOB_ID, user=_USER)),  # parent job
+            # call(KafkaCreateJob(job_id=_JOB_ID_1, user=_USER)),
             call(
                 KafkaQueueChange(
                     job_id=_JOB_ID_1,
@@ -903,7 +908,7 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
                     scheduler_id=_CLUSTER_1,
                 )
             ),
-            call(KafkaCreateJob(job_id=_JOB_ID_2, user=_USER)),
+            # call(KafkaCreateJob(job_id=_JOB_ID_2, user=_USER)),
             call(
                 KafkaQueueChange(
                     job_id=_JOB_ID_2,
@@ -927,7 +932,7 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
     final_expected_parent_job.id = ObjectId(_JOB_ID)
     final_expected_parent_job.user = _USER
     final_expected_parent_job.child_jobs = [_JOB_ID_1, _JOB_ID_2]
-    final_got_parent_job = sdkmr.save_job.call_args_list[4][0][0]
+    final_got_parent_job = sdkmr.save_job.call_args_list[2][0][0]
     assert_jobs_equal(final_got_parent_job, final_expected_parent_job)
 
 

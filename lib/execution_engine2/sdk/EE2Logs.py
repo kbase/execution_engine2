@@ -1,8 +1,8 @@
 from enum import Enum
 from typing import Dict, NamedTuple
 
-from lib.execution_engine2.db.models.models import JobLog as JLModel, LogLines
-from lib.execution_engine2.exceptions import RecordNotFoundException
+from execution_engine2.db.models.models import JobLog as JLModel, LogLines
+from execution_engine2.exceptions import RecordNotFoundException
 
 
 # if TYPE_CHECKING:

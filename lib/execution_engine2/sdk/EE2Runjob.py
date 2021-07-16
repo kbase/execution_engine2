@@ -87,10 +87,8 @@ class EE2RunJob:
         self.logger = self.sdkmr.get_logger()
 
     def _init_job_rec(
-        self,
-        user_id: str,
-        params: Dict,
-    ) -> str:
+        self, user_id: str, params: Dict, save: bool = True
+    ) -> Union[str, Job]:
         f"""
         Save an initial job record to the db and send a message to kafka
 
@@ -163,11 +161,13 @@ class EE2RunJob:
             job.retry_parent = str(parent_retry_job_id)
         job.batch_id = str(params.get(_BATCH_ID)) if params.get(_BATCH_ID) else None
 
-        job_id = self.sdkmr.save_job(job)
-        self.sdkmr.get_kafka_client().send_kafka_message(
-            message=KafkaCreateJob(job_id=job_id, user=user_id)
-        )
-        return job_id
+        if save:
+            job_id = self.sdkmr.save_job(job)
+            self.sdkmr.get_kafka_client().send_kafka_message(
+                message=KafkaCreateJob(job_id=job_id, user=user_id)
+            )
+            return job_id
+        return job
 
     def _check_ws_objects(self, source_objects) -> None:
         """
@@ -234,17 +234,7 @@ class EE2RunJob:
             error=f"{exception}",
         )
 
-    def _prepare_to_run(self, params, concierge_params=None) -> JobSubmissionParameters:
-        """
-        Creates a job record and creates the job submission params
-        """
-
-        job_id = self._init_job_rec(self.sdkmr.get_user_id(), params)
-
-        self.logger.debug(
-            f"User {self.sdkmr.get_user_id()} attempting to run job {params[_METHOD]} {params}"
-        )
-
+    def _generate_job_submission_params(self, job_id, params):
         return JobSubmissionParameters(
             job_id,
             AppInfo(params[_METHOD], params.get(_APP_ID)),
@@ -257,6 +247,101 @@ class EE2RunJob:
             wsid=params.get(_WORKSPACE_ID),
             source_ws_objects=params.get(_SOURCE_WS_OBJECTS),
         )
+
+    def _prepare_to_run(self, params, concierge_params=None) -> JobSubmissionParameters:
+        """
+        Creates a job record and creates the job submission params
+        """
+
+        job_id = self._init_job_rec(self.sdkmr.get_user_id(), params)
+        self.logger.debug(
+            f"User {self.sdkmr.get_user_id()} attempting to run job {params[_METHOD]} {params}"
+        )
+        return self._generate_job_submission_params(job_id, params)
+
+    def _run_multiple(self, runjob_params):
+        """
+        Get the job records, bulk save them, then submit to condor
+        :return:
+        """
+        job_records = []
+        for runjob_param in runjob_params:
+            job_records.append(
+                self._init_job_rec(self.sdkmr.get_user_id(), runjob_param, save=False)
+            )
+
+        job_ids = self.sdkmr.save_jobs(job_records)
+
+        # TODO: Test to see job ids match rjp?
+        job_submission_params = []
+        for i, job_id in enumerate(job_ids):
+            job_submission_params.append(
+                self._generate_job_submission_params(job_id, runjob_params[i])
+            )
+
+        return self._submit_multiple(job_submission_params)
+
+    def _update_to_queued_multiple(self, job_ids, scheduler_ids):
+        # TODO Unused
+        if len(job_ids) != len(scheduler_ids):
+            raise Exception(
+                "Need to provide the same amount of job ids and scheduler_ids"
+            )
+
+        # TODO RETRY FOR RACE CONDITION OF RUN/CANCEL
+        # TODO PASS QUEUE TIME IN FROM SCHEDULER ITSELF?
+        # TODO PASS IN SCHEDULER TYPE?
+        self.sdkmr.get_mongo_util().update_jobs_to_queued(
+            job_ids=job_ids, scheduler_ids=scheduler_ids
+        )
+
+        # TODO figure out kafka message
+        for i, job_id in enumerate(job_ids):
+
+            self.sdkmr.get_kafka_client().send_kafka_message(
+                message=KafkaQueueChange(
+                    job_id=job_id,
+                    new_status=Status.queued.value,
+                    previous_status=Status.created.value,  # TODO maybe change this to allow for estimating jobs
+                    scheduler_id=scheduler_ids[i],
+                )
+            )
+
+    def _submit_multiple(self, job_submission_params):
+        job_ids = []
+        condor_job_ids = []
+        for job_submit_param in job_submission_params:
+            job_id = job_submit_param.job_id
+            job_ids.append(job_id)
+            try:
+                submission_info = self.sdkmr.get_condor().run_job(
+                    params=job_submit_param
+                )
+                condor_job_id = submission_info.clusterid
+                self.logger.debug(f"Submitted job id and got '{condor_job_id}'")
+            except Exception as e:
+                self.logger.error(e)
+                self._finish_created_job(job_id=job_id, exception=e)
+                raise e
+
+            if submission_info.error is not None and isinstance(
+                submission_info.error, Exception
+            ):
+                self._finish_created_job(exception=submission_info.error, job_id=job_id)
+                raise submission_info.error
+            if condor_job_id is None:
+                error_msg = (
+                    "Condor job not run, and error not found. Something went wrong"
+                )
+                self._finish_created_job(
+                    job_id=job_id, exception=RuntimeError(error_msg)
+                )
+                raise RuntimeError(error_msg)
+
+            self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
+            condor_job_ids.append(condor_job_id)
+
+        return job_ids
 
     def _run(self, params):
         job_params = self._prepare_to_run(params=params)
@@ -337,14 +422,21 @@ class EE2RunJob:
 
         for job_param in params:
             job_param[_BATCH_ID] = str(batch_job.id)
-            try:
-                child_jobs.append(str(self._run(params=job_param)))
-            except Exception as e:
-                self.logger.debug(
-                    msg=f"Failed to submit child job. Aborting entire batch job {e}"
-                )
-                self._abort_child_jobs(child_jobs)
-                raise e
+
+        try:
+            child_jobs = self._run_multiple(params)
+        except Exception as e:
+            # See if we can abort any of these child jobs
+            raise e
+
+        # try:
+        #     child_jobs.append(str(self._run(params=job_param)))
+        # except Exception as e:
+        #     self.logger.debug(
+        #         msg=f"Failed to submit child job. Aborting entire batch job {e}"
+        #     )
+        #     self._abort_child_jobs(child_jobs)
+        #     raise e
 
         batch_job.child_jobs = child_jobs
         self.sdkmr.save_job(batch_job)

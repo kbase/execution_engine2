@@ -3,15 +3,15 @@ import subprocess
 import time
 import traceback
 from contextlib import contextmanager
-from typing import Dict
+from typing import Dict, List
 
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
-from pymongo import MongoClient
+from pymongo import MongoClient, UpdateOne
 from pymongo.errors import ServerSelectionTimeoutError
 
-from lib.execution_engine2.db.models.models import JobLog, Job, Status, TerminatedCode
-from lib.execution_engine2.exceptions import (
+from execution_engine2.db.models.models import JobLog, Job, Status, TerminatedCode
+from execution_engine2.exceptions import (
     RecordNotFoundException,
     InvalidStatusTransitionException,
 )
@@ -263,6 +263,27 @@ class MongoUtil:
             return True
         return False
 
+    def update_jobs_to_queued(self, job_ids, scheduler_ids):
+        bulk_operations = []
+        now = time.time()
+        for i, job_id in enumerate(job_ids):
+            bulk_operations.append(
+                UpdateOne(
+                    {"_id": job_id},
+                    {
+                        "$set": {
+                            "status": Status.queued.value,
+                            "queued": now,
+                            "scheduler_ids": scheduler_ids[i],
+                            "scheduler_type": "condor",
+                        }
+                    },
+                )
+            )
+
+        # TODO Save it
+        # TODO ordered false
+
     def cancel_job(self, job_id=None, terminated_code=None):
         """
         #TODO Should we check for a valid state transition here also?
@@ -419,6 +440,26 @@ class MongoUtil:
     @contextmanager
     def mongo_engine_connection(self):
         yield self.me_connection
+
+    def insert_jobs(self, jobs_to_insert: List[Job]) -> List[ObjectId]:
+        """
+        Insert multiple job records using MongoEngine
+        :param jobs_to_insert: Multiple jobs to insert at once
+        :return: List of job ids from the insertion
+        """
+        # TODO Look at pymongo write_concerns that may be useful
+        # TODO see if pymongo is faster
+
+        inserted = Job.objects.insert(doc_or_docs=jobs_to_insert, load_bulk=False)
+
+        return inserted
+        # TODO: Send Kafka messages here or elsewhere
+        # job_id = self.sdkmr.save_job(job)
+        # self.sdkmr.get_kafka_client().send_kafka_message(
+        #     message=KafkaCreateJob(job_id=job_id, user=user_id)
+        # )
+
+        # TODO: Think about error handling
 
     def insert_one(self, doc):
         """
