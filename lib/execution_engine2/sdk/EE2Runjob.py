@@ -272,13 +272,13 @@ class EE2RunJob:
             job_records.append(
                 self._init_job_rec(self.sdkmr.get_user_id(), runjob_param, save=False)
             )
-        print("init_job_rec = ", time.time() - init_job_rec)
+        self.logger.debug(f"init_job_rec = {time.time() - init_job_rec}")
 
         save_jobs = time.time()
         job_ids = self.sdkmr.save_jobs(job_records)
 
-        print("save_jobs = ", time.time() - save_jobs)
-        print("init and save save_jobs  = ", time.time() - init_job_rec)
+        self.logger.debug(f"save_jobs = {time.time() - save_jobs}")
+        self.logger.debug(f"init and save save_jobs = {time.time() - init_job_rec}")
 
         # Generate job submission params
         gen_sub_time = time.time()
@@ -288,7 +288,10 @@ class EE2RunJob:
                 self._generate_job_submission_params(job_id, runjob_params[i])
             )
             assert job_id == job_submission_params[i].job_id
-        print("gen_sub_time = ", time.time() - gen_sub_time)
+
+        self.logger.debug(
+            f"init and gen_sub_time save_jobs = {time.time() - gen_sub_time}"
+        )
 
         kafku = time.time()
         for job_id in job_ids:
@@ -297,13 +300,14 @@ class EE2RunJob:
                     job_id=str(job_id), user=self.sdkmr.get_user_id()
                 )
             )
-        print("kafku = ", time.time() - kafku)
+
+        self.logger.debug(f"kafka submit = {time.time() - kafku}")
 
         # Submit to Condor
         condor_time = time.time()
         try:
             submission_ids = self._submit_multiple(job_submission_params)
-            print("condor_time = ", time.time() - condor_time)
+            self.logger.debug(f"condor_time submit = {time.time() - condor_time}")
             return submission_ids
         except Exception as e:
             self._abort_multiple_jobs(job_ids)
@@ -455,12 +459,12 @@ class EE2RunJob:
             job_param[_BATCH_ID] = str(batch_job.id)
         run_multiple = time.time()
         child_jobs = self._run_multiple(params)
-        print("Run multiple=", time.time() - run_multiple)
+        self.logger.debug(f"run_multiple  = {time.time() - run_multiple}")
 
         batch_save = time.time()
         batch_job.child_jobs = child_jobs
         self.sdkmr.save_job(batch_job)
-        print("batch_save batch_save=", time.time() - batch_save)
+        self.logger.debug(f"batch_save  = {time.time() - batch_save}")
 
         return child_jobs
 
