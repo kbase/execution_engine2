@@ -269,20 +269,26 @@ class MongoUtil:
         for i, job_id in enumerate(job_ids):
             bulk_operations.append(
                 UpdateOne(
-                    {"_id": job_id},
+                    {"_id": ObjectId(job_id)},
                     {
                         "$set": {
                             "status": Status.queued.value,
                             "queued": now,
-                            "scheduler_ids": scheduler_ids[i],
+                            "scheduler_id": scheduler_ids[i],
                             "scheduler_type": "condor",
                         }
                     },
                 )
             )
+        mongo_collection = self.config["mongo-jobs-collection"]
+        if bulk_operations:
+            with self.pymongo_client(mongo_collection) as pymongo_client:
+                bwr = pymongo_client[self.mongo_database][mongo_collection].bulk_write(
+                    bulk_operations, ordered=False
+                )
+                assert bwr.modified_count == len(job_ids)
 
-        # TODO Save it
-        # TODO ordered false
+        # TODO error handling for bulk write result
 
     def cancel_job(self, job_id=None, terminated_code=None):
         """

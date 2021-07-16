@@ -72,7 +72,6 @@ _APP_2 = "module2/app2"
 _CLUSTER_1 = "cluster1"
 _CLUSTER_2 = "cluster2"
 
-
 _EMPTY_JOB_REQUIREMENTS = {
     "cpus": None,
     "memory_MB": None,
@@ -529,7 +528,6 @@ def test_run_job_as_concierge_sched_reqs_empty_list_as_admin():
 
 
 def _run_as_concierge_empty_as_admin(concierge_params, app):
-
     # Set up data variables
     client_group = "concierge"  # hardcoded default for run_as_concierge
     cpus = 1
@@ -839,7 +837,8 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
         ]
     )
 
-    assert len(sdkmr.save_job.call_args_list) == 3
+    assert len(sdkmr.save_job.call_args_list) == 1
+    assert len(sdkmr.save_jobs.call_args_list) == 1
 
     # initial child jobs data save
     expected_job_1 = _create_job(
@@ -887,19 +886,16 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
         [call(params=jsp_expected_1), call(params=jsp_expected_2)]
     )
 
-    # updated job data save
-    mocks[MongoUtil].get_job.assert_has_calls([call(_JOB_ID_1), call(_JOB_ID_2)])
-
     # update to queued state
-    got_queued_job_1 = sdkmr.save_job.call_args_list[0][0][0]
-    got_queued_job_2 = sdkmr.save_job.call_args_list[1][0][0]
-    _check_queued_job_save(got_queued_job_1, _JOB_ID_1, _CLUSTER_1)
-    _check_queued_job_save(got_queued_job_2, _JOB_ID_2, _CLUSTER_2)
+    mocks[MongoUtil].update_jobs_to_queued.assert_has_calls(
+        [call(job_ids=[_JOB_ID_1, _JOB_ID_2], scheduler_ids=[_CLUSTER_1, _CLUSTER_2])]
+    )
 
     mocks[KafkaClient].send_kafka_message.assert_has_calls(
         [
-            # call(KafkaCreateJob(job_id=_JOB_ID, user=_USER)),  # parent job
-            # call(KafkaCreateJob(job_id=_JOB_ID_1, user=_USER)),
+            call(KafkaCreateJob(job_id=_JOB_ID, user=_USER)),  # parent job
+            call(KafkaCreateJob(job_id=_JOB_ID_1, user=_USER)),
+            call(KafkaCreateJob(job_id=_JOB_ID_2, user=_USER)),
             call(
                 KafkaQueueChange(
                     job_id=_JOB_ID_1,
@@ -908,7 +904,6 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
                     scheduler_id=_CLUSTER_1,
                 )
             ),
-            # call(KafkaCreateJob(job_id=_JOB_ID_2, user=_USER)),
             call(
                 KafkaQueueChange(
                     job_id=_JOB_ID_2,
@@ -932,7 +927,7 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
     final_expected_parent_job.id = ObjectId(_JOB_ID)
     final_expected_parent_job.user = _USER
     final_expected_parent_job.child_jobs = [_JOB_ID_1, _JOB_ID_2]
-    final_got_parent_job = sdkmr.save_job.call_args_list[2][0][0]
+    final_got_parent_job = sdkmr.save_job.call_args_list[0][0][0]
     assert_jobs_equal(final_got_parent_job, final_expected_parent_job)
 
 

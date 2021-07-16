@@ -261,25 +261,36 @@ class EE2RunJob:
 
     def _run_multiple(self, runjob_params):
         """
-        Get the job records, bulk save them, then submit to condor
+        Get the job records, bulk save them, then submit to condor.
+        If any condor submission fails, abort all of the jobs
         :return:
         """
+        # Save records to db
         job_records = []
         for runjob_param in runjob_params:
             job_records.append(
                 self._init_job_rec(self.sdkmr.get_user_id(), runjob_param, save=False)
             )
-
         job_ids = self.sdkmr.save_jobs(job_records)
 
-        # TODO: Test to see job ids match rjp?
+        # Generate job submission params
         job_submission_params = []
         for i, job_id in enumerate(job_ids):
             job_submission_params.append(
                 self._generate_job_submission_params(job_id, runjob_params[i])
             )
-
-        return self._submit_multiple(job_submission_params)
+            assert job_id == job_submission_params[i].job_id
+            self.sdkmr.get_kafka_client().send_kafka_message(
+                message=KafkaCreateJob(
+                    job_id=str(job_id), user=self.sdkmr.get_user_id()
+                )
+            )
+        # Submit to Condor
+        try:
+            return self._submit_multiple(job_submission_params)
+        except Exception as e:
+            self._abort_multiple_jobs(job_ids)
+            raise e
 
     def _update_to_queued_multiple(self, job_ids, scheduler_ids):
         # TODO Unused
@@ -308,6 +319,10 @@ class EE2RunJob:
             )
 
     def _submit_multiple(self, job_submission_params):
+        """
+        Submit multiple jobs. If any of the submissions are a failure, raise exception in order
+        to fail all submitted jobs, rather than allowing the submissions to continue
+        """
         job_ids = []
         condor_job_ids = []
         for job_submit_param in job_submission_params:
@@ -337,9 +352,9 @@ class EE2RunJob:
                     job_id=job_id, exception=RuntimeError(error_msg)
                 )
                 raise RuntimeError(error_msg)
-
-            self.update_job_to_queued(job_id=job_id, scheduler_id=condor_job_id)
             condor_job_ids.append(condor_job_id)
+
+        self._update_to_queued_multiple(job_ids=job_ids, scheduler_ids=condor_job_ids)
 
         return job_ids
 
@@ -370,14 +385,14 @@ class EE2RunJob:
 
         return job_id
 
-    def _abort_child_jobs(self, child_job_ids):
+    def _abort_multiple_jobs(self, job_ids):
         """
         Cancel a list of child jobs, and their child jobs
         """
-        for child_job_id in child_job_ids:
+        for job_id in job_ids:
             try:
                 self.sdkmr.cancel_job(
-                    job_id=child_job_id,
+                    job_id=job_id,
                     terminated_code=TerminatedCode.terminated_by_batch_abort.value,
                 )
             except Exception as e:
@@ -411,33 +426,16 @@ class EE2RunJob:
         )
         j = self.sdkmr.save_and_return_job(j)
 
-        # TODO Do we need a new kafka call?
+        # TODO Do we need a new kafka call for batch?
         self.sdkmr.get_kafka_client().send_kafka_message(
             message=KafkaCreateJob(job_id=str(j.id), user=j.user)
         )
         return j
 
     def _run_batch(self, batch_job: Job, params):
-        child_jobs = []
-
         for job_param in params:
             job_param[_BATCH_ID] = str(batch_job.id)
-
-        try:
-            child_jobs = self._run_multiple(params)
-        except Exception as e:
-            # See if we can abort any of these child jobs
-            raise e
-
-        # try:
-        #     child_jobs.append(str(self._run(params=job_param)))
-        # except Exception as e:
-        #     self.logger.debug(
-        #         msg=f"Failed to submit child job. Aborting entire batch job {e}"
-        #     )
-        #     self._abort_child_jobs(child_jobs)
-        #     raise e
-
+        child_jobs = self._run_multiple(params)
         batch_job.child_jobs = child_jobs
         self.sdkmr.save_job(batch_job)
 
