@@ -49,12 +49,18 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 * Submitting multiple jobs uses the `run_job` endpoint, and is blocking (NOT OK!)
 
 ### Desired Behavior
+
+## General
 * Prevent multiple in-flight retries to prevent the user from wasting their own resources (and the queues resources)
-* Add retry_count to retried jobs as well to aid in more book-keeping in a new field called `retry_number`
 * Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
 * One single submission to HTCondor instead of multiple job submissions
 * Ability to gracefully handle jobs with children
 * Ability to handle database consistentcy during retry failure
+
+## Data inconsistency
+* Retry lifecycle is 1) Launch child jobs, 2) Notify the batch parent of the child, 3) Notify the retry parent of the child, 4) update the retry_toggle field
+* A new `retry_ids` field will show a list of jobs that have been retried using this parent id. Retry_count will be returned as a calculated field based off of retry_ids
+* `retry_toggle` field will allow a seperate process to check for jobs that didn't finish the entire retry lifecycle
 
 
 ### Questions
@@ -95,6 +101,7 @@ A: Not necessarily relevant to this endpoint, more of a run_job_batch endpoint q
     Should there be a maximum retry count? Or a warning that more retries are not likely to help?  (Unknown TBD)
     Can a job in states other than failed or canceled be retried? Or should the user be required to cancel a job before it can be retried? (Job must be in Error/Cancel state)
 
+# Deprecated 
 
 # Work estimation
 Priority descending
