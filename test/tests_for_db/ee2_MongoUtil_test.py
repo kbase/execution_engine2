@@ -90,6 +90,8 @@ class MongoUtilTest(unittest.TestCase):
                 "scheduler_id",
                 "child_jobs",
                 "batch_job",
+                "retry_ids",
+                "retry_saved_toggle",
             ]
             self.assertCountEqual(job.keys(), expected_keys)
 
@@ -110,6 +112,8 @@ class MongoUtilTest(unittest.TestCase):
                 "scheduler_id",
                 "batch_job",
                 "child_jobs",
+                "retry_ids",
+                "retry_saved_toggle",
             ]
             self.assertCountEqual(job.keys(), expected_keys)
 
@@ -129,6 +133,8 @@ class MongoUtilTest(unittest.TestCase):
                 "scheduler_id",
                 "batch_job",
                 "child_jobs",
+                "retry_ids",
+                "retry_saved_toggle",
             ]
             self.assertCountEqual(job.keys(), expected_keys)
 
@@ -161,6 +167,8 @@ class MongoUtilTest(unittest.TestCase):
                 "scheduler_id",
                 "batch_job",
                 "child_jobs",
+                "retry_ids",
+                "retry_saved_toggle",
             ]
 
             for job in jobs:
@@ -180,6 +188,8 @@ class MongoUtilTest(unittest.TestCase):
                 "scheduler_id",
                 "batch_job",
                 "child_jobs",
+                "retry_ids",
+                "retry_saved_toggle",
             ]
             for job in jobs:
                 self.assertCountEqual(job.to_mongo().to_dict().keys(), expected_keys)
@@ -211,6 +221,8 @@ class MongoUtilTest(unittest.TestCase):
                 "scheduler_id",
                 "batch_job",
                 "child_jobs",
+                "retry_ids",
+                "retry_saved_toggle",
             ]
 
             self.assertCountEqual(job.keys(), expected_keys)

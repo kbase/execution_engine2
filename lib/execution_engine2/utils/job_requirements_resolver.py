@@ -4,23 +4,21 @@ Contains resolvers for job requirements.
 
 import json
 from configparser import ConfigParser
-from typing import Iterable, Dict, Union, Set
 from enum import Enum
+from typing import Iterable, Dict, Union, Set
 
-from lib.installed_clients.CatalogClient import Catalog
-
-from execution_engine2.utils.arg_processing import (
-    check_string as _check_string,
-    not_falsy as _not_falsy,
-)
-
-from execution_engine2.sdk.job_submission_parameters import JobRequirements
+from execution_engine2.exceptions import IncorrectParamsException
 from execution_engine2.sdk.EE2Constants import (
     EE2_CONFIG_SECTION,
     EE2_DEFAULT_SECTION,
     EE2_DEFAULT_CLIENT_GROUP,
 )
-from execution_engine2.exceptions import IncorrectParamsException
+from execution_engine2.sdk.job_submission_parameters import JobRequirements
+from execution_engine2.utils.arg_processing import (
+    check_string as _check_string,
+    not_falsy as _not_falsy,
+)
+from execution_engine2.utils.catalog_cache import CatalogCache
 
 CLIENT_GROUP = "client_group"
 REQUEST_CPUS = "request_cpus"
@@ -157,19 +155,15 @@ class JobRequirementsResolver:
 
     def __init__(
         self,
-        catalog: Catalog,
         cfgfile: Iterable[str],
         override_client_group: str = None,
     ):
         """
         Create the resolver.
-
-        catalog - a catalog client pointing at the relevant KBase catalog service.
         cfgfile - the configuration file as an open file object or other iterable.
         override_client_group - if provided, this client group will be used for all jobs, ignoring
             all other sources of client group information.
         """
-        self._catalog = _not_falsy(catalog, "catalog")
         self._override_client_group = _check_string(
             override_client_group, "override_client_group", optional=True
         )
@@ -360,6 +354,7 @@ class JobRequirementsResolver:
     def resolve_requirements(
         self,
         method: str,
+        catalog_cache: CatalogCache,
         cpus: int = None,
         memory_MB: int = None,
         disk_GB: int = None,
@@ -377,6 +372,7 @@ class JobRequirementsResolver:
         the catalog and ee2 settings for the job.
 
         method - the method to be run in module.method format.
+        catalog_cache - a per request instance of a CatalogCache in order to speed up catalog lookups
         cpus - the number of CPUs required for the job.
         memory_MB - the amount of memory, in MB, required for the job.
         disk_GB - the amount of disk space, in GB, required for the job.
@@ -413,7 +409,7 @@ class JobRequirementsResolver:
 
         # the catalog could contain arbitrary scheduler requirements so we can't skip the
         # call even if all the arguments are provided
-        cat_reqs_all = self._get_catalog_reqs(module_name, function_name)
+        cat_reqs_all = self._get_catalog_reqs(module_name, function_name, catalog_cache)
         cat_reqs = self.normalize_job_reqs(
             cat_reqs_all,
             f"catalog method {module_name}.{function_name}",
@@ -465,10 +461,13 @@ class JobRequirementsResolver:
             raise IncorrectParamsException(f"No such clientgroup: {cg}")
         return cg
 
-    def _get_catalog_reqs(self, module_name, function_name):
+    @staticmethod
+    def _get_catalog_reqs(
+        module_name: str, function_name: str, catalog_cache: CatalogCache
+    ):
         # could cache results for 30s or so to speed things up... YAGNI
-        group_config = self._catalog.list_client_group_configs(
-            {"module_name": module_name, "function_name": function_name}
+        group_config = catalog_cache.lookup_job_resource_requirements(
+            module_name=module_name, function_name=function_name
         )
         # If group_config is empty, that means there's no clientgroup entry in the catalog
         # It'll return an empty list even for non-existent modules
@@ -477,7 +476,7 @@ class JobRequirementsResolver:
         if len(group_config) > 1:
             raise ValueError(
                 "Unexpected result from the Catalog service: more than one client group "
-                + f"configuration found for method {module_name}.{function_name}"
+                + f"configuration found for method {module_name}.{function_name} {group_config}"
             )
 
         resources_request = group_config[0].get(_CLIENT_GROUPS, None)

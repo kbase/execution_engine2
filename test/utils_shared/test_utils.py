@@ -1,9 +1,9 @@
 import json
-import os.path
-import uuid
 import logging
+import os.path
 import socket
 import time
+import uuid
 from configparser import ConfigParser
 from contextlib import closing
 from datetime import datetime
@@ -12,11 +12,10 @@ from typing import List, Dict
 import requests
 from dotenv import load_dotenv
 
-from lib.execution_engine2.db.models.models import Job, JobInput, Meta
-from lib.execution_engine2.db.models.models import Status
-from lib.execution_engine2.exceptions import MalformedTimestampException
-from lib.execution_engine2.utils.CondorTuples import JobInfo
-
+from execution_engine2.db.models.models import Job, JobInput, Meta
+from execution_engine2.db.models.models import Status
+from execution_engine2.exceptions import MalformedTimestampException
+from execution_engine2.utils.CondorTuples import JobInfo
 
 EE2_CONFIG_SECTION = "execution_engine2"
 KB_DEPLOY_ENV = "KB_DEPLOYMENT_CONFIG"
@@ -541,3 +540,11 @@ def get_ee2_test_config() -> Dict[str, str]:
         cfg[nameval[0]] = nameval[1]
 
     return cfg
+
+
+CLIENT_GROUP_CONFIG = {
+    "module_name": "module_name",
+    "function_name": "function_name",
+    "client_groups": ["client_groups_go_here"],
+}
+MODULE_VERSION = {"git_commit_hash": 123}
