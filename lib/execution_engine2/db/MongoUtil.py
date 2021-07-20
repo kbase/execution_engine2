@@ -15,6 +15,7 @@ from execution_engine2.exceptions import (
     RecordNotFoundException,
     InvalidStatusTransitionException,
 )
+from execution_engine2.sdk.EE2Runjob import JobIdPair
 
 
 class MongoUtil:
@@ -263,19 +264,23 @@ class MongoUtil:
             return True
         return False
 
-    def update_jobs_to_queued(self, job_ids, scheduler_ids):
+    def update_jobs_to_queued(
+        self, job_id_pairs: List[JobIdPair], scheduler_type: str = "condor"
+    ):
         bulk_operations = []
         now = time.time()
-        for i, job_id in enumerate(job_ids):
+        for job_id_pair in job_id_pairs:
+            if None in job_id_pairs:
+                raise InvalidStatusTransitionException
             bulk_operations.append(
                 UpdateOne(
-                    {"_id": ObjectId(job_id)},
+                    {"_id": ObjectId(job_id_pair.job_id)},
                     {
                         "$set": {
                             "status": Status.queued.value,
                             "queued": now,
-                            "scheduler_id": scheduler_ids[i],
-                            "scheduler_type": "condor",
+                            "scheduler_id": job_id_pair.scheduler_id,
+                            "scheduler_type": scheduler_type,
                         }
                     },
                 )
@@ -286,9 +291,9 @@ class MongoUtil:
                 bwr = pymongo_client[self.mongo_database][mongo_collection].bulk_write(
                     bulk_operations, ordered=False
                 )
-                assert bwr.modified_count == len(job_ids)
+                assert bwr.modified_count == len(job_id_pairs)
 
-        # TODO error handling for bulk write result
+        # TODO error handling for bulk write result, otherwise pymongo error will bubble up
 
     def cancel_job(self, job_id=None, terminated_code=None):
         """

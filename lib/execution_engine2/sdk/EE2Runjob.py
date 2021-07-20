@@ -74,6 +74,11 @@ class PreparedJobParams(NamedTuple):
     job_id: str
 
 
+class JobIdPair(NamedTuple):
+    job_id: str
+    scheduler_id: str
+
+
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -315,22 +320,19 @@ class EE2RunJob:
             raise e
 
     def _update_to_queued_multiple(self, job_ids, scheduler_ids):
-        # TODO Unused
         if len(job_ids) != len(scheduler_ids):
             raise Exception(
                 "Need to provide the same amount of job ids and scheduler_ids"
             )
 
+        jobs_to_update = map(JobIdPair, job_ids, scheduler_ids)
+
         # TODO RETRY FOR RACE CONDITION OF RUN/CANCEL
-        # TODO PASS QUEUE TIME IN FROM SCHEDULER ITSELF?
-        # TODO PASS IN SCHEDULER TYPE?
-        self.sdkmr.get_mongo_util().update_jobs_to_queued(
-            job_ids=job_ids, scheduler_ids=scheduler_ids
-        )
+
+        self.sdkmr.get_mongo_util().update_jobs_to_queued(jobs_to_update)
 
         # TODO figure out kafka message
         for i, job_id in enumerate(job_ids):
-
             self.sdkmr.get_kafka_client().send_kafka_message(
                 message=KafkaQueueChange(
                     job_id=job_id,
@@ -461,17 +463,19 @@ class EE2RunJob:
         return j
 
     def _run_batch(self, batch_job: Job, params):
+        """Add the batch id, save the jobs to the db, run the jobs"""
 
         for job_param in params:
             job_param[_BATCH_ID] = str(batch_job.id)
-        run_multiple = time.time()
-        child_jobs = self._run_multiple(params)
-        self.logger.debug(f"run_multiple  = {time.time() - run_multiple}")
 
-        batch_save = time.time()
-        batch_job.child_jobs = child_jobs
-        self.sdkmr.save_job(batch_job)
-        self.logger.debug(f"batch_save  = {time.time() - batch_save}")
+        child_jobs = self._run_multiple(params)
+
+        # Cancel child jobs if we can't notify the batch job of the child jobs
+        try:
+            batch_job.modify(add_to_set__child_jobs=child_jobs)
+        except Exception as e:
+            self._abort_multiple_jobs(child_jobs)
+            raise e
 
         return child_jobs
 
