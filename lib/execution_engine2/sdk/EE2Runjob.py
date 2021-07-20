@@ -325,11 +325,11 @@ class EE2RunJob:
                 "Need to provide the same amount of job ids and scheduler_ids"
             )
 
-        jobs_to_update = map(JobIdPair, job_ids, scheduler_ids)
+        jobs_to_update = list(map(JobIdPair, job_ids, scheduler_ids))
 
         # TODO RETRY FOR RACE CONDITION OF RUN/CANCEL
 
-        self.sdkmr.get_mongo_util().update_created_jobs_to_queued(jobs_to_update)
+        self.sdkmr.get_mongo_util().update_jobs_to_queued(jobs_to_update)
 
         # TODO figure out kafka message
         for i, job_id in enumerate(job_ids):

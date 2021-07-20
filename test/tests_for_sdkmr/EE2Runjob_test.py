@@ -887,7 +887,7 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
     )
 
     # update to queued state
-    mocks[MongoUtil].update_created_jobs_to_queued.assert_has_calls(
+    mocks[MongoUtil].update_jobs_to_queued.assert_has_calls(
         [call(job_ids=[_JOB_ID_1, _JOB_ID_2], scheduler_ids=[_CLUSTER_1, _CLUSTER_2])]
     )
 
