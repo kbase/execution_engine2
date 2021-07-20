@@ -1,24 +1,23 @@
-# Retry Endpoint
+# Retry Endpoint Design (Round 2!)
 
 Date: 2021-05-19
 
 
 ## Motivation for the Endpoint:
 
-The current requirement for the Batch/Bulk UI is to be able to retry jobs that have either "errored" out, or were cancelled.
+The current requirement for the Batch/Bulk UI is to be able to retry jobs that have either "errored" out, or were terminated.
 The UI allows you to retry either single jobs, or multiple jobs, and saves you from having to cancel and resubmit each job individually,
-which is not really possibly with the UI anyway.
+which is not currently implemented in the UI anyway.
 
 ### Motivation for the `code spike` for retry endpoint and follow up design ADR
-```
-As I mentioned, as the product owner, I find our ability to deliver functionality to be pretty awful. 
-We have invested so much effort in refactoring that its killed our timeline - we started in late July, and it is now almost May with no functioning bulk uploader, which was just the first deliverable.
-If we are going to refactor, we need to be able to do it in a timely fashion, and have it not kill the schedule any more than it has.
-I want to see the estimate for a quick and dirty solution that implements a proposed retry endpoint, that can be deployed ASAP, and then once the API contract has been established, and the functional MVP is done, we begin the cleanup of the backend code.
-Note that this is NOT business as usual, the usual way we do this is the nasty MVP gets deployed and then we don't go back until much later.
-Here, we get the API working so that it doesn't block dependencies, and we immediately start the refactoring. The refactor needs to be broken down into smallish chunks of ~3 days estimated work, and each merge should maintain functionality and incrementally improve the codebase.
-Tasks that take more than a couple of days are more likely to be far off in their estimate and this is how we mitigate the risk of poor estimation.
-```
+>As I mentioned, as the product owner, I find our ability to deliver functionality to be pretty awful. 
+>We have invested so much effort in refactoring that its killed our timeline - we started in late July, and it is now almost May with no functioning >bulk uploader, which was just the first deliverable.
+>If we are going to refactor, we need to be able to do it in a timely fashion, and have it not kill the schedule any more than it has.
+>I want to see the estimate for a quick and dirty solution that implements a proposed retry endpoint, that can be deployed ASAP, and then once the API >contract has been established, and the functional MVP is done, we begin the cleanup of the backend code.
+>Note that this is NOT business as usual, the usual way we do this is the nasty MVP gets deployed and then we don't go back until much later.
+>Here, we get the API working so that it doesn't block dependencies, and we immediately start the refactoring. The refactor needs to be broken down into >smallish chunks of ~3 days estimated work, and each merge should maintain functionality and incrementally improve the codebase.
+>Tasks that take more than a couple of days are more likely to be far off in their estimate and this is how we mitigate the risk of poor estimation.
+>
 
 
 ### High Level Behavior of the `retry` endpoint
@@ -32,21 +31,29 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 * The retry will only continue if the status of the job to be retried is in [Status.terminated.value, Status.error.value]
 * If the job id points to a job that has already been retried, it will attempt to retry that job's `retry_parent` instead.
 * If the job id has never been retried, it becomes the `retry_parent` 
-* EE2 looks up the job versions and parameters, and then submits the job to be retried, incrementing the `retry_count`
-  of the job being retried, and the newly launched job gains a pointer to the `_PARENT_RETRY_JOB_ID`
-* The job is submitted and upon successful submission, notifies the `retry_parent` and notifies the `parent_job_id` that a new `child_job` has been added
+* EE2 looks up the method versions and parameters, and then submits the job to be retried, incrementing the `retry_count` of the job being retried, and the newly launched job gains a field called `retry_parent` that contains the job id of the job from the original request.
+* The job is submitted and upon successful submission, the child job adds the field `retry_parent` and notifies the `parent_job_id` that a new `child_job` has been added by appending itself to the `parent_job.child_jobs[]` field
+* There is no way to specify ResourceRequirements with a retry at the moment, even if the job was previously submitted by an administrator and had specfified ResourceRequirements. The retry will only use resource requirements from the catalog / ee2 config.
 
 
 ### Batch Behavior
 * If a job has the attribute of `batch_job=True` the retry will fail, since there is no method to re-run. This is a bug, as it doesn't fail gracefully.
 * If a job has the attribute of `batch_job=True`, but is actually a child job, the parent will be notified of this new retried job
 * Multiple in-flight retries are allowed.
+* Adds `child_job_id` to `parent_job_id.child_job_ids[]`
 
 ## Retry_job behavior
-* Blocking and single submit to HTCondor. It should be fine
+* Blocking and single submit to HTCondor. It should be fine as it returns relatively quickly
   
 ## Retry_jobs behavior
-* Submitting multiple jobs uses the `run_job` endpoint, and is blocking (NOT OK!)
+* Submitting multiple jobs for retry serially calls the same code path
+used for running a single job and blocks until all jobs have been
+submitted to the condor queue. This can cause issues if the
+network drops, and makes the narrative not aware of the state of
+the retry. Submitting 100 jobs currently takes 9 seconds, and that
+is a lot of time for things to go wrong. 
+* (Follow up: Hopefully the making the narrative aware of the state of the retry will be mitigated by the narrative backend. It just blocks on the call anyway, with the default service timeout, which I think is something wacky like half an hour. As long as the user doesn't kill the kernel at that time, all should be well. Of course, if it were me, and it looked frozen for more than a couple minutes, I'd probably restart. )
+* Multiple in-flight retries are allowed.
 
 ### Desired Behavior
 
@@ -56,7 +63,7 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 * One single submission to HTCondor instead of multiple job submissions
 * Ability to gracefully handle jobs with children
 * Ability to handle database consistentcy during retry failure
-* See if we can make some preflight checks fail before job submission and handle them differently than those that appear during job submission 
+* See if we can make some preflight (before the job starts) checks fail before job submission and handle them differently than those that appear during job submission 
 
 #### Data inconsistency
 * A new `retry_ids` field will show a list of jobs that have been retried using this parent id. Retry_count will be returned as a calculated field based off of retry_ids
@@ -66,33 +73,45 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 3) Notify the retry parent of the child,
 4) Update the retry_toggle field
 
+#### Won't do
+* Prevent multiple in-flight retries of the same original job to prevent the user from wasting their own resources (and the queues resources)
+* Add retry_number field
 
+## New priority
+* Create a retry_jobs field, and expose list in api, and a T/F completeness toggle
+* Non blocking job submission / (Possibly htcondor submit)
+* Add failure conditions in run method
+* Add thread to perform actions based on toggle
 
 
 ### Questions
 
-#To Be Answered
-
+#### Answered:
 #### Q: should the number of retries of a job be limited, and if so, where? e.g. a max_retries field in the parent job? wait and see whether people attempt to rerun jobs that have already failed nine zillion times?
-A: Unknown TBD
+A: Make a ticket for this and add to backlog
 
-#### Q: Preventing the same params from being re-run
-A: We have decided to allow it
+#### Q: How do we prevent jobs with identical parameters from being rerun more than once within a retry_jobs request?
+A: We have decided to allow multiple jobs with the same params to be re-run in the same `retry_jobs` request.
 
-#### Q: Finding the most recent run of the job: I would very much like to avoid anything involving iterating over a chain of jobs before you can find the most recent run or the original run -- we can come up with better data structures than that!
-A: Unknown TBD, maybe the frontend does it?
+#### Q: How do we find the most recent retry of a job?
+A: The client using the ee2 API would have to figure it out using the `retry_parent` and job creation date fields. (Unless we added other fields to help with this)
 
-#### Q: It might be best to always submit a git commit for the module, maybe?
-A: (This could be a narrative ticket)
+#### Q: How do we ensure that the app version is correctly run each time when submitting from the narrative?
+A: We would need to change the narrative to submit the git commit hash instead of a version tag
 
 #### Q: How do we handle DB consistency during retry failure? 
 Looks like the options are
-* implement db integrity checks and two-phase commits for making the relationships between a job, its retry parent, and the batch container
+* implement db integrity checks and two-phase commits for making the relationships between a job, its `retry_parent`, and the batch container
 * accept that the db info may be incomplete and write workarounds into the clients
 * (upgrade to Mongo 4.4 for better transaction support)
 
+
+##### Q: Do we want to support ResourceRequirements
+A: Probably not in the short term
+
+
 #### Q: how to prevent incorrect parent-child relationships being created -- should the client be allowed to specify a parent ID? Is it currently possible to add a new child to a parent job if the child is a new job, rather than an existing job ID / set of params that is being rerun?
-A: Not necessarily relevant to this endpoint, more of a run_job_batch endpoint question. Currently the `retry_parent` and `parent_job_id` are looked up from the ee2 record on retry, and not specified in this endpoint.
+A: Not necessarily relevant to this endpoint, more of a `run_job_batch` endpoint question. Currently the `retry_parent` and `parent_job_id` are looked up from the ee2 record on retry, and not specified in this endpoint.
 
 #### Shorter Q and A
 
