@@ -31,8 +31,7 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 * The retry will only continue if the status of the job to be retried is in [Status.terminated.value, Status.error.value]
 * If the job id points to a job that has already been retried, it will attempt to retry that job's `retry_parent` instead.
 * If the job id has never been retried, it becomes the `retry_parent` 
-* EE2 looks up the method versions and parameters, and then submits the job to be retried, incrementing the `retry_count`
-  of the job being retried, and the newly launched job gains a field called `retry_parent` that contains the job id of the job from the original request.
+* EE2 looks up the method versions and parameters, and then submits the job to be retried, incrementing the `retry_count` of the job being retried, and the newly launched job gains a field called `retry_parent` that contains the job id of the job from the original request.
 * The job is submitted and upon successful submission, the child job adds the field `retry_parent` and notifies the `parent_job_id` that a new `child_job` has been added by appending itself to the `parent_job.child_jobs[]` field
 * There is no way to specify ResourceRequirements with a retry at the moment, even if the job was previously submitted by an administrator and had specfified ResourceRequirements. The retry will only use resource requirements from the catalog / ee2 config.
 
