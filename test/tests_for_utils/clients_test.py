@@ -98,21 +98,23 @@ def test_client_set_init_fail():
     n = None
 
     e = ValueError("auth cannot be a value that evaluates to false")
-    _client_set_init_fail(n, aa, c, ca, j, k, m, s, e)
+    _client_set_init_fail(n, aa, c, ca, ca, j, k, m, s, e)
     e = ValueError("auth_admin cannot be a value that evaluates to false")
-    _client_set_init_fail(a, n, c, ca, j, k, m, s, e)
+    _client_set_init_fail(a, n, c, ca, ca, j, k, m, s, e)
     e = ValueError("condor cannot be a value that evaluates to false")
-    _client_set_init_fail(a, aa, n, ca, j, k, m, s, e)
+    _client_set_init_fail(a, aa, n, ca, ca, j, k, m, s, e)
     e = ValueError("catalog cannot be a value that evaluates to false")
-    _client_set_init_fail(a, aa, c, n, j, k, m, s, e)
+    _client_set_init_fail(a, aa, c, n, ca, j, k, m, s, e)
+    e = ValueError("catalog_no_auth cannot be a value that evaluates to false")
+    _client_set_init_fail(a, aa, c, ca, n, j, k, m, s, e)
     e = ValueError("requirements_resolver cannot be a value that evaluates to false")
-    _client_set_init_fail(a, aa, c, ca, n, k, m, s, e)
+    _client_set_init_fail(a, aa, c, ca, ca, n, k, m, s, e)
     e = ValueError("kafka_client cannot be a value that evaluates to false")
-    _client_set_init_fail(a, aa, c, ca, j, n, m, s, e)
+    _client_set_init_fail(a, aa, c, ca, ca, j, n, m, s, e)
     e = ValueError("mongo_util cannot be a value that evaluates to false")
-    _client_set_init_fail(a, aa, c, ca, j, k, n, s, e)
+    _client_set_init_fail(a, aa, c, ca, ca, j, k, n, s, e)
     e = ValueError("slack_client cannot be a value that evaluates to false")
-    _client_set_init_fail(a, aa, c, ca, j, k, m, n, e)
+    _client_set_init_fail(a, aa, c, ca, ca, j, k, m, n, e)
 
 
 def _client_set_init_fail(
@@ -120,6 +122,7 @@ def _client_set_init_fail(
     auth_admin: AdminAuthUtil,
     condor: Condor,
     catalog: Catalog,
+    catalog_no_auth: Catalog,
     requirements_resolver: JobRequirementsResolver,
     kafka_client: KafkaClient,
     mongo_util: MongoUtil,
@@ -132,6 +135,7 @@ def _client_set_init_fail(
             auth_admin,
             condor,
             catalog,
+            catalog_no_auth,
             requirements_resolver,
             kafka_client,
             mongo_util,

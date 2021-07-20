@@ -1,13 +1,15 @@
 """
 Unit tests for the Retry Code
 """
+from unittest.mock import create_autospec, MagicMock
+
+from pytest import raises
+
 from execution_engine2.exceptions import CannotRetryJob, RetryFailureException
 from execution_engine2.sdk.EE2Runjob import EE2RunJob
 from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-
-from test.utils_shared.test_utils import get_example_job, assert_exception_correct
-from unittest.mock import create_autospec, MagicMock
-from pytest import raises
+from test.utils_shared.test_utils import assert_exception_correct
+from test.utils_shared.test_utils import get_example_job
 
 
 def test_retry_db_failures():
@@ -58,12 +60,14 @@ def test_retry_db_failures():
     # One DB failure
     rj._db_update_failure = MagicMock(side_effect=Exception("Boom!"))
     with raises(Exception):
-        rj._retry(job_id=retry_job.id, job=retry_job, parent_job=parent_job)
+        rj._retry(job_id=retry_job.id, job=retry_job, batch_job=parent_job)
     assert rj._db_update_failure.call_count == 1
 
     # Two db failures
     rj._db_update_failure = MagicMock()
-    rj._retry(job_id=retry_job.id, job=retry_job, parent_job=parent_job)
+    rj._retry(job_id=retry_job.id, job=retry_job, batch_job=parent_job)
+
+    assert not retry_job.retry_saved_toggle
 
 
 def test_validate_retry():
@@ -119,6 +123,8 @@ def test_retry_get_run_job_params_from_existing_job():
         "job_input",
         "child_jobs",
         "batch_job",
+        "retry_ids",
+        "retry_saved_toggle",
     ]
     expected_unequal_keys = [
         "updated",

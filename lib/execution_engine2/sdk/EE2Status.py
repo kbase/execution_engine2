@@ -472,7 +472,9 @@ class JobsStatus:
             else:
                 mongo_rec = job.to_mongo().to_dict()
                 del mongo_rec["_id"]
+                mongo_rec["retry_count"] = len(job["retry_ids"])
                 mongo_rec["job_id"] = str(job.id)
+                mongo_rec["batch_id"] = job.batch_id
                 mongo_rec["created"] = int(job.id.generation_time.timestamp() * 1000)
                 mongo_rec["updated"] = int(job.updated * 1000)
                 if job.estimating:
@@ -556,14 +558,17 @@ class JobsStatus:
 
         self.sdkmr.get_catalog().log_exec_stats(log_exec_stats_params)
 
-    def abandon_children(self, parent_job_id, child_job_ids, as_admin=False) -> Dict:
-        if not parent_job_id:
-            raise ValueError("Please provide valid parent_job id")
+    def abandon_children(self, batch_id, child_job_ids, as_admin=False) -> Dict:
+        # Note this does not work for 'manual' batch jobs as the parent job is
+        # never updated with the child jobs. It will only work with batch jobs specifically
+        # created by the run_job_batch endpoint.
+        if not batch_id:
+            raise ValueError("Please provide valid batch_id")
         if not child_job_ids:
             raise ValueError("Please provide job_ids of children to abandon")
 
         job = self.sdkmr.get_job_with_permission(
-            parent_job_id, JobPermissions.WRITE, as_admin=as_admin
+            batch_id, JobPermissions.WRITE, as_admin=as_admin
         )  # type: Job
         for child_job_id in child_job_ids:
             if child_job_id not in job.child_jobs:
@@ -571,11 +576,10 @@ class JobsStatus:
                     f"Couldn't find {child_job_id} in {child_job_ids}"
                 )
 
-        with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            job.update(pull_all__child_jobs=child_job_ids)
-            job.reload()
+        job.update(pull_all__child_jobs=child_job_ids)
+        job.reload()
 
-        return {"parent_job_id": parent_job_id, "child_jobs": job.child_jobs}
+        return {"batch_id": batch_id, "child_job_ids": job.child_jobs}
 
     def start_job(self, job_id, skip_estimation=True, as_admin=False):
         """

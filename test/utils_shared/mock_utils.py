@@ -16,7 +16,7 @@ from execution_engine2.utils.clients import ClientSet
 
 def _build_job_reqs(config, cfgfile, impls):
     with open(cfgfile) as cf:
-        return JobRequirementsResolver(impls[Catalog], cf)
+        return JobRequirementsResolver(cf)
 
 
 _CLASS_IMPLEMENTATION_BUILDERS = {
@@ -56,15 +56,13 @@ def get_client_mocks(config, config_path, *to_be_mocked):
         if clazz in to_be_mocked:
             ret[clazz] = create_autospec(clazz, instance=True, spec_set=True)
         else:
-            # this is a hack - only one client depends on another (JRR -> Cat)
-            # so we rely on the ALL_CLIENTS sort to make sure the dependency is built before the
-            # dependent module. If things become more complicated we'll need a dependency graph.
             ret[clazz] = _CLASS_IMPLEMENTATION_BUILDERS[clazz](config, config_path, ret)
     ret[ClientSet] = ClientSet(
         ret[KBaseAuth],
         ret[AdminAuthUtil],
         ret[Condor],
-        ret[Catalog],
+        ret[Catalog],  # This one is for "catalog"
+        ret[Catalog],  # This one is for "catalog_no_auth"
         ret[JobRequirementsResolver],
         ret[KafkaClient],
         ret[MongoUtil],

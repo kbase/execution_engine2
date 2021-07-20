@@ -4,36 +4,44 @@ Unit tests for the EE2Runjob class.
 
 # Incomplete by a long way. Will add more unit tests as they come up.
 
-from pytest import raises
-from typing import List, Dict, Any
-from bson.objectid import ObjectId
+import copy
 from logging import Logger
+from typing import List, Dict, Any
 from unittest.mock import create_autospec, call
+
+from bson.objectid import ObjectId
+from pytest import raises
+
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
+from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job, JobInput, JobRequirements, Meta
-from execution_engine2.exceptions import IncorrectParamsException, AuthError
+from execution_engine2.exceptions import (
+    IncorrectParamsException,
+    AuthError,
+    InvalidParameterForBatch,
+)
 from execution_engine2.sdk.EE2Runjob import EE2RunJob, JobPermissions
+from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.sdk.job_submission_parameters import (
     JobSubmissionParameters,
     JobRequirements as ResolvedRequirements,
     AppInfo,
     UserCreds,
 )
-from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.utils.Condor import Condor, SubmissionInfo
 from execution_engine2.utils.KafkaUtils import (
     KafkaClient,
     KafkaQueueChange,
     KafkaCreateJob,
 )
+from execution_engine2.utils.SlackUtils import SlackClient
+from execution_engine2.utils.catalog_cache import CatalogCache
 from execution_engine2.utils.job_requirements_resolver import (
     JobRequirementsResolver,
     RequirementsType,
 )
-from execution_engine2.utils.SlackUtils import SlackClient
-from execution_engine2.db.MongoUtil import MongoUtil
-from installed_clients.WorkspaceClient import Workspace
 from installed_clients.CatalogClient import Catalog
+from installed_clients.WorkspaceClient import Workspace
 from utils_shared.mock_utils import get_client_mocks, ALL_CLIENTS
 from utils_shared.test_utils import assert_exception_correct
 
@@ -94,7 +102,10 @@ def _set_up_mocks(user: str, token: str) -> Dict[Any, Any]:
     mocks[Logger] = create_autospec(Logger, spec_set=True, instance=True)
     mocks[Workspace] = create_autospec(Workspace, spec_set=True, instance=True)
     mocks[WorkspaceAuth] = create_autospec(WorkspaceAuth, spec_set=True, instance=True)
+    mocks[CatalogCache] = create_autospec(CatalogCache, spec_set=True, instance=True)
+
     # Set up basic getter calls
+    sdkmr.get_catalog_cache.return_value = mocks[CatalogCache]
     sdkmr.get_catalog.return_value = mocks[Catalog]
     sdkmr.get_condor.return_value = mocks[Condor]
     sdkmr.get_kafka_client.return_value = mocks[KafkaClient]
@@ -117,6 +128,7 @@ def _create_job(
     app=_APP,
     state=_CREATED_STATE,
     git_commit=_GIT_COMMIT,
+    batch_id=None,
     parent_job_id=None,
     source_ws_objects=None,
     wsid=None,
@@ -125,6 +137,7 @@ def _create_job(
     job.user = user
     job.status = state
     job.wsid = wsid
+    job.batch_id = batch_id
     ji = JobInput()
     ji.method = method
     ji.app_id = app
@@ -162,7 +175,7 @@ def _set_up_common_return_values(mocks):
     mocks[Workspace].get_object_info3.return_value = {
         "paths": [[_WS_REF_1], [_WS_REF_2]]
     }
-    mocks[Catalog].get_module_version.return_value = {"git_commit_hash": _GIT_COMMIT}
+    mocks[CatalogCache].lookup_git_commit_version.return_value = _GIT_COMMIT
     mocks[SDKMethodRunner].save_job.return_value = _JOB_ID
     mocks[Condor].run_job.return_value = SubmissionInfo(_CLUSTER, {}, None)
     retjob = Job()
@@ -171,7 +184,7 @@ def _set_up_common_return_values(mocks):
     mocks[MongoUtil].get_job.return_value = retjob
 
 
-def _check_common_mock_calls(mocks, reqs, wsid, app=_APP):
+def _check_common_mock_calls(mocks, reqs, wsid, app=_APP, parent_job_id=None):
     """
     Check that mocks are called as expected when those calls are similar or the same for
     several tests.
@@ -181,13 +194,17 @@ def _check_common_mock_calls(mocks, reqs, wsid, app=_APP):
     mocks[Workspace].get_object_info3.assert_called_once_with(
         {"objects": [{"ref": _WS_REF_1}, {"ref": _WS_REF_2}], "ignoreErrors": 1}
     )
-    mocks[Catalog].get_module_version.assert_called_once_with(
-        {"module_name": "lolcats", "version": "release"}
+    mocks[CatalogCache].lookup_git_commit_version.assert_called_once_with(
+        method="lolcats.lol_unto_death", service_ver=None
     )
 
     # initial job data save
     expected_job = _create_job(
-        reqs, app=app, wsid=wsid, source_ws_objects=[_WS_REF_1, _WS_REF_2]
+        reqs,
+        app=app,
+        wsid=wsid,
+        parent_job_id=parent_job_id,
+        source_ws_objects=[_WS_REF_1, _WS_REF_2],
     )
     assert len(sdkmr.save_job.call_args_list) == 2
     got_job = sdkmr.save_job.call_args_list[0][0][0]
@@ -200,6 +217,7 @@ def _check_common_mock_calls(mocks, reqs, wsid, app=_APP):
         reqs,
         UserCreds(_USER, _TOKEN),
         wsid=wsid,
+        parent_job_id=parent_job_id,
         source_ws_objects=[_WS_REF_1, _WS_REF_2],
     )
     mocks[Condor].run_job.assert_called_once_with(params=jsp_expected)
@@ -304,11 +322,13 @@ def test_run_job():
     # check mocks called as expected. The order here is the order that they're called in the code.
     jrr.normalize_job_reqs.assert_called_once_with({}, "input job")
     jrr.get_requirements_type.assert_called_once_with(**_EMPTY_JOB_REQUIREMENTS)
-    jrr.resolve_requirements.assert_called_once_with(_METHOD, **_EMPTY_JOB_REQUIREMENTS)
+    jrr.resolve_requirements.assert_called_once_with(
+        _METHOD, mocks[CatalogCache], **_EMPTY_JOB_REQUIREMENTS
+    )
     _check_common_mock_calls(mocks, reqs, None, _APP)
 
 
-def test_run_job_as_admin_with_job_requirements():
+def test_run_job_as_admin_with_job_requirements_and_parent_job():
     """
     A basic unit test of the run() method with an administrative user and job requirements.
 
@@ -317,6 +337,8 @@ def test_run_job_as_admin_with_job_requirements():
     metadata, etc.
 
     Does not include an app_id.
+
+    Does include a parent job id.
     """
 
     # Set up data variables
@@ -374,6 +396,7 @@ def test_run_job_as_admin_with_job_requirements():
         "method": _METHOD,
         "source_ws_objects": [_WS_REF_1, _WS_REF_2],
         "job_requirements": inc_reqs,
+        "parent_job_id": "thisislikesoooofake",
     }
     assert rj.run(params, as_admin=True) == _JOB_ID
 
@@ -381,8 +404,12 @@ def test_run_job_as_admin_with_job_requirements():
     sdkmr.check_as_admin.assert_called_once_with(JobPermissions.WRITE)
     jrr.normalize_job_reqs.assert_called_once_with(inc_reqs, "input job")
     jrr.get_requirements_type.assert_called_once_with(**req_args)
-    jrr.resolve_requirements.assert_called_once_with(_METHOD, **req_args)
-    _check_common_mock_calls(mocks, reqs, None, None)
+    jrr.resolve_requirements.assert_called_once_with(
+        _METHOD, mocks[CatalogCache], **req_args
+    )
+    _check_common_mock_calls(
+        mocks, reqs, None, None, parent_job_id="thisislikesoooofake"
+    )
 
 
 def test_run_job_as_concierge_with_wsid():
@@ -456,6 +483,7 @@ def test_run_job_as_concierge_with_wsid():
 
     jrr.resolve_requirements.assert_called_once_with(
         _METHOD,
+        mocks[CatalogCache],
         cpus=cpus,
         memory_MB=mem,
         disk_GB=disk,
@@ -544,6 +572,7 @@ def _run_as_concierge_empty_as_admin(concierge_params, app):
 
     jrr.resolve_requirements.assert_called_once_with(
         _METHOD,
+        mocks[CatalogCache],
         cpus=None,
         memory_MB=None,
         disk_GB=None,
@@ -603,12 +632,22 @@ def test_run_job_and_run_job_batch_fail_illegal_arguments():
 
     Tests both the run() and run_batch() methods.
     """
+    # These are extremely annoying to debug as they don't raise a stacktrace if a different exception type was thrown
+    # or let you know that it was an entirely different exception, or if the exception happened in the bulk version of the run
+
     _run_and_run_batch_fail_illegal_arguments(
         {}, IncorrectParamsException("Missing input parameter: method ID")
     )
+
     _run_and_run_batch_fail_illegal_arguments(
         {"method": "foo.bar", "wsid": 0},
         IncorrectParamsException("wsid must be at least 1"),
+        InvalidParameterForBatch(),
+    )
+    _run_and_run_batch_fail_illegal_arguments(
+        {"method": "foo.bar", "wsid": -1},
+        IncorrectParamsException("wsid must be at least 1"),
+        InvalidParameterForBatch(),
     )
     _run_and_run_batch_fail_illegal_arguments(
         {"method": "foo.bar", "source_ws_objects": {"a": "b"}},
@@ -634,11 +673,11 @@ def test_run_job_and_run_job_batch_fail_illegal_arguments():
     )
 
 
-def _run_and_run_batch_fail_illegal_arguments(params, expected):
+def _run_and_run_batch_fail_illegal_arguments(params, expected, batch_expected=None):
     mocks = _set_up_mocks(_USER, _TOKEN)
     jrr = mocks[JobRequirementsResolver]
     jrr.resolve_requirements.return_value = ResolvedRequirements(1, 1, 1, "cg")
-    _run_and_run_batch_fail(mocks[SDKMethodRunner], params, expected)
+    _run_and_run_batch_fail(mocks[SDKMethodRunner], params, expected, batch_expected)
 
 
 def test_run_job_and_run_job_batch_fail_arg_normalization():
@@ -711,12 +750,16 @@ def test_run_job_and_run_job_batch_fail_workspace_objects_check():
     )
 
 
-def _run_and_run_batch_fail(sdkmr, params, expected, as_admin=True):
+def _run_and_run_batch_fail(
+    sdkmr, params, expected, batch_expected=None, as_admin=True
+):
     rj = EE2RunJob(sdkmr)
     with raises(Exception) as got:
         rj.run(params, as_admin=as_admin)
     assert_exception_correct(got.value, expected)
 
+    if batch_expected:
+        expected = batch_expected
     _run_batch_fail(rj, [params], {}, as_admin, expected)
 
 
@@ -730,11 +773,13 @@ def _set_up_common_return_values_batch(mocks):
     returned_parent_job = Job()
     returned_parent_job.id = ObjectId(_JOB_ID)
     returned_parent_job.user = _USER
-    mocks[SDKMethodRunner].save_and_return_job.return_value = returned_parent_job
-    mocks[Catalog].get_module_version.side_effect = [
-        {"git_commit_hash": _GIT_COMMIT_1},
-        {"git_commit_hash": _GIT_COMMIT_2},
+    mocks[CatalogCache].lookup_git_commit_version.side_effect = [
+        _GIT_COMMIT_1,
+        _GIT_COMMIT_2,
     ]
+
+    mocks[SDKMethodRunner].save_and_return_job.return_value = returned_parent_job
+
     # create job1, update job1, create job2, update job2, update parent job
     mocks[SDKMethodRunner].save_job.side_effect = [
         _JOB_ID_1,
@@ -756,7 +801,7 @@ def _set_up_common_return_values_batch(mocks):
     mocks[MongoUtil].get_job.side_effect = [retjob_1, retjob_2]
 
 
-def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
+def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
     """
     Check that mocks are called as expected when those calls are similar or the same for
     several tests.
@@ -782,10 +827,10 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
     got_parent_job = sdkmr.save_and_return_job.call_args_list[0][0][0]
     assert_jobs_equal(got_parent_job, expected_parent_job)
 
-    mocks[Catalog].get_module_version.assert_has_calls(
+    mocks[CatalogCache].lookup_git_commit_version.assert_has_calls(
         [
-            call({"module_name": "module1", "version": "release"}),
-            call({"module_name": "module2", "version": "release"}),
+            call(method="module1.method1", service_ver=None),
+            call(method="module2.method2", service_ver=None),
         ]
     )
 
@@ -798,7 +843,8 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
         app=_APP_1,
         git_commit=_GIT_COMMIT_1,
         source_ws_objects=[_WS_REF_1, _WS_REF_2],
-        parent_job_id=_JOB_ID,
+        wsid=parent_wsid,
+        batch_id=_JOB_ID,
     )
     got_job_1 = sdkmr.save_job.call_args_list[0][0][0]
     assert_jobs_equal(got_job_1, expected_job_1)
@@ -808,8 +854,8 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
         method=_METHOD_2,
         app=_APP_2,
         git_commit=_GIT_COMMIT_2,
-        wsid=wsid,
-        parent_job_id=_JOB_ID,
+        wsid=parent_wsid,
+        batch_id=_JOB_ID,
     )
     # index 2 because job 1 is updated with save_job before this job is created
     got_job_2 = sdkmr.save_job.call_args_list[2][0][0]
@@ -822,6 +868,7 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
         UserCreds(_USER, _TOKEN),
         parent_job_id=_JOB_ID,
         source_ws_objects=[_WS_REF_1, _WS_REF_2],
+        wsid=parent_wsid,
     )
     jsp_expected_2 = JobSubmissionParameters(
         _JOB_ID_2,
@@ -829,7 +876,7 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid):
         reqs2,
         UserCreds(_USER, _TOKEN),
         parent_job_id=_JOB_ID,
-        wsid=wsid,
+        wsid=parent_wsid,
     )
     mocks[Condor].run_job.assert_has_calls(
         [call(params=jsp_expected_1), call(params=jsp_expected_2)]
@@ -892,6 +939,10 @@ def test_run_job_batch_with_parent_job_wsid():
     potential code paths or provide all the possible run inputs, such as job parameters, cell
     metadata, etc.
     """
+    # When an assertion is failed, this test doesn't show you where failed in PyCharm, so use
+    # Additional arguments `--no-cov -s` or run from cmd line
+    # PYTHONPATH=.:lib:test pytest test/tests_for_sdkmr/EE2Runjob_test.py::test_run_job_batch_with_parent_job_wsid --no-cov
+
     # set up variables
     parent_wsid = 89
     wsid = 32
@@ -942,15 +993,19 @@ def test_run_job_batch_with_parent_job_wsid():
             "wsid": wsid,
         },
     ]
+    with raises(InvalidParameterForBatch) as got:
+        rj.run_batch(copy.deepcopy(params), {"wsid": parent_wsid})
+    assert_exception_correct(got.value, InvalidParameterForBatch())
+
+    params[1]["wsid"] = None
     assert rj.run_batch(params, {"wsid": parent_wsid}) == {
-        "parent_job_id": _JOB_ID,
+        "batch_id": _JOB_ID,
         "child_job_ids": [_JOB_ID_1, _JOB_ID_2],
     }
 
     # check mocks called as expected. The order here is the order that they're called in the code.
     mocks[WorkspaceAuth].can_write.assert_called_once_with(parent_wsid)
-    # this seems like a bug. See comments in the run_batch method
-    mocks[WorkspaceAuth].can_write_list.assert_called_once_with([parent_wsid, wsid])
+
     jrr = mocks[JobRequirementsResolver]
     jrr.normalize_job_reqs.assert_has_calls(
         [call({}, "input job"), call({}, "input job")]
@@ -960,11 +1015,11 @@ def test_run_job_batch_with_parent_job_wsid():
     )
     jrr.resolve_requirements.assert_has_calls(
         [
-            call(_METHOD_1, **_EMPTY_JOB_REQUIREMENTS),
-            call(_METHOD_2, **_EMPTY_JOB_REQUIREMENTS),
+            call(_METHOD_1, mocks[CatalogCache], **_EMPTY_JOB_REQUIREMENTS),
+            call(_METHOD_2, mocks[CatalogCache], **_EMPTY_JOB_REQUIREMENTS),
         ]
     )
-    _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid, wsid)
+    _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid)
 
 
 def test_run_job_batch_as_admin_with_job_requirements():
@@ -977,7 +1032,6 @@ def test_run_job_batch_as_admin_with_job_requirements():
     metadata, etc.
     """
     # set up variables
-    wsid = 32
     cpus = 89
     mem = 3
     disk = 10000
@@ -1047,12 +1101,11 @@ def test_run_job_batch_as_admin_with_job_requirements():
         {
             "method": _METHOD_2,
             "app_id": _APP_2,
-            "wsid": wsid,
             "job_requirements": inc_reqs,
         },
     ]
     assert rj.run_batch(params, {}, as_admin=True) == {
-        "parent_job_id": _JOB_ID,
+        "batch_id": _JOB_ID,
         "child_job_ids": [_JOB_ID_1, _JOB_ID_2],
     }
 
@@ -1065,15 +1118,42 @@ def test_run_job_batch_as_admin_with_job_requirements():
         [call(**_EMPTY_JOB_REQUIREMENTS), call(**req_args)]
     )
     jrr.resolve_requirements.assert_has_calls(
-        [call(_METHOD_1, **_EMPTY_JOB_REQUIREMENTS), call(_METHOD_2, **req_args)]
+        [
+            call(_METHOD_1, mocks[CatalogCache], **_EMPTY_JOB_REQUIREMENTS),
+            call(_METHOD_2, mocks[CatalogCache], **req_args),
+        ]
     )
-    _check_common_mock_calls_batch(mocks, reqs1, reqs2, None, wsid)
+    _check_common_mock_calls_batch(mocks, reqs1, reqs2, None)
 
 
-def test_run_batch_fail_params_not_list():
+def test_run_batch_preflight_failures():
     mocks = _set_up_mocks(_USER, _TOKEN)
     sdkmr = mocks[SDKMethodRunner]
+    rj = EE2RunJob(sdkmr)
+    with raises(Exception) as got:
+        rj._preflight(runjob_params=[], batch_params=[])
 
+    assert_exception_correct(
+        got.value,
+        expected=IncorrectParamsException(
+            "RunJobParams and BatchParams cannot be identical"
+        ),
+    )
+
+    with raises(Exception) as got:
+        rj._preflight(runjob_params=[], batch_params={"batch": "batch"})
+
+    assert_exception_correct(
+        got.value,
+        expected=IncorrectParamsException(
+            "Programming error, you forgot to set the new_batch_job flag to True"
+        ),
+    )
+
+
+def test_run_batch_fail_params_not_list_or_batch_not_mapping():
+    mocks = _set_up_mocks(_USER, _TOKEN)
+    sdkmr = mocks[SDKMethodRunner]
     rj = EE2RunJob(sdkmr)
     for params in [
         None,
@@ -1087,6 +1167,10 @@ def test_run_batch_fail_params_not_list():
         _run_batch_fail(
             rj, params, {}, True, IncorrectParamsException("params must be a list")
         )
+
+    _run_batch_fail(
+        rj, [], [], True, IncorrectParamsException("batch params must be a mapping")
+    )
 
 
 # Note the next few tests are specifically testing that errors for multiple jobs have the
@@ -1121,7 +1205,7 @@ def test_run_job_batch_fail_illegal_arguments():
         [job, {"method": "foo.bar", "wsid": 0}],
         {},
         True,
-        IncorrectParamsException("Job #2: wsid must be at least 1"),
+        InvalidParameterForBatch(),
     )
     _run_batch_fail(
         rj,
@@ -1307,6 +1391,7 @@ def assert_jobs_equal(got_job: Job, expected_job: Job):
         "condor_job_ads",
         "child_jobs",
         "batch_job",
+        "batch_id",
     ]
 
     _assert_field_subset_equal(got_job, expected_job, job_fields)

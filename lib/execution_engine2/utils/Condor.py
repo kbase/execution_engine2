@@ -209,7 +209,7 @@ class Condor:
             return SubmissionInfo(None, sub, e)
 
     def get_job_resource_info(
-        self, job_id: Optional[str] = None, cluster_id: Optional[str] = None
+        self, job_id: str = None, cluster_id: str = None
     ) -> Dict[str, str]:
         if job_id is not None and cluster_id is not None:
             raise Exception("Use only batch name (job_id) or cluster_id, not both")
