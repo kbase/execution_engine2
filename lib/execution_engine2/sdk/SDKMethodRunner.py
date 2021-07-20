@@ -266,6 +266,14 @@ class SDKMethodRunner:
         job.save()
         return str(job.id)
 
+    def add_child_jobs(self, batch_job: Job, child_jobs: List[str]):
+        """
+        Add child jobs to a batch job record in the Mongo Database and return the updated job.
+        :return:
+        """
+        batch_job.modify(add_to_set__child_jobs=child_jobs)
+        return batch_job
+
     def save_and_return_job(self, job: Job) -> Job:
         """
         Save a job record to the Mongo database and return the updated job.

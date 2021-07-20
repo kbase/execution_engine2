@@ -472,7 +472,7 @@ class EE2RunJob:
 
         # Cancel child jobs if we can't notify the batch job of the child jobs
         try:
-            batch_job.modify(add_to_set__child_jobs=child_jobs)
+            self.sdkmr.add_child_jobs(batch_job, child_jobs)
         except Exception as e:
             self._abort_multiple_jobs(child_jobs)
             raise e
@@ -499,30 +499,15 @@ class EE2RunJob:
         wsid = batch_params.get(_WORKSPACE_ID)
         meta = batch_params.get(_META)
 
-        preflight_begin = time.time()
         self._preflight(
             runjob_params=params,
             batch_params=batch_params,
             new_batch_job=True,
             as_admin=as_admin,
         )
-        print("Preflight took", time.time() - preflight_begin)
-        ajr = time.time()
         self._add_job_requirements(params, bool(as_admin))  # as_admin checked above
-        print("ajr", time.time() - ajr)
-
-        cja = time.time()
         self._check_job_arguments(params, batch_job=True)
-        print("cja", time.time() - cja)
-
-        cbj = time.time()
         batch_job = self._create_batch_job(wsid=wsid, meta=meta)
-        print("cbj", time.time() - cbj)
-
-        print(
-            "Total time for presubmit (-preflight_begin) ",
-            time.time() - preflight_begin,
-        )
         children_jobs = self._run_batch(batch_job=batch_job, params=params)
 
         return {_BATCH_ID: str(batch_job.id), "child_job_ids": children_jobs}
