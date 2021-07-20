@@ -329,7 +329,7 @@ class EE2RunJob:
 
         # TODO RETRY FOR RACE CONDITION OF RUN/CANCEL
 
-        self.sdkmr.get_mongo_util().update_jobs_to_queued(jobs_to_update)
+        self.sdkmr.get_mongo_util().update_created_jobs_to_queued(jobs_to_update)
 
         # TODO figure out kafka message
         for i, job_id in enumerate(job_ids):

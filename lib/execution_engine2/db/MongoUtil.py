@@ -264,9 +264,14 @@ class MongoUtil:
             return True
         return False
 
-    def update_jobs_to_queued(
+    def update_created_jobs_to_queued(
         self, job_id_pairs: List[JobIdPair], scheduler_type: str = "condor"
-    ):
+    ) -> None:
+        """
+        Updates a list of created jobs to queued. Does not work on jobs with status of "Estimating"
+        :param job_id_pairs: A list of pairs of Job Ids and Scheduler Ids
+        :param scheduler_type: The scheduler this job was queued in, default condor
+        """
         bulk_operations = []
         now = time.time()
         for job_id_pair in job_id_pairs:
@@ -274,7 +279,10 @@ class MongoUtil:
                 raise InvalidStatusTransitionException
             bulk_operations.append(
                 UpdateOne(
-                    {"_id": ObjectId(job_id_pair.job_id)},
+                    {
+                        "_id": ObjectId(job_id_pair.job_id),
+                        "status": Status.created.value,
+                    },
                     {
                         "$set": {
                             "status": Status.queued.value,
