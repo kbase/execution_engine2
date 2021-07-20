@@ -22,7 +22,7 @@ which is not currently implemented in the UI anyway.
 
 ### High Level Behavior of the `retry` endpoint
 The current implementation of retry is to run jobs using the `retry_job` or `retry_jobs` endpoint. 
-The endpoint takes a job or list of job ids and attempts to resubmit them to the queue, using the same parameters and version of the app as the original job.
+The endpoint takes a job or list of job ids and then attempts to resubmit them to the queue, using the exact same set of parameters and version of the app.
 
 ### Current Behavior
 * Spec file is located at https://github.com/kbase/execution_engine2/blob/8baab8e3ac5212f4bbe59fd935980aa41b4ee06d/execution_engine2.spec#L201-L247
@@ -36,7 +36,11 @@ The endpoint takes a job or list of job ids and attempts to resubmit them to the
 * The job is submitted and upon successful submission, the child job adds the field `retry_parent` and notifies the `parent_job_id` that a new `child_job` has been added by appending itself to the `parent_job.child_jobs[]` field
 * There is no way to specify ResourceRequirements with a retry at the moment, even if the job was previously submitted by an administrator and had specfified ResourceRequirements. The retry will only use resource requirements from the catalog / ee2 config.
 
-### Batch Jobs Behavior
+
+### Batch Behavior
+* If a job has the attribute of `batch_job=True` the retry will fail, since there is no method to re-run. This is a bug, as it doesn't fail gracefully.
+* If a job has the attribute of `batch_job=True`, but is actually a child job, the parent will be notified of this new retried job
+* Multiple in-flight retries are allowed.
 * Adds `child_job_id` to `parent_job_id.child_job_ids[]`
 
 ## Retry_job behavior
@@ -53,13 +57,22 @@ is a lot of time for things to go wrong.
 * Multiple in-flight retries are allowed.
 
 ### Desired Behavior
-* Create a retry_jobs field, and a toggle to have a list of retried jobs and to ensure DB consistency ( Ability to handle database consistency during retry failure. (see thread https://github.com/kbase/execution_engine2/pull/383#discussion_r638341940))
-* Add failure conditions in the `run()` method and see if any of those should be checked prior to starting jobs
-* Prevent retry if resolving `retry_parent` results in two or more of the same job_ids in a retry_jobs request (see thread https://github.com/kbase/execution_engine2/pull/383#discussion_r640907736)  ( Or silently just run the one retry job and report the results to both positions in the list )
 
-### Can be done with RunJob changes
-* * Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
-* * One single submission to HTCondor instead of multiple job submissions
+#### General
+* Prevent multiple in-flight retries to prevent the user from wasting their own resources (and the queues resources)
+* Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
+* One single submission to HTCondor instead of multiple job submissions
+* Ability to gracefully handle jobs with children
+* Ability to handle database consistentcy during retry failure
+* See if we can make some preflight (before the job starts) checks fail before job submission and handle them differently than those that appear during job submission 
+
+#### Data inconsistency
+* A new `retry_ids` field will show a list of jobs that have been retried using this parent id. Retry_count will be returned as a calculated field based off of retry_ids
+* `retry_toggle` field will allow a seperate process to check for jobs that didn't finish the entire retry lifecycle:
+1) Launch child jobs
+2) Notify the batch parent of the child,
+3) Notify the retry parent of the child,
+4) Update the retry_toggle field
 
 #### Won't do
 * Prevent multiple in-flight retries of the same original job to prevent the user from wasting their own resources (and the queues resources)
@@ -101,7 +114,7 @@ A: Probably not in the short term
 #### Q: how to prevent incorrect parent-child relationships being created -- should the client be allowed to specify a parent ID? Is it currently possible to add a new child to a parent job if the child is a new job, rather than an existing job ID / set of params that is being rerun?
 A: Not necessarily relevant to this endpoint, more of a `run_job_batch` endpoint question. Currently the `retry_parent` and `parent_job_id` are looked up from the ee2 record on retry, and not specified in this endpoint.
 
-#### Answered:
+#### Shorter Q and A
 
     Should we track a retry count? (Done)
     Should users see this retry count? (Unknown TBD)
@@ -112,23 +125,39 @@ A: Not necessarily relevant to this endpoint, more of a `run_job_batch` endpoint
     Can a job in states other than failed or canceled be retried? Or should the user be required to cancel a job before it can be retried? (Job must be in Error/Cancel state)
 
 
-#TODO
-MAKE TICKETS AND UPDATE BELOW
-
 # Work estimation
 Priority descending
-* Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
-* One single submission to HTCondor instead of multiple job submission ()
-* Prevent multiple in-flight retries to prevent the user from wasting their own resources (and the queues resources)
-* Add retry_count to retried jobs as well to aid in more book-keeping in a new field called `retry_number`
-
-# Time / Tickets to be created
-* Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
-> Requires refactor of run_job_batch to add jobs to an existing batch job, and force the same app `git_commit versions` and `JobRequirements`
+* Address data inconsistency via retry_count, retry_ids and retry_toggle
 > Estimate 3-4 days
+> https://kbase-jira.atlassian.net/browse/DATAUP-461
+
+* Preflight checks
+> Estimate 3-4 days
+> https://kbase-jira.atlassian.net/browse/DATAUP-528
+
+* Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
+* > Estimate 3-4 days
+> Requires refactor of run_job_batch to be non blocking 
+
+
+> Requires retry to be able to force the same app `git_commit versions` and `JobRequirements` from the db records
+https://kbase-jira.atlassian.net/browse/DATAUP-461
+
+
+*  Hookup retrys to refactored code
+*  Requires refactor of retry to gracefully handle jobs with children by notifying the batch containers for retry of ids not in the same batch
+> Estimate 3 days
+> https://kbase-jira.atlassian.net/browse/DATAUP-535
+
+
 * One single submission to HTCondor instead of multiple job submission ()
-> Dependent on run_job_batch to be threaded first : Estimate 1 day
+> Estimate 1-2 days
+> https://kbase-jira.atlassian.net/browse/DATAUP-391
+
 * Prevent multiple in-flight retries to prevent the user from wasting their own resources (and the queues resources)
-> Some sort of locking mechanism or something else : Estimate 3 day
-* Add retry_count to retried jobs as well to aid in more book-keeping in a new field called `retry_number`
-> Requires addition to run_job and new field in model : Estimate 1.25 day
+> Estimate 3-4 days
+https://kbase-jira.atlassian.net/browse/DATAUP-439
+
+* Create a created jobs and queued jobs reaper than queues created jobs older than 1 hour, and queued jobs over 14 days old.
+> Estimate 2-3 days 
+https://kbase-jira.atlassian.net/browse/DATAUP-536
