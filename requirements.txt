@@ -58,7 +58,6 @@ requests==2.25.1
 requests-async==0.4.1
 requests-mock==1.9.3
 rfc3986==1.5.0
-ruamel-yaml-conda==0.15.100
 ruamel.yaml==0.17.10
 ruamel.yaml.clib==0.2.6
 sanic==21.6.0
