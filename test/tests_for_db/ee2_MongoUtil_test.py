@@ -66,10 +66,10 @@ class MongoUtilTest(unittest.TestCase):
         job_ids = [job_id1, job_id2]
         scheduler_ids = [job.scheduler_id, job2.scheduler_id]
         jobs_to_update = list(map(JobIdPair, job_ids, scheduler_ids))
-        print(jobs_to_update)
-        assert Status.created.value in [job.status, job2.status]
-
-        # TODO RETRY FOR RACE CONDITION OF RUN/CANCEL
+        self.getMongoUtil().update_jobs_to_queued(jobs_to_update)
+        job.reload()
+        job2.reload()
+        assert Status.queued.value in [job.status, job2.status]
 
     def test_update_jobs_failure(self):
         job = get_example_job(status=Status.created.value)
