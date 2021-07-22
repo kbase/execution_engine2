@@ -87,7 +87,7 @@ class MongoUtilTest(unittest.TestCase):
 
         with self.assertRaisesRegex(
             InvalidStatusTransitionException,
-            "Wasn't able to update all jobs to created ",
+            f"Wasn't able to update all jobs from {Status.created.value} to {Status.queued.value}",
         ):
             self.getMongoUtil().update_jobs_to_queued(jobs_to_update)
 

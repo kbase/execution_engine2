@@ -302,7 +302,7 @@ class MongoUtil:
                 )
                 if bwr.modified_count != len(job_id_pairs):
                     raise InvalidStatusTransitionException(
-                        "Wasn't able to update all jobs to created "
+                        f"Wasn't able to update all jobs from {Status.created.value} to {Status.queued.value}"
                     )
 
         # TODO error handling for bulk write result, otherwise pymongo error will bubble up
