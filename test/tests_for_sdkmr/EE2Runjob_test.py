@@ -773,14 +773,12 @@ def _set_up_common_return_values_batch(mocks):
     returned_parent_job = Job()
     returned_parent_job.id = ObjectId(_JOB_ID)
     returned_parent_job.user = _USER
+
+    mocks[SDKMethodRunner].save_and_return_job.return_value = returned_parent_job
     mocks[CatalogCache].lookup_git_commit_version.side_effect = [
         _GIT_COMMIT_1,
         _GIT_COMMIT_2,
     ]
-    returned_parent_job.modify = None
-
-    mocks[SDKMethodRunner].save_and_return_job.return_value = returned_parent_job
-    mocks[SDKMethodRunner].add_child_jobs.return_value = returned_parent_job
 
     # create job1, update job1, create job2, update job2, update parent job
     mocks[SDKMethodRunner].save_job.side_effect = [
@@ -928,17 +926,16 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
     #     ]
     # )
 
-    final_expected_parent_job = Job()
-    final_expected_parent_job.id = ObjectId(_JOB_ID)
-    final_expected_parent_job.user = _USER
-    final_expected_parent_job.child_jobs = [_JOB_ID_1, _JOB_ID_2]
-    final_got_parent_job = sdkmr.add_child_jobs.call_args_list[0][0][0]
-    # Not sure how to get the final parent job anymore to do this test HALP
-    # assert_jobs_equal(final_got_parent_job, final_expected_parent_job)
+    # Test to see if add_child jobs is called with correct batch_container and children
+    expected_batch_container = Job()
+    expected_batch_container.id = ObjectId(_JOB_ID)
+    expected_batch_container.user = _USER
 
+    batch_job = sdkmr.add_child_jobs.call_args_list[0][1]["batch_job"]
     sdkmr.add_child_jobs.assert_called_once_with(
-        batch_job=final_expected_parent_job, child_jobs=child_job_pairs
+        batch_job=expected_batch_container, child_jobs=[_JOB_ID_1, _JOB_ID_2]
     )
+    assert_jobs_equal(batch_job, expected_batch_container)
 
 
 def test_run_job_batch_with_parent_job_wsid():

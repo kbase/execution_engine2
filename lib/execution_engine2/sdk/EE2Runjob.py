@@ -467,7 +467,7 @@ class EE2RunJob:
 
         # Cancel child jobs if we can't notify the batch job of the child jobs
         try:
-            self.sdkmr.add_child_jobs(batch_job, child_jobs)
+            self.sdkmr.add_child_jobs(batch_job=batch_job, child_jobs=child_jobs)
         except Exception as e:
             self._abort_multiple_jobs(child_jobs)
             raise e
