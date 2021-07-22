@@ -712,6 +712,7 @@ class EE2RunJob:
             _SOURCE_WS_OBJECTS: source_ws_objects,  # Must be list
             _SERVICE_VER: ji.service_ver,
             _PARENT_JOB_ID: ji.parent_job_id,
+            _BATCH_ID: job.batch_id,
         }
 
         # Then the next fields are job inputs top level requirements, app run parameters, and scheduler resource requirements
