@@ -123,6 +123,7 @@ class JobsStatus:
         )
 
         # TODO Issue #190 IF success['TotalSuccess = 0'] == FALSE, don't send a kafka message?
+
         self.sdkmr.get_condor().cancel_job(job_id=f"{job.scheduler_id}.0")
         self.sdkmr.kafka_client.send_kafka_message(
             message=KafkaCancelJob(

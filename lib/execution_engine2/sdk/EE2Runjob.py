@@ -324,13 +324,8 @@ class EE2RunJob:
             raise Exception(
                 "Need to provide the same amount of job ids and scheduler_ids"
             )
-
         jobs_to_update = list(map(JobIdPair, job_ids, scheduler_ids))
-
-        # TODO RETRY FOR RACE CONDITION OF RUN/CANCEL
-
         self.sdkmr.get_mongo_util().update_jobs_to_queued(jobs_to_update)
-
         # TODO figure out kafka message
         for i, job_id in enumerate(job_ids):
             self.sdkmr.get_kafka_client().send_kafka_message(
@@ -765,6 +760,7 @@ class EE2RunJob:
         """
         #TODO Add new job requirements/cgroups as an optional param
         #TODO Notify the parent container that it has multiple new children, instead of multiple transactions?
+        #TODO Prevent retry when multiple batch job containers?
 
         :param job_ids: The list of jobs to retry
         :param as_admin: Run with admin permission

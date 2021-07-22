@@ -890,9 +890,11 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
     )
 
     # update to queued state
-    mocks[MongoUtil].update_jobs_to_queued.assert_has_calls(
-        [call([JobIdPair(_JOB_ID_1, _CLUSTER_1), JobIdPair(_JOB_ID_2, _CLUSTER_2)])]
-    )
+    child_job_pairs = [
+        JobIdPair(_JOB_ID_1, _CLUSTER_1),
+        JobIdPair(_JOB_ID_2, _CLUSTER_2),
+    ]
+    mocks[MongoUtil].update_jobs_to_queued.assert_has_calls([call(child_job_pairs)])
 
     mocks[KafkaClient].send_kafka_message.assert_has_calls(
         [
@@ -930,9 +932,13 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
     final_expected_parent_job.id = ObjectId(_JOB_ID)
     final_expected_parent_job.user = _USER
     final_expected_parent_job.child_jobs = [_JOB_ID_1, _JOB_ID_2]
-    # final_got_parent_job = sdkmr.add_child_jobs.call_args_list[0][0][0]
+    final_got_parent_job = sdkmr.add_child_jobs.call_args_list[0][0][0]
     # Not sure how to get the final parent job anymore to do this test HALP
     # assert_jobs_equal(final_got_parent_job, final_expected_parent_job)
+
+    sdkmr.add_child_jobs.assert_called_once_with(
+        batch_job=final_expected_parent_job, child_jobs=child_job_pairs
+    )
 
 
 def test_run_job_batch_with_parent_job_wsid():

@@ -2,12 +2,13 @@
 import logging
 import os
 import unittest
-from configparser import ConfigParser
 
 from bson.objectid import ObjectId
 
 from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.db.models.models import Job, JobLog
+from execution_engine2.db.models.models import Job, JobLog, Status
+from execution_engine2.sdk.EE2Runjob import JobIdPair
+from execution_engine2.exceptions import InvalidStatusTransitionException
 from test.utils_shared.test_utils import (
     bootstrap,
     get_example_job,
@@ -56,6 +57,39 @@ class MongoUtilTest(unittest.TestCase):
         ]
         mongo_util = self.getMongoUtil()
         self.assertTrue(set(class_attri) <= set(mongo_util.__dict__.keys()))
+
+    def test_update_jobs_success(self):
+        job = get_example_job(status=Status.created.value)
+        job2 = get_example_job(status=Status.created.value)
+        job_id1 = job.save().id
+        job_id2 = job2.save().id
+        job_ids = [job_id1, job_id2]
+        scheduler_ids = [job.scheduler_id, job2.scheduler_id]
+        jobs_to_update = list(map(JobIdPair, job_ids, scheduler_ids))
+        print(jobs_to_update)
+        assert Status.created.value in [job.status, job2.status]
+
+        # TODO RETRY FOR RACE CONDITION OF RUN/CANCEL
+
+    def test_update_jobs_failure(self):
+        job = get_example_job(status=Status.created.value)
+        job2 = get_example_job(status=Status.error.value)
+        job3 = get_example_job(status=Status.terminated.value)
+
+        job_id1 = job.save().id
+        job_id2 = job2.save().id
+        job_id3 = job3.save().id
+        job_ids = [job_id1, job_id2, job_id3]
+        scheduler_ids = [job.scheduler_id, job2.scheduler_id, job3.scheduler_id]
+        jobs_to_update = list(map(JobIdPair, job_ids, scheduler_ids))
+        print(jobs_to_update)
+        assert Status.created.value in [job.status, job2.status, job3.status]
+
+        with self.assertRaisesRegex(
+            InvalidStatusTransitionException,
+            "Wasn't able to update all jobs to created ",
+        ):
+            self.getMongoUtil().update_jobs_to_queued(jobs_to_update)
 
     def test_get_by_cluster(self):
         """Get a job by its condor scheduler_id"""

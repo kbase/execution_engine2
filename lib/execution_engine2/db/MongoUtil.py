@@ -268,7 +268,8 @@ class MongoUtil:
         self, job_id_pairs: List[JobIdPair], scheduler_type: str = "condor"
     ) -> None:
         """
-        Updates a list of created jobs to queued. Does not work on jobs that already have gone through a status transition
+        Updates a list of created jobs to queued. Does not work on jobs that already have gone through a status transition.
+        If the record is not in the CREATED status, an InvalidStatusTransitionException will be raised.
         :param job_id_pairs: A list of pairs of Job Ids and Scheduler Ids
         :param scheduler_type: The scheduler this job was queued in, default condor
         """
@@ -281,9 +282,7 @@ class MongoUtil:
                 UpdateOne(
                     {
                         "_id": ObjectId(job_id_pair.job_id),
-                        "status": {
-                            "$in": [Status.created.value, Status.estimating.value]
-                        },
+                        "status": Status.created.value,
                     },
                     {
                         "$set": {
@@ -301,7 +300,10 @@ class MongoUtil:
                 bwr = pymongo_client[self.mongo_database][mongo_collection].bulk_write(
                     bulk_operations, ordered=False
                 )
-                assert bwr.modified_count == len(job_id_pairs)
+                if bwr.modified_count != len(job_id_pairs):
+                    raise InvalidStatusTransitionException(
+                        "Wasn't able to update all jobs to created "
+                    )
 
         # TODO error handling for bulk write result, otherwise pymongo error will bubble up
 
