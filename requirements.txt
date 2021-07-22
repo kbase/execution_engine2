@@ -21,7 +21,7 @@ gunicorn==20.0.4
 h11==0.8.1
 h2==3.1.0
 hpack==3.0.0
-htcondor==8.9.8
+htcondor==9.1.0
 httpcore==0.3.0
 httptools==0.0.13
 hyperframe==5.2.0
