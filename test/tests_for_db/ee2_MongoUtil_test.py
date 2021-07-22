@@ -69,7 +69,7 @@ class MongoUtilTest(unittest.TestCase):
         self.getMongoUtil().update_jobs_to_queued(jobs_to_update)
         job.reload()
         job2.reload()
-        assert Status.queued.value in [job.status, job2.status]
+        assert all(j.status == Status.queued.value for j in [job, job2])
 
     def test_update_jobs_failure(self):
         job = get_example_job(status=Status.created.value)
@@ -82,8 +82,8 @@ class MongoUtilTest(unittest.TestCase):
         job_ids = [job_id1, job_id2, job_id3]
         scheduler_ids = [job.scheduler_id, job2.scheduler_id, job3.scheduler_id]
         jobs_to_update = list(map(JobIdPair, job_ids, scheduler_ids))
-        print(jobs_to_update)
-        assert Status.created.value in [job.status, job2.status, job3.status]
+
+        assert not all(j.status == Status.created.value for j in [job, job2, job3])
 
         with self.assertRaisesRegex(
             InvalidStatusTransitionException,
