@@ -58,38 +58,31 @@ class MongoUtilTest(unittest.TestCase):
         mongo_util = self.getMongoUtil()
         self.assertTrue(set(class_attri) <= set(mongo_util.__dict__.keys()))
 
-    def test_update_jobs_success(self):
-        job = get_example_job(status=Status.created.value)
-        job2 = get_example_job(status=Status.created.value)
-        job_id1 = job.save().id
-        job_id2 = job2.save().id
-        job_ids = [job_id1, job_id2]
-        scheduler_ids = [job.scheduler_id, job2.scheduler_id]
-        jobs_to_update = list(map(JobIdPair, job_ids, scheduler_ids))
-        self.getMongoUtil().update_jobs_to_queued(jobs_to_update)
-        job.reload()
-        job2.reload()
-        assert all(j.status == Status.queued.value for j in [job, job2])
+    def test_update_jobs_enmasse(self):
 
-    def test_update_jobs_failure(self):
-        job = get_example_job(status=Status.created.value)
-        job2 = get_example_job(status=Status.error.value)
-        job3 = get_example_job(status=Status.terminated.value)
+        for state in Status:
+            job = get_example_job(status=Status.created.value).save()
+            job2 = get_example_job(status=state.value).save()
+            job3 = get_example_job(status=state.value).save()
 
-        job_id1 = job.save().id
-        job_id2 = job2.save().id
-        job_id3 = job3.save().id
-        job_ids = [job_id1, job_id2, job_id3]
-        scheduler_ids = [job.scheduler_id, job2.scheduler_id, job3.scheduler_id]
-        jobs_to_update = list(map(JobIdPair, job_ids, scheduler_ids))
+            job_ids = [job.id, job2.id, job3.id]
+            scheduler_ids = [job.scheduler_id, job2.scheduler_id, job3.scheduler_id]
+            jobs_to_update = list(map(JobIdPair, job_ids, scheduler_ids))
 
-        assert not all(j.status == Status.created.value for j in [job, job2, job3])
-
-        with self.assertRaisesRegex(
-            InvalidStatusTransitionException,
-            f"Wasn't able to update all jobs from {Status.created.value} to {Status.queued.value}",
-        ):
-            self.getMongoUtil().update_jobs_to_queued(jobs_to_update)
+            # All fail cases
+            if state.value != Status.created.value:
+                with self.assertRaisesRegex(
+                    InvalidStatusTransitionException,
+                    f"Wasn't able to update all jobs from {Status.created.value} to {Status.queued.value}",
+                ):
+                    self.getMongoUtil().update_jobs_to_queued(jobs_to_update)
+            # Success Case
+            else:
+                self.getMongoUtil().update_jobs_to_queued(jobs_to_update)
+                job.reload()
+                job2.reload()
+                job3.reload()
+                assert all(j.status == Status.queued.value for j in [job, job2, job3])
 
     def test_get_by_cluster(self):
         """Get a job by its condor scheduler_id"""
