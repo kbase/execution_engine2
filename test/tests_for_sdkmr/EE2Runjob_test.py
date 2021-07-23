@@ -938,7 +938,7 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
     """
     So this test doesn't actually check that the call is correct, but the assert_jobs_equal line below does
     the assert below is necessary because of how equality works for Job objects
-    (  print(jobs_to_update) because they have the same object ID, which is what Job equality is based on. )
+    ( because they have the same object ID, which is what Job equality is based on. )
     and that the assert_called_once_with doesn't correctly check the job object
     """
     assert_jobs_equal(batch_job, expected_batch_container)
