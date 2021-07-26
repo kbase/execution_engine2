@@ -43,6 +43,8 @@ RUN echo "mongodb-org hold" | dpkg --set-selections \
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
 && bash ~/miniconda.sh -b -p /miniconda-latest
 
+
+
 # Setup Cron
 COPY ./bin/root /var/spool/cron/crontabs/root
 RUN service cron start
@@ -66,8 +68,11 @@ WORKDIR /kb/module/scripts
 RUN chmod +x download_runner.sh && ./download_runner.sh
 
 WORKDIR /kb/module/
-ENV KB_DEPLOYMENT_CONFIG=/kb/module/deploy.cfg
 
+# Set deploy.cfg location
+ENV KB_DEPLOYMENT_CONFIG=/kb/module/deploy.cfg
+# Save ENV Variables to file
+RUN printenv > /etc/environment && chmod a+rw /etc/environment
 
 ENTRYPOINT [ "./scripts/entrypoint.sh" ]
 CMD [ ]

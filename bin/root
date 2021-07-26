@@ -1,1 +1,3 @@
-*/5 * * * * /miniconda-latest/bin/python3 /kb/module/bin/PurgeBadJobs.py >> ~/cron-purge.log
+SHELL=/bin/bash
+BASH_ENV=/etc/environment
+* * * * * . /etc/environment; /miniconda-latest/bin/python3 /kb/module/bin/PurgeBadJobs.py >> ~/cron-purge.log
