@@ -325,17 +325,25 @@ class EE2RunJob:
                 "Need to provide the same amount of job ids and scheduler_ids"
             )
         jobs_to_update = list(map(JobIdPair, job_ids, scheduler_ids))
-        self.sdkmr.get_mongo_util().update_jobs_to_queued(jobs_to_update)
-        # TODO figure out kafka message
-        for i, job_id in enumerate(job_ids):
-            self.sdkmr.get_kafka_client().send_kafka_message(
-                message=KafkaQueueChange(
-                    job_id=job_id,
-                    new_status=Status.queued.value,
-                    previous_status=Status.created.value,  # TODO maybe change this to allow for estimating jobs
-                    scheduler_id=scheduler_ids[i],
-                )
-            )
+        latest_job_states = self.sdkmr.get_mongo_util().update_jobs_to_queued(jobs_to_update)
+
+
+        for job in latest_job_states:
+            if job.status == Status.queued.value:
+
+                # TODO figure out kafka message
+                for i, job_id in enumerate(job_ids):
+                    self.sdkmr.get_kafka_client().send_kafka_message(
+                        message=KafkaQueueChange(
+                            job_id=job_id,
+                            new_status=Status.queued.value,
+                            previous_status=Status.created.value,  # TODO maybe change this to allow for estimating jobs
+                            scheduler_id=scheduler_ids[i],
+                        )
+                    )
+            else:
+                self._safe_cancel(job_id=j)
+
 
     def _submit_multiple(self, job_submission_params):
         """

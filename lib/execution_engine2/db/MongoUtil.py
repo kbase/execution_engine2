@@ -273,12 +273,14 @@ class MongoUtil:
         :param job_id_pairs: A list of pairs of Job Ids and Scheduler Ids
         :param scheduler_type: The scheduler this job was queued in, default condor
         """
+        job_ids_to_lookup_if_terminated = []
         bulk_update_scheduler_jobs = []
         bulk_update_created_to_queued = []
         now = time.time()
         for job_id_pair in job_id_pairs:
             if None in job_id_pairs:
                 raise InvalidStatusTransitionException
+            job_ids_to_lookup_if_terminated.append(job_id_pair.job_id)
             bulk_update_scheduler_jobs.append(
                 UpdateOne(
                     {
@@ -313,9 +315,11 @@ class MongoUtil:
                 pymongo_client[self.mongo_database][mongo_collection].bulk_write(
                     bulk_update_scheduler_jobs, ordered=False
                 )
-                pymongo_client[self.mongo_database][mongo_collection].bulk_write(
-                    bulk_update_created_to_queued, ordered=False
-                )
+                bulk_update_result = pymongo_client[self.mongo_database][
+                    mongo_collection
+                ].bulk_write(bulk_update_created_to_queued, ordered=False)
+
+        # job_ids_to_lookup_if_terminated
 
     def cancel_job(self, job_id=None, terminated_code=None):
         """
