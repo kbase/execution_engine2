@@ -19,7 +19,7 @@ if [ $# -eq 0 ]; then
   mkdir /condor_shared/cluster_logs && chown kbase /condor_shared/cluster_logs
 
   # Save ENV Variables to file for cron and Remove _=/usr/bin/env
-  env | sed 's/=\(.*\)/="\1"/' | head -n -1 > /etc/environment && chmod a+rw /etc/environment
+  envsubst < /bin/cron_vars> /etc/environment; chmod a+rw /etc/environment
   service cron start
 
   sh ./scripts/start_server.sh
