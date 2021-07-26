@@ -1,3 +1,4 @@
 SHELL=/bin/bash
 BASH_ENV=/etc/environment
-* * * * * . /etc/environment; /miniconda-latest/bin/python3 /kb/module/bin/PurgeBadJobs.py >> ~/cron-purge.log
+# Check the cron-purge.log for issues why the script isn't running, such as missing `EE2_ADMIN_SERVICE_TOKEN`
+* * * * * . /etc/environment; /miniconda-latest/bin/python3 /kb/module/bin/PurgeBadJobs.py >> ~/cron-purge.log 2>&1

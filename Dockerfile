@@ -70,8 +70,7 @@ WORKDIR /kb/module/
 
 # Set deploy.cfg location
 ENV KB_DEPLOYMENT_CONFIG=/kb/module/deploy.cfg
-# Save ENV Variables to file
-RUN printenv > /etc/environment && chmod a+rw /etc/environment
+
 
 ENTRYPOINT [ "./scripts/entrypoint.sh" ]
 CMD [ ]
