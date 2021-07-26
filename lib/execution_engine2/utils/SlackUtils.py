@@ -26,8 +26,8 @@ class SlackClient:
         message = f"Held Job Stats {held_job}"
         self.safe_chat_post_message(channel=self.channel, text=message)
 
-    def ee2_reaper_failure(self, endpoint="Unknown EE2 URL", job_id="Unknown"):
-        message = f"EE2 Held Job reaper failed for {endpoint}  (job {job_id}). Please check it out"
+    def ee2_reaper_failure(self, endpoint="Unknown EE2 URL", job_id="Unknown", e=None):
+        message = f"EE2 Held Job reaper failed for {endpoint}  (job {job_id}), {e}. Please check it out"
         self.safe_chat_post_message(channel=self.channel, text=message)
 
     def ee2_reaper_success(

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/miniconda-latest/bin/python3
 import logging
 import os
 import sys
@@ -8,32 +8,42 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import htcondor
+import pymongo
 
-# I wish a knew a better way to do this
-sys.path.append(".")
+# Must be run in /kb/module
+sys.path.append("/kb/module")
 
 from lib.execution_engine2.utils.SlackUtils import SlackClient
 from lib.installed_clients.execution_engine2Client import execution_engine2
-from lib.execution_engine2.utils.Condor import Condor
+
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 config = ConfigParser()
-config_filepath = os.environ["KB_DEPLOYMENT_CONFIG"]
-
-# Condor
-condor = Condor(config_filepath=config_filepath)
-# EE2
-
-cfg = condor.config
-ee2_endpoint = cfg.get(section="execution_engine2", option="ee2-url")
+config.read(os.environ["KB_DEPLOYMENT_CONFIG"])
+ee2_endpoint = config.get(section="execution_engine2", option="ee2-url")
+slack_token = config.get(section="execution_engine2", option="slack-token")
 
 ee2 = execution_engine2(url=ee2_endpoint, token=os.environ["EE2_ADMIN_SERVICE_TOKEN"])
-# Slack
-slack_token = cfg.get(section="execution_engine2", option="slack-token")
-# TODO change this channel
-slack_client = SlackClient(slack_token, channel="#ee_notifications", debug=True)
+slack_client = SlackClient(
+    slack_token, channel="#ee_notifications", debug=True, endpoint=ee2_endpoint
+)
+db_client = pymongo.MongoClient(
+    host=config.get(section="execution_engine2", option="mongo-host"),
+    port=int(config.get(section="execution_engine2", option="mongo-port")),
+    username=config.get(section="execution_engine2", option="mongo-user"),
+    password=config.get(section="execution_engine2", option="mongo-password"),
+    authSource=config.get(section="execution_engine2", option="mongo-database"),
+    authMechanism=config.get(section="execution_engine2", option="mongo-authmechanism"),
+    serverSelectionTimeoutMS=1000,
+)
+ee2_db = db_client.get_database(
+    config.get(section="execution_engine2", option="mongo-database")
+)
+ee2_jobs_collection = ee2_db.get_collection(
+    config.get(section="execution_engine2", option="mongo-jobs-collection")
+)
 
 
 def read_events(path):
@@ -172,4 +182,4 @@ if __name__ == "__main__":
             )
             time.sleep(5)
         except Exception as e:
-            slack_client.ee2_reaper_failure(endpoint=ee2_endpoint)
+            slack_client.ee2_reaper_failure(endpoint=ee2_endpoint, e=e)
