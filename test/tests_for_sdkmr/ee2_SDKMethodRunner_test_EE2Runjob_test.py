@@ -274,6 +274,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
     @staticmethod
     def check_retry_job_state(job_id: str, retry_job_id: str):
+        """
+        Checks to see the required keys are there
+        :param job_id: The job that was retried
+        :param retry_job_id: The job id that was a result of the retry
+
+        """
         job = Job.objects.get(id=job_id)  # type: Job
         retry_job = Job.objects.get(id=retry_job_id)  # type: Job
 
@@ -282,6 +288,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             "wsid",
             "authstrat",
             "batch_job",
+            "batch_id",
             "scheduler_type",
         ]
 
@@ -597,7 +604,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         batch_job = runner.check_job(job_id=batch_id)
         assert len(batch_job["child_jobs"]) == 3
 
-        retry_id = runner.retry(job_id=child_job_id)["retry_id"]
+        retry_result = runner.retry(job_id=child_job_id)
+        retry_id = retry_result["retry_id"]
         self.check_retry_job_state(child_job_id, retry_id)
         batch_job = runner.check_job(job_id=batch_id)
         assert len(batch_job["child_jobs"]) == 4

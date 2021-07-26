@@ -1,15 +1,24 @@
 # execution_engine2 (ee2) release notes
 =========================================
+
+
 ## 0.0.5
+  * TODO Refactor run_jobs_batch endpoint to cache catalog calls for batch jobs, submit entire batch to condor in one transaction
+  * TODO: Added CreatedJobsReaper
+  * Added retry_job and retry_jobs endpoint along with ADRs
+  * TODO: Will deprecate run_job transaction and use scheduler API
+  * Refactored tests
+  * Removed slack messages for running jobs
   * Fix a bug that caused job requirements from the catalog in CSV format to be ignored other
     than the client group
   * Full EE2 admins can now submit job requirements when running jobs via run_job_batch and
     run_job. See the SDK spec for details.
 
+
 ## 0.0.4
   * Fix up tests
   * Remove dependency on slack
-  * Add batch endpoints
+  * Add batch endpoints, cancel_jobs now cancels child jobs
   * Rename prod branch to "main"
 
 ## 0.0.3.4
