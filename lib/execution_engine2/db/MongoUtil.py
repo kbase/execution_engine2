@@ -40,6 +40,7 @@ class MongoUtil:
             password=self.mongo_pass,
             authSource=self.mongo_database,
             authMechanism=self.mongo_authmechanism,
+            retryWrites=False,
         )
 
     def _get_mongoengine_client(self) -> connection:
