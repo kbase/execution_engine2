@@ -69,20 +69,21 @@ class MongoUtilTest(unittest.TestCase):
             scheduler_ids = [job.scheduler_id, job2.scheduler_id, job3.scheduler_id]
             jobs_to_update = list(map(JobIdPair, job_ids, scheduler_ids))
 
-            # All fail cases
-            if state.value != Status.created.value:
-                with self.assertRaisesRegex(
-                    InvalidStatusTransitionException,
-                    f"Wasn't able to update all jobs from {Status.created.value} to {Status.queued.value}",
-                ):
-                    self.getMongoUtil().update_jobs_to_queued(jobs_to_update)
+            self.getMongoUtil().update_jobs_to_queued(jobs_to_update)
+            job.reload()
+            job2.reload()
+            job3.reload()
+
             # Success Case
-            else:
-                self.getMongoUtil().update_jobs_to_queued(jobs_to_update)
-                job.reload()
-                job2.reload()
-                job3.reload()
+            if state.value == Status.created.value:
                 assert all(j.status == Status.queued.value for j in [job, job2, job3])
+            # Fail Case,
+            else:
+                # The created job should be queued
+                assert job.status == Status.queued.value
+                # Other statuses should remain unchanged
+                assert job2.status == state.value
+                assert job3.status == state.value
 
     def test_get_by_cluster(self):
         """Get a job by its condor scheduler_id"""

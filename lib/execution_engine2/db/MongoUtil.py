@@ -273,12 +273,27 @@ class MongoUtil:
         :param job_id_pairs: A list of pairs of Job Ids and Scheduler Ids
         :param scheduler_type: The scheduler this job was queued in, default condor
         """
-        bulk_operations = []
+        bulk_update_scheduler_jobs = []
+        bulk_update_created_to_queued = []
         now = time.time()
         for job_id_pair in job_id_pairs:
             if None in job_id_pairs:
                 raise InvalidStatusTransitionException
-            bulk_operations.append(
+            bulk_update_scheduler_jobs.append(
+                UpdateOne(
+                    {
+                        "_id": ObjectId(job_id_pair.job_id),
+                    },
+                    {
+                        "$set": {
+                            "queued": now,
+                            "scheduler_id": job_id_pair.scheduler_id,
+                            "scheduler_type": scheduler_type,
+                        }
+                    },
+                )
+            )
+            bulk_update_created_to_queued.append(
                 UpdateOne(
                     {
                         "_id": ObjectId(job_id_pair.job_id),
@@ -287,25 +302,20 @@ class MongoUtil:
                     {
                         "$set": {
                             "status": Status.queued.value,
-                            "queued": now,
-                            "scheduler_id": job_id_pair.scheduler_id,
-                            "scheduler_type": scheduler_type,
                         }
                     },
                 )
             )
+        # Update provided jobs with scheduler id. Then only update non terminated jobs into updated status.
         mongo_collection = self.config["mongo-jobs-collection"]
-        if bulk_operations:
+        if bulk_update_scheduler_jobs:
             with self.pymongo_client(mongo_collection) as pymongo_client:
-                bwr = pymongo_client[self.mongo_database][mongo_collection].bulk_write(
-                    bulk_operations, ordered=False
+                pymongo_client[self.mongo_database][mongo_collection].bulk_write(
+                    bulk_update_scheduler_jobs, ordered=False
                 )
-                if bwr.modified_count != len(job_id_pairs):
-                    raise InvalidStatusTransitionException(
-                        f"Wasn't able to update all jobs from {Status.created.value} to {Status.queued.value}"
-                    )
-
-        # TODO error handling for bulk write result, otherwise pymongo error will bubble up
+                pymongo_client[self.mongo_database][mongo_collection].bulk_write(
+                    bulk_update_created_to_queued, ordered=False
+                )
 
     def cancel_job(self, job_id=None, terminated_code=None):
         """
