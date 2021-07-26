@@ -17,7 +17,7 @@ if [ $# -eq 0 ] ; then
   # Give permissions to transfer logs into here
   mkdir /condor_shared/runner_logs && chown kbase /condor_shared/runner_logs
   mkdir /condor_shared/cluster_logs && chown kbase /condor_shared/cluster_logs
-
+  service cron start
   sh ./scripts/start_server.sh
 
 elif [ "${1}" = "test" ] ; then

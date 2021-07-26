@@ -51,7 +51,9 @@ class MongoUtil:
             password=self.mongo_pass,
             authentication_source=self.mongo_database,
             authentication_mechanism=self.mongo_authmechanism,
+            retryWrites=False,
         )
+        # This MongoDB deployment does not support retryable writes
 
     def _start_local_service(self):
         try:

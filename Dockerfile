@@ -47,7 +47,6 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
 
 # Setup Cron
 COPY ./bin/root /var/spool/cron/crontabs/root
-RUN service cron start
 
 # Need to change startup scripts to match this in MAKEFILE
 ENV PATH=/miniconda-latest/bin:$PATH
