@@ -43,12 +43,15 @@ RUN echo "mongodb-org hold" | dpkg --set-selections \
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
 && bash ~/miniconda.sh -b -p /miniconda-latest
 
+# Setup Cron
+COPY ./bin/root /var/spool/cron/crontabs/root
+RUN service cron start
+
 # Need to change startup scripts to match this in MAKEFILE
 ENV PATH=/miniconda-latest/bin:$PATH
 RUN pip install --upgrade pip && python -V
-
-
 COPY ./requirements.txt /kb/module/requirements.txt
+
 RUN pip install -r /kb/module/requirements.txt
 RUN adduser --disabled-password --gecos '' -shell /bin/bash kbase
 # -----------------------------------------
@@ -64,6 +67,7 @@ RUN chmod +x download_runner.sh && ./download_runner.sh
 
 WORKDIR /kb/module/
 ENV KB_DEPLOYMENT_CONFIG=/kb/module/deploy.cfg
+
 
 ENTRYPOINT [ "./scripts/entrypoint.sh" ]
 CMD [ ]

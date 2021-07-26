@@ -1,0 +1,1 @@
+*/5 * * * * /miniconda-latest/bin/python3 /kb/module/bin/PurgeBadJobs.py >> ~/cron-purge.log
