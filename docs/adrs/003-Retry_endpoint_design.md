@@ -62,12 +62,12 @@ is a lot of time for things to go wrong.
 * Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
 * One single submission to HTCondor instead of multiple job submissions
 * Ability to gracefully handle jobs with children
-* Ability to handle database consistentcy during retry failure
+* Ability to handle database consistency during retry failure
 * See if we can make some preflight (before the job starts) checks fail before job submission and handle them differently than those that appear during job submission 
 
 #### Data inconsistency
 * A new `retry_ids` field will show a list of jobs that have been retried using this parent id. Retry_count will be returned as a calculated field based off of retry_ids
-* `retry_toggle` field will allow a seperate process to check for jobs that didn't finish the entire retry lifecycle:
+* `retry_toggle` field will allow a seperate process to check and possibly correct for jobs that didn't finish the entire retry lifecycle:
 1) Launch child jobs
 2) Notify the batch parent of the child,
 3) Notify the retry parent of the child,
@@ -104,7 +104,7 @@ Looks like the options are
 * implement db integrity checks and two-phase commits for making the relationships between a job, its `retry_parent`, and the batch container
 * accept that the db info may be incomplete and write workarounds into the clients
 * (upgrade to Mongo 4.4 for better transaction support)
-
+A: We have decided to use a `retry_toggle` in order to mark that the entire transaction has occurred for a retry job, and to set up a monitor to fix the jobs that didn't finish the retry lifecycle.
 
 ##### Q: Do we want to support ResourceRequirements
 A: Probably not in the short term
@@ -134,17 +134,16 @@ Priority descending
 > Estimate 3-4 days
 > https://kbase-jira.atlassian.net/browse/DATAUP-528
 
-* Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
-* > Estimate 3-4 days
-> Requires refactor of run_job_batch to be non blocking 
+
 
 
 > Requires retry to be able to force the same app `git_commit versions` and `JobRequirements` from the db records
 https://kbase-jira.atlassian.net/browse/DATAUP-461
 
 
-*  Hookup retrys to refactored code
-*  Requires refactor of retry to gracefully handle jobs with children by notifying the batch containers for retry of ids not in the same batch
+*  Hookup retries to refactored code
+*  Non blocking job submission for submitting multiple jobs, possibly via using `run_job_multiple` 
+*  Requires refactor of retry to gracefully handle jobs with children by notifying the batch containers for retry of ids not in the same batch. If you retry jobs from batch 1 and from batch 2, you want the correct batch parent to be notified. 
 > Estimate 3 days
 > https://kbase-jira.atlassian.net/browse/DATAUP-535
 
@@ -157,6 +156,6 @@ https://kbase-jira.atlassian.net/browse/DATAUP-461
 > Estimate 3-4 days
 https://kbase-jira.atlassian.net/browse/DATAUP-439
 
-* Create a created jobs and queued jobs reaper than queues created jobs older than 1 hour, and queued jobs over 14 days old.
+* Create a created jobs and queued jobs reaper than cancels created jobs older than 1 hour, and cancels queued jobs over 14 days old.
 > Estimate 2-3 days 
 https://kbase-jira.atlassian.net/browse/DATAUP-536
