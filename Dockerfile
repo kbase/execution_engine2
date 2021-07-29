@@ -44,10 +44,6 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -
 && bash ~/miniconda.sh -b -p /miniconda-latest
 
 
-
-# Setup Cron
-COPY ./bin/ee2_cronjobs /etc/cron.d/ee2_cronjobs
-
 # Need to change startup scripts to match this in MAKEFILE
 ENV PATH=/miniconda-latest/bin:$PATH
 RUN pip install --upgrade pip && python -V

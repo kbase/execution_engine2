@@ -3,8 +3,9 @@ import subprocess
 import time
 import traceback
 from contextlib import contextmanager
-from typing import Dict
+from typing import Dict, List
 
+from apscheduler.jobstores.mongodb import MongoDBJobStore
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
 from pymongo import MongoClient
@@ -15,6 +16,7 @@ from lib.execution_engine2.exceptions import (
     RecordNotFoundException,
     InvalidStatusTransitionException,
 )
+from datetime import datetime, timedelta, timezone
 
 
 class MongoUtil:
@@ -32,7 +34,39 @@ class MongoUtil:
         self.pymongoc = self._get_pymongo_client()
         self.me_connection = self._get_mongoengine_client()
 
-    def _get_pymongo_client(self):
+    def get_aps_connection(self):
+        client = self._get_pymongo_client()
+        return MongoDBJobStore(database=self.mongo_database, collection='ee2_aps_scheduler', client=client)
+
+
+    def find_old_queued_jobs(self, age_in_days=14) -> List:
+        """
+        Find jobs that have been in the queued state too long
+        :param age_in_days: N of days back
+        :return: List of job ids
+        """
+        before_days = (
+                datetime.today() - timedelta(days=age_in_days + 1)
+        ).timestamp()
+        with self.mongo_engine_connection():
+            job_ids = [str(job.id) for job in
+                       Job.objects(status=Status.queued.value, batch_job__ne=True, id__lt=before_days)]
+            return job_ids
+
+    def find_old_created_jobs(self, age_in_mins=5) -> List:
+        """
+        Find jobs that have been in the created state too long
+        :param age_in_mins: N of minutes back
+        :return: List of job ids
+        """
+        n_mins_ago = ObjectId.from_datetime(
+            datetime.now(timezone.utc) - timedelta(minutes=age_in_mins)
+        )
+        with self.mongo_engine_connection():
+            job_ids = [str(job.id) for job in Job.objects(status=Status.created.value, batch_job__ne=True, id__lt=n_mins_ago)]
+            return job_ids
+
+    def _get_pymongo_client(self) -> MongoClient:
         return MongoClient(
             self.mongo_host,
             self.mongo_port,
@@ -93,13 +127,13 @@ class MongoUtil:
 
     @classmethod
     def _get_collection(
-        self,
-        mongo_host: str,
-        mongo_port: int,
-        mongo_database: str,
-        mongo_user: str = None,
-        mongo_password: str = None,
-        mongo_authmechanism: str = "DEFAULT",
+            self,
+            mongo_host: str,
+            mongo_port: int,
+            mongo_database: str,
+            mongo_user: str = None,
+            mongo_password: str = None,
+            mongo_authmechanism: str = "DEFAULT",
     ):
         """
         Connect to Mongo server and return a tuple with the MongoClient and MongoClient?
@@ -236,8 +270,8 @@ class MongoUtil:
                         raise ValueError("Please input a list type exclude_fields")
                     jobs = (
                         Job.objects(id__in=job_ids)
-                        .exclude(*exclude_fields)
-                        .order_by("{}_id".format(sort_id_indicator))
+                            .exclude(*exclude_fields)
+                            .order_by("{}_id".format(sort_id_indicator))
                     )
 
                 else:

@@ -18,11 +18,7 @@ if [ $# -eq 0 ]; then
   mkdir /condor_shared/runner_logs && chown kbase /condor_shared/runner_logs
   mkdir /condor_shared/cluster_logs && chown kbase /condor_shared/cluster_logs
 
-  # Save ENV Variables to file for cron and Remove _=/usr/bin/env
-  envsubst </kb/module/bin/cron_vars >/etc/environment
-  chmod a+rw /etc/environment
-  # /usr/sbin/cron: (*system*) NUMBER OF HARD LINKS > 1
-  touch /etc/cron.d/ee2_cronjobs && service cron start
+  sh ./scripts/start_cron.sh
   sh ./scripts/start_server.sh
 
 elif [ "${1}" = "test" ]; then

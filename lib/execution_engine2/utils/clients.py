@@ -18,6 +18,7 @@ from execution_engine2.utils.job_requirements_resolver import JobRequirementsRes
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.authclient import KBaseAuth
+from installed_clients.execution_engine2Client import execution_engine2 as ee2
 
 
 class UserClientSet:
@@ -101,6 +102,7 @@ class ClientSet:
         kafka_client: KafkaClient,
         mongo_util: MongoUtil,
         slack_client: SlackClient,
+        ee2_admin_client: ee2,
     ):
         """
         Initialize the client set from the individual clients.
@@ -117,6 +119,7 @@ class ClientSet:
         self.kafka_client = _not_falsy(kafka_client, "kafka_client")
         self.mongo_util = _not_falsy(mongo_util, "mongo_util")
         self.slack_client = _not_falsy(slack_client, "slack_client")
+        self.ee2_admin_client = _not_falsy(ee2_admin_client, "ee2_admin_client")
 
 
 # the constructor allows for mix and match of mocks and real implementations as needed
@@ -180,6 +183,7 @@ def get_clients(
     )
     # TODO check how MongoUtil handles a bad config + that error messages are understandable
     mongo_util = MongoUtil(cfg)
+    ee2_admin_client = ee2(url=cfg['external-url'],token=cfg[''])
     return (
         auth,
         auth_admin,
@@ -190,6 +194,7 @@ def get_clients(
         kafka_client,
         mongo_util,
         slack_client,
+        ee2_admin_client,
     )
 
 

@@ -85,7 +85,7 @@ class JobsStatus:
         # There's probably a better way and a return type, but not really sure what I need yet
         return json.loads(json.dumps(j.to_mongo().to_dict(), default=str))
 
-    def cancel_job(self, job_id, terminated_code=None, as_admin=False):
+    def cancel_job(self, job_id, terminated_code=None, as_admin=False, perform_admin_check=True):
         """
         Authorization Required: Ability to Read and Write to the Workspace
         Default for terminated code is Terminated By User
@@ -96,9 +96,10 @@ class JobsStatus:
         # Is it inefficient to get the job twice? Is it cached?
         # Maybe if the call fails, we don't actually cancel the job?
 
-        job = self.sdkmr.get_job_with_permission(
-            job_id, JobPermissions.WRITE, as_admin=as_admin
-        )
+        if as_admin and perform_admin_check:
+            job = self.sdkmr.get_job_with_permission(
+                job_id, JobPermissions.WRITE, as_admin=as_admin
+            )
 
         if terminated_code is None:
             terminated_code = TerminatedCode.terminated_by_user.value
