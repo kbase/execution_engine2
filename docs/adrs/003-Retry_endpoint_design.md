@@ -63,7 +63,7 @@ is a lot of time for things to go wrong.
 * Prevent multiple in-flight retries to prevent the user from wasting their own resources (and the queues resources)
 * Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
 * One single submission to HTCondor instead of multiple job submissions
-* Ability to gracefully handle batch container jobs with children to throw proper error [See Batch Behavior](#Batch-Behavior)
+* Ability to gracefully handle batch container jobs with children to throw proper error ([See Batch Behavior](#Batch-Behavior))
 * Ability to handle database consistency during retry failure
 * See if we can make some preflight (before the job starts) checks fail before job submission and handle them differently than those that appear during job submission 
 
@@ -76,7 +76,6 @@ is a lot of time for things to go wrong.
 4) Update the retry_toggle field
 
 #### Won't do
-* Prevent multiple in-flight retries of the same original job to prevent the user from wasting their own resources (and the queues resources)
 * Add retry_number field
 
 ## New priority
