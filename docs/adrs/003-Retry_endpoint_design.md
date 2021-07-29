@@ -127,36 +127,31 @@ A: Not necessarily relevant to this endpoint, more of a `run_job_batch` endpoint
 
 # Work estimation
 Priority descending
-* Address data inconsistency via retry_count, retry_ids and retry_toggle
+### Address data inconsistency via retry_count, retry_ids and retry_toggle
 > Estimate 3-4 days
 > https://kbase-jira.atlassian.net/browse/DATAUP-461
 
-* Preflight checks
+### Preflight checks
 > Estimate 3-4 days
 > https://kbase-jira.atlassian.net/browse/DATAUP-528
-
-
-
-
 > Requires retry to be able to force the same app `git_commit versions` and `JobRequirements` from the db records
 https://kbase-jira.atlassian.net/browse/DATAUP-461
 
 
-*  Hookup retries to refactored code
+###  Hookup retries to refactored code
 *  Non blocking job submission for submitting multiple jobs, possibly via using `run_job_multiple` 
 *  Requires refactor of retry to gracefully handle jobs with children by notifying the batch containers for retry of ids not in the same batch. If you retry jobs from batch 1 and from batch 2, you want the correct batch parent to be notified. 
 > Estimate 3 days
 > https://kbase-jira.atlassian.net/browse/DATAUP-535
 
-
-* One single submission to HTCondor instead of multiple job submission ()
+### One single submission to HTCondor instead of multiple job submission ()
 > Estimate 1-2 days
 > https://kbase-jira.atlassian.net/browse/DATAUP-391
 
-* Prevent multiple in-flight retries to prevent the user from wasting their own resources (and the queues resources)
+### Prevent multiple in-flight retries to prevent the user from wasting their own resources (and the queues resources)
 > Estimate 3-4 days
 https://kbase-jira.atlassian.net/browse/DATAUP-439
 
-* Create a created jobs and queued jobs reaper that cancels created jobs older than 1 hour, and cancels queued jobs over 14 days old.
+### Create a created jobs and queued jobs reaper that cancels created jobs older than 1 hour, and cancels queued jobs over 14 days old.
 > Estimate 2-3 days 
 https://kbase-jira.atlassian.net/browse/DATAUP-536
