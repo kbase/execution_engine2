@@ -25,7 +25,7 @@ The current implementation of retry is to run jobs using the `retry_job` or `ret
 The endpoint takes a job or list of job ids and then attempts to resubmit them to the queue, using the exact same set of parameters and version of the app.
 
 ### Current Behavior
-#Current-behavior
+
 * Spec file is located at https://github.com/kbase/execution_engine2/blob/8baab8e3ac5212f4bbe59fd935980aa41b4ee06d/execution_engine2.spec#L201-L247
   
 * A job id is provided. If there are sufficient permissions, the call will proceed, if not, it will error out, unless the `as_admin` flag is provided by an admin
@@ -38,7 +38,7 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 
 
 ### Batch Behavior
-# batch-behavior
+
 * If a job has the attribute of `batch_job=True` the retry will fail, since there is no method to re-run. This is a bug, as it doesn't fail gracefully. 
 * If a job has the attribute of `batch_job=True`, but is actually a child job, the parent will be notified of this new retried job
 * Multiple in-flight retries are allowed.
@@ -63,7 +63,7 @@ is a lot of time for things to go wrong.
 * Prevent multiple in-flight retries to prevent the user from wasting their own resources (and the queues resources)
 * Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
 * One single submission to HTCondor instead of multiple job submissions
-* Ability to gracefully handle batch container jobs with children to throw proper error [See Batch Behavior](#batch-behavior)
+* Ability to gracefully handle batch container jobs with children to throw proper error [See Batch Behavior](###-Batch-Behavior)
 * Ability to handle database consistency during retry failure
 * See if we can make some preflight (before the job starts) checks fail before job submission and handle them differently than those that appear during job submission 
 
