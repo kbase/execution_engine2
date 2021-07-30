@@ -271,22 +271,14 @@ class EE2RunJob:
         :return:
         """
         # Save records to db
-        init_job_rec = time.time()
         job_records = []
         for runjob_param in runjob_params:
             job_records.append(
                 self._init_job_rec(self.sdkmr.get_user_id(), runjob_param, save=False)
             )
-        self.logger.debug(f"init_job_rec = {time.time() - init_job_rec}")
-
-        save_jobs = time.time()
         job_ids = self.sdkmr.save_jobs(job_records)
 
-        self.logger.debug(f"save_jobs = {time.time() - save_jobs}")
-        self.logger.debug(f"init and save save_jobs = {time.time() - init_job_rec}")
-
         # Generate job submission params
-        gen_sub_time = time.time()
         job_submission_params = []
         for i, job_id in enumerate(job_ids):
             job_submission_params.append(
@@ -294,20 +286,13 @@ class EE2RunJob:
             )
             assert job_id == job_submission_params[i].job_id
 
-        self.logger.debug(
-            f"init and gen_sub_time save_jobs = {time.time() - gen_sub_time}"
-        )
-
-        # Takes 2.5200018882751465 for 100, can shave off 2.5 secs by making this async
-        kafku = time.time()
+        # Takes 2.5200018882751465 for 100 records, can shave off 2.5 secs by making this async
         for job_id in job_ids:
             self.sdkmr.get_kafka_client().send_kafka_message(
                 message=KafkaCreateJob(
                     job_id=str(job_id), user=self.sdkmr.get_user_id()
                 )
             )
-
-        self.logger.debug(f"kafka submit = {time.time() - kafku}")
 
         # Submit to Condor
         condor_time = time.time()
@@ -320,30 +305,32 @@ class EE2RunJob:
             raise e
 
     def _update_to_queued_multiple(self, job_ids, scheduler_ids):
+        """
+        This is called during job submission. If a job is terminated during job submission,
+        we have the chance to re-issue a termination and remove the job from the Job Queue
+        """
         if len(job_ids) != len(scheduler_ids):
             raise Exception(
                 "Need to provide the same amount of job ids and scheduler_ids"
             )
         jobs_to_update = list(map(JobIdPair, job_ids, scheduler_ids))
-        latest_job_states = self.sdkmr.get_mongo_util().update_jobs_to_queued(jobs_to_update)
+        self.sdkmr.get_mongo_util().update_jobs_to_queued(jobs_to_update)
+        jobs = self.sdkmr.get_mongo_util().get_jobs(job_ids)
 
-
-        for job in latest_job_states:
+        for job in jobs:
+            job_id = str(job.id)
             if job.status == Status.queued.value:
-
-                # TODO figure out kafka message
-                for i, job_id in enumerate(job_ids):
-                    self.sdkmr.get_kafka_client().send_kafka_message(
-                        message=KafkaQueueChange(
-                            job_id=job_id,
-                            new_status=Status.queued.value,
-                            previous_status=Status.created.value,  # TODO maybe change this to allow for estimating jobs
-                            scheduler_id=scheduler_ids[i],
-                        )
+                self.sdkmr.get_kafka_client().send_kafka_message(
+                    message=KafkaQueueChange(
+                        job_id=job_id,
+                        new_status=Status.queued.value,
+                        previous_status=Status.created.value,  # TODO maybe change this to allow for estimating jobs
+                        scheduler_id=job.scheduler_id,
                     )
-            else:
-                self._safe_cancel(job_id=j)
-
+                )
+            elif job.status == Status.terminated.value:
+                # Remove from the queue, now that the scheduler_id is available
+                self._safe_cancel(job_id, TerminatedCode.terminated_by_user.value)
 
     def _submit_multiple(self, job_submission_params):
         """
@@ -361,7 +348,6 @@ class EE2RunJob:
                     params=job_submit_param
                 )
                 condor_job_id = submission_info.clusterid
-
             except Exception as e:
                 self.logger.error(e)
                 self._finish_created_job(job_id=job_id, exception=e)

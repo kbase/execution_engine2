@@ -3,7 +3,8 @@ import subprocess
 import time
 import traceback
 from contextlib import contextmanager
-from typing import Dict, List
+from datetime import datetime
+from typing import Dict, List, Tuple
 
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
@@ -217,7 +218,9 @@ class MongoUtil:
 
         return job
 
-    def get_jobs(self, job_ids=None, exclude_fields=None, sort_id_ascending=None):
+    def get_jobs(
+        self, job_ids=None, exclude_fields=None, sort_id_ascending=None
+    ) -> List[Job]:
         if not (job_ids and isinstance(job_ids, list)):
             raise ValueError("Please provide a non empty list of job ids")
 
@@ -273,14 +276,14 @@ class MongoUtil:
         :param job_id_pairs: A list of pairs of Job Ids and Scheduler Ids
         :param scheduler_type: The scheduler this job was queued in, default condor
         """
-        job_ids_to_lookup_if_terminated = []
+
         bulk_update_scheduler_jobs = []
         bulk_update_created_to_queued = []
-        now = time.time()
+        queue_time_now = datetime.utcnow().timestamp()
         for job_id_pair in job_id_pairs:
             if None in job_id_pairs:
                 raise InvalidStatusTransitionException
-            job_ids_to_lookup_if_terminated.append(job_id_pair.job_id)
+
             bulk_update_scheduler_jobs.append(
                 UpdateOne(
                     {
@@ -288,7 +291,7 @@ class MongoUtil:
                     },
                     {
                         "$set": {
-                            "queued": now,
+                            "queued": queue_time_now,
                             "scheduler_id": job_id_pair.scheduler_id,
                             "scheduler_type": scheduler_type,
                         }
@@ -310,16 +313,17 @@ class MongoUtil:
             )
         # Update provided jobs with scheduler id. Then only update non terminated jobs into updated status.
         mongo_collection = self.config["mongo-jobs-collection"]
+
+        from pymongo.collection import Collection
+
         if bulk_update_scheduler_jobs:
             with self.pymongo_client(mongo_collection) as pymongo_client:
-                pymongo_client[self.mongo_database][mongo_collection].bulk_write(
-                    bulk_update_scheduler_jobs, ordered=False
-                )
-                bulk_update_result = pymongo_client[self.mongo_database][
+                ee2_jobs_col = pymongo_client[self.mongo_database][
                     mongo_collection
-                ].bulk_write(bulk_update_created_to_queued, ordered=False)
+                ]  # type: Collection
 
-        # job_ids_to_lookup_if_terminated
+                # Bulk Update to add scheduler ids
+                ee2_jobs_col.bulk_write(bulk_update_scheduler_jobs, ordered=False)
 
     def cancel_job(self, job_id=None, terminated_code=None):
         """

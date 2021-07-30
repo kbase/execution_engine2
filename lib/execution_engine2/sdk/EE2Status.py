@@ -94,7 +94,6 @@ class JobsStatus:
         :param as_admin: Cancel the job for a different user
         """
         # Is it inefficient to get the job twice? Is it cached?
-        # Maybe if the call fails, we don't actually cancel the job?
 
         job = self.sdkmr.get_job_with_permission(
             job_id, JobPermissions.WRITE, as_admin=as_admin
