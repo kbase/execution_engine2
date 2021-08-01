@@ -79,10 +79,15 @@ is a lot of time for things to go wrong.
 * Add retry_number field
 
 ## New priority
+
+For MVP
 * Create a retry_jobs field, and expose list in api, and a T/F completeness toggle
+* Add failure conditions in run method to fail before creating db records  
+
+Not for mvp
 * Non blocking job submission / (Possibly htcondor submit)
-* Add failure conditions in run method
-* Add thread to perform actions based on toggle
+* Add thread/reaper to perform actions based on toggle
+
 
 
 ### Questions
@@ -125,8 +130,9 @@ A: Not necessarily relevant to this endpoint, more of a `run_job_batch` endpoint
     Can a job in states other than failed or canceled be retried? Or should the user be required to cancel a job before it can be retried? (Job must be in Error/Cancel state)
 
 
-# Work estimation
+# Work estimation for MVP
 Priority descending
+
 ### Address data inconsistency via retry_count, retry_ids and retry_toggle
 > Estimate 3-4 days
 > https://kbase-jira.atlassian.net/browse/DATAUP-461
@@ -137,6 +143,11 @@ Priority descending
 > Requires retry to be able to force the same app `git_commit versions` and `JobRequirements` from the db records
 https://kbase-jira.atlassian.net/browse/DATAUP-461
 
+### Create a created jobs and queued jobs reaper that cancels created jobs older than 1 hour, and cancels queued jobs over 14 days old.
+> Estimate 2-3 days 
+https://kbase-jira.atlassian.net/browse/DATAUP-536
+
+# Work estimation for POST MVP
 
 ###  Hookup retries to refactored code
 *  Non blocking job submission for submitting multiple jobs, possibly via using `run_job_multiple` 
@@ -144,14 +155,13 @@ https://kbase-jira.atlassian.net/browse/DATAUP-461
 > Estimate 3 days
 > https://kbase-jira.atlassian.net/browse/DATAUP-535
 
+Not for MVP
 ### One single submission to HTCondor instead of multiple job submission ()
 > Estimate 1-2 days
 > https://kbase-jira.atlassian.net/browse/DATAUP-391
-
+Not for MVP
 ### Prevent multiple in-flight retries to prevent the user from wasting their own resources (and the queues resources)
 > Estimate 3-4 days
 https://kbase-jira.atlassian.net/browse/DATAUP-439
 
-### Create a created jobs and queued jobs reaper that cancels created jobs older than 1 hour, and cancels queued jobs over 14 days old.
-> Estimate 2-3 days 
-https://kbase-jira.atlassian.net/browse/DATAUP-536
+
