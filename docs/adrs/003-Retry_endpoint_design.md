@@ -7,7 +7,7 @@ Date: 2021-05-19
 
 The current requirement for the Batch/Bulk UI is to be able to retry jobs that have either "errored" out, or were terminated.
 The UI allows you to retry either single jobs, or multiple jobs, and saves you from having to cancel and resubmit each job individually,
-which is not currently implemented in the UI anyway.
+which is not currently implemented in the UI anyway. 
 
 ### Motivation for the `code spike` for retry endpoint and follow up design ADR
 >As I mentioned, as the product owner, I find our ability to deliver functionality to be pretty awful. 
@@ -122,7 +122,7 @@ A: Not necessarily relevant to this endpoint, more of a `run_job_batch` endpoint
 #### Shorter Q and A
 
     Should we track a retry count? (Done)
-    Should users see this retry count? (Unknown TBD)
+    Should users see this retry count? A: Visible in the EE2 API, UI is TBD 
     Are retried jobs saved in some sort of data structure linking them, possibly indirectly, to the parent job or are they orphaned? (Yes, retry_parent)
     If the former, is the retry relationship linear or a tree? E.g. what happens if there are two simultaneous calls to retry a job? (Tree, simultaneous jobs run)
     Should it be at least theoretically possible to see the list of retried jobs in order? (It is possible by sorting on creation date)
@@ -152,6 +152,7 @@ https://kbase-jira.atlassian.net/browse/DATAUP-536
 ###  Hookup retries to refactored code
 *  Non blocking job submission for submitting multiple jobs, possibly via using `run_job_multiple` 
 *  Requires refactor of retry to gracefully handle jobs with children by notifying the batch containers for retry of ids not in the same batch. If you retry jobs from batch 1 and from batch 2, you want the correct batch parent to be notified. 
+*  Switching from starting the retried jobs one at a time to starting them in batch mode will require refactoring how the batch and retry parents are updated
 > Estimate 3 days
 > https://kbase-jira.atlassian.net/browse/DATAUP-535
 
