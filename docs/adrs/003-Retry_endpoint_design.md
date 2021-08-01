@@ -39,7 +39,7 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 
 ### Batch Behavior
 
-* If a job has the attribute of `batch_job=True` the retry will fail, since there is no method to re-run. This is a bug, as it doesn't fail gracefully. 
+* If a job has the attribute of `batch_job=True` the retry will fail, since there is no method to re-run. This is a bug, as it doesn't fail gracefully. Gracefully handling jobs with children means that it won't throw an error about not having a method to re-run, and instead will throw an error that says "Cannot retry batch job parents. Must retry individual jobs"
 * If a job has the attribute of `batch_job=True`, but is actually a child job, the parent will be notified of this new retried job
 * Multiple in-flight retries are allowed.
 * Adds `child_job_id` to `parent_job_id.child_job_ids[]`
