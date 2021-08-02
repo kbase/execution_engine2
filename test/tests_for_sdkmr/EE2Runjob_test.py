@@ -769,7 +769,7 @@ def _run_and_run_batch_fail(
     _run_batch_fail(rj, [params], {}, as_admin, expected)
 
 
-def _set_up_common_return_values_batch(mocks):
+def _set_up_common_return_values_batch(mocks, returned_job_state=None):
     """
     Set up return values on mocks that are the same for several tests.
     """
@@ -812,11 +812,15 @@ def _set_up_common_return_values_batch(mocks):
 
     retjob_1_after_submit = Job()
     retjob_1_after_submit.id = ObjectId(_JOB_ID_1)
-    retjob_1_after_submit.status = _QUEUED_STATE
+    retjob_1_after_submit.status = (
+        _QUEUED_STATE if not returned_job_state else returned_job_state
+    )
     retjob_1_after_submit.scheduler_id = _CLUSTER_1
     retjob_2_after_submit = Job()
     retjob_2_after_submit.id = ObjectId(_JOB_ID_2)
-    retjob_2_after_submit.status = _QUEUED_STATE
+    retjob_2_after_submit.status = (
+        _QUEUED_STATE if not returned_job_state else returned_job_state
+    )
     retjob_2_after_submit.scheduler_id = _CLUSTER_2
 
     mocks[MongoUtil].get_job.side_effect = [retjob_1, retjob_2]
@@ -825,7 +829,9 @@ def _set_up_common_return_values_batch(mocks):
     ]
 
 
-def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
+def _check_common_mock_calls_batch(
+    mocks, reqs1, reqs2, parent_wsid, terminated_during_submit=False
+):
     """
     Check that mocks are called as expected when those calls are similar or the same for
     several tests.
@@ -913,29 +919,44 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
     ]
     mocks[MongoUtil].update_jobs_to_queued.assert_has_calls([call(child_job_pairs)])
 
-    mocks[KafkaClient].send_kafka_message.assert_has_calls(
-        [
-            call(KafkaCreateJob(job_id=_JOB_ID, user=_USER)),  # parent job
-            call(KafkaCreateJob(job_id=_JOB_ID_1, user=_USER)),
-            call(KafkaCreateJob(job_id=_JOB_ID_2, user=_USER)),
-            call(
-                KafkaQueueChange(
-                    job_id=_JOB_ID_1,
-                    new_status=_QUEUED_STATE,
-                    previous_status=_CREATED_STATE,
-                    scheduler_id=_CLUSTER_1,
-                )
-            ),
-            call(
-                KafkaQueueChange(
-                    job_id=_JOB_ID_2,
-                    new_status=_QUEUED_STATE,
-                    previous_status=_CREATED_STATE,
-                    scheduler_id=_CLUSTER_2,
-                )
-            ),
-        ]
-    )
+    if not terminated_during_submit:
+        mocks[KafkaClient].send_kafka_message.assert_has_calls(
+            [
+                call(KafkaCreateJob(job_id=_JOB_ID, user=_USER)),  # parent job
+                call(KafkaCreateJob(job_id=_JOB_ID_1, user=_USER)),
+                call(KafkaCreateJob(job_id=_JOB_ID_2, user=_USER)),
+                call(
+                    KafkaQueueChange(
+                        job_id=_JOB_ID_1,
+                        new_status=_QUEUED_STATE,
+                        previous_status=_CREATED_STATE,
+                        scheduler_id=_CLUSTER_1,
+                    )
+                ),
+                call(
+                    KafkaQueueChange(
+                        job_id=_JOB_ID_2,
+                        new_status=_QUEUED_STATE,
+                        previous_status=_CREATED_STATE,
+                        scheduler_id=_CLUSTER_2,
+                    )
+                ),
+            ]
+        )
+    else:
+        mocks[KafkaClient].send_kafka_message.assert_has_calls(
+            [
+                call(KafkaCreateJob(job_id=_JOB_ID, user=_USER)),  # parent job
+                call(KafkaCreateJob(job_id=_JOB_ID_1, user=_USER)),
+                call(KafkaCreateJob(job_id=_JOB_ID_2, user=_USER)),
+            ]
+        )
+        mocks[SDKMethodRunner].cancel_job.assert_has_calls(
+            [
+                call(job_id=_JOB_ID_1, terminated_code=0),
+                call(job_id=_JOB_ID_2, terminated_code=0),
+            ]
+        )
 
     # Removed for now, but might be added back in if run_job_message is re-added
     # mocks[SlackClient].run_job_message.assert_has_calls(
@@ -961,6 +982,98 @@ def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
     and that the assert_called_once_with doesn't correctly check the job object
     """
     assert_jobs_equal(batch_job, expected_batch_container)
+
+
+def test_run_job_batch_with_cancellation_during_submit():
+    """
+    A basic unit test of the run_batch() method, providing a workspace ID for the parent job. This one also checks for
+    cancellation during submit causing a job cancellation request to be processed .
+
+    This test is a fairly minimal test of the run_batch() method. It does not exercise all the
+    potential code paths or provide all the possible run inputs, such as job parameters, cell
+    metadata, etc.
+    """
+    # When an assertion is failed, this test doesn't show you where failed in PyCharm, so use
+    # Additional arguments `--no-cov -s` or run from cmd line
+    # PYTHONPATH=.:lib:test pytest test/tests_for_sdkmr/EE2Runjob_test.py::test_run_job_batch_with_parent_job_wsid --no-cov
+
+    # set up variables
+    parent_wsid = 89
+    wsid = 32
+
+    # set up mocks
+    mocks = _set_up_mocks(_USER, _TOKEN)
+    sdkmr = mocks[SDKMethodRunner]
+    jrr = mocks[JobRequirementsResolver]
+    # We intentionally do not check the logger methods as there are a lot of them and this is
+    # already a very large test. This may be something to be added later when needed.
+
+    # Set up call returns. These calls are in the order they occur in the code
+    mocks[WorkspaceAuth].can_write.return_value = True
+    mocks[WorkspaceAuth].can_write_list.return_value = {wsid: True}
+
+    jrr.normalize_job_reqs.side_effect = [{}, {}]
+    jrr.get_requirements_type.side_effect = [
+        RequirementsType.STANDARD,
+        RequirementsType.STANDARD,
+    ]
+    reqs1 = ResolvedRequirements(
+        cpus=1,
+        memory_MB=2,
+        disk_GB=3,
+        client_group="cg1",
+    )
+    reqs2 = ResolvedRequirements(
+        cpus=10,
+        memory_MB=20,
+        disk_GB=30,
+        client_group="cg2",
+    )
+    jrr.resolve_requirements.side_effect = [reqs1, reqs2]
+
+    _set_up_common_return_values_batch(
+        mocks, returned_job_state=Status.terminated.value
+    )
+
+    # set up the class to be tested and run the method
+    rj = EE2RunJob(sdkmr)
+    params = [
+        {
+            "method": _METHOD_1,
+            "app_id": _APP_1,
+            "source_ws_objects": [_WS_REF_1, _WS_REF_2],
+        },
+        {
+            "method": _METHOD_2,
+            "app_id": _APP_2,
+            "wsid": wsid,
+        },
+    ]
+    params[1]["wsid"] = None
+    assert rj.run_batch(params, {"wsid": parent_wsid}) == {
+        "batch_id": _JOB_ID,
+        "child_job_ids": [_JOB_ID_1, _JOB_ID_2],
+    }
+
+    # check mocks called as expected. The order here is the order that they're called in the code.
+    mocks[WorkspaceAuth].can_write.assert_called_once_with(parent_wsid)
+
+    jrr = mocks[JobRequirementsResolver]
+    jrr.normalize_job_reqs.assert_has_calls(
+        [call({}, "input job"), call({}, "input job")]
+    )
+    jrr.get_requirements_type.assert_has_calls(
+        [call(**_EMPTY_JOB_REQUIREMENTS), call(**_EMPTY_JOB_REQUIREMENTS)]
+    )
+    jrr.resolve_requirements.assert_has_calls(
+        [
+            call(_METHOD_1, mocks[CatalogCache], **_EMPTY_JOB_REQUIREMENTS),
+            call(_METHOD_2, mocks[CatalogCache], **_EMPTY_JOB_REQUIREMENTS),
+        ]
+    )
+    _check_common_mock_calls_batch(
+        mocks, reqs1, reqs2, parent_wsid, terminated_during_submit=True
+    )
 
 
 def test_run_job_batch_with_parent_job_wsid():

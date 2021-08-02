@@ -293,12 +293,9 @@ class EE2RunJob:
                     job_id=str(job_id), user=self.sdkmr.get_user_id()
                 )
             )
-
         # Submit to Condor
-        condor_time = time.time()
         try:
             submission_ids = self._submit_multiple(job_submission_params)
-            self.logger.debug(f"condor_time submit = {time.time() - condor_time}")
             return submission_ids
         except Exception as e:
             self._abort_multiple_jobs(job_ids)
@@ -330,7 +327,7 @@ class EE2RunJob:
                 )
             elif job.status == Status.terminated.value:
                 # Remove from the queue, now that the scheduler_id is available
-                self._safe_cancel(job_id, TerminatedCode.terminated_by_user.value)
+                self._safe_cancel(job_id, TerminatedCode.terminated_by_user)
 
     def _submit_multiple(self, job_submission_params):
         """
