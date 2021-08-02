@@ -84,6 +84,30 @@ class MongoUtilTest(unittest.TestCase):
                 # Don't change their state
                 assert all(j.status == state.value for j in [job2, job3])
 
+    def test_update_jobs_enmasse_bad_job_pairs(self):
+        job = get_example_job(status=Status.created.value).save()
+        job2 = get_example_job(status=Status.created.value).save()
+        job3 = get_example_job(status=Status.created.value).save()
+        job_ids = [job.id, job2.id, job3.id]
+        scheduler_ids = [job.scheduler_id, job2.scheduler_id, None]
+        job_id_pairs = list(map(JobIdPair, job_ids, scheduler_ids))
+
+        with self.assertRaisesRegex(
+            expected_exception=ValueError,
+            expected_regex=f"Provided a bad job_id_pair, missing scheduler_id for {job3.id}",
+        ):
+            self.getMongoUtil().update_jobs_to_queued(job_id_pairs)
+
+        job_ids = [job.id, job2.id, None]
+        scheduler_ids = [job.scheduler_id, job2.scheduler_id, job3.scheduler_id]
+        job_id_pairs = list(map(JobIdPair, job_ids, scheduler_ids))
+
+        with self.assertRaisesRegex(
+            expected_exception=ValueError,
+            expected_regex=f"Provided a bad job_id_pair, missing job_id for {job3.scheduler_id}",
+        ):
+            self.getMongoUtil().update_jobs_to_queued(job_id_pairs)
+
     def test_get_by_cluster(self):
         """Get a job by its condor scheduler_id"""
         mongo_util = self.getMongoUtil()

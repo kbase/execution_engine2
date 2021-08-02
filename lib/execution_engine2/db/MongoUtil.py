@@ -282,8 +282,14 @@ class MongoUtil:
         bulk_update_created_to_queued = []
         queue_time_now = datetime.utcnow().timestamp()
         for job_id_pair in job_id_pairs:
-            if None in job_id_pairs:
-                raise InvalidStatusTransitionException
+            if job_id_pair.job_id is None:
+                raise ValueError(
+                    f"Provided a bad job_id_pair, missing job_id for {job_id_pair.scheduler_id}"
+                )
+            elif job_id_pair.scheduler_id is None:
+                raise ValueError(
+                    f"Provided a bad job_id_pair, missing scheduler_id for {job_id_pair.job_id}"
+                )
 
             bulk_update_scheduler_jobs.append(
                 UpdateOne(
