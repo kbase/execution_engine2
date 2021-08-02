@@ -59,7 +59,7 @@ class MongoUtilTest(unittest.TestCase):
         self.assertTrue(set(class_attri) <= set(mongo_util.__dict__.keys()))
 
     def test_update_jobs_enmasse(self):
-
+        """Check to see that created jobs get updated to queued"""
         for state in Status:
             job = get_example_job(status=Status.created.value).save()
             job2 = get_example_job(status=state.value).save()
@@ -74,16 +74,15 @@ class MongoUtilTest(unittest.TestCase):
             job2.reload()
             job3.reload()
 
-            # Success Case
+            # First job always should transition to queued
+            assert job.status == Status.queued.value
+
+            # Created jobs should transition
             if state.value == Status.created.value:
                 assert all(j.status == Status.queued.value for j in [job, job2, job3])
-            # Fail Case,
             else:
-                # The created job should be queued
-                assert job.status == Status.queued.value
-                # Other statuses should remain unchanged
-                assert job2.status == state.value
-                assert job3.status == state.value
+                # Don't change their state
+                assert all(j.status == state.value for j in [job2, job3])
 
     def test_get_by_cluster(self):
         """Get a job by its condor scheduler_id"""

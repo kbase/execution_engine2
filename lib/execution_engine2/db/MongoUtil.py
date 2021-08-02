@@ -270,9 +270,10 @@ class MongoUtil:
     def update_jobs_to_queued(
         self, job_id_pairs: List[JobIdPair], scheduler_type: str = "condor"
     ) -> None:
-        """
-        Updates a list of created jobs to queued. Does not work on jobs that already have gone through a status transition.
-        If the record is not in the CREATED status, an InvalidStatusTransitionException will be raised.
+        f"""
+        * Adds scheduler id to list of jobs
+        * Updates a list of {Status.created.value} jobs to queued. Does not work on jobs that already have gone through any other
+        status transition. If the record is not in the {Status.created.value} status, nothing will happen
         :param job_id_pairs: A list of pairs of Job Ids and Scheduler Ids
         :param scheduler_type: The scheduler this job was queued in, default condor
         """
@@ -314,16 +315,13 @@ class MongoUtil:
         # Update provided jobs with scheduler id. Then only update non terminated jobs into updated status.
         mongo_collection = self.config["mongo-jobs-collection"]
 
-        from pymongo.collection import Collection
-
         if bulk_update_scheduler_jobs:
             with self.pymongo_client(mongo_collection) as pymongo_client:
-                ee2_jobs_col = pymongo_client[self.mongo_database][
-                    mongo_collection
-                ]  # type: Collection
-
+                ee2_jobs_col = pymongo_client[self.mongo_database][mongo_collection]
                 # Bulk Update to add scheduler ids
                 ee2_jobs_col.bulk_write(bulk_update_scheduler_jobs, ordered=False)
+                # Bulk Update to add queued status ids
+                ee2_jobs_col.bulk_write(bulk_update_created_to_queued, ordered=False)
 
     def cancel_job(self, job_id=None, terminated_code=None):
         """

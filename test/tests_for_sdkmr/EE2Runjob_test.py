@@ -14,7 +14,13 @@ from pytest import raises
 
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.db.models.models import Job, JobInput, JobRequirements, Meta
+from execution_engine2.db.models.models import (
+    Job,
+    JobInput,
+    JobRequirements,
+    Meta,
+    Status,
+)
 from execution_engine2.exceptions import (
     IncorrectParamsException,
     AuthError,
@@ -56,8 +62,8 @@ _APP = "lolcats/itsmypartyilllolifiwantto"
 _USER = "someuser"
 _TOKEN = "tokentokentoken"
 _OTHER_USER = "some_sucker"
-_CREATED_STATE = "created"
-_QUEUED_STATE = "queued"
+_CREATED_STATE = Status.created.value
+_QUEUED_STATE = Status.queued.value
 
 # batch common variables
 _BATCH = "batch"
@@ -803,7 +809,20 @@ def _set_up_common_return_values_batch(mocks):
     retjob_2 = Job()
     retjob_2.id = ObjectId(_JOB_ID_2)
     retjob_2.status = _CREATED_STATE
+
+    retjob_1_after_submit = Job()
+    retjob_1_after_submit.id = ObjectId(_JOB_ID_1)
+    retjob_1_after_submit.status = _QUEUED_STATE
+    retjob_1_after_submit.scheduler_id = _CLUSTER_1
+    retjob_2_after_submit = Job()
+    retjob_2_after_submit.id = ObjectId(_JOB_ID_2)
+    retjob_2_after_submit.status = _QUEUED_STATE
+    retjob_2_after_submit.scheduler_id = _CLUSTER_2
+
     mocks[MongoUtil].get_job.side_effect = [retjob_1, retjob_2]
+    mocks[MongoUtil].get_jobs.side_effect = [
+        [retjob_1_after_submit, retjob_2_after_submit]
+    ]
 
 
 def _check_common_mock_calls_batch(mocks, reqs1, reqs2, parent_wsid):
