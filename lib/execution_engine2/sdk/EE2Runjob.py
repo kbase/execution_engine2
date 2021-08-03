@@ -327,6 +327,8 @@ class EE2RunJob:
                 )
             elif job.status == Status.terminated.value:
                 # Remove from the queue, now that the scheduler_id is available
+                # The job record doesn't actually get updated in the db a 2nd time, and this TerminatedCode is only
+                # used by the initial transition to Terminated
                 self._safe_cancel(job_id, TerminatedCode.terminated_by_user)
 
     def _submit_multiple(self, job_submission_params):

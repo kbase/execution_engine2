@@ -373,9 +373,9 @@ class JobsStatus:
     def _update_finished_job_with_usage(self, job_id, as_admin=None) -> Dict:
         """
         # TODO Does this need a kafka message?
-        :param job_id:
-        :param as_admin:
-        :return:
+        # TODO EE2 issue #251 : The saved job stats are inaccurate:
+        # The usage is not recorded until the job is completely finished.
+        :return: Resources at the time the job almost finished.
         """
         # note this method is replaced by a magic mock in some tests
         job = self.sdkmr.get_job_with_permission(

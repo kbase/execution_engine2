@@ -4,7 +4,7 @@ import time
 import traceback
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
