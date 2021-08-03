@@ -131,7 +131,7 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_run_job_and_handle_held(self, rq_mock, condor_mock):
         """
-        Run a job, then call it held as an admin, and then check to see if the record is set to error
+        Run a job, then call it held as an admin, and then check to see if the record is set to error or terminated
         :param rq_mock:
         :param condor_mock:
         :return:
