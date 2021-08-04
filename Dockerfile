@@ -43,8 +43,6 @@ RUN echo "mongodb-org hold" | dpkg --set-selections \
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
 && bash ~/miniconda.sh -b -p /miniconda-latest
 
-
-
 # Setup Cron
 COPY ./bin/ee2_cronjobs /etc/cron.d/ee2_cronjobs
 
