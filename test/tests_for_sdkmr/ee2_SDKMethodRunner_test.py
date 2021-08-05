@@ -174,7 +174,14 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             is clients_and_mocks[JobRequirementsResolver]
         )
 
-    def test_save_job(self):
+    def test_save_jobs(self):
+        ws = Workspace("https://fake.com")
+        wsa = WorkspaceAuth("user", ws)
+        cliset = UserClientSet("user", "token", ws, wsa)
+        clients_and_mocks = get_client_mocks(self.cfg, self.config_file, *ALL_CLIENTS)
+        sdkmr = SDKMethodRunner(cliset, clients_and_mocks[ClientSet])
+
+    def test_save_job_and_save_jobs(self):
         ws = Workspace("https://fake.com")
         wsa = WorkspaceAuth("user", ws)
         cliset = UserClientSet("user", "token", ws, wsa)
@@ -190,8 +197,29 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         j = create_autospec(Job, spec_set=False, instance=True)
         j.id = bson.objectid.ObjectId("603051cfaf2e3401b0500982")
         assert sdkmr.save_job(j) == "603051cfaf2e3401b0500982"
-
         j.save.assert_called_once_with()
+
+        # Test Save Jobs
+        job1 = Job()
+        job1.id = bson.objectid.ObjectId("603051cfaf2e3401b0500980")
+        job2 = Job()
+        job2.id = bson.objectid.ObjectId("603051cfaf2e3401b0500981")
+        sdkmr.get_mongo_util().insert_jobs.return_value = [job1.id, job2.id]
+        jobs = sdkmr.save_jobs([job1, job2])
+        sdkmr.get_mongo_util().insert_jobs.assert_called_with(
+            jobs_to_insert=[job1, job2]
+        )
+        assert jobs == [str(job1.id), str(job2.id)]
+
+    def test_add_child_jobs(self):
+        ws = Workspace("https://fake.com")
+        wsa = WorkspaceAuth("user", ws)
+        cliset = UserClientSet("user", "token", ws, wsa)
+        clients_and_mocks = get_client_mocks(self.cfg, self.config_file, *ALL_CLIENTS)
+        sdkmr = SDKMethodRunner(cliset, clients_and_mocks[ClientSet])
+        j = create_autospec(Job, spec_set=False, instance=True)
+        sdkmr.add_child_jobs(batch_job=j, child_jobs=["a", "b", "c"])
+        j.modify.assert_called_once_with(add_to_set__child_jobs=["a", "b", "c"])
 
     def test_save_and_return_job(self):
         ws = Workspace("https://fake.com")
