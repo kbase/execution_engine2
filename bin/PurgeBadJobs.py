@@ -42,6 +42,9 @@ ee2_jobs_collection = ee2_db.get_collection(
     config.get(section="execution_engine2", option="mongo-jobs-collection")
 )
 
+CREATED_MINUTES_AGO = 5
+QUEUE_THRESHOLD_DAYS = 14
+
 
 def cancel(record):
     job_id = str(record["_id"])
@@ -69,7 +72,7 @@ def cancel_jobs_stuck_in_queue():
     ee2.update_job_status({'job_id': '601af2afeeb773acaf9de80d', 'as_admin': True, 'status': 'queued'})
     :return:
     """
-    queue_threshold_days = 14
+    queue_threshold_days = QUEUE_THRESHOLD_DAYS
     before_days = (
         datetime.today() - timedelta(days=queue_threshold_days + 1)
     ).timestamp()
@@ -92,8 +95,9 @@ def cancel_created():
     """
     For jobs that are not batch jobs, and have been in the created state for more than 5 minutes, uh oh, spaghettio, time to go
     """
+
     five_mins_ago = ObjectId.from_datetime(
-        datetime.now(timezone.utc) - timedelta(minutes=5)
+        datetime.now(timezone.utc) - timedelta(minutes=CREATED_MINUTES_AGO)
     )
     stuck_jobs = ee2_jobs_collection.find(
         {"status": "created", "_id": {"$lt": five_mins_ago}, "batch_job": {"$ne": True}}
