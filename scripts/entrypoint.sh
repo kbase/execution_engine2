@@ -21,8 +21,7 @@ if [ $# -eq 0 ]; then
   # Save ENV Variables to file for cron and Remove _=/usr/bin/env
   envsubst </kb/module/bin/cron_vars >/etc/environment
   chmod a+rw /etc/environment
-  # Start cron and fix /usr/sbin/cron: (*system*) NUMBER OF HARD LINKS > 1
-  cron && touch /etc/cron.d/ee2_cronjobs
+  service cron start
   sh ./scripts/start_server.sh
 
 elif [ "${1}" = "test" ]; then
