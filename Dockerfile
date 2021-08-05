@@ -68,7 +68,7 @@ WORKDIR /kb/module/
 
 # Set deploy.cfg location
 ENV KB_DEPLOYMENT_CONFIG=/kb/module/deploy.cfg
-
+ENV PATH=/kb/module:$PATH
 
 ENTRYPOINT [ "./scripts/entrypoint.sh" ]
 CMD [ ]

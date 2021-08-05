@@ -15,6 +15,7 @@ from lib.execution_engine2.exceptions import (
     RecordNotFoundException,
     InvalidStatusTransitionException,
 )
+from utils.arg_processing import parse_bool
 
 
 class MongoUtil:
@@ -25,6 +26,7 @@ class MongoUtil:
         self.mongo_database = config["mongo-database"]
         self.mongo_user = config["mongo-user"]
         self.mongo_pass = config["mongo-password"]
+        self.retry_rewrites = parse_bool(config["mongo-retry-rewrites"])
         self.mongo_authmechanism = config["mongo-authmechanism"]
         self.mongo_collection = None
         self._start_local_service()
@@ -40,7 +42,7 @@ class MongoUtil:
             password=self.mongo_pass,
             authSource=self.mongo_database,
             authMechanism=self.mongo_authmechanism,
-            retryWrites=False,
+            retryWrites=self.retry_rewrites,
         )
 
     def _get_mongoengine_client(self) -> connection:
@@ -52,7 +54,7 @@ class MongoUtil:
             password=self.mongo_pass,
             authentication_source=self.mongo_database,
             authentication_mechanism=self.mongo_authmechanism,
-            retryWrites=False,
+            retryWrites=self.retry_rewrites,
         )
         # This MongoDB deployment does not support retryable writes
 

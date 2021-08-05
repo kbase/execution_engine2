@@ -4,4 +4,3 @@ BASH_ENV=/etc/environment
 
 # m h dom mon dow user command
   * * *   *   *   root . /etc/environment; /miniconda-latest/bin/python3 /kb/module/bin/PurgeBadJobs.py >> /root/cron-purge.log 2>&1
-  * * *   *   *   root echo 'hello' > /root/cron-echo

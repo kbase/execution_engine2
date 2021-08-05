@@ -10,8 +10,6 @@ from pathlib import Path
 import htcondor
 import pymongo
 
-# Must be run in /kb/module
-sys.path.append("/kb/module")
 
 from lib.execution_engine2.utils.SlackUtils import SlackClient
 from lib.installed_clients.execution_engine2Client import execution_engine2
@@ -24,25 +22,9 @@ config = ConfigParser()
 config.read(os.environ["KB_DEPLOYMENT_CONFIG"])
 ee2_endpoint = config.get(section="execution_engine2", option="ee2-url")
 slack_token = config.get(section="execution_engine2", option="slack-token")
-
 ee2 = execution_engine2(url=ee2_endpoint, token=os.environ["EE2_ADMIN_SERVICE_TOKEN"])
 slack_client = SlackClient(
     slack_token, channel="#ee_notifications", debug=True, endpoint=ee2_endpoint
-)
-db_client = pymongo.MongoClient(
-    host=config.get(section="execution_engine2", option="mongo-host"),
-    port=int(config.get(section="execution_engine2", option="mongo-port")),
-    username=config.get(section="execution_engine2", option="mongo-user"),
-    password=config.get(section="execution_engine2", option="mongo-password"),
-    authSource=config.get(section="execution_engine2", option="mongo-database"),
-    authMechanism=config.get(section="execution_engine2", option="mongo-authmechanism"),
-    serverSelectionTimeoutMS=1000,
-)
-ee2_db = db_client.get_database(
-    config.get(section="execution_engine2", option="mongo-database")
-)
-ee2_jobs_collection = ee2_db.get_collection(
-    config.get(section="execution_engine2", option="mongo-jobs-collection")
 )
 
 

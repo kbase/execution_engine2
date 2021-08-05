@@ -3,7 +3,6 @@
 
 import logging
 import os
-import sys
 from configparser import ConfigParser
 from datetime import datetime, timedelta, timezone
 from time import sleep
@@ -11,11 +10,9 @@ from time import sleep
 import pymongo
 from bson import ObjectId
 
-# Must be run in /kb/module
-sys.path.append("/kb/module")
+from lib.execution_engine2.db.models.models import TerminatedCode, Status
 from lib.execution_engine2.utils.SlackUtils import SlackClient
 from lib.installed_clients.execution_engine2Client import execution_engine2
-from lib.execution_engine2.db.models.models import TerminatedCode, Status
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -120,8 +117,7 @@ def purge():
 
 if __name__ == "__main__":
     try:
-        cancel_jobs_stuck_in_queue()
-        cancel_created()
+        purge()
     except Exception as e:
         slack_client.ee2_reaper_failure(endpoint=ee2_endpoint, e=e)
         raise e
