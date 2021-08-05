@@ -189,9 +189,7 @@ def _set_up_common_return_values(mocks):
     mocks[MongoUtil].get_job.return_value = retjob
 
 
-def _check_common_mock_calls(
-    mocks, reqs, wsid, app=_APP, parent_job_id=None, batch=False
-):
+def _check_common_mock_calls(mocks, reqs, wsid, app=_APP, parent_job_id=None):
     """
     Check that mocks are called as expected when those calls are similar or the same for
     several tests.
@@ -769,7 +767,7 @@ def _run_and_run_batch_fail(
     _run_batch_fail(rj, [params], {}, as_admin, expected)
 
 
-def _set_up_common_return_values_batch(mocks, returned_job_state=None):
+def _set_up_common_return_values_batch(mocks, returned_job_state=_QUEUED_STATE):
     """
     Set up return values on mocks that are the same for several tests.
     """
@@ -812,15 +810,11 @@ def _set_up_common_return_values_batch(mocks, returned_job_state=None):
 
     retjob_1_after_submit = Job()
     retjob_1_after_submit.id = ObjectId(_JOB_ID_1)
-    retjob_1_after_submit.status = (
-        _QUEUED_STATE if not returned_job_state else returned_job_state
-    )
+    retjob_1_after_submit.status = returned_job_state
     retjob_1_after_submit.scheduler_id = _CLUSTER_1
     retjob_2_after_submit = Job()
     retjob_2_after_submit.id = ObjectId(_JOB_ID_2)
-    retjob_2_after_submit.status = (
-        _QUEUED_STATE if not returned_job_state else returned_job_state
-    )
+    retjob_2_after_submit.status = returned_job_state
     retjob_2_after_submit.scheduler_id = _CLUSTER_2
 
     mocks[MongoUtil].get_job.side_effect = [retjob_1, retjob_2]
@@ -918,6 +912,8 @@ def _check_common_mock_calls_batch(
         JobIdPair(_JOB_ID_2, _CLUSTER_2),
     ]
     mocks[MongoUtil].update_jobs_to_queued.assert_has_calls([call(child_job_pairs)])
+    job_ids = [child_job_pair.job_id for child_job_pair in child_job_pairs]
+    mocks[MongoUtil].get_jobs.assert_has_calls([call(job_ids)])
 
     if not terminated_during_submit:
         mocks[KafkaClient].send_kafka_message.assert_has_calls(

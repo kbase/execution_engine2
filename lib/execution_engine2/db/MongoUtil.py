@@ -298,7 +298,6 @@ class MongoUtil:
                     },
                     {
                         "$set": {
-                            "queued": queue_time_now,
                             "scheduler_id": job_id_pair.scheduler_id,
                             "scheduler_type": scheduler_type,
                         }
@@ -314,6 +313,7 @@ class MongoUtil:
                     {
                         "$set": {
                             "status": Status.queued.value,
+                            "queued": queue_time_now,
                         }
                     },
                 )
