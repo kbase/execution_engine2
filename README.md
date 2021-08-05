@@ -145,6 +145,10 @@ deserialization.
 * This is a daemon launched by entrypoint.sh 
 * It is not a cronjob because there is no way to easy way to seek through the HTCondor EXECUTE log, which takes a while to seek through
 
+#### Horizontal Scaling
+* These scripts will have to be rethought if we do not want multiple copies running if ee2 is horizontally scaled.
+
+
 # Help  
   
 Contact @Tianhao-Gu, @bio_boris, @briehl
