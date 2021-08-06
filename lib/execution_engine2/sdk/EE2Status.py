@@ -94,7 +94,6 @@ class JobsStatus:
         :param as_admin: Cancel the job for a different user
         """
         # Is it inefficient to get the job twice? Is it cached?
-        # Maybe if the call fails, we don't actually cancel the job?
 
         job = self.sdkmr.get_job_with_permission(
             job_id, JobPermissions.WRITE, as_admin=as_admin
@@ -123,6 +122,7 @@ class JobsStatus:
         )
 
         # TODO Issue #190 IF success['TotalSuccess = 0'] == FALSE, don't send a kafka message?
+
         self.sdkmr.get_condor().cancel_job(job_id=f"{job.scheduler_id}.0")
         self.sdkmr.kafka_client.send_kafka_message(
             message=KafkaCancelJob(
@@ -373,9 +373,9 @@ class JobsStatus:
     def _update_finished_job_with_usage(self, job_id, as_admin=None) -> Dict:
         """
         # TODO Does this need a kafka message?
-        :param job_id:
-        :param as_admin:
-        :return:
+        # TODO EE2 issue #251 : The saved job stats are inaccurate:
+        # The usage is not recorded until the job is completely finished.
+        :return: Resources at the time the job almost finished.
         """
         # note this method is replaced by a magic mock in some tests
         job = self.sdkmr.get_job_with_permission(

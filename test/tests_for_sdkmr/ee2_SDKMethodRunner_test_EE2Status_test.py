@@ -131,7 +131,7 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_run_job_and_handle_held(self, rq_mock, condor_mock):
         """
-        Run a job, then call it held as an admin, and then check to see if the record contains condor info about the job
+        Run a job, then call it held as an admin, and then check to see if the record is set to error or terminated
         :param rq_mock:
         :param condor_mock:
         :return:
@@ -157,8 +157,15 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         print(
             f"Job id is {job_id}. Status is {check_job.get('status')} Cluster is {check_job.get('scheduler_id')} "
         )
+        self.assertEqual(check_job.get("status"), Status.queued.value)
         job_record = runner.handle_held_job(cluster_id=check_job.get("scheduler_id"))
-        self.assertEqual(self.fake_used_resources, job_record.get("condor_job_ads"))
+        # This flaky test changes depending on your test environment
+        self.assertIn(
+            job_record.get("status"), [Status.terminated.value, Status.error.value]
+        )
+        # Condor ads are actually wrong and should only be updated after the job is completed,
+        # so we don't need to check them in this test right now.
+        # See EE2 issue #251
 
     def test_update_job_status(self):
         runner = self.getRunner()
