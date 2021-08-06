@@ -672,11 +672,11 @@ class EE2RunJob:
             except Exception as e:
                 failed_presubmit[job_id] = str(e)
 
-        # If mapping
+        # Return a mapping of jobs that failed presubmit
         if failed_presubmit:
             return failed_presubmit
 
-        # Submit all of the collected jobs
+        # Submit all of the collected jobs and start making db changes
         for i, job_id in enumerate(job_ids):
             try:
                 retried_jobs.append(
