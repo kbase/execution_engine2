@@ -12,13 +12,14 @@ import time
 from datetime import datetime
 from enum import Enum
 from logging import Logger
+from typing import List
 
 import dateutil
 
-from lib.execution_engine2.db.MongoUtil import MongoUtil
+from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job
-from lib.execution_engine2.exceptions import AuthError
-from lib.execution_engine2.sdk import (
+from execution_engine2.exceptions import AuthError
+from execution_engine2.sdk import (
     EE2Runjob,
     EE2StatusRange,
     EE2Authentication,
@@ -251,12 +252,27 @@ class SDKMethodRunner:
     # at this point since MongoEngine creates a global connection to MongoDB
     # and makes it available to all the model objects.
 
+    def save_jobs(self, jobs: List[Job]) -> List[str]:
+        """
+        Save multiple jobs to the Mongo DB at once, and return all of the job ids
+        """
+        job_ids = self.get_mongo_util().insert_jobs(jobs_to_insert=jobs)
+        return [str(job_id) for job_id in job_ids]
+
     def save_job(self, job: Job) -> str:
         """
         Save a job record to the Mongo database and return the job's ID as a string.
         """
         job.save()
         return str(job.id)
+
+    def add_child_jobs(self, batch_job: Job, child_jobs: List[str]):
+        """
+        Add child jobs to a batch job record in the Mongo Database and return the updated job.
+        :return:
+        """
+        batch_job.modify(add_to_set__child_jobs=child_jobs)
+        return batch_job
 
     def save_and_return_job(self, job: Job) -> Job:
         """
