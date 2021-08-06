@@ -13,7 +13,6 @@ from test.utils_shared.test_utils import (
     bootstrap,
     get_example_job,
     read_config_into_dict,
-    assert_close_to_now,
 )
 from tests_for_db.mongo_test_helper import MongoTestHelper
 
@@ -66,6 +65,10 @@ class MongoUtilTest(unittest.TestCase):
         jobs_to_insert = [job, job2]
         job_ids = self.getMongoUtil().insert_jobs(jobs_to_insert)
         assert len(job_ids) == len(jobs_to_insert)
+        retrieved_jobs = self.getMongoUtil().get_jobs(job_ids=job_ids)
+
+        for i, retrieved_job in enumerate(retrieved_jobs):
+            assert jobs_to_insert[i] == retrieved_job
 
     def test_update_jobs_enmasse(self):
         """Check to see that created jobs get updated to queued"""

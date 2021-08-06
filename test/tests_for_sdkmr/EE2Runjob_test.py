@@ -62,8 +62,8 @@ _APP = "lolcats/itsmypartyilllolifiwantto"
 _USER = "someuser"
 _TOKEN = "tokentokentoken"
 _OTHER_USER = "some_sucker"
-_CREATED_STATE = Status.created.value
-_QUEUED_STATE = Status.queued.value
+_CREATED_STATE = "created"
+_QUEUED_STATE = "queued"
 
 # batch common variables
 _BATCH = "batch"
