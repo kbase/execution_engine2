@@ -64,8 +64,8 @@ class MongoUtilTest(unittest.TestCase):
         job.save()
         job.reload()
         new_updated_ts = job.updated
-        # Now check modify
         assert new_updated_ts > updated_ts
+        # Now check modify
         job.modify(add_to_set__child_jobs=["a"])
         assert job.updated > new_updated_ts
 
