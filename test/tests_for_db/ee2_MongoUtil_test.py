@@ -68,7 +68,7 @@ class MongoUtilTest(unittest.TestCase):
         retrieved_jobs = self.getMongoUtil().get_jobs(job_ids=job_ids)
 
         for i, retrieved_job in enumerate(retrieved_jobs):
-            assert jobs_to_insert[i] == retrieved_job
+            assert jobs_to_insert[i].to_json() == retrieved_job.to_json()
 
     def test_update_jobs_enmasse(self):
         """Check to see that created jobs get updated to queued"""
