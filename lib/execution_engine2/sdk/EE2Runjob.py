@@ -640,7 +640,7 @@ class EE2RunJob:
 
         :param job_ids: The list of jobs to retry
         :param as_admin: Run with admin permission
-        :return: A list of mappigns containing the child job ids that have been retried or errors
+        :return: A list of mappings containing the child job ids that have been retried or errors
         or a mapping containing job ids and errors
         """
         if not job_ids:
