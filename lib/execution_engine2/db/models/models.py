@@ -339,8 +339,12 @@ class Job(Document):
     meta = {"collection": "ee2_jobs"}
 
     def save(self, *args, **kwargs):
-        self.updated = time.time()
+        self.updated = datetime.utcnow().timestamp()
         return super(Job, self).save(*args, **kwargs)
+
+    def modify(self, query=None, **update):
+        update["updated"] = datetime.utcnow().timestamp()
+        return super(Job, self).modify(query=None, **update)
 
     def __repr__(self):
         return self.to_json()

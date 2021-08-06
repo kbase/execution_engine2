@@ -3,7 +3,7 @@ import logging
 import os
 import unittest
 from datetime import datetime
-
+import json
 from bson.objectid import ObjectId
 
 from execution_engine2.db.MongoUtil import MongoUtil
@@ -58,17 +58,47 @@ class MongoUtilTest(unittest.TestCase):
         mongo_util = self.getMongoUtil()
         self.assertTrue(set(class_attri) <= set(mongo_util.__dict__.keys()))
 
+    def test_save_and_modify_updates_timestamp(self):
+        job = get_example_job(status=Status.created.value)
+        updated_ts = job.updated
+        job.save()
+        job.reload()
+        new_updated_ts = job.updated
+        # Now check modify
+        assert new_updated_ts > updated_ts
+        job.modify(add_to_set__child_jobs=["a"])
+        assert job.updated > new_updated_ts
+
     def test_insert_jobs(self):
         """Check to see that jobs are inserted into mongo"""
         job = get_example_job(status=Status.created.value)
         job2 = get_example_job(status=Status.created.value)
+
+        json_repr = [job.to_json(), job2.to_json()]
+        mongo_repr = [job.to_mongo(), job2.to_mongo()]
+
         jobs_to_insert = [job, job2]
         job_ids = self.getMongoUtil().insert_jobs(jobs_to_insert)
         assert len(job_ids) == len(jobs_to_insert)
         retrieved_jobs = self.getMongoUtil().get_jobs(job_ids=job_ids)
 
         for i, retrieved_job in enumerate(retrieved_jobs):
-            assert jobs_to_insert[i].to_json() == retrieved_job.to_json()
+            original_job_json = json.loads(json_repr[i])
+            mongo_repr_for_job = mongo_repr[i]
+
+            retrieved_job_json = json.loads(retrieved_job.to_json())
+            retrieved_job_mongo = retrieved_job.to_mongo()
+
+            # Cannot compare `id` or `updated` for a job that wasn't yet saved
+            if "_id" not in original_job_json:
+                del retrieved_job_json["_id"]
+                del retrieved_job_mongo["_id"]
+            if "updated" not in original_job_json:
+                del retrieved_job_json["updated"]
+                del retrieved_job_mongo["updated"]
+
+            assert original_job_json == retrieved_job_json
+            assert mongo_repr_for_job == retrieved_job_mongo
 
     def test_update_jobs_enmasse(self):
         """Check to see that created jobs get updated to queued"""
