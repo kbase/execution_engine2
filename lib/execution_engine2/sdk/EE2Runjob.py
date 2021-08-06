@@ -633,16 +633,15 @@ class EE2RunJob:
             job_id=job_id, job=job, batch_job=batch_job, as_admin=as_admin
         )
 
-    def retry_multiple(
-        self, job_ids, as_admin=False
-    ) -> List[Dict[str, Union[str, Any]]]:
+    def retry_multiple(self, job_ids, as_admin=False):
         """
         #TODO Add new job requirements/cgroups as an optional param
         #TODO Notify the parent container that it has multiple new children, instead of multiple transactions?
 
         :param job_ids: The list of jobs to retry
         :param as_admin: Run with admin permission
-        :return: The child job ids that have been retried or errors
+        :return: A list of mappigns containing the child job ids that have been retried or errors
+        or a mapping containing job ids and errors
         """
         if not job_ids:
             raise ValueError("No job_ids provided to retry")
@@ -662,6 +661,7 @@ class EE2RunJob:
         retried_jobs = []
         jobs = []
         batch_jobs = []
+        failed_presubmit = dict()
         for job_id in job_ids:
             try:
                 job, batch_job = self._validate_retry_presubmit(
@@ -670,7 +670,11 @@ class EE2RunJob:
                 jobs.append(job)
                 batch_jobs.append(batch_job)
             except Exception as e:
-                raise RetryFailureException(e)
+                failed_presubmit[job_id] = str(e)
+
+        # If mapping
+        if failed_presubmit:
+            return failed_presubmit
 
         # Submit all of the collected jobs
         for i, job_id in enumerate(job_ids):
