@@ -1,19 +1,15 @@
-#!/miniconda-latest/bin/python3
+#!/usr/bin/env python3
 import logging
 import os
-import sys
 import time
 from configparser import ConfigParser
 from datetime import datetime, timedelta
 from pathlib import Path
 
 import htcondor
-import pymongo
-
 
 from lib.execution_engine2.utils.SlackUtils import SlackClient
 from lib.installed_clients.execution_engine2Client import execution_engine2
-
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

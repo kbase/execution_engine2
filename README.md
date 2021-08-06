@@ -136,6 +136,8 @@ deserialization.
 
 # CronJobs/Reaper Scripts
 
+* Notifications are sent to the #ee_notifications slack channel
+
 ### PurgeBadJobs
 * Cronjobs are copied in and launched via the Dockerfile
 * There are cronjobs configured in /etc/cron.d/ee2_cronjobs 

@@ -1,4 +1,4 @@
-#!/miniconda-latest/bin/python3
+#!/usr/bin/env python3
 # Script to purge jobs that have been queued for too long, or stuck in the created state for too long
 
 import logging
