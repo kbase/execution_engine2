@@ -7,7 +7,7 @@ Date: 2021-05-19
 
 The current requirement for the Batch/Bulk UI is to be able to retry jobs that have either "errored" out, or were terminated.
 The UI allows you to retry either single jobs, or multiple jobs, and saves you from having to cancel and resubmit each job individually,
-which is not currently implemented in the UI anyway.
+which is not currently implemented in the UI anyway. 
 
 ### Motivation for the `code spike` for retry endpoint and follow up design ADR
 >As I mentioned, as the product owner, I find our ability to deliver functionality to be pretty awful. 
@@ -25,6 +25,7 @@ The current implementation of retry is to run jobs using the `retry_job` or `ret
 The endpoint takes a job or list of job ids and then attempts to resubmit them to the queue, using the exact same set of parameters and version of the app.
 
 ### Current Behavior
+
 * Spec file is located at https://github.com/kbase/execution_engine2/blob/8baab8e3ac5212f4bbe59fd935980aa41b4ee06d/execution_engine2.spec#L201-L247
   
 * A job id is provided. If there are sufficient permissions, the call will proceed, if not, it will error out, unless the `as_admin` flag is provided by an admin
@@ -37,7 +38,8 @@ The endpoint takes a job or list of job ids and then attempts to resubmit them t
 
 
 ### Batch Behavior
-* If a job has the attribute of `batch_job=True` the retry will fail, since there is no method to re-run. This is a bug, as it doesn't fail gracefully.
+
+* If a job has the attribute of `batch_job=True` the retry will fail, since there is no method to re-run. This is a bug, as it doesn't fail gracefully. Gracefully handling jobs with children means that it won't throw an error about not having a method to re-run, and instead will throw an error that says "Cannot retry batch job parents. Must retry individual jobs"
 * If a job has the attribute of `batch_job=True`, but is actually a child job, the parent will be notified of this new retried job
 * Multiple in-flight retries are allowed.
 * Adds `child_job_id` to `parent_job_id.child_job_ids[]`
@@ -61,27 +63,31 @@ is a lot of time for things to go wrong.
 * Prevent multiple in-flight retries to prevent the user from wasting their own resources (and the queues resources)
 * Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
 * One single submission to HTCondor instead of multiple job submissions
-* Ability to gracefully handle jobs with children
-* Ability to handle database consistentcy during retry failure
+* Ability to gracefully handle batch container jobs with children to throw proper error ([See Batch Behavior](#Batch-Behavior))
+* Ability to handle database consistency during retry failure
 * See if we can make some preflight (before the job starts) checks fail before job submission and handle them differently than those that appear during job submission 
 
 #### Data inconsistency
 * A new `retry_ids` field will show a list of jobs that have been retried using this parent id. Retry_count will be returned as a calculated field based off of retry_ids
-* `retry_toggle` field will allow a seperate process to check for jobs that didn't finish the entire retry lifecycle:
+* `retry_toggle` field will allow a seperate process to check and possibly correct for jobs that didn't finish the entire retry lifecycle:
 1) Launch child jobs
 2) Notify the batch parent of the child,
 3) Notify the retry parent of the child,
 4) Update the retry_toggle field
 
 #### Won't do
-* Prevent multiple in-flight retries of the same original job to prevent the user from wasting their own resources (and the queues resources)
 * Add retry_number field
 
 ## New priority
+
+For MVP
 * Create a retry_jobs field, and expose list in api, and a T/F completeness toggle
+* Add failure conditions in run method to fail before creating db records  
+
+Not for mvp
 * Non blocking job submission / (Possibly htcondor submit)
-* Add failure conditions in run method
-* Add thread to perform actions based on toggle
+* Add thread/reaper to perform actions based on toggle
+
 
 
 ### Questions
@@ -104,7 +110,7 @@ Looks like the options are
 * implement db integrity checks and two-phase commits for making the relationships between a job, its `retry_parent`, and the batch container
 * accept that the db info may be incomplete and write workarounds into the clients
 * (upgrade to Mongo 4.4 for better transaction support)
-
+A: We have decided to use a `retry_toggle` in order to mark that the entire transaction has occurred for a retry job, and to set up a monitor to fix the jobs that didn't finish the retry lifecycle.
 
 ##### Q: Do we want to support ResourceRequirements
 A: Probably not in the short term
@@ -116,7 +122,7 @@ A: Not necessarily relevant to this endpoint, more of a `run_job_batch` endpoint
 #### Shorter Q and A
 
     Should we track a retry count? (Done)
-    Should users see this retry count? (Unknown TBD)
+    Should users see this retry count? A: Visible in the EE2 API, UI is TBD 
     Are retried jobs saved in some sort of data structure linking them, possibly indirectly, to the parent job or are they orphaned? (Yes, retry_parent)
     If the former, is the retry relationship linear or a tree? E.g. what happens if there are two simultaneous calls to retry a job? (Tree, simultaneous jobs run)
     Should it be at least theoretically possible to see the list of retried jobs in order? (It is possible by sorting on creation date)
@@ -124,39 +130,39 @@ A: Not necessarily relevant to this endpoint, more of a `run_job_batch` endpoint
     Can a job in states other than failed or canceled be retried? Or should the user be required to cancel a job before it can be retried? (Job must be in Error/Cancel state)
 
 
-# Work estimation
+# Work estimation for MVP
 Priority descending
-* Address data inconsistency via retry_count, retry_ids and retry_toggle
+
+### Address data inconsistency via retry_count, retry_ids and retry_toggle
 > Estimate 3-4 days
 > https://kbase-jira.atlassian.net/browse/DATAUP-461
 
-* Preflight checks
+### Preflight checks
 > Estimate 3-4 days
 > https://kbase-jira.atlassian.net/browse/DATAUP-528
-
-* Non blocking job submission for submitting multiple jobs, possibly via using `run_job_batch` (requires refactor of run_job_batch)
-* > Estimate 3-4 days
-> Requires refactor of run_job_batch to be non blocking 
-
-
 > Requires retry to be able to force the same app `git_commit versions` and `JobRequirements` from the db records
 https://kbase-jira.atlassian.net/browse/DATAUP-461
 
+### Create a created jobs and queued jobs reaper that cancels created jobs older than 1 hour, and cancels queued jobs over 14 days old.
+> Estimate 2-3 days 
+https://kbase-jira.atlassian.net/browse/DATAUP-536
 
-*  Hookup retrys to refactored code
-*  Requires refactor of retry to gracefully handle jobs with children by notifying the batch containers for retry of ids not in the same batch
+# Work estimation for POST MVP
+
+###  Hookup retries to refactored code
+*  Non blocking job submission for submitting multiple jobs, possibly via using `run_job_multiple` 
+*  Requires refactor of retry to gracefully handle jobs with children by notifying the batch containers for retry of ids not in the same batch. If you retry jobs from batch 1 and from batch 2, you want the correct batch parent to be notified. 
+*  Switching from starting the retried jobs one at a time to starting them in batch mode will require refactoring how the batch and retry parents are updated
 > Estimate 3 days
 > https://kbase-jira.atlassian.net/browse/DATAUP-535
 
-
-* One single submission to HTCondor instead of multiple job submission ()
+Not for MVP
+### One single submission to HTCondor instead of multiple job submission ()
 > Estimate 1-2 days
 > https://kbase-jira.atlassian.net/browse/DATAUP-391
-
-* Prevent multiple in-flight retries to prevent the user from wasting their own resources (and the queues resources)
+Not for MVP
+### Prevent multiple in-flight retries to prevent the user from wasting their own resources (and the queues resources)
 > Estimate 3-4 days
 https://kbase-jira.atlassian.net/browse/DATAUP-439
 
-* Create a created jobs and queued jobs reaper than queues created jobs older than 1 hour, and queued jobs over 14 days old.
-> Estimate 2-3 days 
-https://kbase-jira.atlassian.net/browse/DATAUP-536
+
