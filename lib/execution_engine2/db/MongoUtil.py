@@ -5,7 +5,6 @@ import traceback
 from contextlib import contextmanager
 from datetime import datetime
 from typing import Dict, List
-
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
 from pymongo import MongoClient, UpdateOne
@@ -19,7 +18,6 @@ from execution_engine2.exceptions import (
 
 from lib.execution_engine2.utils.arg_processing import parse_bool
 from execution_engine2.sdk.EE2Runjob import JobIdPair
-
 
 
 class MongoUtil:
