@@ -29,7 +29,7 @@ class ExecutionEngine2SchedulerTest(unittest.TestCase):
 
     def test_status_change(self):
 
-        with self.assertRaisesRegexp(
+        with self.assertRaisesRegex(
             expected_exception=TypeError,
             expected_regex=r"__init__\(\) missing 1 required positional argument: 'scheduler_id'",
         ):

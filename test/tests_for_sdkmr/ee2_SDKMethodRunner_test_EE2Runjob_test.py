@@ -274,6 +274,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
     @staticmethod
     def check_retry_job_state(job_id: str, retry_job_id: str):
+        """
+        Checks to see the required keys are there
+        :param job_id: The job that was retried
+        :param retry_job_id: The job id that was a result of the retry
+
+        """
         job = Job.objects.get(id=job_id)  # type: Job
         retry_job = Job.objects.get(id=retry_job_id)  # type: Job
 
@@ -282,6 +288,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             "wsid",
             "authstrat",
             "batch_job",
+            "batch_id",
             "scheduler_type",
         ]
 
@@ -327,7 +334,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             "'123' is not a valid ObjectId, it must be a 12-byte input or a 24-character "
             "hex string"
         )
-        with self.assertRaisesRegexp(RetryFailureException, errmsg):
+        with self.assertRaisesRegex(RetryFailureException, errmsg):
             runner.retry_multiple(job_ids=[parent_job_id1, 123])
 
         # 3. Retry the jobs with duplicate job ids
@@ -375,7 +382,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         self.check_retry_job_state(parent_job_id4, job4["job_id"])
 
         # Test no job ids
-        with self.assertRaisesRegexp(ValueError, "No job_ids provided to retry"):
+        with self.assertRaisesRegex(ValueError, "No job_ids provided to retry"):
             runner.retry_multiple(job_ids=None)
 
         # Test error during retry, but passing validate
@@ -597,7 +604,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         batch_job = runner.check_job(job_id=batch_id)
         assert len(batch_job["child_jobs"]) == 3
 
-        retry_id = runner.retry(job_id=child_job_id)["retry_id"]
+        retry_result = runner.retry(job_id=child_job_id)
+        retry_id = retry_result["retry_id"]
         self.check_retry_job_state(child_job_id, retry_id)
         batch_job = runner.check_job(job_id=batch_id)
         assert len(batch_job["child_jobs"]) == 4

@@ -22,11 +22,8 @@ class KafkaClient:
             producer = Producer({"bootstrap.servers": self.server_address})
             producer.produce(topic, str(message), callback=_delivery_report)
             producer.poll(2)
-            logging.info(
-                f"Successfully sent message to kafka at topic={topic} message={json.dumps(message)} server_address={self.server_address}"
-            )
         except Exception as e:
-            logging.info(
+            logging.error(
                 f"Failed to send message to kafka at topic={topic} message={json.dumps(message)} server_address={self.server_address}"
             )
             raise Exception(e)
