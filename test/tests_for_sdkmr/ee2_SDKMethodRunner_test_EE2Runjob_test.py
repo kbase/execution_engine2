@@ -319,11 +319,13 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
 
+        parent_job_id0 = runner.run_job(params=job)
         parent_job_id1 = runner.run_job(params=job)
         parent_job_id2 = runner.run_job(params=job)
         parent_job_id3 = runner.run_job(params=job)
         parent_job_id4 = runner.run_job(params=job)
 
+        runner.update_job_status(job_id=parent_job_id0, status=Status.terminated.value)
         runner.update_job_status(job_id=parent_job_id1, status=Status.terminated.value)
         runner.update_job_status(job_id=parent_job_id2, status=Status.error.value)
         runner.update_job_status(job_id=parent_job_id3, status=Status.terminated.value)
@@ -334,8 +336,14 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             "'123' is not a valid ObjectId, it must be a 12-byte input or a 24-character "
             "hex string"
         )
-        with self.assertRaisesRegexp(RetryFailureException, errmsg):
-            runner.retry_multiple(job_ids=[parent_job_id1, 123])
+        errmsg2 = (
+            "'1234' is not a valid ObjectId, it must be a 12-byte input or a 24-character "
+            "hex string"
+        )
+        retry_results = runner.retry_multiple(job_ids=[1234, 123, parent_job_id0])
+        assert retry_results[0] == {"job_id": 1234, "error": errmsg2}
+        assert retry_results[1] == {"job_id": 123, "error": errmsg}
+        assert retry_results[2]["job_id"] == parent_job_id0
 
         # 3. Retry the jobs with duplicate job ids
         retry_candidates = (
@@ -614,11 +622,22 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job = runner.check_job(job_id=child_job_id)
         retry_count = job["retry_count"]
 
-        # Test to see if one input fails, so fail them all
-        with self.assertRaises(expected_exception=RetryFailureException):
-            runner.retry_multiple(job_ids=[child_job_id, "grail", "fail"])
-        # Check to see other job wasn't retried
-        assert retry_count == runner.check_job(job_id=child_job_id)["retry_count"]
+        # Test to see if one input fails, so keep going
+        results = runner.retry_multiple(job_ids=[child_job_id, "grail", "fail"])
+        assert results[0]["job_id"] == child_job_id
+        assert "error" in results[1]
+        assert "error" in results[2]
+
+        # Check to see child_job_id was retried
+        assert retry_count + 1 == runner.check_job(job_id=child_job_id)["retry_count"]
+
+        # Test for duplicates
+        with self.assertRaises(expected_exception=ValueError) as e:
+            runner.retry_multiple(job_ids=[1, 2, 2])
+        assert (
+            e.exception.args[0]
+            == "Retry of the same id in the same request is not supported. Offending ids:[2] "
+        )
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)

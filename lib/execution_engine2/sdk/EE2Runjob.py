@@ -7,7 +7,6 @@ the logic to retrieve info needed by the runnner to start the job
 import os
 import time
 from collections import Counter
-from collections import defaultdict
 from enum import Enum
 from typing import Optional, Dict, NamedTuple, Union, List, Any
 
@@ -680,7 +679,7 @@ class EE2RunJob:
             except Exception as e:
                 retried_jobs.append({"job_id": job_id, "error": f"{e}"})
 
-            return retried_jobs
+        return retried_jobs
 
     @staticmethod
     def _get_run_job_params_from_existing_job(job: Job, user_id: str) -> Dict:
