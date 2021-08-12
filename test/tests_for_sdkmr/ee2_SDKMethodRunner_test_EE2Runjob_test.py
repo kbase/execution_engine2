@@ -390,7 +390,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         self.check_retry_job_state(parent_job_id4, job4["job_id"])
 
         # Test no job ids
-        with self.assertRaisesRegexp(ValueError, "No job_ids provided to retry"):
+        with self.assertRaisesRegex(ValueError, "No job_ids provided to retry"):
             runner.retry_multiple(job_ids=None)
 
         # Test error during retry, but passing validate

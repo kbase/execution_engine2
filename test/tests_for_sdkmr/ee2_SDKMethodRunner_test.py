@@ -19,9 +19,13 @@ from pytest import raises
 
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.MongoUtil import MongoUtil
+from execution_engine2.db.models.models import Job, Status, TerminatedCode
 from execution_engine2.exceptions import AuthError
+from execution_engine2.exceptions import InvalidStatusTransitionException
+from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.utils.Condor import Condor
+from execution_engine2.utils.CondorTuples import SubmissionInfo
 from execution_engine2.utils.KafkaUtils import KafkaClient
 from execution_engine2.utils.SlackUtils import SlackClient
 from execution_engine2.utils.clients import UserClientSet, ClientSet
@@ -30,10 +34,6 @@ from execution_engine2.utils.job_requirements_resolver import (
     JobRequirementsResolver,
     RequirementsType,
 )
-from lib.execution_engine2.db.models.models import Job, Status, TerminatedCode
-from lib.execution_engine2.exceptions import InvalidStatusTransitionException
-from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
 from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 from test.utils_shared.mock_utils import get_client_mocks, ALL_CLIENTS
 from test.utils_shared.test_utils import (
@@ -48,7 +48,7 @@ from tests_for_db.mongo_test_helper import MongoTestHelper
 logging.basicConfig(level=logging.INFO)
 bootstrap()
 
-from lib.execution_engine2.sdk.EE2Runjob import EE2RunJob
+from execution_engine2.sdk.EE2Runjob import EE2RunJob
 
 from installed_clients.CatalogClient import Catalog
 from installed_clients.WorkspaceClient import Workspace
@@ -174,7 +174,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             is clients_and_mocks[JobRequirementsResolver]
         )
 
-    def test_save_job(self):
+    def test_save_job_and_save_jobs(self):
         ws = Workspace("https://fake.com")
         wsa = WorkspaceAuth("user", ws)
         cliset = UserClientSet("user", "token", ws, wsa)
@@ -190,8 +190,30 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         j = create_autospec(Job, spec_set=False, instance=True)
         j.id = bson.objectid.ObjectId("603051cfaf2e3401b0500982")
         assert sdkmr.save_job(j) == "603051cfaf2e3401b0500982"
-
         j.save.assert_called_once_with()
+
+        # Test Save Jobs
+        job1 = Job()
+        job1.id = bson.objectid.ObjectId("603051cfaf2e3401b0500980")
+        job2 = Job()
+        job2.id = bson.objectid.ObjectId("603051cfaf2e3401b0500981")
+        sdkmr.get_mongo_util().insert_jobs.return_value = [job1.id, job2.id]
+        jobs = sdkmr.save_jobs([job1, job2])
+        sdkmr.get_mongo_util().insert_jobs.assert_called_with(
+            jobs_to_insert=[job1, job2]
+        )
+        assert jobs == [str(job1.id), str(job2.id)]
+
+    def test_add_child_jobs(self):
+        ws = Workspace("https://fake.com")
+        wsa = WorkspaceAuth("user", ws)
+        cliset = UserClientSet("user", "token", ws, wsa)
+        clients_and_mocks = get_client_mocks(self.cfg, self.config_file, *ALL_CLIENTS)
+        sdkmr = SDKMethodRunner(cliset, clients_and_mocks[ClientSet])
+        j = create_autospec(Job, spec_set=False, instance=True)
+        returned_job = sdkmr.add_child_jobs(batch_job=j, child_jobs=["a", "b", "c"])
+        j.modify.assert_called_once_with(add_to_set__child_jobs=["a", "b", "c"])
+        assert returned_job == j
 
     def test_save_and_return_job(self):
         ws = Workspace("https://fake.com")

@@ -133,6 +133,24 @@ Note that the representation of this data in the catalog API is idiosyncratic - 
 CSV data are split by commas into parts. EE2 will detect JSON entries and reconsitute them before
 deserialization.
 
+
+# CronJobs/Reaper Scripts
+
+* Notifications are sent to the #ee_notifications slack channel
+
+### PurgeBadJobs
+* Cronjobs are copied in and launched via the Dockerfile
+* There are cronjobs configured in /etc/cron.d/ee2_cronjobs 
+* You can monitor them by reading the logs in /root/cron-purge.log 
+
+### PurgeHeldJobs
+* This is a daemon launched by entrypoint.sh 
+* It is not a cronjob because there is no way to easy way to seek through the HTCondor EXECUTE log, which takes a while to seek through
+
+#### Horizontal Scaling
+* These scripts will have to be rethought if we do not want multiple copies running if ee2 is horizontally scaled.
+
+
 # Help  
   
 Contact @Tianhao-Gu, @bio_boris, @briehl

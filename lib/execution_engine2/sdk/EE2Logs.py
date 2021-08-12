@@ -1,8 +1,8 @@
 from enum import Enum
 from typing import Dict, NamedTuple
 
-from lib.execution_engine2.db.models.models import JobLog as JLModel, LogLines
-from lib.execution_engine2.exceptions import RecordNotFoundException
+from execution_engine2.db.models.models import JobLog as JLModel, LogLines
+from execution_engine2.exceptions import RecordNotFoundException
 
 
 # if TYPE_CHECKING:
@@ -104,7 +104,6 @@ class EE2Logs:
         self.sdkmr.get_job_with_permission(
             job_id, JobPermissions.WRITE, as_admin=as_admin
         )
-        self.sdkmr.logger.debug(f"About to add logs for {job_id}")
         try:
             try:
                 job_log = self.sdkmr.mongo_util.get_job_log_pymongo(job_id)
