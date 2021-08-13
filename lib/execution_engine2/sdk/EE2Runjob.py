@@ -305,12 +305,11 @@ class EE2RunJob:
 
         # Start up job submission thread
         # For testing, mock this out and check to see it is called with these params?
-        x = threading.Thread(
+        threading.Thread(
             target=self._submit_multiple_wrapper,
             kwargs={"runjob_params": runjob_params, "job_ids": job_ids},
             daemon=True,
-        )
-        x.start()
+        ).start()
         return job_ids
 
     def _update_to_queued_multiple(self, job_ids, scheduler_ids):

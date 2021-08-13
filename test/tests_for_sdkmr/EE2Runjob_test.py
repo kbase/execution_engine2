@@ -5,6 +5,7 @@ Unit tests for the EE2Runjob class.
 # Incomplete by a long way. Will add more unit tests as they come up.
 
 import copy
+import time
 from logging import Logger
 from typing import List, Dict, Any
 from unittest.mock import create_autospec, call
@@ -1050,6 +1051,8 @@ def test_run_job_batch_with_cancellation_during_submit():
         "batch_id": _JOB_ID,
         "child_job_ids": [_JOB_ID_1, _JOB_ID_2],
     }
+    # May need to increase sleep if thread takes too long
+    time.sleep(0.1)
 
     # check mocks called as expected. The order here is the order that they're called in the code.
     mocks[WorkspaceAuth].can_write.assert_called_once_with(parent_wsid)
@@ -1143,6 +1146,8 @@ def test_run_job_batch_with_parent_job_wsid():
         "batch_id": _JOB_ID,
         "child_job_ids": [_JOB_ID_1, _JOB_ID_2],
     }
+    # May need to increase sleep if thread takes too long
+    time.sleep(0.1)
 
     # check mocks called as expected. The order here is the order that they're called in the code.
     mocks[WorkspaceAuth].can_write.assert_called_once_with(parent_wsid)
@@ -1249,6 +1254,8 @@ def test_run_job_batch_as_admin_with_job_requirements():
         "batch_id": _JOB_ID,
         "child_job_ids": [_JOB_ID_1, _JOB_ID_2],
     }
+    # May need to increase sleep if thread takes too long
+    time.sleep(0.1)
 
     # check mocks called as expected. The order here is the order that they're called in the code.
     sdkmr.check_as_admin.assert_called_once_with(JobPermissions.WRITE)
