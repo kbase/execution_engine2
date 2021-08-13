@@ -6,7 +6,7 @@ the logic to retrieve info needed by the runnner to start the job
 """
 import os
 import time
-from collections import defaultdict
+from collections import Counter
 from enum import Enum
 from typing import Optional, Dict, NamedTuple, Union, List, Any
 
@@ -762,44 +762,38 @@ class EE2RunJob:
         if not job_ids:
             raise ValueError("No job_ids provided to retry")
 
-        offending_ids = defaultdict(int)
-        for job_id in job_ids:
-            if job_ids.count(job_id) > 1:
-                offending_ids[job_id] += 1
-
-        if offending_ids.keys():
+        offending_ids = [item for item, count in Counter(job_ids).items() if count > 1]
+        if offending_ids:
             raise ValueError(
                 f"Retry of the same id in the same request is not supported."
-                f" Offending ids:{list(offending_ids.keys())} "
+                f" Offending ids: {offending_ids} "
             )
 
         # Check all inputs before attempting to start submitting jobs
         retried_jobs = []
-        jobs = []
-        batch_jobs = []
         for job_id in job_ids:
+            # Check for presubmission failures
             try:
                 job, batch_job = self._validate_retry_presubmit(
                     job_id=job_id, as_admin=as_admin
                 )
-                jobs.append(job)
-                batch_jobs.append(batch_job)
             except Exception as e:
-                raise RetryFailureException(e)
-
-        # Submit all of the collected jobs
-        for i, job_id in enumerate(job_ids):
+                # Collect the presubmit error and don't submit the job
+                retried_jobs.append({"job_id": job_id, "error": f"{e}"})
+                continue
+            # Presubmit worked, write to the db and submit
             try:
                 retried_jobs.append(
                     self._retry(
                         job_id=job_id,
-                        job=jobs[i],
-                        batch_job=batch_jobs[i],
+                        job=job,
+                        batch_job=batch_job,
                         as_admin=as_admin,
                     )
                 )
             except Exception as e:
                 retried_jobs.append({"job_id": job_id, "error": f"{e}"})
+
         return retried_jobs
 
     @staticmethod
