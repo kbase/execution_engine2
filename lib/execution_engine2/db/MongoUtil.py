@@ -17,7 +17,7 @@ from execution_engine2.exceptions import (
 )
 
 from lib.execution_engine2.utils.arg_processing import parse_bool
-from execution_engine2.sdk.EE2Runjob import JobIdPair
+from sdk.EE2RunjobConstants import JobIdPair
 
 
 class MongoUtil:

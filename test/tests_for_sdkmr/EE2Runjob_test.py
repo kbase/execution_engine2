@@ -26,7 +26,8 @@ from execution_engine2.exceptions import (
     AuthError,
     InvalidParameterForBatch,
 )
-from execution_engine2.sdk.EE2Runjob import EE2RunJob, JobPermissions, JobIdPair
+from execution_engine2.sdk.EE2Runjob import EE2RunJob
+from sdk.EE2RunjobConstants import JobPermissions, JobIdPair
 from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.sdk.job_submission_parameters import (
     JobSubmissionParameters,

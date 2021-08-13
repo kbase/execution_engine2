@@ -8,7 +8,7 @@ from bson.objectid import ObjectId
 
 from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job, JobLog, Status
-from execution_engine2.sdk.EE2Runjob import JobIdPair
+from sdk.EE2RunjobConstants import JobIdPair
 from test.utils_shared.test_utils import (
     bootstrap,
     get_example_job,

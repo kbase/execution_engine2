@@ -387,12 +387,16 @@ class SDKMethodRunner:
             job_id=job_id, status=status, as_admin=as_admin
         )
 
-    def cancel_job(self, job_id, terminated_code=None, as_admin=False):
+    def cancel_job(self, job_id, terminated_code=None, as_admin=False, ignore_exceptions=False):
         # TODO: Cancel Child Jobs as well
         """Authorization Required Read/Write"""
-        return self.get_jobs_status().cancel_job(
-            job_id=job_id, terminated_code=terminated_code, as_admin=as_admin
-        )
+        try:
+            return self.get_jobs_status().cancel_job(
+                job_id=job_id, terminated_code=terminated_code, as_admin=as_admin
+            )
+        except Exception as e:
+            if not ignore_exceptions:
+                raise e
 
     def handle_held_job(self, cluster_id):
         """Authorization Required Read/Write"""
