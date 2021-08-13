@@ -5,6 +5,7 @@ the logic to retrieve info needed by the runnner to start the job
 
 """
 import os
+import threading
 import time
 from collections import Counter
 from enum import Enum
@@ -264,20 +265,7 @@ class EE2RunJob:
         )
         return self._generate_job_submission_params(job_id, params)
 
-    def _run_multiple(self, runjob_params):
-        """
-        Get the job records, bulk save them, then submit to condor.
-        If any condor submission fails, abort all of the jobs
-        :return:
-        """
-        # Save records to db
-        job_records = []
-        for runjob_param in runjob_params:
-            job_records.append(
-                self._init_job_rec(self.sdkmr.get_user_id(), runjob_param, save=False)
-            )
-        job_ids = self.sdkmr.save_jobs(job_records)
-
+    def _submit_multiple_wrapper(self, job_ids: list, runjob_params: List[Dict]):
         # Generate job submission params
         job_submission_params = []
         for i, job_id in enumerate(job_ids):
@@ -300,6 +288,30 @@ class EE2RunJob:
         except Exception as e:
             self._abort_multiple_jobs(job_ids)
             raise e
+
+    def _run_multiple(self, runjob_params: List[Dict]):
+        """
+        Get the job records, bulk save them, then submit to condor.
+        If any condor submission fails, abort all of the jobs
+        :return:
+        """
+        # Save records to db
+        job_records = []
+        for runjob_param in runjob_params:
+            job_records.append(
+                self._init_job_rec(self.sdkmr.get_user_id(), runjob_param, save=False)
+            )
+        job_ids = self.sdkmr.save_jobs(job_records)
+
+        # Start up job submission thread
+        # For testing, mock this out and check to see it is called with these params?
+        x = threading.Thread(
+            target=self._submit_multiple_wrapper,
+            kwargs={"runjob_params": runjob_params, "job_ids": job_ids},
+            daemon=True,
+        )
+        x.start()
+        return job_ids
 
     def _update_to_queued_multiple(self, job_ids, scheduler_ids):
         """
