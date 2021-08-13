@@ -352,7 +352,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             parent_job_id1,
             parent_job_id2,
         )
-        fail_msg = f"Retry of the same id in the same request is not supported. Offending ids:{[parent_job_id1, parent_job_id2]} "
+        fail_msg = f"Retry of the same id in the same request is not supported. Offending ids: {[parent_job_id1, parent_job_id2]} "
 
         with self.assertRaises(ValueError) as e:
             runner.retry_multiple(retry_candidates)
@@ -636,7 +636,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             runner.retry_multiple(job_ids=[1, 2, 2])
         assert (
             e.exception.args[0]
-            == "Retry of the same id in the same request is not supported. Offending ids:[2] "
+            == "Retry of the same id in the same request is not supported. Offending ids: [2] "
         )
 
     @requests_mock.Mocker()

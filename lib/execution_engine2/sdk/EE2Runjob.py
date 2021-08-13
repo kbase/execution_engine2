@@ -766,7 +766,7 @@ class EE2RunJob:
         if offending_ids:
             raise ValueError(
                 f"Retry of the same id in the same request is not supported."
-                f" Offending ids:{offending_ids} "
+                f" Offending ids: {offending_ids} "
             )
 
         # Check all inputs before attempting to start submitting jobs
