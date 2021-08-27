@@ -1204,6 +1204,10 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
         }
         ee2 = ee2client(f"http://localhost:{ee2_port}", token=TOKEN_NO_ADMIN)
         ret = ee2.run_job_batch([job1_params, job2_params], job_batch_params)
+
+        # May need to increase sleep if thread takes too long
+        time.sleep(0.1)
+
         batch_id = ret["batch_id"]
         job_id_1, job_id_2 = ret["child_job_ids"]
 
@@ -1417,6 +1421,10 @@ def test_run_job_batch_with_no_batch_wsid(ee2_port, ws_controller, mongo_client)
         }
         ee2 = ee2client(f"http://localhost:{ee2_port}", token=TOKEN_NO_ADMIN)
         ret = ee2.run_job_batch([job1_params, job2_params], job_batch_params)
+
+        # May need to increase sleep if thread takes too long
+        time.sleep(0.1)
+
         batch_id = ret["batch_id"]
         job_id_1, job_id_2 = ret["child_job_ids"]
 
@@ -1614,6 +1622,10 @@ def test_run_job_batch_as_admin_with_job_reqs(ee2_port, ws_controller, mongo_cli
         job_batch_params = {"wsid": job_batch_wsid, "as_admin": "foo"}
         ee2 = ee2client(f"http://localhost:{ee2_port}", token=TOKEN_WRITE_ADMIN)
         ret = ee2.run_job_batch([job1_params, job2_params], job_batch_params)
+
+        # May need to increase sleep if thread takes too long
+        time.sleep(0.1)
+
         batch_id = ret["batch_id"]
         job_id_1, job_id_2 = ret["child_job_ids"]
 
