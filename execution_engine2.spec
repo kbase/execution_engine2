@@ -234,7 +234,7 @@
 
 
         /*
-            batch job_id to retry
+            batch_job_id: BATCH_ID to retry
             status_filter: job states in ['terminated', 'error'] (valid retry states)
             as_admin: retry someone else's job in your namespace
             #TODO: Possibly Add list<JobRequirements> job_requirements;
@@ -607,10 +607,9 @@
 
 
         /*
-            job_id: batch job to retry
+            batch_job_id: BATCH_ID to cancel
             status_filter: optional filter of either 'terminated' or 'error'. Not setting this results in cancel of both
             as_admin: retry someone else's job in your namespace
-            #TODO: Possibly Add list<JobRequirements> job_requirements;
         */
         typedef structure {
             job_id batch_job_id;
