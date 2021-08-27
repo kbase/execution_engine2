@@ -16,8 +16,8 @@
         /* A job id. */
         typedef string job_id;
 
-        /* A job state. */
-        typedef string job_state;
+        /* A job state's job status. */
+        typedef string job_status;
 
         /*
             A structure representing the Execution Engine status
@@ -241,7 +241,7 @@
         */
         typedef structure {
             job_id batch_job_id;
-            list<job_state> status_filter;
+            list<job_status> status_filter;
             boolean as_admin;
         } BatchRetryParams;
 
@@ -613,7 +613,7 @@
         */
         typedef structure {
             job_id batch_job_id;
-            list<job_state> status_filter;
+            list<job_status> status_filter;
             boolean as_admin;
         } BatchCancelParams;
 
