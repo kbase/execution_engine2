@@ -335,6 +335,12 @@ class SDKMethodRunner:
         """Authorization Required Read/Write"""
         return self.get_runjob().retry(job_id=job_id, as_admin=as_admin)
 
+    def retry_batch(self, job_id, status_list, as_admin=False):
+        """Authorization Required Read/Write"""
+        return self.get_runjob().retry_batch(
+            job_id=job_id, as_admin=as_admin, status_list=status_list
+        )
+
     def run_job(self, params, as_admin=False):
         """Authorization Required Read/Write"""
         return self.get_runjob().run(params=params, as_admin=as_admin)
@@ -392,6 +398,15 @@ class SDKMethodRunner:
         """Authorization Required Read/Write"""
         return self.get_jobs_status().cancel_job(
             job_id=job_id, terminated_code=terminated_code, as_admin=as_admin
+        )
+
+    def cancel_batch_job(self, job_id, status_list, terminated_code, as_admin=False):
+        """Authorization Required Read/Write"""
+        return self.get_jobs_status().cancel_batch_job(
+            job_id=job_id,
+            terminated_code=terminated_code,
+            status_list=status_list,
+            as_admin=as_admin,
         )
 
     def handle_held_job(self, cluster_id):

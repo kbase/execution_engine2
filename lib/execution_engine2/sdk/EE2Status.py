@@ -8,6 +8,8 @@ from bson import ObjectId
 from execution_engine2.exceptions import (
     InvalidStatusTransitionException,
     ChildrenNotFoundError,
+    InvalidStatusListException,
+    NotBatchJobException,
 )
 from execution_engine2.sdk.EE2Constants import JobError
 from lib.execution_engine2.authorization.authstrategy import can_read_jobs
@@ -85,19 +87,79 @@ class JobsStatus:
         # There's probably a better way and a return type, but not really sure what I need yet
         return json.loads(json.dumps(j.to_mongo().to_dict(), default=str))
 
-    def cancel_job(self, job_id, terminated_code=None, as_admin=False):
+    def cancel_batch_job(
+        self, job_id, status_list, terminated_code=None, as_admin=False
+    ):
+        """
+        Terminate jobs by status given a BATCH_ID
+        :param job_id:  A batch job id to terminate child jobs of
+        :param status_list:  A list of statuses to terminate the child jobs in
+        :param terminated_code:  The terminated code, default to TerminatedCode.terminated_by_user.value
+        :param as_admin: Terminate jobs for others
+        :return: A list of job ids that were successfully terminated
+        """
+        # Validation
+        valid_statuses = [
+            Status.created.value,
+            Status.queued.value,
+            Status.estimating.value,
+            Status.running.value,
+        ]
+        if not status_list:
+            raise InvalidStatusListException(
+                f"Provide a list of status codes from {valid_statuses}."
+            )
+        for status in status_list:
+            if status not in valid_statuses:
+                raise InvalidStatusListException(
+                    f"Provided status {status} not in {valid_statuses}."
+                )
+
+        batch_job = self.sdkmr.get_job_with_permission(
+            job_id, JobPermissions.WRITE, as_admin=as_admin
+        )
+        if not batch_job.batch_job:
+            raise NotBatchJobException(f"{job_id} is not a batch job")
+
+        # Termination
+        terminated_ids = []
+        child_jobs = self.sdkmr.get_mongo_util().get_jobs_with_status(
+            job_ids=batch_job.child_jobs, status_list=status_list
+        )
+        for job in child_jobs:
+            try:
+                self.cancel_job(
+                    job=job, terminated_code=terminated_code, as_admin=as_admin
+                )
+                terminated_ids.append(job.id)
+            except Exception:
+                # Nothing to report, a job might have finished by now
+                pass
+
+        # Report
+        if len(terminated_ids) == 0:
+            raise Exception(f"{job_id} didn't have any valid child jobs to terminate")
+        return terminated_ids
+
+    def cancel_job(self, job_id=None, job=None, terminated_code=None, as_admin=False):
         """
         Authorization Required: Ability to Read and Write to the Workspace
-        Default for terminated code is Terminated By User
+        Terminates child jobs as well
+
         :param job_id: Job ID To cancel
-        :param terminated_code:
+        :param terminated_code: Default Terminated By User
         :param as_admin: Cancel the job for a different user
         """
         # Is it inefficient to get the job twice? Is it cached?
+        if (not job_id and not job) or (job_id and job):
+            raise Exception(
+                "Programming Error: Need to provide exactly one  job id or a job object"
+            )
 
-        job = self.sdkmr.get_job_with_permission(
-            job_id, JobPermissions.WRITE, as_admin=as_admin
-        )
+        if job_id:
+            job = self.sdkmr.get_job_with_permission(
+                job_id, JobPermissions.WRITE, as_admin=as_admin
+            )
 
         if terminated_code is None:
             terminated_code = TerminatedCode.terminated_by_user.value

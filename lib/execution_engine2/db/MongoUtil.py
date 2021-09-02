@@ -223,6 +223,20 @@ class MongoUtil:
 
         return job
 
+    def get_jobs_with_status(
+        self, job_ids: List[str], status_list: List[str], only_job_ids: bool = False
+    ) -> List[Job]:
+        if not (job_ids and isinstance(job_ids, list)):
+            raise ValueError("Please provide a non empty list of job ids")
+
+        if not (status_list and isinstance(job_ids, list)):
+            raise ValueError("Please provide a non empty list of job statuses")
+
+        with self.mongo_engine_connection():
+            if only_job_ids:
+                return Job.objects(id__in=job_ids, status__in=status_list).only("_id")
+            return Job.objects(id__in=job_ids, status__in=status_list)
+
     def get_jobs(
         self, job_ids=None, exclude_fields=None, sort_id_ascending=None
     ) -> List[Job]:

@@ -30,7 +30,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.5"
     GIT_URL = "git@github.com:kbase/execution_engine2.git"
-    GIT_COMMIT_HASH = "ac8da691d9012571b51995a68fb826c8ae32e146"
+    GIT_COMMIT_HASH = "9adfa50d1ea628eb3907038c9993c6a52fe34fc7"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -360,7 +360,7 @@ class execution_engine2:
         #BEGIN run_job_batch
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
-            clients = self.clients,
+            clients=self.clients,
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache
         )
@@ -402,7 +402,7 @@ class execution_engine2:
         #BEGIN retry_job
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
-            clients = self.clients,
+            clients=self.clients,
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache
         )
@@ -473,6 +473,15 @@ class execution_engine2:
         # ctx is the context object
         # return variables are: retry_result
         #BEGIN retry_batch_jobs
+        mr = SDKMethodRunner(
+            user_clients=self.gen_cfg.get_user_clients(ctx),
+            clients=self.clients,
+            job_permission_cache=self.job_permission_cache,
+            admin_permissions_cache=self.admin_permissions_cache
+        )
+        retry_result = mr.retry_batch(job_id=params.get('job_id'),
+                                      job_status=params.get('status_filter'),
+                                      as_admin=params.get('as_admin'))
         #END retry_batch_jobs
 
         # At some point might do deeper type checking...
@@ -1682,16 +1691,35 @@ class execution_engine2:
         :param params: instance of type "BatchCancelParams" (batch_job_id:
            BATCH_ID to cancel status_filter: optional filter of either
            'terminated' or 'error'. Not setting this results in cancel of
-           both as_admin: retry someone else's job in your namespace) ->
-           structure: parameter "batch_job_id" of type "job_id" (A job id.),
-           parameter "status_filter" of list of type "job_status" (A job
-           state's job status.), parameter "as_admin" of type "boolean"
-           (@range [0,1])
+           both terminated_code: optional terminated code, default to
+           terminated by user as_admin: retry someone else's job in your
+           namespace @optional terminated_code) -> structure: parameter
+           "batch_job_id" of type "job_id" (A job id.), parameter
+           "status_filter" of list of type "job_status" (A job state's job
+           status.), parameter "terminated_code" of Long, parameter
+           "as_admin" of type "boolean" (@range [0,1])
+        :returns: instance of list of type "job_id" (A job id.)
         """
         # ctx is the context object
+        # return variables are: job_ids
         #BEGIN cancel_batch_job
+        mr = SDKMethodRunner(
+            user_clients=self.gen_cfg.get_user_clients(ctx),
+            clients=self.clients,
+            job_permission_cache=self.job_permission_cache,
+            admin_permissions_cache=self.admin_permissions_cache
+        )
+        returnVal = mr.cancel_batch_job(job_id=params.get('job_id'),
+                                      status_list=params.get('status_filter'),
+                                      as_admin=params.get('as_admin'))
         #END cancel_batch_job
-        pass
+
+        # At some point might do deeper type checking...
+        if not isinstance(job_ids, list):
+            raise ValueError('Method cancel_batch_job return value ' +
+                             'job_ids is not type list as required.')
+        # return the results
+        return [job_ids]
 
     def check_job_canceled(self, ctx, params):
         """
