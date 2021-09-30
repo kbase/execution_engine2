@@ -17,7 +17,7 @@ In order to do this, some apps use a mechanism called KBParallel. The apps are l
 * Missing the ability to be able to run, manage and track jobs and their subjobs 
 * No good way to test and hard to benchmark or measure performance 
 * Code is split more than is necessary
-
+* UI doesn't properly display progress of batch jobs
 
 Background:
 
@@ -31,14 +31,13 @@ Pending
 
 ## Alternatives Considered
 
-* Writing a new Batch App
-* Implementing a Dynamic Service
-* Implementing a standalone Narrative Widget
-* Implementing a new (set) of EE2 endpoint(s)
+* Ignore most issues and just make apps that run kbparallels limited to N instances of kbparallels per user to avoid deadlocks
+* Writing new ee2 endpoints to entirely handle batch execution
+* Remove kbparallels and change apps to a collection of 2-3 apps that do submit, split, aggregate and a batch endpoint
 
 ## Decision Outcome
 
-After much [discussion](https://docs.google.com/document/d/1PoiOas-hqgHONNzmCVupjmNCyvUvcned5YfZf-5CxsI/edit#) [and research](https://docs.google.com/spreadsheets/d/1FGecELaEBAWQ7ljXsR29h5RdtmYV_jMyLSiJAWcm4mE/edit#gid=492998772) the decision was to create a new endpoint (or set of endpoints) in EE2 for the purpose of running batch analysis workflows at KBase. 
+
 
 ## Consequences
 
