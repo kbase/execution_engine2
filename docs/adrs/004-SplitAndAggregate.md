@@ -7,6 +7,11 @@ Date: 2021-09-22
 ## Note
 This ADR is more of a place to keep the current discussions we had at https://docs.google.com/document/d/1AWjayMoqCoGkpO9-tjXxEvO40yYnFtcECbdne5vTURo
 Rather than to make a decision. There is still more planning, scoping and testing involved before we can fully design this system.
+Still to be determined (not in scope of this ADR):
+
+    UI and how it relates to the bulk execution
+    XSV Analysis and how it relates to the bulk execution
+
 
 ## Intro
 Sometimes a calculation requires too many resources from one node (walltime, memory, disk), so the calculation gets spread across multiple machines.
@@ -34,8 +39,10 @@ Needs more planning, but current ideas are documented here
 
 ## Decision Outcome (pending more research to iron out more details)
 
-For the first pass, we would likely limit the number of kbparallel runs
+For the first pass, we would likely limit the number of kbparallel runs.
+
 For the next pass, we would want to create a comprehensive generalized solution to submit,split and aggregate, with recipes or conveniences for common operations for creating sets, reports, or things of that nature.
+
 We would also want to do a user study on what we want from the UI and which functionality we want, as the UI may inform the design of the backend system.
 
 
@@ -44,6 +51,8 @@ We would also want to do a user study on what we want from the UI and which func
 * Fan out (FO)
 * Process in parallel (PIP)
 * Fan in (FI)
+
+
 ### Steps:
 1. User launches job as normal
 2. Possibly the job is marked as a FO job, Makes it easier for the UI to display the job correctly initially, Ideally would be marked in the spec, but this might be a lot of work Could potentially be marked in the catalog UI (e.g. along with the job requirements) 
@@ -61,10 +70,9 @@ We would also want to do a user study on what we want from the UI and which func
 * What about workflow engines (WDL, Cromwell)? Are we reinventing the wheel here?
 * Can new EE2 endpoints speed up or reduce the complexity of any of these steps?
 
-### Notes about DAG 
+### Notes about DAG in ee2 Endpoints
 ```
-Your dag would
-need to have (at least) a first job followed by a SUBDAG EXTERNAL.
+Your dag would need to have (at least) a first job followed by a SUBDAG EXTERNAL.
 Somewhere in the first job you'd generate a new dag workflow that
 defines the N clusters followed by the N+1 job, which runs in the
 subdag.
@@ -82,6 +90,7 @@ above.
 ```
 
 Between these there are several different ways to do what you want.
+
 There's a useful example here that shows the general workflow in the
 bindings: https://htcondor.readthedocs.io/en/latest/apis/python-bindings/tutorials/DAG-Creation-And-Submission.html#Describing-the-DAG-using-htcondor.dags
 
