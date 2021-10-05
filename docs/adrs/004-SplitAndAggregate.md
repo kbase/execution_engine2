@@ -32,49 +32,40 @@ Pending
 ## Alternatives Considered
 
 * Ignore most issues and just make apps that run kbparallels limited to N instances of kbparallels per user to avoid deadlocks
-* Writing new ee2 endpoints to entirely handle batch execution
-* Remove kbparallels and change apps to a collection of 2-3 apps that do submit, split, aggregate and a batch endpoint
+* Writing new ee2 endpoints to entirely handle batch execution and possibly use a DAG
+* Remove kbparallels and change apps to a collection of 2-3 apps that do submit, split and aggregate and an use an ee2 endpoint to create a DAG
 
 ## Decision Outcome
 
-
+For the first pass, we would likely limit the number of kbparallel runs
+For the next pass, we would want to create a comprehensive generalized solution to submit,split and aggregate, with recipes or conveniences for common operations for creating sets, reports, or things of that nature.
+We would also want to do a user study on what we want from the UI and which functionality we want, as the UI may inform the design of the backend system.
 
 ## Consequences
 
-We will have to implement a new narrative UI, however this was work that would happen regardless due as we are looking to improve the UX for batch upload and analysis at KBase. 
-
-As far as we have discussed, this decision only seems to have positive consequences. We will be able to streamline the code structure at KBase, make batch analysis easier to test and improve usability and job management. 
-
-Initial architecture sketches for what this could look like have been started [here](https://miro.com/app/board/o9J_kmb4y4Q=/?moveToWidget=3074457350208108487&cot=12)
+* We will have to roll out fixes in multiple stages
+* We will have to implement a new narrative UI, however this was work that would happen regardless due as we are looking to improve the UX for batch upload and analysis at KBase. 
+* This will take significant time to further research and engineer the solutions
 
 Still to be determined (not in scope of this ADR): 
-* What other endpoints we may need such as cancel batch
-* Other implementation details that are TBD:
-  * Will the Narrative poll EE2 for updates on jobs or subscribe to Kafka? 
-  * Creating sets of objects and what to do at the end of a batch run
-  * What to do about a set if a child task fails during processing 
+* UI and how it relates to the bulk execution
+* XSV Analysis and how it relates to the bulk execution
 
 ## Pros and Cons of the Alternatives
 
-### Writing a new Batch App
+### Limit multiple instances of kbparallels
 
-* `+` We have a potential first pass at implementation [here](https://github.com/bio-boris/simplebatch)
-* `+` Removes dependency on KB Parallel
-* `+` In current implementation, no longer uses up a slot in the queue (however this could easily morph into a con depending on how we manage set creation. If we need a reduce step this could require us to use multiple slots.)
-* `+` Offers some improvement upon job management
-* `-` Code is still split between locations
-* `-` No good way to test and hard to benchmark or measure performance 
-* `-` Tracking and managing sub jobs is still a challenge
+* `+` Simplest solution, quickest turnaround, fixes deadlock issue
+* `-` UI still broken for batch analysis
 
-### Implementing a Dynamic Service
+## Seperate Queue for kbparallels apps
+
+### Deprecate kbparallels, and write new ee2 endpoints to entirely handle batch execution and possibly use a DAG
 * `+` No longer uses an app
 * `+` Custom endpoint
 * `+` No longer uses a slot in the queue
 * `+` Can manage jobs more closely: have tables, more control over lifecycle, resource requests, canceling subjobs
-* `-` Hard to test (secret variables, dynamic services in app-dev and prod have same catalog, so hard to tell which service is where; service wizard can cause problems) 
-* `-` Takes microservices approach to the extreme - if we have a service for this it makes more sense for it to live within EE2 rather than be further separated
-* `-` Locked into KB-SDK
-* `-` Coupled with other dynamic services and Rancher1. DevOps can't easily modify the deployment of these without changes to the service wizard. 
+* `-` Still deadlocks and uses a slot in the queue
 
 ### Implementing a standalone Narrative Widget
 * `+` No longer uses an app
