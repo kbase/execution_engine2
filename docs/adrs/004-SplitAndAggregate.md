@@ -7,10 +7,10 @@ Date: 2021-09-22
 ## Note
 This ADR is more of a place to keep the current discussions we had at https://docs.google.com/document/d/1AWjayMoqCoGkpO9-tjXxEvO40yYnFtcECbdne5vTURo
 Rather than to make a decision. There is still more planning, scoping and testing involved before we can fully design this system.
-Still to be determined (not in scope of this ADR):
 
-    UI and how it relates to the bulk execution
-    XSV Analysis and how it relates to the bulk execution
+Still to be determined (not in scope of this ADR):
+* UI and how it relates to the bulk execution
+* XSV Analysis and how it relates to the bulk execution
 
 
 ## Intro
@@ -110,7 +110,6 @@ Still to be determined (not in scope of this ADR):
 * Writing new ee2 endpoints to entirely handle batch execution and possibly use a DAG
 * Remove kbparallels and change apps to a collection of 2-3 apps that do submit, split and aggregate and an use an ee2 endpoint to create a DAG
 * Different DevOps solutions
-
 
 ## Pros and Cons of the Alternatives
 
