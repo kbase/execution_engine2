@@ -24,16 +24,12 @@ In order to do this, some apps use a mechanism called KBParallel. The apps are l
 * Code is split more than is necessary
 * UI doesn't properly display progress of batch jobs
 
-Background:
-
 ## Author(s)
 
 @bio-boris, @mrcreosote
 
 ## Status
-
-Needs more research
-
+Needs more planning, but current ideas are documented here
 
 
 ## Decision Outcome (pending more research to iron out more details)
