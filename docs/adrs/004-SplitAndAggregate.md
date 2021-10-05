@@ -34,55 +34,13 @@ Background:
 
 Needs more research
 
-## Alternatives Considered
 
-* Ignore most issues and just make apps that run kbparallels limited to N instances of kbparallels per user to avoid deadlocks
-* Writing new ee2 endpoints to entirely handle batch execution and possibly use a DAG
-* Remove kbparallels and change apps to a collection of 2-3 apps that do submit, split and aggregate and an use an ee2 endpoint to create a DAG
-* Different DevOps solutions
 
 ## Decision Outcome (pending more research to iron out more details)
 
 For the first pass, we would likely limit the number of kbparallel runs
 For the next pass, we would want to create a comprehensive generalized solution to submit,split and aggregate, with recipes or conveniences for common operations for creating sets, reports, or things of that nature.
 We would also want to do a user study on what we want from the UI and which functionality we want, as the UI may inform the design of the backend system.
-
-## Consequences
-
-* We will have to roll out fixes in multiple stages
-* We will have to implement a new narrative UI, however this was work that would happen regardless due as we are looking to improve the UX for batch upload and analysis at KBase. 
-* This will take significant time to further research and engineer the solutions
-
-Still to be determined (not in scope of this ADR): 
-* UI and how it relates to the bulk execution
-* XSV Analysis and how it relates to the bulk execution
-
-## Pros and Cons of the Alternatives
-
-### Limit multiple instances of kbparallels
-
-* `+` Simplest solution, quickest turnaround, fixes deadlock issue
-* `-` UI still broken for batch analysis
-
-## DEADLOCK: Increase number of slots or Seperate Queue for kbparallels apps without 10 job limit
-* `+` Simple solutions, quick turnarounds, fixes deadlock issue
-* `-` UI still broken for batch analysis 
-* `-` A small amount of users can take over the entire system
-* `-` The calculations done by the apps will interfere with other apps and cause crashes/failures
-
-## DEADLOCK: Modify KBP to do only local submission, Move the job to a machine with larger resources
-* `+` Simple solutions, quick turnarounds, fixes deadlock issue, fixes UI issues
- * `-` We have a limited number of larger resources machines
-* `-` Continued dependency on deprecated KBP tools
-
-### Deprecate kbparallels, and write new ee2 endpoints to entirely handle split and aggregate
-* `+` No longer uses an app, No longer uses a slot in the queue
-* `-` All jobs would have to change to stop using KBP in favor of these via the ee2 client,
-* `+` Can manage jobs more closely: have tables, more control over lifecycle, resource requests, canceling subjobs
-* `-` Job monitoring thread would have to run in ee2
-* `-`  Requires new data structures and models in ee2 to make sure that the relationship is preserved between jobs and sub jobs, and to make sure deadlocking does not occur
-* `-` Requires storing the job outside of condor to prevent job submission, unless we can mark jobs as runnable or not via the HTCondor API* 
-* `-` The endpoint would need to know how to split up input files and aggregate them
 
 
 ### Deprecate KBP and instead break out apps into 3 parts
@@ -130,3 +88,48 @@ above.
 Between these there are several different ways to do what you want.
 There's a useful example here that shows the general workflow in the
 bindings: https://htcondor.readthedocs.io/en/latest/apis/python-bindings/tutorials/DAG-Creation-And-Submission.html#Describing-the-DAG-using-htcondor.dags
+
+## Consequences
+
+* We will have to roll out fixes in multiple stages
+* We will have to implement a new narrative UI, however this was work that would happen regardless due as we are looking to improve the UX for batch upload and analysis at KBase. 
+* This will take significant time to further research and engineer the solutions
+
+Still to be determined (not in scope of this ADR): 
+* UI and how it relates to the bulk execution
+* XSV Analysis and how it relates to the bulk execution
+
+## Alternatives Considered
+
+* Ignore most issues and just make apps that run kbparallels limited to N instances of kbparallels per user to avoid deadlocks
+* Writing new ee2 endpoints to entirely handle batch execution and possibly use a DAG
+* Remove kbparallels and change apps to a collection of 2-3 apps that do submit, split and aggregate and an use an ee2 endpoint to create a DAG
+* Different DevOps solutions
+
+
+## Pros and Cons of the Alternatives
+
+### Limit multiple instances of kbparallels
+
+* `+` Simplest solution, quickest turnaround, fixes deadlock issue
+* `-` UI still broken for batch analysis
+
+## DEADLOCK: Increase number of slots or Seperate Queue for kbparallels apps without 10 job limit
+* `+` Simple solutions, quick turnarounds, fixes deadlock issue
+* `-` UI still broken for batch analysis 
+* `-` A small amount of users can take over the entire system
+* `-` The calculations done by the apps will interfere with other apps and cause crashes/failures
+
+## DEADLOCK: Modify KBP to do only local submission, Move the job to a machine with larger resources
+* `+` Simple solutions, quick turnarounds, fixes deadlock issue, fixes UI issues
+ * `-` We have a limited number of larger resources machines
+* `-` Continued dependency on deprecated KBP tools
+
+### Deprecate kbparallels, and write new ee2 endpoints to entirely handle split and aggregate
+* `+` No longer uses an app, No longer uses a slot in the queue
+* `-` All jobs would have to change to stop using KBP in favor of these via the ee2 client,
+* `+` Can manage jobs more closely: have tables, more control over lifecycle, resource requests, canceling subjobs
+* `-` Job monitoring thread would have to run in ee2
+* `-`  Requires new data structures and models in ee2 to make sure that the relationship is preserved between jobs and sub jobs, and to make sure deadlocking does not occur
+* `-` Requires storing the job outside of condor to prevent job submission, unless we can mark jobs as runnable or not via the HTCondor API* 
+* `-` The endpoint would need to know how to split up input files and aggregate them
