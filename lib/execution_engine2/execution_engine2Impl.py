@@ -1288,7 +1288,7 @@ class execution_engine2:
             clients=self.clients,
         )
         returnVal = mr.check_job_batch(
-            parent_job_id=params["job_id"], exclude_fields=params.get("exclude_fields", None),
+            batch_id=params["job_id"], exclude_fields=params.get("exclude_fields", None),
             as_admin=params.get('as_admin')
         )
         #END check_job_batch
