@@ -1360,6 +1360,11 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
             sub_init, schedd_init, sub, schedd, txn, expected_sub_1, expected_sub_2
         )
 
+        # Check to see check_job_batch has bot the batch and child jobstates
+        ret = ee2.check_job_batch(params={"job_id": batch_id})
+        assert "batch_jobstate" in ret
+        assert "child_jobstates" in ret
+
 
 def test_run_job_batch_with_no_batch_wsid(ee2_port, ws_controller, mongo_client):
     """
