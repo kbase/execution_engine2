@@ -1362,8 +1362,32 @@ def test_run_job_batch(ee2_port, ws_controller, mongo_client):
 
         # Check to see check_job_batch has both the batch and child jobstates
         ret = ee2.check_job_batch(params={"job_id": batch_id})
-        assert "batch_jobstate" in ret
-        assert "child_jobstates" in ret
+        batch_jobstate = ret["batch_jobstate"]
+        child_jobstates = ret["child_jobstates"]
+
+        # Check to see that the BATCH jobstate is as expected
+        expected_batch_jobstate = expected_parent_job
+        del expected_batch_jobstate["_id"]
+        expected_batch_jobstate.update(
+            {"batch_id": None, "job_id": batch_id, "retry_count": 0}
+        )
+        del batch_jobstate["created"]
+        del batch_jobstate["updated"]
+        assert batch_jobstate == expected_batch_jobstate
+
+        # Check to see the child states are as expected
+        for expected_child_job_state in [expected_job1, expected_job2]:
+            expected_child_job_state["retry_count"] = 0
+            expected_child_job_state["job_id"] = str(expected_child_job_state["_id"])
+            del expected_child_job_state["_id"]
+
+        for received_child_job_state in child_jobstates:
+            del received_child_job_state["created"]
+            del received_child_job_state["queued"]
+            del received_child_job_state["updated"]
+
+        assert child_jobstates[0] == expected_job1
+        assert child_jobstates[1] == expected_job2
 
 
 def test_run_job_batch_with_no_batch_wsid(ee2_port, ws_controller, mongo_client):
