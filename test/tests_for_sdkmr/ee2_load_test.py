@@ -286,6 +286,41 @@ class ee2_server_load_test(unittest.TestCase):
     )
     @patch("installed_clients.CatalogClient.Catalog.get_module_version", autospec=True)
     @patch("installed_clients.CatalogClient.Catalog.log_exec_stats", autospec=True)
+    def test_check_job_batch_stress(
+        self, cc_log_stats, cc_get_mod_ver, cc_list_cli_configs, workspace, condor
+    ):
+        # Note, not a stress test, just an impl file test
+        cc_get_mod_ver.return_value = {"git_commit_hash": "moduleversiongoeshere"}
+        cc_list_cli_configs.return_value = []
+
+        # set job method differently to distinguish
+        method_1 = "app1.a_method"
+        method_2 = "app2.b_method"
+
+        job_params_1 = get_sample_job_params(
+            method=method_1, app_id="app1/a", wsid=None, parent_job_id=None
+        )
+        job_params_2 = get_sample_job_params(
+            method=method_2, app_id="app2/b", wsid=None, parent_job_id=None
+        )
+
+        batch_id = self.impl.run_job_batch(
+            ctx=self.ctx, params=[job_params_1, job_params_2], batch_params={}
+        )[0]["batch_id"]
+        check_job_batch_status = self.impl.check_job_batch(
+            ctx=self.ctx, params={"job_id": batch_id}
+        )
+        assert "batch_jobstate" in check_job_batch_status[0]
+        assert "child_jobstates" in check_job_batch_status[0]
+
+    @patch.object(Condor, "run_job", return_value=si)
+    @patch.object(WorkspaceAuth, "can_write", return_value=True)
+    @patch(
+        "installed_clients.CatalogClient.Catalog.list_client_group_configs",
+        autospec=True,
+    )
+    @patch("installed_clients.CatalogClient.Catalog.get_module_version", autospec=True)
+    @patch("installed_clients.CatalogClient.Catalog.log_exec_stats", autospec=True)
     def test_run_job_stress(
         self, cc_log_stats, cc_get_mod_ver, cc_list_cli_configs, workspace, condor
     ):
