@@ -786,9 +786,20 @@ class EE2RunJob:
         if not batch_job.batch_job:
             raise NotBatchJobException(f"{job_id} is not a batch job")
         # Retry and Report
-        retryable_child_job_ids = self.sdkmr.get_mongo_util().get_jobs_with_status(
-            job_ids=batch_job.child_jobs, status_list=status_list, only_job_ids=True
+        # Get jobs that do NOT have a retry_parent, i.e. only jobs that haven't been retried and retry_parents only
+        potentially_retryable_child_jobs = (
+            self.sdkmr.get_mongo_util().get_jobs_with_status(
+                job_ids=batch_job.child_jobs,
+                status_list=status_list,
+                retried_jobs_allowed=False,
+            )
         )
+        # So we don't want to retry jobs that have retry jobs in progress,
+        # or a retry job that has already been successful
+        retryable_child_job_ids = []
+        for job in potentially_retryable_child_jobs:
+            if self.sdkmr.get_mongo_util().eligible_for_retry(job=job):
+                retryable_child_job_ids.append(str(job.id))
 
         if len(retryable_child_job_ids) == 0:
             raise RetryFailureException(

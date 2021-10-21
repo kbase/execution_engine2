@@ -10,6 +10,8 @@ from execution_engine2.exceptions import (
     ChildrenNotFoundError,
     InvalidStatusListException,
     NotBatchJobException,
+    CannotRetryJob,
+    BatchTerminationException,
 )
 from execution_engine2.sdk.EE2Constants import JobError
 from lib.execution_engine2.authorization.authstrategy import can_read_jobs
@@ -138,7 +140,9 @@ class JobsStatus:
 
         # Report
         if len(terminated_ids) == 0:
-            raise Exception(f"{job_id} didn't have any valid child jobs to terminate")
+            raise BatchTerminationException(
+                f"{job_id} didn't have any valid child jobs to terminate"
+            )
         return terminated_ids
 
     def cancel_job(self, job_id=None, job=None, terminated_code=None, as_admin=False):

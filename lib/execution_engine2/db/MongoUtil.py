@@ -5,6 +5,7 @@ import traceback
 from contextlib import contextmanager
 from datetime import datetime
 from typing import Dict, List, Union
+
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
 from pymongo import MongoClient, UpdateOne
@@ -15,9 +16,8 @@ from execution_engine2.exceptions import (
     RecordNotFoundException,
     InvalidStatusTransitionException,
 )
-
-from lib.execution_engine2.utils.arg_processing import parse_bool
 from execution_engine2.sdk.EE2Runjob import JobIdPair
+from lib.execution_engine2.utils.arg_processing import parse_bool
 
 
 class MongoUtil:
@@ -224,7 +224,11 @@ class MongoUtil:
         return job
 
     def get_jobs_with_status(
-        self, job_ids: List[str], status_list: List[str], only_job_ids: bool = False
+        self,
+        job_ids: List[str],
+        status_list: List[str],
+        only_job_ids: bool = False,
+        retried_jobs_allowed=True,
     ) -> Union[List[Job], List[str]]:
         if not (job_ids and isinstance(job_ids, list)):
             raise ValueError("Please provide a non empty list of job ids")
@@ -234,10 +238,32 @@ class MongoUtil:
 
         with self.mongo_engine_connection():
             # TODO: Only seems to be returning other fields as well. Is .only() broken?
-            jobs = Job.objects(id__in=job_ids, status__in=status_list)
+            if retried_jobs_allowed:
+                jobs = Job.objects(id__in=job_ids, status__in=status_list)
+            else:
+                jobs = Job.objects(
+                    id__in=job_ids, status__in=status_list, retry_parent__exists=False
+                )
+
             if only_job_ids:
                 return [str(job.id) for job in jobs]
             return jobs
+
+    def eligible_for_retry(self, job: Job):
+        """
+        Checks the job record to see if it has any retry_ids,
+        and if those retry_ids do not contain an ineligble job state
+        :param job:
+        :return:
+        """
+        if job.retry_ids == []:
+            return True
+        eligble_states = [Status.completed.value, Status.error.value]
+        jobs = self.get_jobs(job_ids=job.retry_ids)
+        for job in jobs:
+            if job.status not in eligble_states:
+                return False
+        return True
 
     def get_jobs(
         self, job_ids=None, exclude_fields=None, sort_id_ascending=None

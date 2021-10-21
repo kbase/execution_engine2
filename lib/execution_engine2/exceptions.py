@@ -22,6 +22,10 @@ class InvalidStatusListException(ExecutionEngineValueError):
     """Invalid job state status provided"""
 
 
+class BatchTerminationException(ExecutionEngineException):
+    """No jobs to terminate"""
+
+
 class IncorrectParamsException(ExecutionEngineValueError):
     """Wrong parameters were provided"""
 

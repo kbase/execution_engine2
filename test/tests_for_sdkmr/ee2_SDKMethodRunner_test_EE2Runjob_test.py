@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import copy
+import itertools
 import logging
 import os
 import unittest
@@ -12,11 +13,10 @@ from mock import MagicMock
 from execution_engine2.exceptions import (
     CannotRetryJob,
     InvalidParameterForBatch,
-    ExecutionEngineException,
-    InvalidStatusTransitionException,
     InvalidStatusListException,
     NotBatchJobException,
     RetryFailureException,
+    BatchTerminationException,
 )
 from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.utils.clients import (
@@ -560,7 +560,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
-    def test_retry_batch(self, rq_mock, condor_mock):
+    def test_retry_batch_and_cancel_batch(self, rq_mock, condor_mock):
         rq_mock.add_matcher(
             run_job_adapter(
                 ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
@@ -622,12 +622,84 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         assert len(job_ids["child_job_ids"]) == len(batch_retry_results)
 
         for brr in batch_retry_results:
-            parent_id = brr["job_id"]
-            child_job = brr["retry_id"]
-            batch_check = runner.check_job(parent_id)
-            cj_check = runner.check_job(child_job)
-            assert batch_check["retry_ids"] == [child_job]
-            assert cj_check["retry_parent"] == parent_id
+            job_id = brr["job_id"]
+            retry_id = brr["retry_id"]
+            batch_check = runner.check_job(job_id)
+            cj_check = runner.check_job(retry_id)
+            assert batch_check["retry_ids"] == [retry_id]
+            assert cj_check["retry_parent"] == job_id
+            # For the next test
+            runner.update_job_status(retry_id, "error")
+            runner.update_job_status(job_id, "error")
+
+        # Now let's generate more errors
+        batch_retry_results = runner.retry_batch(
+            job_id=batch_job_id, status_list=["error"]
+        )
+        assert len(job_ids["child_job_ids"]) == len(batch_retry_results)
+
+        # Now setup tests based on a failed retry and successful retry combo
+        runner.update_job_status(batch_retry_results[0]["job_id"], "error")
+        runner.update_job_status(batch_retry_results[0]["retry_id"], "error")
+
+        runner.update_job_status(batch_retry_results[1]["job_id"], "error")
+        runner.update_job_status(batch_retry_results[1]["retry_id"], "created")
+
+        runner.update_job_status(batch_retry_results[2]["job_id"], "error")
+        runner.update_job_status(batch_retry_results[2]["retry_id"], "running")
+
+        batch_retry_results = runner.retry_batch(
+            job_id=batch_job_id, status_list=["error"]
+        )
+        assert 1 == len(batch_retry_results)
+
+        # Cancel Batch job tests
+
+        features = Status.get_status_names()
+        combos_list = []
+        for i in range(1, len(features)):
+            oc = itertools.combinations(features, i + 1)
+            for c in oc:
+                combos_list.append(list(c))
+
+        possible_errors = []
+        for item in [
+            Status.error.value,
+            Status.terminated.value,
+            Status.completed.value,
+        ]:
+            possible_errors.append(
+                f"Provided status {item} not in ['created', 'queued', 'estimating', 'running']"
+            )
+
+        for status_list in combos_list:
+            failable = False
+            for item in status_list:
+                if item in [
+                    Status.error.value,
+                    Status.terminated.value,
+                    Status.completed.value,
+                ]:
+                    failable = True
+
+            if status_list and failable:
+                with self.assertRaises(InvalidStatusListException) as e:
+                    runner.cancel_batch_job(
+                        job_id=batch_job_id, status_list=status_list, terminated_code=0
+                    )
+                    assert e.exception.args[0] in [possible_errors]
+            else:
+                with self.assertRaises(BatchTerminationException) as e:
+                    runner.cancel_batch_job(
+                        job_id=batch_job_id, status_list=status_list, terminated_code=0
+                    )
+                    assert (
+                        e.exception.args[0]
+                        == f"{batch_job_id} didn't have any valid child jobs to terminate"
+                    )
+
+        job_status = runner.check_job_batch(batch_id=batch_job_id)
+        print(job_status)
 
 
 @requests_mock.Mocker()
