@@ -701,112 +701,110 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job_status = runner.check_job_batch(batch_id=batch_job_id)
         print(job_status)
 
-
-@requests_mock.Mocker()
-@patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
-def test_run_job_batch(self, rq_mock, condor_mock):
-    """
-    Test running batch jobs
-    """
-    rq_mock.add_matcher(
-        run_job_adapter(
-            ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
+    @requests_mock.Mocker()
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    def test_run_job_batch(self, rq_mock, condor_mock):
+        """
+        Test running batch jobs
+        """
+        rq_mock.add_matcher(
+            run_job_adapter(
+                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
+            )
         )
-    )
-    runner = self.getRunner()
-    runner.get_condor = MagicMock(return_value=condor_mock)
-    jobs = self.get_batch_jobs()
-    condor_mock.run_job = MagicMock(
-        return_value=SubmissionInfo(clusterid="test", submit=jobs[0], error=None)
-    )
-
-    job_ids = runner.run_job_batch(
-        params=copy.deepcopy(jobs), batch_params={"wsid": self.ws_id}
-    )
-
-    for job in runner.check_jobs(
-        job_ids=job_ids["child_job_ids"] + [job_ids["batch_id"]]
-    )["job_states"]:
-        assert job.get("wsid") == self.ws_id
-        # Job input is forced to assume the batch wsid
-        if job["job_id"] != job_ids["batch_id"]:
-            assert job.get("job_input", {}).get("wsid") == self.ws_id
-
-    assert "batch_id" in job_ids and isinstance(job_ids["batch_id"], str)
-    assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
-    assert len(job_ids["child_job_ids"]) == len(jobs)
-
-    with self.assertRaises(InvalidParameterForBatch):
-        job_good = get_example_job_as_dict(
-            user=self.user_id, wsid=None, source_ws_objects=[]
+        runner = self.getRunner()
+        runner.get_condor = MagicMock(return_value=condor_mock)
+        jobs = self.get_batch_jobs()
+        condor_mock.run_job = MagicMock(
+            return_value=SubmissionInfo(clusterid="test", submit=jobs[0], error=None)
         )
-        job_bad = (
-            get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
+
+        job_ids = runner.run_job_batch(
+            params=copy.deepcopy(jobs), batch_params={"wsid": self.ws_id}
         )
-        jobs = [job_good, job_bad]
-        runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
-    # Test that you can't run a job in someone elses workspace
-    no_perms_ws = 111970
-    with self.assertRaises(PermissionError):
-        job_good = get_example_job_as_dict(
-            user=self.user_id, wsid=None, source_ws_objects=[]
+        for job in runner.check_jobs(
+            job_ids=job_ids["child_job_ids"] + [job_ids["batch_id"]]
+        )["job_states"]:
+            assert job.get("wsid") == self.ws_id
+            # Job input is forced to assume the batch wsid
+            if job["job_id"] != job_ids["batch_id"]:
+                assert job.get("job_input", {}).get("wsid") == self.ws_id
+
+        assert "batch_id" in job_ids and isinstance(job_ids["batch_id"], str)
+        assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
+        assert len(job_ids["child_job_ids"]) == len(jobs)
+
+        with self.assertRaises(InvalidParameterForBatch):
+            job_good = get_example_job_as_dict(
+                user=self.user_id, wsid=None, source_ws_objects=[]
+            )
+            job_bad = (
+                get_example_job(user=self.user_id, wsid=self.ws_id).to_mongo().to_dict()
+            )
+            jobs = [job_good, job_bad]
+            runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
+
+        # Test that you can't run a job in someone elses workspace
+        no_perms_ws = 111970
+        with self.assertRaises(PermissionError):
+            job_good = get_example_job_as_dict(
+                user=self.user_id, wsid=None, source_ws_objects=[]
+            )
+            job_bad = get_example_job(user=self.user_id, wsid=None).to_mongo().to_dict()
+            jobs = [job_good, job_bad]
+            runner.run_job_batch(params=jobs, batch_params={"wsid": no_perms_ws})
+
+        # Check wsids
+        batch_id = job_ids["batch_id"]
+        child_job_id = job_ids["child_job_ids"][0]
+
+        # Squeeze in a retry test here
+        runner.update_job_status(job_id=child_job_id, status=Status.terminated.value)
+        batch_job = runner.check_job(job_id=batch_id)
+        assert len(batch_job["child_jobs"]) == 3
+
+        retry_result = runner.retry(job_id=child_job_id)
+        retry_id = retry_result["retry_id"]
+        self.check_retry_job_state(child_job_id, retry_id)
+        batch_job = runner.check_job(job_id=batch_id)
+        assert len(batch_job["child_jobs"]) == 4
+        assert batch_job["child_jobs"][-1] == retry_id
+
+        job = runner.check_job(job_id=child_job_id)
+        retry_count = job["retry_count"]
+
+        # Test to see if one input fails, so keep going
+        results = runner.retry_multiple(job_ids=[child_job_id, "grail", "fail"])
+        assert results[0]["job_id"] == child_job_id
+        assert "error" in results[1]
+        assert "error" in results[2]
+
+        # Check to see child_job_id was retried
+        assert retry_count + 1 == runner.check_job(job_id=child_job_id)["retry_count"]
+
+        # Test for duplicates
+        with self.assertRaises(expected_exception=ValueError) as e:
+            runner.retry_multiple(job_ids=[1, 2, 2])
+        assert (
+            e.exception.args[0]
+            == "Retry of the same id in the same request is not supported. Offending ids: [2] "
         )
-        job_bad = get_example_job(user=self.user_id, wsid=None).to_mongo().to_dict()
-        jobs = [job_good, job_bad]
-        runner.run_job_batch(params=jobs, batch_params={"wsid": no_perms_ws})
 
-    # Check wsids
-    batch_id = job_ids["batch_id"]
-    child_job_id = job_ids["child_job_ids"][0]
-
-    # Squeeze in a retry test here
-    runner.update_job_status(job_id=child_job_id, status=Status.terminated.value)
-    batch_job = runner.check_job(job_id=batch_id)
-    assert len(batch_job["child_jobs"]) == 3
-
-    retry_result = runner.retry(job_id=child_job_id)
-    retry_id = retry_result["retry_id"]
-    self.check_retry_job_state(child_job_id, retry_id)
-    batch_job = runner.check_job(job_id=batch_id)
-    assert len(batch_job["child_jobs"]) == 4
-    assert batch_job["child_jobs"][-1] == retry_id
-
-    job = runner.check_job(job_id=child_job_id)
-    retry_count = job["retry_count"]
-
-    # Test to see if one input fails, so keep going
-    results = runner.retry_multiple(job_ids=[child_job_id, "grail", "fail"])
-    assert results[0]["job_id"] == child_job_id
-    assert "error" in results[1]
-    assert "error" in results[2]
-
-    # Check to see child_job_id was retried
-    assert retry_count + 1 == runner.check_job(job_id=child_job_id)["retry_count"]
-
-    # Test for duplicates
-    with self.assertRaises(expected_exception=ValueError) as e:
-        runner.retry_multiple(job_ids=[1, 2, 2])
-    assert (
-        e.exception.args[0]
-        == "Retry of the same id in the same request is not supported. Offending ids: [2] "
-    )
-
-
-@requests_mock.Mocker()
-@patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
-def test_run_job_fail(self, rq_mock, condor_mock):
-    rq_mock.add_matcher(
-        run_job_adapter(
-            ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
+    @requests_mock.Mocker()
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    def test_run_job_fail(self, rq_mock, condor_mock):
+        rq_mock.add_matcher(
+            run_job_adapter(
+                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
+            )
         )
-    )
-    runner = self.getRunner()
+        runner = self.getRunner()
 
-    job = get_example_job_as_dict(user=self.user_id, wsid=self.ws_id)
+        job = get_example_job_as_dict(user=self.user_id, wsid=self.ws_id)
 
-    si = SubmissionInfo(clusterid="test", submit=job, error=None)
-    condor_mock.run_job = MagicMock(return_value=si)
+        si = SubmissionInfo(clusterid="test", submit=job, error=None)
+        condor_mock.run_job = MagicMock(return_value=si)
 
-    with self.assertRaises(expected_exception=RuntimeError):
-        runner.run_job(params=job)
+        with self.assertRaises(expected_exception=RuntimeError):
+            runner.run_job(params=job)
