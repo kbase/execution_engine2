@@ -107,7 +107,7 @@ class JobsStatus:
         ]
         if not status_list:
             raise InvalidStatusListException(
-                f"Provide a list of status codes from {valid_statuses}."
+                f"Provide a list of valid job statuses from {valid_statuses}."
             )
         for status in status_list:
             if status not in valid_statuses:
@@ -146,6 +146,7 @@ class JobsStatus:
         Authorization Required: Ability to Read and Write to the Workspace
         Terminates child jobs as well
 
+        :param job: Job Object to cancel
         :param job_id: Job ID To cancel
         :param terminated_code: Default Terminated By User
         :param as_admin: Cancel the job for a different user
@@ -153,7 +154,7 @@ class JobsStatus:
         # Is it inefficient to get the job twice? Is it cached?
         if (not job_id and not job) or (job_id and job):
             raise Exception(
-                "Programming Error: Need to provide exactly one  job id or a job object"
+                "Programming Error: Need to provide exactly one job id or a job object"
             )
 
         if job_id:

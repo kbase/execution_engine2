@@ -4,7 +4,7 @@ import time
 import traceback
 from contextlib import contextmanager
 from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, Union
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
 from pymongo import MongoClient, UpdateOne
@@ -225,7 +225,7 @@ class MongoUtil:
 
     def get_jobs_with_status(
         self, job_ids: List[str], status_list: List[str], only_job_ids: bool = False
-    ) -> List[Job]:
+    ) -> Union[List[Job], List[str]]:
         if not (job_ids and isinstance(job_ids, list)):
             raise ValueError("Please provide a non empty list of job ids")
 
@@ -233,9 +233,11 @@ class MongoUtil:
             raise ValueError("Please provide a non empty list of job statuses")
 
         with self.mongo_engine_connection():
+            # TODO: Only seems to be returning other fields as well. Is .only() broken?
+            jobs = Job.objects(id__in=job_ids, status__in=status_list)
             if only_job_ids:
-                return Job.objects(id__in=job_ids, status__in=status_list).only("_id")
-            return Job.objects(id__in=job_ids, status__in=status_list)
+                return [str(job.id) for job in jobs]
+            return jobs
 
     def get_jobs(
         self, job_ids=None, exclude_fields=None, sort_id_ascending=None

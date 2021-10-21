@@ -235,13 +235,13 @@
 
         /*
             batch_job_id: BATCH_ID to retry
-            status_filter: job states in ['terminated', 'error'] (valid retry states)
+            status_list: job states in ['terminated', 'error'] (valid retry states)
             as_admin: retry someone else's job in your namespace
             #TODO: Possibly Add list<JobRequirements> job_requirements;
         */
         typedef structure {
             job_id batch_job_id;
-            list<job_status> status_filter;
+            list<job_status> status_list;
             boolean as_admin;
         } BatchRetryParams;
 
@@ -608,14 +608,14 @@
 
         /*
             batch_job_id: BATCH_ID to cancel
-            status_filter: optional filter of either 'terminated' or 'error'. Not setting this results in cancel of both
+            status_list: optional filter of either 'terminated' or 'error'. Not setting this results in cancel of both
             terminated_code: optional terminated code, default to terminated by user
             as_admin: retry someone else's job in your namespace
             @optional terminated_code
         */
         typedef structure {
             job_id batch_job_id;
-            list<job_status> status_filter;
+            list<job_status> status_list;
             int terminated_code;
             boolean as_admin;
         } BatchCancelParams;
@@ -624,7 +624,7 @@
             Cancels children of a batch job. This results in the status becoming "terminated" with termination_code 0.
             Valid statuses are ['created', 'estimating', 'queued', 'running']
             (Requires the user to keep track of the job states of the Status enum in the ee2 models file)
-            If no status_filter is provided, an exception is thrown.
+            If no status_list is provided, an exception is thrown.
         */
         funcdef cancel_batch_job(BatchCancelParams params) returns (list<job_id> job_ids) authentication required;
 

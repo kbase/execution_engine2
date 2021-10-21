@@ -789,6 +789,12 @@ class EE2RunJob:
         retryable_child_job_ids = self.sdkmr.get_mongo_util().get_jobs_with_status(
             job_ids=batch_job.child_jobs, status_list=status_list, only_job_ids=True
         )
+
+        if len(retryable_child_job_ids) == 0:
+            raise RetryFailureException(
+                f"No retryable jobs found with a state of {status_list}"
+            )
+
         return self.retry_multiple(job_ids=retryable_child_job_ids)
 
     def retry_multiple(

@@ -480,7 +480,7 @@ class execution_engine2:
             admin_permissions_cache=self.admin_permissions_cache
         )
         retry_result = mr.retry_batch(job_id=params.get('job_id'),
-                                      job_status=params.get('status_filter'),
+                                      status_list=params.get('status_list'),
                                       as_admin=params.get('as_admin'))
         #END retry_batch_jobs
 
@@ -1709,8 +1709,8 @@ class execution_engine2:
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache
         )
-        returnVal = mr.cancel_batch_job(job_id=params.get('job_id'),
-                                      status_list=params.get('status_filter'),
+        job_ids = mr.cancel_batch_job(job_id=params.get('job_id'),
+                                      status_list=params.get('status_list'),
                                       as_admin=params.get('as_admin'))
         #END cancel_batch_job
 
