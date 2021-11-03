@@ -1,6 +1,9 @@
 # execution_engine2 (ee2) release notes
 =========================================
 
+## 0.0.6
+* Release of MVP
+
 
 ## 0.0.5
 ### New Endpoints
