@@ -2,17 +2,28 @@
 =========================================
 
 
+
+
 ## 0.0.5
-  * TODO Refactor run_jobs_batch endpoint to cache catalog calls for batch jobs, submit entire batch to condor in one transaction
-  * TODO: Added CreatedJobsReaper
-  * Added retry_job and retry_jobs endpoint along with ADRs
-  * TODO: Will deprecate run_job transaction and use scheduler API
-  * Refactored tests
-  * Removed slack messages for running jobs
-  * Fix a bug that caused job requirements from the catalog in CSV format to be ignored other
+### New Endpoints
+*   run_job_batch
+*   retry_job
+*   retry_jobs
+*   abandon_children
+  
+### BugFixes
+* Fix a bug that caused job requirements from the catalog in CSV format to be ignored other
     than the client group
-  * Full EE2 admins can now submit job requirements when running jobs via run_job_batch and
-    run_job. See the SDK spec for details.
+  
+### Other features and refactoring
+* Refactor run_jobs_batch endpoint to cache catalog calls for batch jobs, submit entire batch to condor in one transaction
+* Refactored tests
+* Removed slack messages for running jobs
+* Added CreatedJobsReaper
+* Added retry_job and retry_jobs endpoint along with ADRs
+* Full EE2 admins can now submit job requirements when running jobs via run_job_batch and
+run_job. See the SDK spec for details.
+* Added ADRs for retry endpoint
 
 
 ## 0.0.4
