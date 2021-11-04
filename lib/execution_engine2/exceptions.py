@@ -18,8 +18,20 @@ class ExecutionEngineException(Exception):
         super().__init__(msg or self.__doc__, *args, **kwargs)
 
 
+class InvalidStatusListException(ExecutionEngineValueError):
+    """Invalid job status provided"""
+
+
+class BatchTerminationException(ExecutionEngineException):
+    """No jobs to terminate"""
+
+
 class IncorrectParamsException(ExecutionEngineValueError):
     """Wrong parameters were provided"""
+
+
+class NotBatchJobException(ExecutionEngineValueError):
+    """Requested job is not a batch job"""
 
 
 class InvalidParameterForBatch(ExecutionEngineValueError):

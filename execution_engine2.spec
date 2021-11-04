@@ -16,6 +16,9 @@
         /* A job id. */
         typedef string job_id;
 
+        /* A job state's job status. */
+        typedef string job_status;
+
         /*
             A structure representing the Execution Engine status
             git_commit - the Git hash of the version of the module.
@@ -229,6 +232,20 @@
             boolean as_admin;
         } BulkRetryParams;
 
+
+        /*
+            batch_job_id: BATCH_ID to retry
+            status_list: job states in ['terminated', 'error'] (valid retry states)
+            as_admin: retry someone else's job in your namespace
+            #TODO: Possibly Add list<JobRequirements> job_requirements;
+        */
+        typedef structure {
+            job_id batch_job_id;
+            list<job_status> status_list;
+            boolean as_admin;
+        } BatchRetryParams;
+
+
         /*
             #TODO write retry parent tests to ensure BOTH the parent_job_id is present, and retry_job_id is present
             #TODO Add retry child that checks the status of the child? to prevent multiple retries
@@ -246,13 +263,16 @@
         */
         funcdef retry_jobs(BulkRetryParams params) returns (list<RetryResult> retry_result) authentication required;
 
-
+        /*
+            Retry a job based on a batch id with a job_state status list ['error', 'terminated']
+            Requires the user to keep track of the job states of the Status enum in the ee2 models file
+            If no status_list is provided, an exception is thrown.
+        */
+        funcdef retry_batch_jobs_by_status(BatchRetryParams params) returns (list<RetryResult> retry_result) authentication required;
 
 
         funcdef abandon_children(AbandonChildren params)
             returns (BatchSubmission parent_and_child_ids) authentication required;
-
-
 
         /* EE2Constants Concierge Params are
             request_cpus: int
@@ -584,6 +604,29 @@
             Cancels a job. This results in the status becoming "terminated" with termination_code 0.
         */
         funcdef cancel_job(CancelJobParams params) returns () authentication required;
+
+
+        /*
+            batch_job_id: BATCH_ID to cancel
+            status_list: required filter of one or more of [created, estimating, queued, or running]
+            terminated_code: optional terminated code, default to terminated by user
+            as_admin: retry someone else's job in your namespace
+            @optional terminated_code
+        */
+        typedef structure {
+            job_id batch_job_id;
+            list<job_status> status_list;
+            int terminated_code;
+            boolean as_admin;
+        } BatchCancelParams;
+
+        /*
+            Cancels children of a batch job. This results in the status becoming "terminated" with termination_code 0.
+            Valid statuses are ['created', 'estimating', 'queued', 'running']
+            (Requires the user to keep track of the job states of the Status enum in the ee2 models file)
+            If no status_list is provided, an exception is thrown.
+        */
+        funcdef cancel_batch_jobs_by_status(BatchCancelParams params) returns (list<job_id> job_ids) authentication required;
 
         /*
             job_id - id of job running method

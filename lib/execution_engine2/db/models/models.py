@@ -227,6 +227,10 @@ class Status(Enum):
     A job begins at created, then can either be estimating
     """
 
+    @classmethod
+    def get_status_names(cls):
+        return list(map(lambda x: x.value, cls._member_map_.values()))
+
     created = "created"
     estimating = "estimating"
     queued = "queued"

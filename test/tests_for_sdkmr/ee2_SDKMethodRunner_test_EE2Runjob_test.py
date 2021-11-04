@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import copy
+import itertools
 import logging
 import os
 import unittest
@@ -11,8 +12,10 @@ from mock import MagicMock
 
 from execution_engine2.exceptions import (
     CannotRetryJob,
-    RetryFailureException,
     InvalidParameterForBatch,
+    InvalidStatusListException,
+    NotBatchJobException,
+    RetryFailureException,
 )
 from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.utils.clients import (
@@ -541,6 +544,159 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         # TODO Retry a job without an app_id
         # TODO Check narrative_cell_info
 
+    def get_batch_jobs(self):
+        job = get_example_job_as_dict(
+            user=self.user_id, wsid=None, source_ws_objects=[]
+        )
+        job2 = get_example_job_as_dict(
+            user=self.user_id, wsid=None, source_ws_objects=[]
+        )
+        job3 = get_example_job_as_dict(
+            user=self.user_id, wsid=None, source_ws_objects=[]
+        )
+        jobs = [job, job2, job3]
+        return jobs
+
+    @requests_mock.Mocker()
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    def test_retry_batch_and_cancel_batch(self, rq_mock, condor_mock):
+        rq_mock.add_matcher(
+            run_job_adapter(
+                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}}
+            )
+        )
+        runner = self.getRunner()
+        runner.get_condor = MagicMock(return_value=condor_mock)
+        jobs = self.get_batch_jobs()
+        condor_mock.run_job = MagicMock(
+            return_value=SubmissionInfo(clusterid="test", submit=jobs[0], error=None)
+        )
+        job_ids = runner.run_job_batch(
+            params=copy.deepcopy(jobs), batch_params={"wsid": self.ws_id}
+        )
+        batch_job_id = job_ids["batch_id"]
+        child_jobs = job_ids["child_job_ids"]
+
+        # TEST OUT ERROR CONDITIONS
+        for status_list in [
+            None,
+            [],
+        ]:
+            expected_exception = InvalidStatusListException
+            with self.assertRaises(expected_exception) as e:
+                runner.retry_batch(job_id=batch_job_id, status_list=status_list)
+            assert (
+                e.exception.args[0]
+                == "Provide a list of status codes from ['terminated', 'error']."
+            )
+
+        for status_list in [["running"], ["apple", "kertuffl"], [None]]:
+            expected_exception = InvalidStatusListException
+            with self.assertRaises(expected_exception) as e:
+                runner.retry_batch(job_id=batch_job_id, status_list=status_list)
+            assert (
+                e.exception.args[0]
+                == f"Provided status list contains {status_list}, which are not retryable. Status not in ['terminated', 'error']"
+            )
+
+        with self.assertRaises(NotBatchJobException) as e:
+            runner.retry_batch(job_id=child_jobs[0], status_list=["error"])
+        assert e.exception.args[0] == f"{child_jobs[0]} is not a batch job"
+
+        for status_list in [["terminated"], ["terminated", "error"], ["error"]]:
+            with self.assertRaises(RetryFailureException) as e:
+                runner.retry_batch(job_id=batch_job_id, status_list=status_list)
+            assert (
+                e.exception.args[0]
+                == f"No retryable jobs found with a status in {status_list}"
+            )
+
+        for job_id in child_jobs:
+            runner.update_job_status(job_id=job_id, status="error")
+
+        batch_retry_results = runner.retry_batch(
+            job_id=batch_job_id, status_list=["error"]
+        )
+        assert len(job_ids["child_job_ids"]) == len(batch_retry_results)
+
+        for brr in batch_retry_results:
+            job_id = brr["job_id"]
+            retry_id = brr["retry_id"]
+            batch_check = runner.check_job(job_id)
+            cj_check = runner.check_job(retry_id)
+            assert batch_check["retry_ids"] == [retry_id]
+            assert cj_check["retry_parent"] == job_id
+            # For the next test
+            runner.update_job_status(retry_id, "error")
+            runner.update_job_status(job_id, "error")
+
+        # Now let's generate more errors
+        batch_retry_results = runner.retry_batch(
+            job_id=batch_job_id, status_list=["error"]
+        )
+        assert len(job_ids["child_job_ids"]) == len(batch_retry_results)
+
+        # Now setup tests based on a failed retry and successful retry combo
+        runner.update_job_status(batch_retry_results[0]["job_id"], "error")
+        runner.update_job_status(batch_retry_results[0]["retry_id"], "error")
+
+        runner.update_job_status(batch_retry_results[1]["job_id"], "error")
+        runner.update_job_status(batch_retry_results[1]["retry_id"], "created")
+
+        runner.update_job_status(batch_retry_results[2]["job_id"], "error")
+        runner.update_job_status(batch_retry_results[2]["retry_id"], "running")
+
+        batch_retry_results = runner.retry_batch(
+            job_id=batch_job_id, status_list=["error"]
+        )
+        assert 1 == len(batch_retry_results)
+
+        # Cancel Batch job tests
+
+        features = Status.get_status_names()
+        combos_list = []
+        for i in range(1, len(features)):
+            oc = itertools.combinations(features, i + 1)
+            for c in oc:
+                combos_list.append(list(c))
+
+        valid_statuses = [
+            Status.created.value,
+            Status.queued.value,
+            Status.estimating.value,
+            Status.running.value,
+        ]
+
+        for status_list in combos_list:
+            failable = False
+            for item in status_list:
+                if item in [
+                    Status.error.value,
+                    Status.terminated.value,
+                    Status.completed.value,
+                ]:
+                    failable = True
+
+            if status_list and failable:
+                with self.assertRaises(InvalidStatusListException) as e:
+                    runner.cancel_batch_job(
+                        job_id=batch_job_id, status_list=status_list, terminated_code=0
+                    )
+
+                for item in valid_statuses:
+                    try:
+                        del status_list[status_list.index(item)]
+                    except Exception:
+                        pass
+
+                expected = f"Provided status list contains {status_list}, which are not cancelable. Status not in {valid_statuses}"
+
+                assert e.exception.args[0] == expected
+
+        # Assert cancelled jobs?
+        job_status = runner.check_job_batch(batch_id=batch_job_id)
+        print(job_status)
+
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_run_job_batch(self, rq_mock, condor_mock):
@@ -554,19 +710,11 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         )
         runner = self.getRunner()
         runner.get_condor = MagicMock(return_value=condor_mock)
+        jobs = self.get_batch_jobs()
+        condor_mock.run_job = MagicMock(
+            return_value=SubmissionInfo(clusterid="test", submit=jobs[0], error=None)
+        )
 
-        job = get_example_job_as_dict(
-            user=self.user_id, wsid=None, source_ws_objects=[]
-        )
-        job2 = get_example_job_as_dict(
-            user=self.user_id, wsid=None, source_ws_objects=[]
-        )
-        job3 = get_example_job_as_dict(
-            user=self.user_id, wsid=None, source_ws_objects=[]
-        )
-        si = SubmissionInfo(clusterid="test", submit=job, error=None)
-        condor_mock.run_job = MagicMock(return_value=si)
-        jobs = [job, job2, job3]
         job_ids = runner.run_job_batch(
             params=copy.deepcopy(jobs), batch_params={"wsid": self.ws_id}
         )

@@ -26,6 +26,8 @@ from execution_engine2.exceptions import (
     CannotRetryJob,
     RetryFailureException,
     InvalidParameterForBatch,
+    InvalidStatusListException,
+    NotBatchJobException,
 )
 from execution_engine2.sdk.EE2Constants import CONCIERGE_CLIENTGROUP
 from execution_engine2.sdk.job_submission_parameters import (
@@ -744,7 +746,7 @@ class EE2RunJob:
         # to make sure the retried job is correctly submitted? Or save that for a unit test?
         return {"job_id": job_id, "retry_id": retry_job_id}
 
-    def retry(self, job_id: str, as_admin=False) -> Dict[str, Optional[str]]:
+    def retry(self, job_id: str, as_admin: bool = False) -> Dict[str, Optional[str]]:
         """
         #TODO Add new job requirements/cgroups as an optional param
         :param job_id: The main job to retry
@@ -757,6 +759,62 @@ class EE2RunJob:
         return self._retry(
             job_id=job_id, job=job, batch_job=batch_job, as_admin=as_admin
         )
+
+    def retry_jobs_in_batch_by_status(
+        self, job_id: str, status_list: list, as_admin: bool = False
+    ):
+        """
+        Retry jobs by status given a BATCH_ID
+        :param job_id: The batch job id to retry jobs for
+        :param status_list: The state of jobs in that batch to retry
+        :param as_admin: Retry jobs for others
+        :return: A list of job ids that are retried from the batch
+        """
+        valid_statuses = [Status.terminated.value, Status.error.value]
+        # Validation
+        if not status_list:
+            raise InvalidStatusListException(
+                f"Provide a list of status codes from {valid_statuses}."
+            )
+
+        invalid_statuses = [
+            status for status in status_list if not self._retryable(status)
+        ]
+        if len(invalid_statuses):
+            raise InvalidStatusListException(
+                f"Provided status list contains {invalid_statuses}, which are not retryable. "
+                + f"Status not in {valid_statuses}"
+            )
+
+        batch_job = self.sdkmr.get_job_with_permission(
+            job_id, JobPermissions.WRITE, as_admin=as_admin
+        )
+        if not batch_job.batch_job:
+            raise NotBatchJobException(f"{job_id} is not a batch job")
+        # Retry and Report
+        # Get jobs that
+        # do NOT have a retry_parent, i.e. only jobs that haven't been retried
+        # and jobs that have not retried retry_parents only
+        potentially_retryable_child_jobs = (
+            self.sdkmr.get_mongo_util().get_jobs_with_status(
+                job_ids=batch_job.child_jobs,
+                status_list=status_list,
+                retried_jobs_allowed=False,
+            )
+        )
+        # So we don't want to retry jobs that have retry jobs in progress,
+        # or a retry job that has already been successful
+        retryable_child_job_ids = []
+        for child_job in potentially_retryable_child_jobs:
+            if self.sdkmr.get_mongo_util().eligible_for_retry(job=child_job):
+                retryable_child_job_ids.append(str(child_job.id))
+
+        if len(retryable_child_job_ids) == 0:
+            raise RetryFailureException(
+                f"No retryable jobs found with a status in {status_list}"
+            )
+
+        return self.retry_multiple(job_ids=retryable_child_job_ids)
 
     def retry_multiple(
         self, job_ids, as_admin=False

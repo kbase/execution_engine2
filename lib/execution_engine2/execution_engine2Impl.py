@@ -29,8 +29,8 @@ class execution_engine2:
     # the latter method is running.
     ######################################### noqa
     VERSION = "0.0.5"
-    GIT_URL = "https://github.com/mrcreosote/execution_engine2.git"
-    GIT_COMMIT_HASH = "2ad95ce47caa4f1e7b939651f2b1773840e67a8a"
+    GIT_URL = "git@github.com:kbase/execution_engine2.git"
+    GIT_COMMIT_HASH = "6f9e6f9593f74a64cd8453c342546e97b269ba14"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -360,7 +360,7 @@ class execution_engine2:
         #BEGIN run_job_batch
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
-            clients = self.clients,
+            clients=self.clients,
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache
         )
@@ -402,7 +402,7 @@ class execution_engine2:
         #BEGIN retry_job
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
-            clients = self.clients,
+            clients=self.clients,
             job_permission_cache=self.job_permission_cache,
             admin_permissions_cache=self.admin_permissions_cache
         )
@@ -446,6 +446,44 @@ class execution_engine2:
         # At some point might do deeper type checking...
         if not isinstance(retry_result, list):
             raise ValueError('Method retry_jobs return value ' +
+                             'retry_result is not type list as required.')
+        # return the results
+        return [retry_result]
+
+    def retry_batch_jobs_by_status(self, ctx, params):
+        """
+        Retry a job based on a batch id with a job_state status list ['error', 'terminated']
+        Requires the user to keep track of the job states of the Status enum in the ee2 models file
+        If no status_list is provided, an exception is thrown.
+        :param params: instance of type "BatchRetryParams" (batch_job_id:
+           BATCH_ID to retry status_list: job states in ['terminated',
+           'error'] (valid retry states) as_admin: retry someone else's job
+           in your namespace #TODO: Possibly Add list<JobRequirements>
+           job_requirements;) -> structure: parameter "batch_job_id" of type
+           "job_id" (A job id.), parameter "status_list" of list of type
+           "job_status" (A job state's job status.), parameter "as_admin" of
+           type "boolean" (@range [0,1])
+        :returns: instance of list of type "RetryResult" (job_id of retried
+           job retry_id: job_id of the job that was launched str error:
+           reason as to why that particular retry failed (available for bulk
+           retry only)) -> structure: parameter "job_id" of type "job_id" (A
+           job id.), parameter "retry_id" of type "job_id" (A job id.),
+           parameter "error" of String
+        """
+        # ctx is the context object
+        # return variables are: retry_result
+        #BEGIN retry_batch_jobs_by_status
+        mr = SDKMethodRunner(user_clients=self.gen_cfg.get_user_clients(ctx), clients=self.clients,
+                             job_permission_cache=self.job_permission_cache,
+                             admin_permissions_cache=self.admin_permissions_cache)
+        retry_result = mr.retry_batch(job_id=params.get('job_id'),
+                                      status_list=params.get('status_list'),
+                                      as_admin=params.get('as_admin'))
+        #END retry_batch_jobs_by_status
+
+        # At some point might do deeper type checking...
+        if not isinstance(retry_result, list):
+            raise ValueError('Method retry_batch_jobs_by_status return value ' +
                              'retry_result is not type list as required.')
         # return the results
         return [retry_result]
@@ -911,7 +949,7 @@ class execution_engine2:
            retry_ids - list - list of jobs that are retried based off of this
            job retry_parent - str - job_id of the parent this retry is based
            off of. Not available on a retry_parent itself batch_id - str -
-           the parent of the job, if the job is a child job created via
+           the coordinating job, if the job is a child job created via
            run_job_batch batch_job - bool - whether or not this is a batch
            parent container child_jobs - array - Only parent container should
            have child job ids scheduler_type - str - scheduler, such as awe
@@ -1033,19 +1071,19 @@ class execution_engine2:
            of list of String, parameter "as_admin" of type "boolean" (@range
            [0,1])
         :returns: instance of type "CheckJobBatchResults" (batch_jobstate -
-           state of parent job of the batch child_jobstates - states of child
-           jobs IDEA: ADD aggregate_states - count of all available child job
-           states, even if they are zero) -> structure: parameter
-           "batch_jobstate" of type "JobState" (job_id - string - id of the
-           job user - string - user who started the job wsid - int - optional
-           id of the workspace where the job is bound authstrat - string -
-           what strategy used to authenticate the job job_input - object -
-           inputs to the job (from the run_job call)  ## TODO - verify
-           job_output - object - outputs from the job (from the run_job call)
-           ## TODO - verify updated - int - timestamp since epoch in
-           milliseconds of the last time the status was updated running - int
-           - timestamp since epoch in milliseconds of when it entered the
-           running state created - int - timestamp since epoch in
+           state of the coordinating job for the batch child_jobstates -
+           states of child jobs IDEA: ADD aggregate_states - count of all
+           available child job states, even if they are zero) -> structure:
+           parameter "batch_jobstate" of type "JobState" (job_id - string -
+           id of the job user - string - user who started the job wsid - int
+           - optional id of the workspace where the job is bound authstrat -
+           string - what strategy used to authenticate the job job_input -
+           object - inputs to the job (from the run_job call)  ## TODO -
+           verify job_output - object - outputs from the job (from the
+           run_job call) ## TODO - verify updated - int - timestamp since
+           epoch in milliseconds of the last time the status was updated
+           running - int - timestamp since epoch in milliseconds of when it
+           entered the running state created - int - timestamp since epoch in
            milliseconds when the job was created finished - int - timestamp
            since epoch in milliseconds when the job was finished status -
            string - status of the job. one of the following: created - job
@@ -1068,7 +1106,7 @@ class execution_engine2:
            retry_ids - list - list of jobs that are retried based off of this
            job retry_parent - str - job_id of the parent this retry is based
            off of. Not available on a retry_parent itself batch_id - str -
-           the parent of the job, if the job is a child job created via
+           the coordinating job, if the job is a child job created via
            run_job_batch batch_job - bool - whether or not this is a batch
            parent container child_jobs - array - Only parent container should
            have child job ids scheduler_type - str - scheduler, such as awe
@@ -1189,7 +1227,7 @@ class execution_engine2:
            retry_ids - list - list of jobs that are retried based off of this
            job retry_parent - str - job_id of the parent this retry is based
            off of. Not available on a retry_parent itself batch_id - str -
-           the parent of the job, if the job is a child job created via
+           the coordinating job, if the job is a child job created via
            run_job_batch batch_job - bool - whether or not this is a batch
            parent container child_jobs - array - Only parent container should
            have child job ids scheduler_type - str - scheduler, such as awe
@@ -1343,7 +1381,7 @@ class execution_engine2:
            retry_ids - list - list of jobs that are retried based off of this
            job retry_parent - str - job_id of the parent this retry is based
            off of. Not available on a retry_parent itself batch_id - str -
-           the parent of the job, if the job is a child job created via
+           the coordinating job, if the job is a child job created via
            run_job_batch batch_job - bool - whether or not this is a batch
            parent container child_jobs - array - Only parent container should
            have child job ids scheduler_type - str - scheduler, such as awe
@@ -1500,7 +1538,7 @@ class execution_engine2:
            retry_ids - list - list of jobs that are retried based off of this
            job retry_parent - str - job_id of the parent this retry is based
            off of. Not available on a retry_parent itself batch_id - str -
-           the parent of the job, if the job is a child job created via
+           the coordinating job, if the job is a child job created via
            run_job_batch batch_job - bool - whether or not this is a batch
            parent container child_jobs - array - Only parent container should
            have child job ids scheduler_type - str - scheduler, such as awe
@@ -1640,6 +1678,44 @@ class execution_engine2:
         )
         #END cancel_job
         pass
+
+    def cancel_batch_jobs_by_status(self, ctx, params):
+        """
+        Cancels children of a batch job. This results in the status becoming "terminated" with termination_code 0.
+        Valid statuses are ['created', 'estimating', 'queued', 'running']
+        (Requires the user to keep track of the job states of the Status enum in the ee2 models file)
+        If no status_list is provided, an exception is thrown.
+        :param params: instance of type "BatchCancelParams" (batch_job_id:
+           BATCH_ID to cancel status_list: required filter of one or more of
+           [created, estimating, queued, or running] terminated_code:
+           optional terminated code, default to terminated by user as_admin:
+           retry someone else's job in your namespace @optional
+           terminated_code) -> structure: parameter "batch_job_id" of type
+           "job_id" (A job id.), parameter "status_list" of list of type
+           "job_status" (A job state's job status.), parameter
+           "terminated_code" of Long, parameter "as_admin" of type "boolean"
+           (@range [0,1])
+        :returns: instance of list of type "job_id" (A job id.)
+        """
+        # ctx is the context object
+        # return variables are: job_ids
+        #BEGIN cancel_batch_jobs_by_status
+        mr = SDKMethodRunner(user_clients=self.gen_cfg.get_user_clients(ctx), clients=self.clients,
+                             job_permission_cache=self.job_permission_cache,
+                             admin_permissions_cache=self.admin_permissions_cache)
+
+        job_ids = mr.cancel_batch_job(job_id=params.get('job_id'),
+                                      status_list=params.get('status_list'),
+                                      as_admin=params.get('as_admin'),
+                                      terminated_code=params.get('terminated_code'))
+        #END cancel_batch_jobs_by_status
+
+        # At some point might do deeper type checking...
+        if not isinstance(job_ids, list):
+            raise ValueError('Method cancel_batch_jobs_by_status return value ' +
+                             'job_ids is not type list as required.')
+        # return the results
+        return [job_ids]
 
     def check_job_canceled(self, ctx, params):
         """
@@ -1801,7 +1877,7 @@ class execution_engine2:
            retry_ids - list - list of jobs that are retried based off of this
            job retry_parent - str - job_id of the parent this retry is based
            off of. Not available on a retry_parent itself batch_id - str -
-           the parent of the job, if the job is a child job created via
+           the coordinating job, if the job is a child job created via
            run_job_batch batch_job - bool - whether or not this is a batch
            parent container child_jobs - array - Only parent container should
            have child job ids scheduler_type - str - scheduler, such as awe
@@ -2016,7 +2092,7 @@ class execution_engine2:
            retry_ids - list - list of jobs that are retried based off of this
            job retry_parent - str - job_id of the parent this retry is based
            off of. Not available on a retry_parent itself batch_id - str -
-           the parent of the job, if the job is a child job created via
+           the coordinating job, if the job is a child job created via
            run_job_batch batch_job - bool - whether or not this is a batch
            parent container child_jobs - array - Only parent container should
            have child job ids scheduler_type - str - scheduler, such as awe
