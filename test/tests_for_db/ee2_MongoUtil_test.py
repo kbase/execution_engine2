@@ -2,12 +2,13 @@
 import logging
 import os
 import unittest
-from configparser import ConfigParser
+from datetime import datetime
 
 from bson.objectid import ObjectId
 
 from execution_engine2.db.MongoUtil import MongoUtil
-from execution_engine2.db.models.models import Job, JobLog
+from execution_engine2.db.models.models import Job, JobLog, Status
+from execution_engine2.sdk.EE2Runjob import JobIdPair
 from test.utils_shared.test_utils import (
     bootstrap,
     get_example_job,
@@ -57,8 +58,89 @@ class MongoUtilTest(unittest.TestCase):
         mongo_util = self.getMongoUtil()
         self.assertTrue(set(class_attri) <= set(mongo_util.__dict__.keys()))
 
+    def test_insert_jobs(self):
+        """Check to see that jobs are inserted into mongo"""
+        job = get_example_job(status=Status.created.value)
+        job2 = get_example_job(status=Status.created.value)
+        jobs_to_insert = [job, job2]
+        job_ids = self.getMongoUtil().insert_jobs(jobs_to_insert)
+        assert len(job_ids) == len(jobs_to_insert)
+        retrieved_jobs = self.getMongoUtil().get_jobs(job_ids=job_ids)
+
+        for i, retrieved_job in enumerate(retrieved_jobs):
+            assert jobs_to_insert[i].to_json() == retrieved_job.to_json()
+
+    def test_update_jobs_enmasse(self):
+        """Check to see that created jobs get updated to queued"""
+        for state in Status:
+            job = get_example_job(status=Status.created.value, scheduler_id=None)
+            job2 = get_example_job(status=state.value, scheduler_id=None)
+            job3 = get_example_job(status=state.value, scheduler_id=None)
+            jobs = [job, job2, job3]
+
+            for j in jobs:
+                j.scheduler_id = None
+                j.save()
+                assert j.scheduler_id is None
+
+            job_ids = [job.id, job2.id, job3.id]
+            scheduler_ids = ["humpty", "dumpty", "alice"]
+            jobs_to_update = list(map(JobIdPair, job_ids, scheduler_ids))
+
+            now_ms = datetime.utcnow().timestamp()
+
+            self.getMongoUtil().update_jobs_to_queued(jobs_to_update)
+            job.reload()
+            job2.reload()
+            job3.reload()
+
+            # Check that sched ids are set
+            for i, val in enumerate(scheduler_ids):
+                assert jobs[i].scheduler_id == val
+                assert jobs[i].scheduler_type == "condor"
+
+            #  Checks that a timestamp in seconds since the epoch is within a second of the current time.
+            for j in jobs:
+                assert now_ms + 1 > j.updated
+                assert now_ms - 1 < j.updated
+
+        # First job always should transition to queued
+        assert job.status == Status.queued.value
+
+        # Created jobs should transition
+        if state.value == Status.created.value:
+            assert all(j.status == Status.queued.value for j in [job, job2, job3])
+
+        else:
+            # Don't change their state
+            assert all(j.status == state.value for j in [job2, job3])
+
+    def test_update_jobs_enmasse_bad_job_pairs(self):
+        job = get_example_job(status=Status.created.value).save()
+        job2 = get_example_job(status=Status.created.value).save()
+        job3 = get_example_job(status=Status.created.value).save()
+        job_ids = [job.id, job2.id, job3.id]
+        scheduler_ids = [job.scheduler_id, job2.scheduler_id, None]
+        job_id_pairs = list(map(JobIdPair, job_ids, scheduler_ids))
+
+        with self.assertRaisesRegex(
+            expected_exception=ValueError,
+            expected_regex=f"Provided a bad job_id_pair, missing scheduler_id for {job3.id}",
+        ):
+            self.getMongoUtil().update_jobs_to_queued(job_id_pairs)
+
+        job_ids = [job.id, job2.id, None]
+        scheduler_ids = [job.scheduler_id, job2.scheduler_id, job3.scheduler_id]
+        job_id_pairs = list(map(JobIdPair, job_ids, scheduler_ids))
+
+        with self.assertRaisesRegex(
+            expected_exception=ValueError,
+            expected_regex=f"Provided a bad job_id_pair, missing job_id for {job3.scheduler_id}",
+        ):
+            self.getMongoUtil().update_jobs_to_queued(job_id_pairs)
+
     def test_get_by_cluster(self):
-        """ Get a job by its condor scheduler_id"""
+        """Get a job by its condor scheduler_id"""
         mongo_util = self.getMongoUtil()
         with mongo_util.mongo_engine_connection():
             job = get_example_job()
@@ -67,7 +149,6 @@ class MongoUtilTest(unittest.TestCase):
             self.assertEqual(str(job_id), batch)
 
     def test_get_job_ok(self):
-
         mongo_util = self.getMongoUtil()
 
         with mongo_util.mongo_engine_connection():
@@ -90,6 +171,8 @@ class MongoUtilTest(unittest.TestCase):
                 "scheduler_id",
                 "child_jobs",
                 "batch_job",
+                "retry_ids",
+                "retry_saved_toggle",
             ]
             self.assertCountEqual(job.keys(), expected_keys)
 
@@ -110,6 +193,8 @@ class MongoUtilTest(unittest.TestCase):
                 "scheduler_id",
                 "batch_job",
                 "child_jobs",
+                "retry_ids",
+                "retry_saved_toggle",
             ]
             self.assertCountEqual(job.keys(), expected_keys)
 
@@ -129,6 +214,8 @@ class MongoUtilTest(unittest.TestCase):
                 "scheduler_id",
                 "batch_job",
                 "child_jobs",
+                "retry_ids",
+                "retry_saved_toggle",
             ]
             self.assertCountEqual(job.keys(), expected_keys)
 
@@ -136,7 +223,6 @@ class MongoUtilTest(unittest.TestCase):
             self.assertEqual(ori_job_count, Job.objects.count())
 
     def test_get_jobs_ok(self):
-
         mongo_util = self.getMongoUtil()
 
         with mongo_util.mongo_engine_connection():
@@ -161,6 +247,8 @@ class MongoUtilTest(unittest.TestCase):
                 "scheduler_id",
                 "batch_job",
                 "child_jobs",
+                "retry_ids",
+                "retry_saved_toggle",
             ]
 
             for job in jobs:
@@ -180,6 +268,8 @@ class MongoUtilTest(unittest.TestCase):
                 "scheduler_id",
                 "batch_job",
                 "child_jobs",
+                "retry_ids",
+                "retry_saved_toggle",
             ]
             for job in jobs:
                 self.assertCountEqual(job.to_mongo().to_dict().keys(), expected_keys)
@@ -189,7 +279,6 @@ class MongoUtilTest(unittest.TestCase):
             self.assertEqual(ori_job_count, Job.objects.count())
 
     def test_connection_ok(self):
-
         mongo_util = self.getMongoUtil()
 
         with mongo_util.mongo_engine_connection():
@@ -211,6 +300,8 @@ class MongoUtilTest(unittest.TestCase):
                 "scheduler_id",
                 "batch_job",
                 "child_jobs",
+                "retry_ids",
+                "retry_saved_toggle",
             ]
 
             self.assertCountEqual(job.keys(), expected_keys)
@@ -329,7 +420,6 @@ class MongoUtilTest(unittest.TestCase):
             self.assertEqual(col.count_documents({}), doc_count)
 
     def test_get_job_log_pymongo_ok(self):
-
         mongo_util = self.getMongoUtil()
 
         primary_key = ObjectId()

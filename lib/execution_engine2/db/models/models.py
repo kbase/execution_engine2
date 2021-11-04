@@ -109,7 +109,9 @@ class Meta(EmbeddedDocument):
     token_id = StringField()
     tag = StringField()
     cell_id = StringField()
-    status = StringField()
+
+    def __repr__(self):
+        return self.to_json()
 
 
 class CondorResourceUsage(EmbeddedDocument):
@@ -147,6 +149,9 @@ class JobRequirements(EmbeddedDocument):
     disk = IntField()
     estimate = EmbeddedDocumentField(Estimate)
 
+    def __repr__(self):
+        return self.to_json()
+
 
 class JobInput(EmbeddedDocument):
     """
@@ -158,11 +163,16 @@ class JobInput(EmbeddedDocument):
     requested_release = StringField()
     params = DynamicField()
     service_ver = StringField(required=True)
-    app_id = StringField(required=True)
+    app_id = StringField()
     source_ws_objects = ListField()
+    # this ID is for jobs submitted via run_job with a parent_job_id field included by the
+    # client. For this case, the parent job is not updated at all.
     parent_job_id = StringField()
     requirements = EmbeddedDocumentField(JobRequirements)
     narrative_cell_info = EmbeddedDocumentField(Meta, required=True)
+
+    def __repr__(self):
+        return self.to_json()
 
 
 class JobOutput(EmbeddedDocument):
@@ -209,6 +219,7 @@ class TerminatedCode(Enum):
     terminated_by_admin = 1
     terminated_by_automation = 2
     terminated_by_batch_abort = 3
+    terminated_by_server_failure = 4
 
 
 class Status(Enum):
@@ -304,15 +315,26 @@ class Job(Document):
 
     terminated_code = IntField(validation=valid_termination_code)
     error_code = IntField(validation=valid_errorcode)
-
+    batch_job = BooleanField(default=False)
     scheduler_type = StringField()
     scheduler_id = StringField()
     scheduler_estimator_id = StringField()
     job_input = EmbeddedDocumentField(JobInput, required=True)
     job_output = DynamicField()
     condor_job_ads = DynamicField()
-    child_jobs = ListField()
-    batch_job = BooleanField(default=False)
+    # this is the ID of the coordinating job created as part of run_job_batch. Only child jobs
+    # in a "true" batch job maintained by EE2 should have this field. Coordinating jobs will
+    # be updated with the child ID in child_jobs, unlike "fake" batch jobs that are created
+    # outside of the EE2 codebase using the 'parent_job_id' field.
+    batch_id = StringField()
+    child_jobs = ListField()  # Only coordinating jobs should have child jobs
+    # batch_parent_container = BooleanField(default=False) # Only parent container should have this
+    retry_ids = ListField()  # The retry_parent has been used to launch these jobs
+    # Only present on a retried job, not it's parent. If attempting to retry this job, use its parent instead
+    retry_parent = StringField()
+    retry_saved_toggle = BooleanField(
+        default=False
+    )  # Marked true when all retry steps have completed
 
     meta = {"collection": "ee2_jobs"}
 
@@ -322,6 +344,53 @@ class Job(Document):
 
     def __repr__(self):
         return self.to_json()
+
+
+# class BatchJobCollection(Document):
+#     """
+#     A container for storing related batch job containers
+#     Does this need to exist before creating a collection?
+#     """
+#
+#     # User and wsid are used for permission handling
+#     user = StringField(required=True)
+#     wsid = IntField(required=False, default=None)
+#     batch_jobs = ListField(required=True)
+#     updated = FloatField(default=time.time)
+#     title = StringField(required=False)
+#     description = StringField(required=False)
+#
+#     def save(self, *args, **kwargs):
+#         self.updated = time.time()
+#         return super(BatchJobCollection, self).save(*args, **kwargs)
+#
+#     def __repr__(self):
+#         return self.to_json()
+#
+#
+# class BatchJobContainer(Document):
+#     """
+#     A container for storing jobs information
+#     Can be created via run_job_batch endpoint, or through the UI/ee2 api,
+#     or a running job with the ee2_client
+#     """
+#
+#     meta = {"collection": "ee2_jobs"}
+#     user = StringField(required=True)
+#     wsid = IntField(required=False, default=None)
+#     updated = FloatField(default=time.time)
+#     scheduler_type = StringField(default="htcondor", required=False)
+#     child_jobs = ListField(required=True)
+#     title = StringField(required=False)
+#     description = StringField(required=False)
+#     meta = {"collection": "ee2_jobs"}
+#
+#     def save(self, *args, **kwargs):
+#         self.updated = time.time()
+#         return super(BatchJobContainer, self).save(*args, **kwargs)
+#
+#     def __repr__(self):
+#         return self.to_json()
 
 
 # Unused for now

@@ -12,7 +12,8 @@ from mongoengine import ValidationError
 
 from lib.execution_engine2.db.models.models import Job
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-from lib.execution_engine2.utils.CondorTuples import SubmissionInfo, CondorResources
+from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
+from execution_engine2.utils.clients import get_user_client_set, get_client_set
 from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 from test.utils_shared.test_utils import bootstrap, get_example_job
 
@@ -44,22 +45,18 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         cls.ws_id = 9999
         cls.token = "token"
 
-        cls.method_runner = SDKMethodRunner(
-            cls.cfg, user_id=cls.user_id, token=cls.token
-        )
-        cls.cr = CondorResources(
-            request_cpus="1",
-            request_disk="1GB",
-            request_memory="100M",
-            client_group="njs",
-        )
+        with open(config_file) as cf:
+            cls.method_runner = SDKMethodRunner(
+                get_user_client_set(cls.cfg, cls.user_id, cls.token),
+                get_client_set(cls.cfg, cf),
+            )
         cls.fake_used_resources = {
             "RemoteUserCpu": "1",
             "DiskUsage_RAW": "1",
             "DiskUsage": "1",
         }
         cls.mongo_util = cls.method_runner.get_mongo_util()
-        cls.sdkmr_test_helper = ee2_sdkmr_test_helper(mr=cls.method_runner)
+        cls.sdkmr_test_helper = ee2_sdkmr_test_helper(cls.user_id)
 
     def getRunner(self) -> SDKMethodRunner:
         # Initialize these clients from None
@@ -74,9 +71,67 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
 
     @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
+    def test_check_job(self, rq_mock, condor_mock):
+        rq_mock.add_matcher(
+            run_job_adapter(
+                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "a"}},
+                user_roles=["EE2_ADMIN"],
+            )
+        )
+        runner = self.getRunner()
+        runner.get_condor = MagicMock(return_value=condor_mock)
+        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=self.ws_id)
+        si = SubmissionInfo(clusterid="test", submit=job, error=None)
+        condor_mock.run_job = MagicMock(return_value=si)
+        condor_mock.get_job_resource_info = MagicMock(
+            return_value=self.fake_used_resources
+        )
+        job_id = runner.run_job(params=job)
+        job_status = runner.check_job(job_id=job_id)
+        expected_status = {
+            "authstrat": "kbaseworkspace",
+            "batch_job": False,
+            "child_jobs": [],
+            "created": 1623781528000,
+            "job_id": "60c8f0989a70bc8ec0ac0ec7",
+            "job_input": {
+                "app_id": "module/super_function",
+                "method": "module.method",
+                "narrative_cell_info": {},
+                "requirements": {
+                    "clientgroup": "njs",
+                    "cpu": 4,
+                    "disk": 30,
+                    "memory": 2000,
+                },
+                "service_ver": "some_commit_hash",
+                "source_ws_objects": [],
+                "wsid": 9999,
+            },
+            "batch_id": None,
+            "queued": 1623781529017,
+            "retry_count": 0,
+            "retry_ids": [],
+            "scheduler_id": "test",
+            "scheduler_type": "condor",
+            "status": "queued",
+            "updated": 1623781529017,
+            "user": "wsadmin",
+            "wsid": 9999,
+        }
+
+        expected_different = ["job_id", "created", "queued", "updated"]
+        for key, val in expected_status.items():
+            if key not in expected_different:
+                assert job_status[key] == val
+            else:
+                assert key in job_status
+
+    @requests_mock.Mocker()
+    @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_run_job_and_handle_held(self, rq_mock, condor_mock):
         """
-        Run a job, then call it held as an admin, and then check to see if the record contains condor info about the job
+        Run a job, then call it held as an admin, and then check to see if the record is set to error or terminated
         :param rq_mock:
         :param condor_mock:
         :return:
@@ -93,7 +148,6 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-        condor_mock.extract_resources = MagicMock(return_value=self.cr)
         condor_mock.get_job_resource_info = MagicMock(
             return_value=self.fake_used_resources
         )
@@ -103,10 +157,15 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         print(
             f"Job id is {job_id}. Status is {check_job.get('status')} Cluster is {check_job.get('scheduler_id')} "
         )
-
+        self.assertEqual(check_job.get("status"), Status.queued.value)
         job_record = runner.handle_held_job(cluster_id=check_job.get("scheduler_id"))
-        print("Records are", job_record.get("condor_job_ads"))
-        self.assertEqual(self.fake_used_resources, job_record.get("condor_job_ads"))
+        # This flaky test changes depending on your test environment
+        self.assertIn(
+            job_record.get("status"), [Status.terminated.value, Status.error.value]
+        )
+        # Condor ads are actually wrong and should only be updated after the job is completed,
+        # so we don't need to check them in this test right now.
+        # See EE2 issue #251
 
     def test_update_job_status(self):
         runner = self.getRunner()
@@ -177,21 +236,22 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         )
         runner = self.getRunner()  # type: SDKMethodRunner
         runner.get_condor = MagicMock(return_value=condor_mock)
-        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=self.ws_id)
+        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
+        job2 = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
+        job3 = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
-        jobs = [job, job, job]
+        jobs = [job, job2, job3]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
-        assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
+        assert "batch_id" in job_ids and isinstance(job_ids["batch_id"], str)
         assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
         assert len(job_ids["child_job_ids"]) == len(jobs)
 
-        runner.cancel_job(job_id=job_ids["parent_job_id"])
+        runner.cancel_job(job_id=job_ids["batch_id"])
         job_status = runner.check_jobs(
-            job_ids=[job_ids["parent_job_id"]] + job_ids["child_job_ids"]
+            job_ids=[job_ids["batch_id"]] + job_ids["child_job_ids"]
         )
         for job in job_status["job_states"]:
             assert job["status"] == Status.terminated.value
@@ -206,27 +266,30 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         )
         runner = self.getRunner()  # type: SDKMethodRunner
         runner.get_condor = MagicMock(return_value=condor_mock)
-        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=self.ws_id)
+        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
+        job2 = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
+        job3 = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
-        jobs = [job, job, job]
+        jobs = [job, job2, job3]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
-        assert "parent_job_id" in job_ids and isinstance(job_ids["parent_job_id"], str)
+        assert "batch_id" in job_ids and isinstance(job_ids["batch_id"], str)
         assert "child_job_ids" in job_ids and isinstance(job_ids["child_job_ids"], list)
         assert len(job_ids["child_job_ids"]) == len(jobs)
 
-        runner.abandon_children(
-            parent_job_id=job_ids["parent_job_id"],
+        res = runner.abandon_children(
+            batch_id=job_ids["batch_id"],
             child_job_ids=job_ids["child_job_ids"][0:2],
         )
+        assert res == {
+            "batch_id": job_ids["batch_id"],
+            "child_job_ids": job_ids["child_job_ids"][2:],
+        }
 
-        job_status = runner.check_jobs(job_ids=[job_ids["parent_job_id"]])[
-            "job_states"
-        ][0]
+        job_status = runner.check_jobs(job_ids=[job_ids["batch_id"]])["job_states"][0]
 
         for job_id in job_ids["child_job_ids"][0:2]:
             assert job_id not in job_status["child_jobs"]
@@ -243,19 +306,20 @@ class ee2_SDKMethodRunner_test_status(unittest.TestCase):
         )
         runner = self.getRunner()  # type: SDKMethodRunner
         runner.get_condor = MagicMock(return_value=condor_mock)
-        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=self.ws_id)
+        job = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
+        job2 = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
+        job3 = get_example_job_as_dict_for_runjob(user=self.user_id, wsid=None)
 
         si = SubmissionInfo(clusterid="test", submit=job, error=None)
         condor_mock.run_job = MagicMock(return_value=si)
-        condor_mock.extract_resources = MagicMock(return_value=self.cr)
 
-        jobs = [job, job, job]
+        jobs = [job, job2, job3]
         job_ids = runner.run_job_batch(params=jobs, batch_params={"wsid": self.ws_id})
 
-        job_status = runner.check_job_batch(parent_job_id=job_ids["parent_job_id"])
-        parent_job_state = job_status["parent_jobstate"]
+        job_status = runner.check_job_batch(batch_id=job_ids["batch_id"])
+        batch_jobstate = job_status["batch_jobstate"]
         child_jobstates = job_status["child_jobstates"]
 
         assert len(child_jobstates) == len(jobs)
         for child_job in child_jobstates:
-            assert child_job["job_id"] in parent_job_state.get("child_jobs")
+            assert child_job["job_id"] in batch_jobstate.get("child_jobs")

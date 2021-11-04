@@ -26,8 +26,8 @@ class SlackClient:
         message = f"Held Job Stats {held_job}"
         self.safe_chat_post_message(channel=self.channel, text=message)
 
-    def ee2_reaper_failure(self, endpoint="Unknown EE2 URL", job_id="Unknown"):
-        message = f"EE2 Held Job reaper failed for {endpoint}  (job {job_id}). Please check it out"
+    def ee2_reaper_failure(self, endpoint="Unknown EE2 URL", job_id="Unknown", e=None):
+        message = f"EE2 Held Job reaper failed for {endpoint}  (job {job_id}), {e}. Please check it out"
         self.safe_chat_post_message(channel=self.channel, text=message)
 
     def ee2_reaper_success(
@@ -55,7 +55,7 @@ class SlackClient:
         if self.debug is False:
             return
 
-        message = f"scheduler_id:{scheduler_id} job_id:{job_id} has been canceled due to {termination_code} ({self.endpoint})"
+        message = f"scheduler_id:`{scheduler_id}` job_id:`{job_id}` has been canceled due to `{termination_code}` ({self.endpoint})"
         self.safe_chat_post_message(channel=self.channel, text=message)
 
     def finish_job_message(self, job_id, scheduler_id, finish_status, error_code=None):

@@ -212,11 +212,8 @@ class KafkaClient:
             )
             # TODO Remove POLL?
             producer.poll(2)
-            logger.debug(
-                f"Successfully sent message to kafka at topic={topic} message={json.dumps(message.__dict__)} server_address={self.server_address}"
-            )
         except Exception as e:
-            logger.debug(
+            logger.error(
                 f"Failed to send message to kafka at topic={topic} message={json.dumps(message.__dict__)} server_address={self.server_address}"
             )
             raise Exception(e)

@@ -15,13 +15,6 @@ class SubmissionInfo(NamedTuple):
     error: Optional[Exception]
 
 
-class CondorResources(NamedTuple):
-    request_cpus: str
-    request_disk: str
-    request_memory: str
-    client_group: str
-
-
 class JobStatusCodes(enum.Enum):
     UNEXPANDED = 0
     IDLE = 1

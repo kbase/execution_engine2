@@ -1,4 +1,4 @@
-FROM kbase/sdkbase2:python
+FROM quay.io/kbase/sdkbase2:python
 MAINTAINER KBase Developer
 
 RUN apt-get clean all && apt-get update --fix-missing -y
@@ -17,6 +17,12 @@ RUN DEBIAN_FRONTEND=noninteractive wget -qO - https://research.cs.wisc.edu/htcon
     && echo "deb-src http://research.cs.wisc.edu/htcondor/debian/8.8/stretch stretch contrib" >> /etc/apt/sources.list \
     && apt-get update -y \
     && apt-get install -y condor
+
+# install jars
+# perhaps we should have test and prod dockerfiles to avoid jars and mongo installs in prod
+RUN cd /opt \
+    && git clone https://github.com/kbase/jars \
+    && cd -
 
 # install mongodb
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2930ADAE8CAF5059EE73BB4B58712A2291FA4AD5 \
@@ -37,12 +43,14 @@ RUN echo "mongodb-org hold" | dpkg --set-selections \
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
 && bash ~/miniconda.sh -b -p /miniconda-latest
 
+# Setup Cron
+COPY ./bin/ee2_cronjobs /etc/cron.d/ee2_cronjobs
+
 # Need to change startup scripts to match this in MAKEFILE
 ENV PATH=/miniconda-latest/bin:$PATH
 RUN pip install --upgrade pip && python -V
-
-
 COPY ./requirements.txt /kb/module/requirements.txt
+
 RUN pip install -r /kb/module/requirements.txt
 RUN adduser --disabled-password --gecos '' -shell /bin/bash kbase
 # -----------------------------------------
@@ -57,7 +65,10 @@ WORKDIR /kb/module/scripts
 RUN chmod +x download_runner.sh && ./download_runner.sh
 
 WORKDIR /kb/module/
+
+# Set deploy.cfg location
 ENV KB_DEPLOYMENT_CONFIG=/kb/module/deploy.cfg
+ENV PATH=/kb/module:$PATH
 
 ENTRYPOINT [ "./scripts/entrypoint.sh" ]
 CMD [ ]

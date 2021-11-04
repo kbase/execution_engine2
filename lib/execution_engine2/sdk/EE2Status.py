@@ -18,6 +18,7 @@ from lib.execution_engine2.db.models.models import (
     ErrorCode,
     TerminatedCode,
 )
+from execution_engine2.utils.arg_processing import parse_bool
 from lib.execution_engine2.utils.KafkaUtils import (
     KafkaCancelJob,
     KafkaCondorCommand,
@@ -93,7 +94,6 @@ class JobsStatus:
         :param as_admin: Cancel the job for a different user
         """
         # Is it inefficient to get the job twice? Is it cached?
-        # Maybe if the call fails, we don't actually cancel the job?
 
         job = self.sdkmr.get_job_with_permission(
             job_id, JobPermissions.WRITE, as_admin=as_admin
@@ -122,6 +122,7 @@ class JobsStatus:
         )
 
         # TODO Issue #190 IF success['TotalSuccess = 0'] == FALSE, don't send a kafka message?
+
         self.sdkmr.get_condor().cancel_job(job_id=f"{job.scheduler_id}.0")
         self.sdkmr.kafka_client.send_kafka_message(
             message=KafkaCancelJob(
@@ -354,9 +355,9 @@ class JobsStatus:
                 )
             )
         else:
-            self.sdkmr.logger.debug("Finishing job with a success")
+            self.sdkmr.get_logger().debug("Finishing job with a success")
             self._finish_job_with_success(job_id=job_id, job_output=job_output)
-            self.sdkmr.kafka_client.send_kafka_message(
+            self.sdkmr.get_kafka_client().send_kafka_message(
                 message=KafkaFinishJob(
                     job_id=str(job_id),
                     new_status=Status.completed.value,
@@ -367,15 +368,16 @@ class JobsStatus:
                 )
             )
             self._send_exec_stats_to_catalog(job_id=job_id)
-        self.update_finished_job_with_usage(job_id, as_admin=as_admin)
+        self._update_finished_job_with_usage(job_id, as_admin=as_admin)
 
-    def update_finished_job_with_usage(self, job_id, as_admin=None) -> Dict:
+    def _update_finished_job_with_usage(self, job_id, as_admin=None) -> Dict:
         """
         # TODO Does this need a kafka message?
-        :param job_id:
-        :param as_admin:
-        :return:
+        # TODO EE2 issue #251 : The saved job stats are inaccurate:
+        # The usage is not recorded until the job is completely finished.
+        :return: Resources at the time the job almost finished.
         """
+        # note this method is replaced by a magic mock in some tests
         job = self.sdkmr.get_job_with_permission(
             job_id=job_id, requested_job_perm=JobPermissions.WRITE, as_admin=as_admin
         )
@@ -389,7 +391,9 @@ class JobsStatus:
             )
         condor = self.sdkmr.get_condor()
         resources = condor.get_job_resource_info(job_id=job_id)
-        self.sdkmr.logger.debug(f"Extracted the following condor job ads {resources}")
+        self.sdkmr.get_logger().debug(
+            f"Extracted the following condor job ads {resources}"
+        )
         self.sdkmr.get_mongo_util().update_job_resources(
             job_id=job_id, resources=resources
         )
@@ -445,7 +449,7 @@ class JobsStatus:
                     "Checking for read permission to: {}".format(job_ids)
                 )
                 perms = can_read_jobs(
-                    jobs, self.sdkmr.user_id, self.sdkmr.token, self.sdkmr.config
+                    jobs, self.sdkmr.user_id, self.sdkmr.workspace_auth
                 )
             except RuntimeError as e:
                 self.sdkmr.logger.error(
@@ -468,7 +472,9 @@ class JobsStatus:
             else:
                 mongo_rec = job.to_mongo().to_dict()
                 del mongo_rec["_id"]
+                mongo_rec["retry_count"] = len(job["retry_ids"])
                 mongo_rec["job_id"] = str(job.id)
+                mongo_rec["batch_id"] = job.batch_id
                 mongo_rec["created"] = int(job.id.generation_time.timestamp() * 1000)
                 mongo_rec["updated"] = int(job.updated * 1000)
                 if job.estimating:
@@ -486,7 +492,7 @@ class JobsStatus:
             {job_id: job_states.get(job_id, []) for job_id in job_ids}
         )
 
-        if return_list is not None and self.sdkmr.parse_bool_from_string(return_list):
+        if return_list is not None and parse_bool(return_list):
             job_states = {"job_states": list(job_states.values())}
 
         return job_states
@@ -502,8 +508,7 @@ class JobsStatus:
         if exclude_fields is None:
             exclude_fields = []
 
-        ws_auth = self.sdkmr.get_workspace_auth()
-        if not ws_auth.can_read(workspace_id):
+        if not self.sdkmr.workspace_auth.can_read(workspace_id):
             self.sdkmr.logger.debug(
                 f"User {self.sdkmr.user_id} doesn't have permission to read jobs in workspace {workspace_id}."
             )
@@ -534,8 +539,13 @@ class JobsStatus:
         log_exec_stats_params = dict()
         log_exec_stats_params["user_id"] = job.user
         app_id = job_input.app_id
-        log_exec_stats_params["app_module_name"] = app_id.split("/")[0]
-        log_exec_stats_params["app_id"] = app_id
+        if app_id:
+            # Note this will not work properly for app_ids incorrectly separated by a '.',
+            # which happens in some KBase code (which needs to be fixed at some point) -
+            # notably the narrative data download code, maybe more
+            # It's been this way for a long time, so leave for now
+            log_exec_stats_params["app_module_name"] = app_id.split("/")[0]
+            log_exec_stats_params["app_id"] = app_id
         method = job_input.method
         log_exec_stats_params["func_module_name"] = method.split(".")[0]
         log_exec_stats_params["func_name"] = method.split(".")[-1]
@@ -546,16 +556,19 @@ class JobsStatus:
         log_exec_stats_params["is_error"] = int(job.status == Status.error.value)
         log_exec_stats_params["job_id"] = job_id
 
-        self.sdkmr.catalog_utils.catalog.log_exec_stats(log_exec_stats_params)
+        self.sdkmr.get_catalog().log_exec_stats(log_exec_stats_params)
 
-    def abandon_children(self, parent_job_id, child_job_ids, as_admin=False) -> Dict:
-        if not parent_job_id:
-            raise ValueError("Please provide valid parent_job id")
+    def abandon_children(self, batch_id, child_job_ids, as_admin=False) -> Dict:
+        # Note this does not work for 'manual' batch jobs as the parent job is
+        # never updated with the child jobs. It will only work with batch jobs specifically
+        # created by the run_job_batch endpoint.
+        if not batch_id:
+            raise ValueError("Please provide valid batch_id")
         if not child_job_ids:
             raise ValueError("Please provide job_ids of children to abandon")
 
         job = self.sdkmr.get_job_with_permission(
-            parent_job_id, JobPermissions.WRITE, as_admin=as_admin
+            batch_id, JobPermissions.WRITE, as_admin=as_admin
         )  # type: Job
         for child_job_id in child_job_ids:
             if child_job_id not in job.child_jobs:
@@ -563,11 +576,10 @@ class JobsStatus:
                     f"Couldn't find {child_job_id} in {child_job_ids}"
                 )
 
-        with self.sdkmr.get_mongo_util().mongo_engine_connection():
-            job.update(pull_all__child_jobs=child_job_ids)
-            job.reload()
+        job.update(pull_all__child_jobs=child_job_ids)
+        job.reload()
 
-        return {"parent_job_id": parent_job_id, "child_jobs": job.child_jobs}
+        return {"batch_id": batch_id, "child_job_ids": job.child_jobs}
 
     def start_job(self, job_id, skip_estimation=True, as_admin=False):
         """

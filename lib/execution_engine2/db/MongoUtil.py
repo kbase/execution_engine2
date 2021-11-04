@@ -3,27 +3,32 @@ import subprocess
 import time
 import traceback
 from contextlib import contextmanager
-
+from datetime import datetime
+from typing import Dict, List
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
-from pymongo import MongoClient
+from pymongo import MongoClient, UpdateOne
 from pymongo.errors import ServerSelectionTimeoutError
 
-from lib.execution_engine2.db.models.models import JobLog, Job, Status, TerminatedCode
-from lib.execution_engine2.exceptions import (
+from execution_engine2.db.models.models import JobLog, Job, Status, TerminatedCode
+from execution_engine2.exceptions import (
     RecordNotFoundException,
     InvalidStatusTransitionException,
 )
 
+from lib.execution_engine2.utils.arg_processing import parse_bool
+from execution_engine2.sdk.EE2Runjob import JobIdPair
+
 
 class MongoUtil:
-    def __init__(self, config: dict):
+    def __init__(self, config: Dict):
         self.config = config
         self.mongo_host = config["mongo-host"]
         self.mongo_port = int(config["mongo-port"])
         self.mongo_database = config["mongo-database"]
         self.mongo_user = config["mongo-user"]
         self.mongo_pass = config["mongo-password"]
+        self.retry_rewrites = parse_bool(config["mongo-retry-rewrites"])
         self.mongo_authmechanism = config["mongo-authmechanism"]
         self.mongo_collection = None
         self._start_local_service()
@@ -39,9 +44,10 @@ class MongoUtil:
             password=self.mongo_pass,
             authSource=self.mongo_database,
             authMechanism=self.mongo_authmechanism,
+            retryWrites=self.retry_rewrites,
         )
 
-    def _get_mongoengine_client(self):
+    def _get_mongoengine_client(self) -> connection:
         return connect(
             db=self.mongo_database,
             host=self.mongo_host,
@@ -50,7 +56,9 @@ class MongoUtil:
             password=self.mongo_pass,
             authentication_source=self.mongo_database,
             authentication_mechanism=self.mongo_authmechanism,
-        )  # type: connection
+            retryWrites=self.retry_rewrites,
+        )
+        # This MongoDB deployment does not support retryable writes
 
     def _start_local_service(self):
         try:
@@ -215,7 +223,9 @@ class MongoUtil:
 
         return job
 
-    def get_jobs(self, job_ids=None, exclude_fields=None, sort_id_ascending=None):
+    def get_jobs(
+        self, job_ids=None, exclude_fields=None, sort_id_ascending=None
+    ) -> List[Job]:
         if not (job_ids and isinstance(job_ids, list)):
             raise ValueError("Please provide a non empty list of job ids")
 
@@ -261,6 +271,68 @@ class MongoUtil:
         ]:
             return True
         return False
+
+    def update_jobs_to_queued(
+        self, job_id_pairs: List[JobIdPair], scheduler_type: str = "condor"
+    ) -> None:
+        f"""
+        * Adds scheduler id to list of jobs
+        * Updates a list of {Status.created.value} jobs to queued. Does not work on jobs that already have gone through any other
+        status transition. If the record is not in the {Status.created.value} status, nothing will happen
+        :param job_id_pairs: A list of pairs of Job Ids and Scheduler Ids
+        :param scheduler_type: The scheduler this job was queued in, default condor
+        """
+
+        bulk_update_scheduler_jobs = []
+        bulk_update_created_to_queued = []
+        queue_time_now = datetime.utcnow().timestamp()
+        for job_id_pair in job_id_pairs:
+            if job_id_pair.job_id is None:
+                raise ValueError(
+                    f"Provided a bad job_id_pair, missing job_id for {job_id_pair.scheduler_id}"
+                )
+            elif job_id_pair.scheduler_id is None:
+                raise ValueError(
+                    f"Provided a bad job_id_pair, missing scheduler_id for {job_id_pair.job_id}"
+                )
+
+            bulk_update_scheduler_jobs.append(
+                UpdateOne(
+                    {
+                        "_id": ObjectId(job_id_pair.job_id),
+                    },
+                    {
+                        "$set": {
+                            "scheduler_id": job_id_pair.scheduler_id,
+                            "scheduler_type": scheduler_type,
+                        }
+                    },
+                )
+            )
+            bulk_update_created_to_queued.append(
+                UpdateOne(
+                    {
+                        "_id": ObjectId(job_id_pair.job_id),
+                        "status": Status.created.value,
+                    },
+                    {
+                        "$set": {
+                            "status": Status.queued.value,
+                            "queued": queue_time_now,
+                        }
+                    },
+                )
+            )
+        # Update provided jobs with scheduler id. Then only update non terminated jobs into updated status.
+        mongo_collection = self.config["mongo-jobs-collection"]
+
+        if bulk_update_scheduler_jobs:
+            with self.pymongo_client(mongo_collection) as pymongo_client:
+                ee2_jobs_col = pymongo_client[self.mongo_database][mongo_collection]
+                # Bulk Update to add scheduler ids
+                ee2_jobs_col.bulk_write(bulk_update_scheduler_jobs, ordered=False)
+                # Bulk Update to add queued status ids
+                ee2_jobs_col.bulk_write(bulk_update_created_to_queued, ordered=False)
 
     def cancel_job(self, job_id=None, terminated_code=None):
         """
@@ -372,8 +444,6 @@ class MongoUtil:
                     f"Cannot change already finished/terminated/errored job.  {j.status} to {status}"
                 )
 
-            self.logger.debug(f"job status is {j.status}. going to update to {status}")
-
             #  A job in status running can only be terminated/error/finished
             if j.status == Status.running.value:
                 if status not in [
@@ -421,6 +491,18 @@ class MongoUtil:
     def mongo_engine_connection(self):
         yield self.me_connection
 
+    def insert_jobs(self, jobs_to_insert: List[Job]) -> List[ObjectId]:
+        """
+        Insert multiple job records using MongoEngine
+        :param jobs_to_insert: Multiple jobs to insert at once
+        :return: List of job ids from the insertion
+        """
+        # TODO Look at pymongo write_concerns that may be useful
+        # TODO see if pymongo is faster
+        # TODO: Think about error handling
+        inserted = Job.objects.insert(doc_or_docs=jobs_to_insert, load_bulk=False)
+        return inserted
+
     def insert_one(self, doc):
         """
         insert a doc into collection
@@ -442,7 +524,7 @@ class MongoUtil:
         return rec.inserted_id
 
     def _push_job_logs(self, log_lines: JobLog, job_id: str, record_count: int):
-        """ append a list of job logs, and update the record count  """
+        """append a list of job logs, and update the record count"""
 
         update_filter = {"_id": ObjectId(job_id)}
         push_op = {"lines": {"$each": log_lines}}

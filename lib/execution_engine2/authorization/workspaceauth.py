@@ -1,8 +1,8 @@
 from typing import List, Dict
 from enum import Enum
-from lib.execution_engine2.authorization.basestrategy import AuthStrategy
-from lib.installed_clients.WorkspaceClient import Workspace
-from lib.installed_clients.baseclient import ServerError
+from execution_engine2.authorization.basestrategy import AuthStrategy
+from installed_clients.WorkspaceClient import Workspace
+from installed_clients.baseclient import ServerError
 
 STRATEGY = "kbaseworkspace"
 
@@ -15,8 +15,8 @@ class WorkspacePermission(Enum):
 
 
 class WorkspaceAuth(AuthStrategy):
-    def __init__(self, token: str, user_id: str, ws_url: str):
-        self.ws_client = Workspace(url=ws_url, token=token)
+    def __init__(self, user_id: str, workspace: Workspace):
+        self.ws_client = workspace
         self.user_id = user_id
 
     def can_read(self, auth_param: str) -> bool:
