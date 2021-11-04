@@ -16,7 +16,6 @@ from execution_engine2.exceptions import (
     InvalidStatusListException,
     NotBatchJobException,
     RetryFailureException,
-    BatchTerminationException,
 )
 from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.utils.clients import (

@@ -1711,7 +1711,8 @@ class execution_engine2:
         )
         job_ids = mr.cancel_batch_job(job_id=params.get('job_id'),
                                       status_list=params.get('status_list'),
-                                      as_admin=params.get('as_admin'))
+                                      as_admin=params.get('as_admin'),
+                                      terminated_code=params.get('terminated_code'))
         #END cancel_batch_job
 
         # At some point might do deeper type checking...

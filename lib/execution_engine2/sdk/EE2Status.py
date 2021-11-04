@@ -10,8 +10,6 @@ from execution_engine2.exceptions import (
     ChildrenNotFoundError,
     InvalidStatusListException,
     NotBatchJobException,
-    CannotRetryJob,
-    BatchTerminationException,
 )
 from execution_engine2.sdk.EE2Constants import JobError
 from lib.execution_engine2.authorization.authstrategy import can_read_jobs
