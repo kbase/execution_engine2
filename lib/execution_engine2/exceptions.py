@@ -19,7 +19,7 @@ class ExecutionEngineException(Exception):
 
 
 class InvalidStatusListException(ExecutionEngineValueError):
-    """Invalid job state status provided"""
+    """Invalid job status provided"""
 
 
 class BatchTerminationException(ExecutionEngineException):

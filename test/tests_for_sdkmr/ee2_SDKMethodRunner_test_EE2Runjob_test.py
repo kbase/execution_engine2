@@ -591,14 +591,13 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 == "Provide a list of status codes from ['terminated', 'error']."
             )
 
-        for status_list in [["running"], ["apple"], [None]]:
-            status = status_list[0]
+        for status_list in [["running"], ["apple", "kertuffl"], [None]]:
             expected_exception = InvalidStatusListException
             with self.assertRaises(expected_exception) as e:
                 runner.retry_batch(job_id=batch_job_id, status_list=status_list)
             assert (
                 e.exception.args[0]
-                == f"Provided status {status} not retryable . Status not in ['terminated', 'error']"
+                == f"Provided status list contains {status_list}, which are not retryable. Status not in ['terminated', 'error']"
             )
 
         with self.assertRaises(NotBatchJobException) as e:
@@ -610,7 +609,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 runner.retry_batch(job_id=batch_job_id, status_list=status_list)
             assert (
                 e.exception.args[0]
-                == f"No retryable jobs found with a state of {status_list}"
+                == f"No retryable jobs found with a status in {status_list}"
             )
 
         for job_id in child_jobs:
@@ -662,15 +661,12 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             for c in oc:
                 combos_list.append(list(c))
 
-        possible_errors = []
-        for item in [
-            Status.error.value,
-            Status.terminated.value,
-            Status.completed.value,
-        ]:
-            possible_errors.append(
-                f"Provided status {item} not in ['created', 'queued', 'estimating', 'running']"
-            )
+        valid_statuses = [
+            Status.created.value,
+            Status.queued.value,
+            Status.estimating.value,
+            Status.running.value,
+        ]
 
         for status_list in combos_list:
             failable = False
@@ -687,17 +683,18 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                     runner.cancel_batch_job(
                         job_id=batch_job_id, status_list=status_list, terminated_code=0
                     )
-                    assert e.exception.args[0] in [possible_errors]
-            else:
-                with self.assertRaises(BatchTerminationException) as e:
-                    runner.cancel_batch_job(
-                        job_id=batch_job_id, status_list=status_list, terminated_code=0
-                    )
-                    assert (
-                        e.exception.args[0]
-                        == f"{batch_job_id} didn't have any valid child jobs to terminate"
-                    )
 
+                for item in valid_statuses:
+                    try:
+                        del status_list[status_list.index(item)]
+                    except Exception:
+                        pass
+
+                expected = f"Provided status list contains {status_list}, which are not cancelable. Status not in {valid_statuses}"
+
+                assert e.exception.args[0] == expected
+
+        # Assert cancelled jobs?
         job_status = runner.check_job_batch(batch_id=batch_job_id)
         print(job_status)
 

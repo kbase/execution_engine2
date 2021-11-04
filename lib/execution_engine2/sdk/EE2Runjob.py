@@ -760,7 +760,9 @@ class EE2RunJob:
             job_id=job_id, job=job, batch_job=batch_job, as_admin=as_admin
         )
 
-    def retry_batch(self, job_id: str, status_list: list, as_admin: bool = False):
+    def retry_jobs_in_batch_by_status(
+        self, job_id: str, status_list: list, as_admin: bool = False
+    ):
         """
         Retry jobs by status given a BATCH_ID
         :param job_id: The batch job id to retry jobs for
@@ -774,11 +776,15 @@ class EE2RunJob:
             raise InvalidStatusListException(
                 f"Provide a list of status codes from {valid_statuses}."
             )
-        for status in status_list:
-            if not self._retryable(status):
-                raise InvalidStatusListException(
-                    f"Provided status {status} not retryable . Status not in {valid_statuses}"
-                )
+
+        invalid_statuses = [
+            status for status in status_list if not self._retryable(status)
+        ]
+        if len(invalid_statuses):
+            raise InvalidStatusListException(
+                f"Provided status list contains {invalid_statuses}, which are not retryable. "
+                + f"Status not in {valid_statuses}"
+            )
 
         batch_job = self.sdkmr.get_job_with_permission(
             job_id, JobPermissions.WRITE, as_admin=as_admin
@@ -786,7 +792,9 @@ class EE2RunJob:
         if not batch_job.batch_job:
             raise NotBatchJobException(f"{job_id} is not a batch job")
         # Retry and Report
-        # Get jobs that do NOT have a retry_parent, i.e. only jobs that haven't been retried and retry_parents only
+        # Get jobs that
+        # do NOT have a retry_parent, i.e. only jobs that haven't been retried
+        # and jobs that have not retried retry_parents only
         potentially_retryable_child_jobs = (
             self.sdkmr.get_mongo_util().get_jobs_with_status(
                 job_ids=batch_job.child_jobs,
@@ -797,13 +805,13 @@ class EE2RunJob:
         # So we don't want to retry jobs that have retry jobs in progress,
         # or a retry job that has already been successful
         retryable_child_job_ids = []
-        for job in potentially_retryable_child_jobs:
-            if self.sdkmr.get_mongo_util().eligible_for_retry(job=job):
-                retryable_child_job_ids.append(str(job.id))
+        for child_job in potentially_retryable_child_jobs:
+            if self.sdkmr.get_mongo_util().eligible_for_retry(job=child_job):
+                retryable_child_job_ids.append(str(child_job.id))
 
         if len(retryable_child_job_ids) == 0:
             raise RetryFailureException(
-                f"No retryable jobs found with a state of {status_list}"
+                f"No retryable jobs found with a status in {status_list}"
             )
 
         return self.retry_multiple(job_ids=retryable_child_job_ids)

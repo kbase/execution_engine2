@@ -268,7 +268,7 @@
             Requires the user to keep track of the job states of the Status enum in the ee2 models file
             If no status_list is provided, an exception is thrown.
         */
-        funcdef retry_batch_jobs(BatchRetryParams params) returns (list<RetryResult> retry_result) authentication required;
+        funcdef retry_batch_jobs_by_status(BatchRetryParams params) returns (list<RetryResult> retry_result) authentication required;
 
 
         funcdef abandon_children(AbandonChildren params)
@@ -608,7 +608,7 @@
 
         /*
             batch_job_id: BATCH_ID to cancel
-            status_list: optional filter of either 'terminated' or 'error'. Not setting this results in cancel of both
+            status_list: required filter of one or more of [created, estimating, queued, or running]
             terminated_code: optional terminated code, default to terminated by user
             as_admin: retry someone else's job in your namespace
             @optional terminated_code
@@ -626,7 +626,7 @@
             (Requires the user to keep track of the job states of the Status enum in the ee2 models file)
             If no status_list is provided, an exception is thrown.
         */
-        funcdef cancel_batch_job(BatchCancelParams params) returns (list<job_id> job_ids) authentication required;
+        funcdef cancel_batch_jobs_by_status(BatchCancelParams params) returns (list<job_id> job_ids) authentication required;
 
         /*
             job_id - id of job running method

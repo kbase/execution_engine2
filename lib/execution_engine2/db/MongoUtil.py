@@ -253,15 +253,15 @@ class MongoUtil:
         """
         Checks the job record to see if it has any retry_ids,
         and if those retry_ids do not contain an ineligble job state
-        :param job:
-        :return:
+        :param job: Should be a child job of a BATCH job
         """
-        if job.retry_ids == []:
+
+        if not job.retry_ids:
             return True
-        eligble_states = [Status.completed.value, Status.error.value]
+        valid_statuses = [Status.terminated.value, Status.error.value]
         jobs = self.get_jobs(job_ids=job.retry_ids)
         for job in jobs:
-            if job.status not in eligble_states:
+            if job.status not in valid_statuses:
                 return False
         return True
 

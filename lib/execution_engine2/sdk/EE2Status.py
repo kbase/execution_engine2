@@ -89,7 +89,7 @@ class JobsStatus:
         # There's probably a better way and a return type, but not really sure what I need yet
         return json.loads(json.dumps(j.to_mongo().to_dict(), default=str))
 
-    def cancel_batch_job(
+    def cancel_jobs_in_batch_by_status(
         self, job_id, status_list, terminated_code=None, as_admin=False
     ):
         """
@@ -111,11 +111,14 @@ class JobsStatus:
             raise InvalidStatusListException(
                 f"Provide a list of valid job statuses from {valid_statuses}."
             )
-        for status in status_list:
-            if status not in valid_statuses:
-                raise InvalidStatusListException(
-                    f"Provided status {status} not in {valid_statuses}."
-                )
+
+        found_invalid_statuses = [
+            status for status in status_list if status not in valid_statuses
+        ]
+        if len(found_invalid_statuses):
+            raise InvalidStatusListException(
+                f"Provided status list contains {found_invalid_statuses}, which are not cancelable. Status not in {valid_statuses}"
+            )
 
         batch_job = self.sdkmr.get_job_with_permission(
             job_id, JobPermissions.WRITE, as_admin=as_admin
@@ -125,31 +128,20 @@ class JobsStatus:
 
         # Termination
         terminated_ids = []
-        child_jobs = self.sdkmr.get_mongo_util().get_jobs_with_status(
-            job_ids=batch_job.child_jobs, status_list=status_list
+        child_job_ids = self.sdkmr.get_mongo_util().get_jobs_with_status(
+            job_ids=batch_job.child_jobs, status_list=status_list, only_job_ids=False
         )
-        for job in child_jobs:
-            try:
-                self.cancel_job(
-                    job=job, terminated_code=terminated_code, as_admin=as_admin
-                )
-                terminated_ids.append(job.id)
-            except Exception:
-                # Nothing to report, a job might have finished by now
-                pass
+        for job in child_job_ids:
+            self.cancel_job(job=job, terminated_code=terminated_code, as_admin=as_admin)
+            terminated_ids.append(str(job.id))
 
-        # Report
-        if len(terminated_ids) == 0:
-            raise BatchTerminationException(
-                f"{job_id} didn't have any valid child jobs to terminate"
-            )
         return terminated_ids
 
     def cancel_job(self, job_id=None, job=None, terminated_code=None, as_admin=False):
         """
         Authorization Required: Ability to Read and Write to the Workspace
         Terminates child jobs as well
-
+        Need to provide exactly one job id or a Job
         :param job: Job Object to cancel
         :param job_id: Job ID To cancel
         :param terminated_code: Default Terminated By User
@@ -170,14 +162,8 @@ class JobsStatus:
             terminated_code = TerminatedCode.terminated_by_user.value
 
         self.sdkmr.get_mongo_util().cancel_job(
-            job_id=job_id, terminated_code=terminated_code
+            job_id=job.id, terminated_code=terminated_code
         )
-        for child_job_id in job.child_jobs:
-            self.cancel_job(
-                job_id=child_job_id,
-                terminated_code=TerminatedCode.terminated_by_batch_abort.value,
-            )
-
         for child_job_id in job.child_jobs:
             self.cancel_job(
                 job_id=child_job_id,

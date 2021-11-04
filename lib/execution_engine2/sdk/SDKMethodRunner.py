@@ -337,7 +337,7 @@ class SDKMethodRunner:
 
     def retry_batch(self, job_id, status_list, as_admin=False):
         """Authorization Required Read/Write"""
-        return self.get_runjob().retry_batch(
+        return self.get_runjob().retry_jobs_in_batch_by_status(
             job_id=job_id, as_admin=as_admin, status_list=status_list
         )
 
@@ -402,7 +402,7 @@ class SDKMethodRunner:
 
     def cancel_batch_job(self, job_id, status_list, terminated_code, as_admin=False):
         """Authorization Required Read/Write"""
-        return self.get_jobs_status().cancel_batch_job(
+        return self.get_jobs_status().cancel_jobs_in_batch_by_status(
             job_id=job_id,
             terminated_code=terminated_code,
             status_list=status_list,
