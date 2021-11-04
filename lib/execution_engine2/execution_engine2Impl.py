@@ -30,7 +30,7 @@ class execution_engine2:
     ######################################### noqa
     VERSION = "0.0.5"
     GIT_URL = "git@github.com:kbase/execution_engine2.git"
-    GIT_COMMIT_HASH = "9adfa50d1ea628eb3907038c9993c6a52fe34fc7"
+    GIT_COMMIT_HASH = "6f9e6f9593f74a64cd8453c342546e97b269ba14"
 
     #BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
@@ -450,17 +450,17 @@ class execution_engine2:
         # return the results
         return [retry_result]
 
-    def retry_batch_jobs(self, ctx, params):
+    def retry_batch_jobs_by_status(self, ctx, params):
         """
         Retry a job based on a batch id with a job_state status list ['error', 'terminated']
         Requires the user to keep track of the job states of the Status enum in the ee2 models file
         If no status_list is provided, an exception is thrown.
         :param params: instance of type "BatchRetryParams" (batch_job_id:
-           BATCH_ID to retry status_filter: job states in ['terminated',
+           BATCH_ID to retry status_list: job states in ['terminated',
            'error'] (valid retry states) as_admin: retry someone else's job
            in your namespace #TODO: Possibly Add list<JobRequirements>
            job_requirements;) -> structure: parameter "batch_job_id" of type
-           "job_id" (A job id.), parameter "status_filter" of list of type
+           "job_id" (A job id.), parameter "status_list" of list of type
            "job_status" (A job state's job status.), parameter "as_admin" of
            type "boolean" (@range [0,1])
         :returns: instance of list of type "RetryResult" (job_id of retried
@@ -472,21 +472,18 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: retry_result
-        #BEGIN retry_batch_jobs
-        mr = SDKMethodRunner(
-            user_clients=self.gen_cfg.get_user_clients(ctx),
-            clients=self.clients,
-            job_permission_cache=self.job_permission_cache,
-            admin_permissions_cache=self.admin_permissions_cache
-        )
+        #BEGIN retry_batch_jobs_by_status
+        mr = SDKMethodRunner(user_clients=self.gen_cfg.get_user_clients(ctx), clients=self.clients,
+                             job_permission_cache=self.job_permission_cache,
+                             admin_permissions_cache=self.admin_permissions_cache)
         retry_result = mr.retry_batch(job_id=params.get('job_id'),
                                       status_list=params.get('status_list'),
                                       as_admin=params.get('as_admin'))
-        #END retry_batch_jobs
+        #END retry_batch_jobs_by_status
 
         # At some point might do deeper type checking...
         if not isinstance(retry_result, list):
-            raise ValueError('Method retry_batch_jobs return value ' +
+            raise ValueError('Method retry_batch_jobs_by_status return value ' +
                              'retry_result is not type list as required.')
         # return the results
         return [retry_result]
@@ -1682,42 +1679,40 @@ class execution_engine2:
         #END cancel_job
         pass
 
-    def cancel_batch_job(self, ctx, params):
+    def cancel_batch_jobs_by_status(self, ctx, params):
         """
         Cancels children of a batch job. This results in the status becoming "terminated" with termination_code 0.
         Valid statuses are ['created', 'estimating', 'queued', 'running']
         (Requires the user to keep track of the job states of the Status enum in the ee2 models file)
-        If no status_filter is provided, an exception is thrown.
+        If no status_list is provided, an exception is thrown.
         :param params: instance of type "BatchCancelParams" (batch_job_id:
-           BATCH_ID to cancel status_filter: optional filter of either
-           'terminated' or 'error'. Not setting this results in cancel of
-           both terminated_code: optional terminated code, default to
-           terminated by user as_admin: retry someone else's job in your
-           namespace @optional terminated_code) -> structure: parameter
-           "batch_job_id" of type "job_id" (A job id.), parameter
-           "status_filter" of list of type "job_status" (A job state's job
-           status.), parameter "terminated_code" of Long, parameter
-           "as_admin" of type "boolean" (@range [0,1])
+           BATCH_ID to cancel status_list: required filter of one or more of
+           [created, estimating, queued, or running] terminated_code:
+           optional terminated code, default to terminated by user as_admin:
+           retry someone else's job in your namespace @optional
+           terminated_code) -> structure: parameter "batch_job_id" of type
+           "job_id" (A job id.), parameter "status_list" of list of type
+           "job_status" (A job state's job status.), parameter
+           "terminated_code" of Long, parameter "as_admin" of type "boolean"
+           (@range [0,1])
         :returns: instance of list of type "job_id" (A job id.)
         """
         # ctx is the context object
         # return variables are: job_ids
-        #BEGIN cancel_batch_job
-        mr = SDKMethodRunner(
-            user_clients=self.gen_cfg.get_user_clients(ctx),
-            clients=self.clients,
-            job_permission_cache=self.job_permission_cache,
-            admin_permissions_cache=self.admin_permissions_cache
-        )
+        #BEGIN cancel_batch_jobs_by_status
+        mr = SDKMethodRunner(user_clients=self.gen_cfg.get_user_clients(ctx), clients=self.clients,
+                             job_permission_cache=self.job_permission_cache,
+                             admin_permissions_cache=self.admin_permissions_cache)
+
         job_ids = mr.cancel_batch_job(job_id=params.get('job_id'),
                                       status_list=params.get('status_list'),
                                       as_admin=params.get('as_admin'),
                                       terminated_code=params.get('terminated_code'))
-        #END cancel_batch_job
+        #END cancel_batch_jobs_by_status
 
         # At some point might do deeper type checking...
         if not isinstance(job_ids, list):
-            raise ValueError('Method cancel_batch_job return value ' +
+            raise ValueError('Method cancel_batch_jobs_by_status return value ' +
                              'job_ids is not type list as required.')
         # return the results
         return [job_ids]
