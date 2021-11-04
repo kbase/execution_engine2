@@ -338,7 +338,7 @@ class Job(Document):
 
     # See https://docs.mongoengine.org/guide/defining-documents.html#indexes
     # Hmm, are these indexes need to be + or - ?
-    indexes = [("status", "-created"), ("status", "-queued")]
+    indexes = [("status", "batch_job"), ("status", "-queued")]
 
     meta = {"collection": "ee2_jobs", "indexes": indexes}
 
