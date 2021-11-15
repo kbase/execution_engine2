@@ -16,7 +16,14 @@ Still to be determined (not in scope of this ADR):
 ## Intro
 Sometimes a calculation requires too many resources from one node (walltime, memory, disk), so the calculation gets spread across multiple machines.
 The final step of the app that uses KBParallels is to create a report. This step may use results from all of the computed jobs to create the final report.
-In order to do this, some apps use a mechanism called KBParallel. The apps are listed at [DATAUP-111](https://kbase-jira.atlassian.net/browse/DATAUP-111)
+In order to do this, some apps use a mechanism called KBParallel. The apps listed at [git](https://github.com/search?q=kbparallel&type=code) all use kbparallels. There are 7 known apps 
+* kb_Bowtie2
+* refseq_importer
+* kb_concoct
+* kb_phylogenomics
+* kb_hisat2
+* kb_meta_decoder
+*  kb_Bwa. 
 
 ## The current implementation of Batch Analysis in [kb_BatchApp](https://github.com/kbaseapps/kb_BatchApp) at KBase has the following issues:
 
