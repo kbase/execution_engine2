@@ -16,7 +16,7 @@ Still to be determined (not in scope of this ADR):
 ## Intro
 Sometimes a calculation requires too many resources from one node (walltime, memory, disk), so the calculation gets spread across multiple machines.
 The final step of the app that uses KBParallels is to create a report. This step may use results from all of the computed jobs to create the final report.
-In order to do this, some apps use a mechanism called KBParallel. The apps listed at [git](https://github.com/search?q=kbparallel&type=code) all use kbparallels. There are 7 known apps 
+In order to do this, the following apps use a mechanism called KBParallel
 * kb_Bowtie2
 * refseq_importer
 * kb_concoct
