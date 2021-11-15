@@ -23,7 +23,7 @@ In order to do this, some apps use a mechanism called KBParallel. The apps liste
 * kb_phylogenomics
 * kb_hisat2
 * kb_meta_decoder
-*  kb_Bwa. 
+* kb_Bwa
 
 ## The current implementation of Batch Analysis in [kb_BatchApp](https://github.com/kbaseapps/kb_BatchApp) at KBase has the following issues:
 
