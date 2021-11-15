@@ -116,17 +116,17 @@ Still to be determined (not in scope of this ADR):
 ### Limit multiple instances of kbparallels
 
 * `+` Simplest solution, quickest turnaround, fixes deadlock issue
-* `-` UI still broken for batch analysis
+* `-` Addresses only the deadlocking issue, UI still broken for regular runs and batch runs 
 
-## DEADLOCK: Increase number of slots or Seperate Queue for kbparallels apps without 10 job limit
+### Increase number of slots or Seperate Queue for kbparallels apps without 10 job limit
 * `+` Simple solutions, quick turnarounds, fixes deadlock issue
-* `-` UI still broken for batch analysis 
+* `-` Addresses only the deadlocking issue, UI still broken for regular runs and batch runs
 * `-` A small amount of users can take over the entire system
 * `-` The calculations done by the apps will interfere with other apps and cause crashes/failures
 
-## DEADLOCK: Modify KBP to do only local submission, Move the job to a machine with larger resources
+### Modify KBP to do only local submission, Move the job to a machine with larger resources
 * `+` Simple solutions, quick turnarounds, fixes deadlock issue, fixes UI issues
- * `-` We have a limited number of larger resources machines
+* `-` We have a limited number of larger resources machines
 * `-` Continued dependency on deprecated KBP tools
 
 ### Deprecate kbparallels, and write new ee2 endpoints to entirely handle split and aggregate
