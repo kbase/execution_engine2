@@ -125,11 +125,20 @@ Still to be determined (not in scope of this ADR):
 * `+` Simplest solution, quickest turnaround, fixes deadlock issue
 * `-` Addresses only the deadlocking issue, UI still broken for regular runs and batch runs 
 
-### Increase number of slots or Seperate Queue for kbparallels apps without 10 job limit
-* `+` Simple solutions, quick turnarounds, fixes deadlock issue
+### Increase number of slots per user > 10
+* `+` Simple solutions, quick turnarounds, fixes deadlock issue for small numbers of jobs.
+* `-` Doesn't fix deadlock issue as the user can still submit more KBP jobs
 * `-` Addresses only the deadlocking issue, UI still broken for regular runs and batch runs
 * `-` A small amount of users can take over the entire system
 * `-` The calculations done by the apps will interfere with other apps and cause crashes/failures
+
+###  Seperate Queue for kbparallels apps that may or may not have its own limit to running jobs.
+* `+` Simple solutions, quick turnarounds, fixes deadlock issue 
+* `+` Requires minimum changes to ee2 and condor if condor supports this feature
+* `-` Addresses only the deadlocking issue, UI still broken for regular runs and batch runs
+* `-` A small amount of users can take over the entire system unless  the new queue has its own limit to running jobs then it prevents users from taking over.
+* `-` The calculations done by the apps will interfere with other apps and cause crashes/failures
+
 
 ### Modify KBP to do only local submission, Move the job to a machine with larger resources
 * `+` Simple solutions, quick turnarounds, fixes deadlock issue, fixes UI issues
