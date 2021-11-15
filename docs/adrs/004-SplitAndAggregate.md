@@ -22,7 +22,7 @@ In order to do this, some apps use a mechanism called KBParallel. The apps are l
 
 * Current UI is not adequate: Users shouldn’t have to code in order to run batch analysis. Also it’s difficult to do so, even for those familiar with KBase code (have to find object names)
 * Dependency on [KBParallel](https://github.com/kbaseapps/KBParallel): any changes to KBParallel could affect KB Batch and subsequently all other apps. 
-* Queue deadlocking: users have a max of 10 slots in the queue, with the current implementation one is taken up just to manage the jobs. Could lead to deadlock scenarios
+* Queue deadlocking: users have a max of 10 slots in the queue, with the current implementation one management job is created to manage the jobs that it submits. This could lead to deadlock scenarios, as there can be 10 management jobs waiting to submit computation jobs, but they cannot, as there all slots are being used up.
 * KBP can spawn other KBP jobs. Batch jobs can spawn other batch jobs. 
 * Missing the ability to be able to run, manage (cancel) and track jobs and their subjobs along with the ability to specify resources differently between the main and sub jobs
 * No good way to test and hard to benchmark or measure performance 
