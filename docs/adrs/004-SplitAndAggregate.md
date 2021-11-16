@@ -143,7 +143,8 @@ Still to be determined (not in scope of this ADR):
 * `+` Allows us to group up KBP jobs onto fewer machines, instead of giving them their entire node
 * `-` Requires going through each app and understanding the worst case computational needs in order to  set the estimated cpu and memory needs for each app 
 * `-` Apps can interfere with other innocent apps and take them down
-
+* `-` Creating a new queue requires balancing between how many active KBP nodes there vs how many nodes are available for other NJS jobs.
+ 
 ### Modify KBP to do only local submission, Move the job to a machine with larger resources
 * `+` Simple solutions, quick turnarounds, fixes deadlock issue, fixes UI issues
 * `-` We have a limited number of larger resources machines
