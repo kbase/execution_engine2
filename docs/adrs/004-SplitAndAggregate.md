@@ -120,7 +120,7 @@ Still to be determined (not in scope of this ADR):
 
 ## Pros and Cons of the Alternatives
 
-### Limit multiple instances of kbparallels
+### Limit multiple instances of kbparallels by keeping a list of apps that use it
 
 * `+` Simplest solution, quickest turnaround, fixes deadlock issue
 * `-` Addresses only the deadlocking issue, UI still broken for regular runs and batch runs 
@@ -129,15 +129,15 @@ Still to be determined (not in scope of this ADR):
 * `+` Simple solutions, quick turnarounds, fixes deadlock issue for small numbers of jobs.
 * `-` Doesn't fix deadlock issue as the user can still submit more KBP jobs
 * `-` Addresses only the deadlocking issue, UI still broken for regular runs and batch runs
-* `-` A small amount of users can take over the entire system
-* `-` The calculations done by the apps will interfere with other apps and cause crashes/failures
+* `-` A small amount of users can take over the entire system by being able to submit more than 10 jobs
+* `-` > 10 nodes will be taken up by jobs that do little computation as each job gets its own node
 
-###  Seperate Queue for kbparallels apps that may or may not have its own limit to running jobs.
-* `+` Simple solutions, quick turnarounds, fixes deadlock issue 
-* `+` Requires minimum changes to ee2 and condor if condor supports this feature
+###  Seperate Queue for kbparallels apps that allows multiple instances of apps that use kbparallels running on the same machine
+* `+` Simple solutions, quick turnarounds, fixes deadlock issue , requires changes to ee2 using an allowlist and condor to make jobs in the new queue a consumable resource.
 * `-` Addresses only the deadlocking issue, UI still broken for regular runs and batch runs
-* `-` A small amount of users can take over the new  queue unless the new queue has its own limit to running jobs then it prevents users from taking over.
-* `-` The calculations done by the apps will interfere with other apps and cause crashes/failures
+* `-` A small amount of users can take over the new queue unless the new queue has its own limit to running jobs then it prevents users from taking over.
+* `-` The calculations done by the apps will interfere with other apps in the new queue still and cause crashes/failures since they are doing more than managing the jobs right now. This would be solved by not allowing multple instances of apps that use KBP, but then it would waste a lot of resources.
+
 
 
 ### Modify KBP to do only local submission, Move the job to a machine with larger resources
