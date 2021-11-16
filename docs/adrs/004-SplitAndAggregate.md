@@ -136,7 +136,7 @@ Still to be determined (not in scope of this ADR):
 * `+` Simple solutions, quick turnarounds, fixes deadlock issue 
 * `+` Requires minimum changes to ee2 and condor if condor supports this feature
 * `-` Addresses only the deadlocking issue, UI still broken for regular runs and batch runs
-* `-` A small amount of users can take over the entire system unless  the new queue has its own limit to running jobs then it prevents users from taking over.
+* `-` A small amount of users can take over the new  queue unless the new queue has its own limit to running jobs then it prevents users from taking over.
 * `-` The calculations done by the apps will interfere with other apps and cause crashes/failures
 
 
