@@ -162,9 +162,9 @@ Still to be determined (not in scope of this ADR):
 
 1) Launch a management job called the *Job Manager* that sits in the KBP Queue, alongside other KBP jobs. 
 2) Launch a new NJS queue job  called the *Setup Job* which will
- 1) Use the User Parameters and/or
- 2) Download the Data from the initial parameters  (Optional)
- 3) The results of information gathered from the initial download and or paramters will be sent to (Job Manager)
+ * Use the User Parameters and/or
+ * Download the Data from the initial parameters  (Optional)
+ * The results of information gathered from the initial download and or paramters will be sent to (Job Manager)
 3) The *Job Manager* now has enough parameters to setup *Fan Out* Jobs, and will send out jobs and wait for them (and possibly retry them upon failure)
 4) Fan Out jobs download data and perform calculations, save them back to the system, and return references to the saved objects
 5) The *Job Manager* optionally launches a *Group/Reduce* job based on User Parameters and or the results of *Fan Out* Jobs
