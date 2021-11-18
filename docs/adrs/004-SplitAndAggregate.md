@@ -117,13 +117,14 @@ Still to be determined (not in scope of this ADR):
 * Writing new ee2 endpoints to entirely handle batch execution and possibly use a DAG
 * Remove kbparallels and change apps to a collection of 2-3 apps that do submit, split and aggregate and an use an ee2 endpoint to create a DAG
 * Different DevOps solutions
+* Rewriting KBP or swapping it out for a lightweight alternative that has a subset of the KBP features
 
 ## Pros and Cons of the Alternatives
 
-### Limit multiple instances of kbparallels by keeping a list of apps that use it
-
-* `+` Simplest solution, quickest turnaround, fixes deadlock issue
-* `-` Addresses only the deadlocking issue, UI still broken for regular runs and batch runs 
+### General Notes
+*  With the current implementation of KBP, Having a separate KBP queue with multiple machines can save a spot from a user's 10 job maximum for running more jobs, but takes up / wastes compute resources (especially if the nodes sit idle). The user still gets  10 jobs, but there are less spots for jobs to run overall in the system if we make another queue, as this requires taking up more compute nodes that are currently dedicated to the NJS queue.
+* Without changing apps that use KBP, running multiple KBP apps on the same machine can interfere with each other and we want to avoid this. 
+* If we scrap KBP in favor of a "lightweight alternative" we can avoid some of the previous issues, if we modify all apps that use KBP to use a lightweight alternative.  A lightweight alternative would have to guarantee that no computation besides job management occured, and then we could have the management jobs sit and wait for other jobs without interfering with other jobs on the system. 
 
 ### Increase number of slots per user > 10
 * `+` Simple solutions, quick turnarounds, fixes deadlock issue for small numbers of jobs.
@@ -131,24 +132,58 @@ Still to be determined (not in scope of this ADR):
 * `-` Addresses only the deadlocking issue, UI still broken for regular runs and batch runs
 * `-` A small amount of users can take over the entire system by being able to submit more than 10 jobs
 * `-` > 10 nodes will continue be taken up by jobs that do little computation as each job gets its own node
+* `-` Capacity is still wasted, as some KBP jobs sit around waiting for other jobs to run
 
-### LIMIT KBP jobs to a maximum of 5 active jobs per user
+### LIMIT KBP jobs to a maximum of N<10 active KBP jobs per user
 * `+` Simple solution requires ee2 to maintain list of KBP apps, and add a KBP_LIMIT to jobs from this list. [Condor](https://github.com/kbase/condor/pull/26) will need KBP_LIMIT Added
 * `+` List of apps is not frequently updated
+* `+` Apps do not need to be modified
 * `-` If a new app uses KBP and their app is not on the list, it won't be limited by the KBP_LIMIT unless the owner lets us know.
 * `-` If an existing app no longer uses KBP, their app is still limited unless the owner lets us know.
 * `-` Nodes will continue be taken up by jobs that do little computation as each job gets its own node.
+* `-` Users may not be able to effectively use up their 10 job spots 
+* `-` Capacity is still wasted, as some KBP jobs sit around waiting for other jobs to run
 
-###  LIMIT KBP jobs to a maximum of 5 active jobs per user + Seperate queue for kbparallels apps 
+###  LIMIT KBP jobs to a maximum of N<10 active jobs per user + Seperate queue for kbparallels apps 
+* `+` Same pros as above
 * `+` Allows us to group up KBP jobs onto fewer machines, instead of giving them their entire node
 * `-` Requires going through each app and understanding the worst case computational needs in order to  set the estimated cpu and memory needs for each app 
 * `-` Apps can interfere with other innocent apps and take them down
 * `-` Creating a new queue requires balancing between how many active KBP nodes there vs how many nodes are available for other NJS jobs.
+* `-` Capacity is still wasted, as some KBP jobs sit around waiting for other jobs to run
+
+
+### Build KBP Lightweight Version + KBP Queue
+
+
+#### Design of new verison
+* All apps must be modified to use the new KBP lightweight version, which will: 
+* Can either modify KBP, or create a new tool/package to use instead of KBP
+
+1) Launch a management job called the *Job Manager* that sits in the KBP Queue, alongside other KBP jobs. 
+2) Launch a new NJS queue job  called the *Setup Job* which will
+ 1) Use the User Parameters and/or
+ 2) Download the Data from the initial parameters  (Optional)
+ 3) The results of information gathered from the initial download and or paramters will be sent to (Job Manager)
+3) The *Job Manager* now has enough parameters to setup *Fan Out* Jobs, and will send out jobs and wait for them (and possibly retry them upon failure)
+4) Fan Out jobs download data and perform calculations, save them back to the system, and return references to the saved objects
+5) The *Job Manager* optionally launches a *Group/Reduce* job based on User Parameters and or the results of *Fan Out* Jobs
+6) The *Group/Reduce* job downloads objects from the system, and creates a set or other grouping, and then saves the set back to the system
+7) The *Job Manager*  sends the results back to a *Report* Job, which downloads the final data and uploads a report based on that data
+8) The *Job Manager* returns the reference to the results of the *Report Job*
+
+Pros/Cons
+* `-` Addresses the deadlocking issue, UI still broken for regular runs and batch runs if we re-use KBP
+* `+` All KBP jobs can run on a small subset of machines
+* `+` Job Manager 
+* `+` Minimal changes to ee2 required
+
  
-### Modify KBP to do only local submission, Move the job to a machine with larger resources
+### Modify Apps to do only local submission by remove KBP, and moving the job 
 * `+` Simple solutions, quick turnarounds, fixes deadlock issue, fixes UI issues
 * `-` We have a limited number of larger resources machines
 * `-` Continued dependency on deprecated KBP tools
+* `-` App runs may take longer since fewer resources may be available to the app run
 
 ### Deprecate kbparallels, and write new ee2 endpoints to entirely handle split and aggregate
 * `+` No longer uses an app, No longer uses a slot in the queue
