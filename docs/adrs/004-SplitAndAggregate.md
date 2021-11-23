@@ -103,7 +103,6 @@ bindings: https://htcondor.readthedocs.io/en/latest/apis/python-bindings/tutoria
 
 ## Consequences
 
-* We will have to roll out fixes in multiple stages
 * We will have to implement a new narrative UI, however this was work that would happen regardless due as we are looking to improve the UX for batch upload and analysis at KBase. 
 * This will take significant time to further research and engineer the solutions
 
