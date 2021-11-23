@@ -165,8 +165,8 @@ Still to be determined (not in scope of this ADR):
  * Use the *User Parameters* and/or
  * Optionally Download the Data from the *User Parameters*  to figure out *Job Manager* parameters
  * Use the results of information gathered from the initial download and or *User Parameters*
- * Generate final parameters to be sent to the *Job Manager* to launch *Fan Out* jobs
-3) The *Job Manager* now has enough parameters to setup *Fan Out* Jobs, and will send out jobs and wait for them (and possibly retry them upon failure)
+ * Generate final parameters to be sent to the *Job Manager* to launch *Fan Out* jobs, or launch *Fan Out* jobs and return job ids
+3) The *Job Manager* now has enough parameters to launch and/or monitor *Fan Out* Jobs, and monitor/manage the jobs (and possibly retry them upon failure)
 4) *Fan Out* jobs download data and perform calculations, save them back to the system, and return references to the saved objects
 5) The *Job Manager* optionally launches a *Group/Reduce* job based on User Parameters and or the results of *Fan Out* Jobs
 6) The *Group/Reduce* job downloads objects from the system, and creates a set or other grouping, and then saves the set back to the system
@@ -174,12 +174,11 @@ Still to be determined (not in scope of this ADR):
 8) The *Job Manager* returns the reference to the results of the *Report Job*
 
 Pros/Cons
-* `-` Addresses the deadlocking issue, UI still broken for regular runs and batch runs if we re-use KBP
-* `-` Have to rewrite all apps that use KBP to use this new paradigm
-* `-` Will have to upload data and download data more times as no computation is done in the *Job Manager*
+* `+` On an as needed basis, would have to rewrite apps that use KBP to use this new paradigm
 * `+` All KBP jobs can run on a small subset of machines, deadlock issue is fixed
 * `+` No changes to ee2 required
-
+* `-` Will have to upload data and download data more times as no computation is done in the *Job Manager*
+* `-` Addresses the deadlocking issue, UI still broken for regular runs and batch runs if we re-use KBP
 
  
 ### Modify Apps to do only local submission by remove KBP, and moving the job 
@@ -191,9 +190,8 @@ Pros/Cons
 ### Deprecate kbparallels, and write new ee2 endpoints to entirely handle split and aggregate
 * See [ADR](https://github.com/kbase/execution_engine2/blob/develop/docs/adrs/rework-batch-analysis-architecture.md#implementing-a-new-set-of-ee2-endpoints)
 * `+` No longer uses an app, No longer uses a slot in the queue
-* `-` All jobs would have to change to stop using KBP in favor of these via the ee2 client,
 * `+` Can manage jobs more closely: have tables, more control over lifecycle, resource requests, canceling subjobs
-* `-` Job monitoring thread would have to run in ee2
+* `+` Apps could change to stop using KBP in favor of these via the ee2 client on an as-needed basis
 * `-`  Requires new data structures and models in ee2 to make sure that the relationship is preserved between jobs and sub jobs, and to make sure deadlocking does not occur
 * `-` Requires storing the job outside of condor to prevent job submission, unless we can mark jobs as runnable or not via the HTCondor API*  (This is due to not wanting to use a HTC DAG in order to manage the running order, as all submitted jobs would start in random order, so this guarantees order)
 * `-` The endpoint would need to know how to split up input files and aggregate them (crazypants)
