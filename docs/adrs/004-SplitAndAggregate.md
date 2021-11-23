@@ -157,27 +157,28 @@ Still to be determined (not in scope of this ADR):
 
 
 #### Design of new verison
+
+
 * All apps must be modified to use the new KBP lightweight version, which will: 
 * Can either modify KBP, or create a new tool/package to use instead of KBP
+
 
 1) Launch a management job called the *Job Manager* that sits in the KBP Queue, alongside other KBP jobs. Other jobs are launched in the NJS queue.
 2) Launch the *Setup Job* which will
  * Use the *User Parameters* and/or
  * Optionally Download the Data from the *User Parameters*  to figure out *Job Manager* parameters
  * Use the results of information gathered from the initial download and or *User Parameters*
- * Generate final parameters to be sent to the *Job Manager* to launch *Fan Out* jobs, or launch *Fan Out* jobs and return job ids
+ * Generate final parameters to be sent to the *Job Manager* to launch *Fan Out* jobs, or directly launch *Fan Out* jobs and return job ids
 3) The *Job Manager* now has enough parameters to launch and/or monitor *Fan Out* Jobs, and monitor/manage the jobs (and possibly retry them upon failure)
 4) *Fan Out* jobs download data and perform calculations, save them back to the system, and return references to the saved objects
-5) The *Job Manager* optionally launches a *Group/Reduce* job based on User Parameters and or the results of *Fan Out* Jobs
-6) The *Group/Reduce* job downloads objects from the system, and creates a set or other grouping, and then saves the set back to the system
-7) The *Job Manager*  sends the results back to a *Report* Job, which downloads the final data and uploads a report based on that data
+5) The *Job Manager* launches one *FanIn* job based on User Parameters and or the results of *Fan Out* Jobs
+6) The *FanIn* (a.k.a Group/Reduce/Report) job downloads objects from the system, and creates a set or other grouping, and then saves the object(s) back to the system. Final data and report is uploaded back to the system
 8) The *Job Manager* returns the reference to the results of the *Report Job*
 
 Pros/Cons
 * `+` On an as needed basis, would have to rewrite apps that use KBP to use this new paradigm
 * `+` All KBP jobs can run on a small subset of machines, deadlock issue is fixed
 * `+` No changes to ee2 required
-* `-` Will have to upload data and download data more times as no computation is done in the *Job Manager*
 * `-` Addresses the deadlocking issue, UI still broken for regular runs and batch runs if we re-use KBP
 
  
