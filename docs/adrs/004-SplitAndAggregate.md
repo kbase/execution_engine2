@@ -186,12 +186,3 @@ Pros/Cons
 * `-` We have a limited number of larger resources machines
 * `-` Continued dependency on deprecated KBP tools
 * `-` App runs may take longer since fewer resources may be available to the app run
-
-### Deprecate kbparallels, and write new ee2 endpoints to entirely handle split and aggregate
-* See [ADR](https://github.com/kbase/execution_engine2/blob/develop/docs/adrs/rework-batch-analysis-architecture.md#implementing-a-new-set-of-ee2-endpoints)
-* `+` No longer uses an app, No longer uses a slot in the queue
-* `+` Can manage jobs more closely: have tables, more control over lifecycle, resource requests, canceling subjobs
-* `+` Apps could change to stop using KBP in favor of these via the ee2 client on an as-needed basis
-* `-`  Requires new data structures and models in ee2 to make sure that the relationship is preserved between jobs and sub jobs, and to make sure deadlocking does not occur
-* `-` Requires storing the job outside of condor to prevent job submission, unless we can mark jobs as runnable or not via the HTCondor API*  (This is due to not wanting to use a HTC DAG in order to manage the running order, as all submitted jobs would start in random order, so this guarantees order)
-* `-` The endpoint would need to know how to split up input files and aggregate them (crazypants)
