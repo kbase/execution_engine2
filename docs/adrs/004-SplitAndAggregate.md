@@ -146,6 +146,7 @@ Still to be determined (not in scope of this ADR):
 
 ###  LIMIT KBP jobs to a maximum of N<10 active jobs per user + Seperate queue for kbparallels apps 
 * `+` Same pros as above
+* `+` Users will be able to more effectively use their 10 job spots
 * `+` Allows us to group up KBP jobs onto fewer machines, instead of giving them their entire node
 * `-` Requires going through each app and understanding the worst case computational needs in order to  set the estimated cpu and memory needs for each app 
 * `-` Apps can interfere with other innocent apps and take them down
