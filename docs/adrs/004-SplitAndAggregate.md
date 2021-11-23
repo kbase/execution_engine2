@@ -113,10 +113,10 @@ Still to be determined (not in scope of this ADR):
 ## Alternatives Considered
 
 * Ignore most issues and just make apps that run kbparallels limited to N instances of kbparallels per user to avoid deadlocks
-* Writing new ee2 endpoints to entirely handle batch execution and possibly use a DAG
 * Remove kbparallels and change apps to a collection of 2-3 apps that do submit, split and aggregate and an use an ee2 endpoint to create a DAG
 * Different DevOps solutions
 * Rewriting KBP or swapping it out for a lightweight alternative that has a subset of the KBP features
+
 
 ## Pros and Cons of the Alternatives
 
@@ -176,10 +176,11 @@ Still to be determined (not in scope of this ADR):
 8) The *Job Manager* returns the reference to the results of the *Report Job*
 
 Pros/Cons
-* `+` On an as needed basis, would have to rewrite apps that use KBP to use this new paradigm
+
 * `+` All KBP jobs can run on a small subset of machines, deadlock issue is fixed
 * `+` No changes to ee2 required
 * `-` Addresses the deadlocking issue, UI still broken for regular runs and batch runs if we re-use KBP
+* `-` On an as needed basis, would have to rewrite apps that use KBP to use this new paradigm
 
  
 ### Modify Apps to do only local submission by remove KBP, and moving the job 
