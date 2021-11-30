@@ -44,6 +44,7 @@ ee2_jobs_collection = ee2_db.get_collection(
 
 CREATED_MINUTES_AGO = 5
 QUEUE_THRESHOLD_DAYS = 14
+RUNNING_THRESHOLD_DAYS = 8
 
 
 def cancel(record):
@@ -65,6 +66,28 @@ def cancel(record):
     sleep(1)
 
 
+def cancel_jobs_stuck_in_running():
+    """ 
+    Same as cancel_jobs_stuck_in queue except they are in the running state
+    """
+    threshold_days = RUNNING_THRESHOLD_DAYS
+    before_days = (
+        datetime.today() - timedelta(days=queue_threshold_days + 1)
+    ).timestamp()
+    print({"status": "queued", "queued": {"$lt": before_days}})
+    stuck_jobs = ee2_jobs_collection.find(
+        {"status": Status.queued.value, "queued": {"$lt": before_days}}
+    )
+    print(
+        f"Found {stuck_jobs.count()} jobs that were stuck in the {Status.queued.value} state over {queue_threshold_days} days"
+    )
+    for record in stuck_jobs:
+        queued_time = record["queued"]
+        now = datetime.now(timezone.utc).timestamp()
+        elapsed = now - queued_time
+        print("queued days=", elapsed / 86000)
+        cancel(record)
+    
 def cancel_jobs_stuck_in_queue():
     """
     For jobs over 14 days old, cancel them
