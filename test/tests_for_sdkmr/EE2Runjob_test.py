@@ -908,10 +908,12 @@ def _check_common_mock_calls_batch(
     )
 
     # update to queued state
-    mocks[MongoUtil].update_job_to_queued.assert_has_calls([
-        call(_JOB_ID_1, _CLUSTER_1),
-        call(_JOB_ID_2, _CLUSTER_2),
-    ])
+    mocks[MongoUtil].update_job_to_queued.assert_has_calls(
+        [
+            call(_JOB_ID_1, _CLUSTER_1),
+            call(_JOB_ID_2, _CLUSTER_2),
+        ]
+    )
     job_ids = [_JOB_ID_1, _JOB_ID_2]
     mocks[MongoUtil].get_jobs.assert_has_calls([call(job_ids)])
 

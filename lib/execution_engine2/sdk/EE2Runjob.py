@@ -378,7 +378,9 @@ class EE2RunJob:
 
         update_time = time.time()
         self._finish_multiple_job_submission(job_ids=job_ids)
-        self.logger.error(f"It took {time.time() - update_time} to finish job submission")
+        self.logger.error(
+            f"It took {time.time() - update_time} to finish job submission"
+        )
 
         return job_ids
 
