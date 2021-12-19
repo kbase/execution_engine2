@@ -1,6 +1,10 @@
 # execution_engine2 (ee2) release notes
 =========================================
 
+## 0.0.7
+* Fixed a bug that could cause missing `queued` timestamps if many jobs were submitted in a
+  batch
+
 ## 0.0.6
 * Release of MVP
 
