@@ -15,7 +15,7 @@ from test.utils_shared.test_utils import (
     get_example_job,
     read_config_into_dict,
     assert_exception_correct,
-    assert_close_to_now
+    assert_close_to_now,
 )
 from tests_for_db.mongo_test_helper import MongoTestHelper
 

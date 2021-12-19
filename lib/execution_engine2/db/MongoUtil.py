@@ -272,7 +272,8 @@ class MongoUtil:
         return False
 
     def update_job_to_queued(
-            self, job_id: str, scheduler_id: str, scheduler_type: str = "condor") -> None:
+        self, job_id: str, scheduler_id: str, scheduler_type: str = "condor"
+    ) -> None:
         f"""
         * Updates a {Status.created.value} job to queued and sets scheduler state.
           Always sets scheduler state, but will only update to queued if the job is in the
@@ -292,13 +293,18 @@ class MongoUtil:
             # should we check that the job was updated and do something if it wasn't?
             ee2_jobs_col.update_one(
                 {"_id": ObjectId(job_id), "status": Status.created.value},
-                {"$set": {"status": Status.queued.value, "queued": queue_time_now}}
+                {"$set": {"status": Status.queued.value, "queued": queue_time_now}},
             )
             # originally had a single query, but seems safer to always record the scheduler
             # state no matter the state of the job
             ee2_jobs_col.update_one(
                 {"_id": ObjectId(job_id)},
-                {"$set": {"scheduler_id": scheduler_id, "scheduler_type": scheduler_type}}
+                {
+                    "$set": {
+                        "scheduler_id": scheduler_id,
+                        "scheduler_type": scheduler_type,
+                    }
+                },
             )
 
     def update_jobs_to_queued(
