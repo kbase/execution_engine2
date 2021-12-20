@@ -3,7 +3,7 @@ import subprocess
 import time
 import traceback
 from contextlib import contextmanager
-from typing import Dict, List
+from typing import Dict, List, NamedTuple
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
 from pymongo import MongoClient, UpdateOne
@@ -16,7 +16,11 @@ from execution_engine2.exceptions import (
 )
 
 from lib.execution_engine2.utils.arg_processing import parse_bool
-from execution_engine2.sdk.EE2Runjob import JobIdPair
+
+
+class JobIdPair(NamedTuple):
+    job_id: str
+    scheduler_id: str
 
 
 class MongoUtil:
