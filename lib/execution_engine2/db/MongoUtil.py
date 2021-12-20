@@ -3,7 +3,6 @@ import subprocess
 import time
 import traceback
 from contextlib import contextmanager
-from datetime import datetime, timezone
 from typing import Dict, List
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
@@ -285,7 +284,7 @@ class MongoUtil:
 
         bulk_update_scheduler_jobs = []
         bulk_update_created_to_queued = []
-        queue_time_now = datetime.now(tz=timezone.utc).timestamp()
+        queue_time_now = time.time()
         for job_id_pair in job_id_pairs:
             if job_id_pair.job_id is None:
                 raise ValueError(
