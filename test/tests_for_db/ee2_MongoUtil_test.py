@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import logging
 import os
+import time
 import unittest
-from datetime import datetime
 
 from bson.objectid import ObjectId
 
@@ -87,8 +87,7 @@ class MongoUtilTest(unittest.TestCase):
             scheduler_ids = ["humpty", "dumpty", "alice"]
             jobs_to_update = list(map(JobIdPair, job_ids, scheduler_ids))
 
-            now_ms = datetime.utcnow().timestamp()
-
+            now_ms = time.time()
             self.getMongoUtil().update_jobs_to_queued(jobs_to_update)
             job.reload()
             job2.reload()
