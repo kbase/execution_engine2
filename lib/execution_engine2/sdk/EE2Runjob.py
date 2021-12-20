@@ -75,11 +75,6 @@ class PreparedJobParams(NamedTuple):
     job_id: str
 
 
-class JobIdPair(NamedTuple):
-    job_id: str
-    scheduler_id: str
-
-
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -312,17 +307,11 @@ class EE2RunJob:
         ).start()
         return job_ids
 
-    def _update_to_queued_multiple(self, job_ids, scheduler_ids):
+    def _finish_multiple_job_submission(self, job_ids):
         """
         This is called during job submission. If a job is terminated during job submission,
         we have the chance to re-issue a termination and remove the job from the Job Queue
         """
-        if len(job_ids) != len(scheduler_ids):
-            raise Exception(
-                "Need to provide the same amount of job ids and scheduler_ids"
-            )
-        jobs_to_update = list(map(JobIdPair, job_ids, scheduler_ids))
-        self.sdkmr.get_mongo_util().update_jobs_to_queued(jobs_to_update)
         jobs = self.sdkmr.get_mongo_util().get_jobs(job_ids)
 
         for job in jobs:
@@ -377,14 +366,21 @@ class EE2RunJob:
                 )
                 raise RuntimeError(error_msg)
             condor_job_ids.append(condor_job_id)
+            # Previously the jobs were updated in a batch after submitting all jobs to condor.
+            # This led to issues where a large job count could result in jobs switching to
+            # running prior to all jobs being submitted and so the queued timestamp was
+            # never added to the job record.
+            self.sdkmr.get_mongo_util().update_job_to_queued(job_id, condor_job_id)
 
-        self.logger.error(f"It took {time.time() - begin} to submit jobs to condor")
-        # It took 4.836009502410889 to submit jobs to condor
+        self.logger.error(
+            f"It took {time.time() - begin} to submit jobs to condor and update to queued"
+        )
 
         update_time = time.time()
-        self._update_to_queued_multiple(job_ids=job_ids, scheduler_ids=condor_job_ids)
-        # It took 1.9239885807037354 to update jobs
-        self.logger.error(f"It took {time.time() - update_time} to update jobs ")
+        self._finish_multiple_job_submission(job_ids=job_ids)
+        self.logger.error(
+            f"It took {time.time() - update_time} to finish job submission"
+        )
 
         return job_ids
 

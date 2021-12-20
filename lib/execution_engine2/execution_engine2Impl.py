@@ -28,7 +28,7 @@ class execution_engine2:
     # state. A method could easily clobber the state set by another while
     # the latter method is running.
     ######################################### noqa
-    VERSION = "0.0.5"
+    VERSION = "0.0.7"
     GIT_URL = "https://github.com/mrcreosote/execution_engine2.git"
     GIT_COMMIT_HASH = "2ad95ce47caa4f1e7b939651f2b1773840e67a8a"
 

@@ -27,7 +27,7 @@ from execution_engine2.exceptions import (
     AuthError,
     InvalidParameterForBatch,
 )
-from execution_engine2.sdk.EE2Runjob import EE2RunJob, JobPermissions, JobIdPair
+from execution_engine2.sdk.EE2Runjob import EE2RunJob, JobPermissions
 from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.sdk.job_submission_parameters import (
     JobSubmissionParameters,
@@ -908,12 +908,13 @@ def _check_common_mock_calls_batch(
     )
 
     # update to queued state
-    child_job_pairs = [
-        JobIdPair(_JOB_ID_1, _CLUSTER_1),
-        JobIdPair(_JOB_ID_2, _CLUSTER_2),
-    ]
-    mocks[MongoUtil].update_jobs_to_queued.assert_has_calls([call(child_job_pairs)])
-    job_ids = [child_job_pair.job_id for child_job_pair in child_job_pairs]
+    mocks[MongoUtil].update_job_to_queued.assert_has_calls(
+        [
+            call(_JOB_ID_1, _CLUSTER_1),
+            call(_JOB_ID_2, _CLUSTER_2),
+        ]
+    )
+    job_ids = [_JOB_ID_1, _JOB_ID_2]
     mocks[MongoUtil].get_jobs.assert_has_calls([call(job_ids)])
 
     if not terminated_during_submit:

@@ -1,18 +1,20 @@
 # -*- coding: utf-8 -*-
 import logging
 import os
+import time
 import unittest
-from datetime import datetime
+from pytest import raises
 
 from bson.objectid import ObjectId
 
-from execution_engine2.db.MongoUtil import MongoUtil
+from execution_engine2.db.MongoUtil import MongoUtil, JobIdPair
 from execution_engine2.db.models.models import Job, JobLog, Status
-from execution_engine2.sdk.EE2Runjob import JobIdPair
 from test.utils_shared.test_utils import (
     bootstrap,
     get_example_job,
     read_config_into_dict,
+    assert_exception_correct,
+    assert_close_to_now,
 )
 from tests_for_db.mongo_test_helper import MongoTestHelper
 
@@ -70,6 +72,40 @@ class MongoUtilTest(unittest.TestCase):
         for i, retrieved_job in enumerate(retrieved_jobs):
             assert jobs_to_insert[i].to_json() == retrieved_job.to_json()
 
+    def test_update_job_to_queued_fail_with_bad_args(self):
+        jid = "aaaaaaaaaaaaaaaaaaaaaaaa"
+        err = ValueError("None of the 3 arguments can be falsy")
+        self.update_job_to_queued_fail(None, "sid", "sch", err)
+        self.update_job_to_queued_fail("", "sid", "sch", err)
+        self.update_job_to_queued_fail(jid, None, "sch", err)
+        self.update_job_to_queued_fail(jid, "", "sch", err)
+        self.update_job_to_queued_fail(jid, "sid", None, err)
+        self.update_job_to_queued_fail(jid, "sid", "", err)
+
+    def update_job_to_queued_fail(self, job_id, schd_id, schd, expected):
+        with raises(Exception) as got:
+            self.getMongoUtil().update_job_to_queued(job_id, schd_id, schd)
+        assert_exception_correct(got.value, expected)
+
+    def test_update_job_to_queued(self):
+        for state in Status:
+            j = get_example_job(status=state.value)
+            j.scheduler_id = None
+            j.save()
+            assert j.scheduler_id is None
+
+            self.getMongoUtil().update_job_to_queued(j.id, "schdID", "condenast")
+            j.reload()
+            assert_close_to_now(j.updated)
+            assert j.scheduler_id == "schdID"
+            assert j.scheduler_type == "condenast"
+            if state == Status.created:
+                assert_close_to_now(j.queued)
+                assert j.status == Status.queued.value
+            else:
+                assert j.queued is None
+                assert j.status == state.value
+
     def test_update_jobs_enmasse(self):
         """Check to see that created jobs get updated to queued"""
         for state in Status:
@@ -87,8 +123,7 @@ class MongoUtilTest(unittest.TestCase):
             scheduler_ids = ["humpty", "dumpty", "alice"]
             jobs_to_update = list(map(JobIdPair, job_ids, scheduler_ids))
 
-            now_ms = datetime.utcnow().timestamp()
-
+            now_ms = time.time()
             self.getMongoUtil().update_jobs_to_queued(jobs_to_update)
             job.reload()
             job2.reload()

@@ -3,8 +3,7 @@ import subprocess
 import time
 import traceback
 from contextlib import contextmanager
-from datetime import datetime
-from typing import Dict, List
+from typing import Dict, List, NamedTuple
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
 from pymongo import MongoClient, UpdateOne
@@ -17,7 +16,11 @@ from execution_engine2.exceptions import (
 )
 
 from lib.execution_engine2.utils.arg_processing import parse_bool
-from execution_engine2.sdk.EE2Runjob import JobIdPair
+
+
+class JobIdPair(NamedTuple):
+    job_id: str
+    scheduler_id: str
 
 
 class MongoUtil:
@@ -272,6 +275,42 @@ class MongoUtil:
             return True
         return False
 
+    def update_job_to_queued(
+        self, job_id: str, scheduler_id: str, scheduler_type: str = "condor"
+    ) -> None:
+        f"""
+        * Updates a {Status.created.value} job to queued and sets scheduler state.
+          Always sets scheduler state, but will only update to queued if the job is in the
+          {Status.created.value} state.
+        :param job_id: the ID of the job.
+        :param scheduler_id: the scheduler's job ID for the job.
+        :param scheduler_type: The scheduler this job was queued in, default condor
+        """
+        if not job_id or not scheduler_id or not scheduler_type:
+            raise ValueError("None of the 3 arguments can be falsy")
+        # could also test that the job ID is a valid job ID rather than having mongo throw an
+        # error
+        mongo_collection = self.config["mongo-jobs-collection"]
+        queue_time_now = time.time()
+        with self.pymongo_client(mongo_collection) as pymongo_client:
+            ee2_jobs_col = pymongo_client[self.mongo_database][mongo_collection]
+            # should we check that the job was updated and do something if it wasn't?
+            ee2_jobs_col.update_one(
+                {"_id": ObjectId(job_id), "status": Status.created.value},
+                {"$set": {"status": Status.queued.value, "queued": queue_time_now}},
+            )
+            # originally had a single query, but seems safer to always record the scheduler
+            # state no matter the state of the job
+            ee2_jobs_col.update_one(
+                {"_id": ObjectId(job_id)},
+                {
+                    "$set": {
+                        "scheduler_id": scheduler_id,
+                        "scheduler_type": scheduler_type,
+                    }
+                },
+            )
+
     def update_jobs_to_queued(
         self, job_id_pairs: List[JobIdPair], scheduler_type: str = "condor"
     ) -> None:
@@ -285,7 +324,7 @@ class MongoUtil:
 
         bulk_update_scheduler_jobs = []
         bulk_update_created_to_queued = []
-        queue_time_now = datetime.utcnow().timestamp()
+        queue_time_now = time.time()
         for job_id_pair in job_id_pairs:
             if job_id_pair.job_id is None:
                 raise ValueError(
