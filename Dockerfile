@@ -66,6 +66,9 @@ RUN chmod +x download_runner.sh && ./download_runner.sh
 
 WORKDIR /kb/module/
 
+# Prune cruft
+RUN rm -rf /kb/deployment/lib
+
 # Set deploy.cfg location
 ENV KB_DEPLOYMENT_CONFIG=/kb/module/deploy.cfg
 ENV PATH=/kb/module:$PATH
