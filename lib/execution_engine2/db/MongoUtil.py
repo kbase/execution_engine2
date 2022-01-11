@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from typing import Dict, List, NamedTuple
 from bson.objectid import ObjectId
 from mongoengine import connect, connection
-from pymongo import MongoClient, UpdateOne
+from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
 
 from execution_engine2.db.models.models import JobLog, Job, Status, TerminatedCode
