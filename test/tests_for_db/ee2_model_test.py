@@ -42,7 +42,9 @@ class EE2ModelTest(unittest.TestCase):
         logging.info(f"Searching for {job.id}")
         db = self.config["mongo-database"]
         coll = self.config["mongo-jobs-collection"]
-        saved_job = self.mongo_util.pymongoc[db][coll].find_one({"_id": ObjectId(job.id)})
+        saved_job = self.mongo_util.pymongoc[db][coll].find_one(
+            {"_id": ObjectId(job.id)}
+        )
         logging.info("Found")
         logging.info(saved_job)
 
