@@ -33,7 +33,8 @@ class MongoUtil:
         self.mongo_pass = config["mongo-password"]
         self.retry_rewrites = parse_bool(config["mongo-retry-rewrites"])
         self.mongo_authmechanism = config["mongo-authmechanism"]
-        self.mongo_collection = None
+        self._col_jobs = config["mongo-jobs-collection"]
+        self._col_logs = config["mongo-logs-collection"]
         self._start_local_service()
         self.logger = logging.getLogger("ee2")
         self.pymongoc = self._get_pymongo_client()
@@ -155,16 +156,6 @@ class MongoUtil:
 
         return pymongo_client, mongoengine_client
 
-    @contextmanager
-    def pymongo_client(self, mongo_collection):
-        """
-        Instantiates a mongo client to be used as a context manager
-        Closes the connection at the end
-        :return:
-        """
-        self.mongo_collection = mongo_collection
-        yield self.pymongoc
-
     def get_workspace_jobs(self, workspace_id):
         with self.mongo_engine_connection():
             job_ids = [str(job.id) for job in Job.objects(wsid=workspace_id)]
@@ -172,24 +163,21 @@ class MongoUtil:
 
     def get_job_log_pymongo(self, job_id: str = None):
 
-        mongo_collection = self.config["mongo-logs-collection"]
+        job_log_col = self.pymongoc[self.mongo_database][self._col_logs]
+        try:
+            find_filter = {"_id": ObjectId(job_id)}
+            job_log = job_log_col.find_one(find_filter)
+        except Exception as e:
+            error_msg = "Unable to find job\n"
+            error_msg += "ERROR -- {}:\n{}".format(
+                e, "".join(traceback.format_exception(None, e, e.__traceback__))
+            )
+            raise ValueError(error_msg)
 
-        with self.pymongo_client(mongo_collection) as pymongo_client:
-            job_log_col = pymongo_client[self.mongo_database][self.mongo_collection]
-            try:
-                find_filter = {"_id": ObjectId(job_id)}
-                job_log = job_log_col.find_one(find_filter)
-            except Exception as e:
-                error_msg = "Unable to find job\n"
-                error_msg += "ERROR -- {}:\n{}".format(
-                    e, "".join(traceback.format_exception(None, e, e.__traceback__))
-                )
-                raise ValueError(error_msg)
-
-            if not job_log:
-                raise RecordNotFoundException(
-                    "Cannot find job log with id: {}".format(job_id)
-                )
+        if not job_log:
+            raise RecordNotFoundException(
+                "Cannot find job log with id: {}".format(job_id)
+            )
 
         return job_log
 
@@ -290,88 +278,24 @@ class MongoUtil:
             raise ValueError("None of the 3 arguments can be falsy")
         # could also test that the job ID is a valid job ID rather than having mongo throw an
         # error
-        mongo_collection = self.config["mongo-jobs-collection"]
         queue_time_now = time.time()
-        with self.pymongo_client(mongo_collection) as pymongo_client:
-            ee2_jobs_col = pymongo_client[self.mongo_database][mongo_collection]
-            # should we check that the job was updated and do something if it wasn't?
-            ee2_jobs_col.update_one(
-                {"_id": ObjectId(job_id), "status": Status.created.value},
-                {"$set": {"status": Status.queued.value, "queued": queue_time_now}},
-            )
-            # originally had a single query, but seems safer to always record the scheduler
-            # state no matter the state of the job
-            ee2_jobs_col.update_one(
-                {"_id": ObjectId(job_id)},
-                {
-                    "$set": {
-                        "scheduler_id": scheduler_id,
-                        "scheduler_type": scheduler_type,
-                    }
-                },
-            )
-
-    def update_jobs_to_queued(
-        self, job_id_pairs: List[JobIdPair], scheduler_type: str = "condor"
-    ) -> None:
-        f"""
-        * Adds scheduler id to list of jobs
-        * Updates a list of {Status.created.value} jobs to queued. Does not work on jobs that already have gone through any other
-        status transition. If the record is not in the {Status.created.value} status, nothing will happen
-        :param job_id_pairs: A list of pairs of Job Ids and Scheduler Ids
-        :param scheduler_type: The scheduler this job was queued in, default condor
-        """
-
-        bulk_update_scheduler_jobs = []
-        bulk_update_created_to_queued = []
-        queue_time_now = time.time()
-        for job_id_pair in job_id_pairs:
-            if job_id_pair.job_id is None:
-                raise ValueError(
-                    f"Provided a bad job_id_pair, missing job_id for {job_id_pair.scheduler_id}"
-                )
-            elif job_id_pair.scheduler_id is None:
-                raise ValueError(
-                    f"Provided a bad job_id_pair, missing scheduler_id for {job_id_pair.job_id}"
-                )
-
-            bulk_update_scheduler_jobs.append(
-                UpdateOne(
-                    {
-                        "_id": ObjectId(job_id_pair.job_id),
-                    },
-                    {
-                        "$set": {
-                            "scheduler_id": job_id_pair.scheduler_id,
-                            "scheduler_type": scheduler_type,
-                        }
-                    },
-                )
-            )
-            bulk_update_created_to_queued.append(
-                UpdateOne(
-                    {
-                        "_id": ObjectId(job_id_pair.job_id),
-                        "status": Status.created.value,
-                    },
-                    {
-                        "$set": {
-                            "status": Status.queued.value,
-                            "queued": queue_time_now,
-                        }
-                    },
-                )
-            )
-        # Update provided jobs with scheduler id. Then only update non terminated jobs into updated status.
-        mongo_collection = self.config["mongo-jobs-collection"]
-
-        if bulk_update_scheduler_jobs:
-            with self.pymongo_client(mongo_collection) as pymongo_client:
-                ee2_jobs_col = pymongo_client[self.mongo_database][mongo_collection]
-                # Bulk Update to add scheduler ids
-                ee2_jobs_col.bulk_write(bulk_update_scheduler_jobs, ordered=False)
-                # Bulk Update to add queued status ids
-                ee2_jobs_col.bulk_write(bulk_update_created_to_queued, ordered=False)
+        ee2_jobs_col = self.pymongoc[self.mongo_database][self._col_jobs]
+        # should we check that the job was updated and do something if it wasn't?
+        ee2_jobs_col.update_one(
+            {"_id": ObjectId(job_id), "status": Status.created.value},
+            {"$set": {"status": Status.queued.value, "queued": queue_time_now}},
+        )
+        # originally had a single query, but seems safer to always record the scheduler
+        # state no matter the state of the job
+        ee2_jobs_col.update_one(
+            {"_id": ObjectId(job_id)},
+            {
+                "$set": {
+                    "scheduler_id": scheduler_id,
+                    "scheduler_type": scheduler_type,
+                }
+            },
+        )
 
     def cancel_job(self, job_id=None, terminated_code=None):
         """
@@ -542,26 +466,6 @@ class MongoUtil:
         inserted = Job.objects.insert(doc_or_docs=jobs_to_insert, load_bulk=False)
         return inserted
 
-    def insert_one(self, doc):
-        """
-        insert a doc into collection
-        """
-        self.logger.debug("start inserting document")
-
-        with self.pymongo_client(self.mongo_collection) as pymongo_client:
-            try:
-                rec = pymongo_client[self.mongo_database][
-                    self.mongo_collection
-                ].insert_one(doc)
-            except Exception as e:
-                error_msg = "Cannot insert doc\n"
-                error_msg += "ERROR -- {}:\n{}".format(
-                    e, "".join(traceback.format_exception(None, e, e.__traceback__))
-                )
-                raise ValueError(error_msg)
-
-        return rec.inserted_id
-
     def _push_job_logs(self, log_lines: JobLog, job_id: str, record_count: int):
         """append a list of job logs, and update the record count"""
 
@@ -574,80 +478,15 @@ class MongoUtil:
             "updated": time.time(),
         }
         update = {"$push": push_op, "$set": set_op}
-        with self.pymongo_client(self.mongo_collection) as pymongo_client:
-            job_col = pymongo_client[self.mongo_database][self.mongo_collection]
-            try:
-                job_col.update_one(update_filter, update, upsert=False)
-            except Exception as e:
-                error_msg = "Cannot update doc\n ERROR -- {}:\n{}".format(
-                    e, "".join(traceback.format_exception(None, e, e.__traceback__))
-                )
-                raise ValueError(error_msg)
+        job_col = self.pymongoc[self.mongo_database][self._col_logs]
+        try:
+            job_col.update_one(update_filter, update, upsert=False)
+        except Exception as e:
+            error_msg = "Cannot update doc\n ERROR -- {}:\n{}".format(
+                e, "".join(traceback.format_exception(None, e, e.__traceback__))
+            )
+            raise ValueError(error_msg)
 
-            slc = job_col.find_one({"_id": ObjectId(job_id)}).get("stored_line_count")
+        slc = job_col.find_one({"_id": ObjectId(job_id)}).get("stored_line_count")
 
-            return slc
-
-    def update_one(self, doc, job_id):
-        """
-        update existing records or create if they do not exist
-        https://docs.mongodb.com/manual/reference/operator/update/set/
-        """
-        with self.pymongo_client(self.mongo_collection) as pymongo_client:
-            job_col = pymongo_client[self.mongo_database][self.mongo_collection]
-            try:
-                update_filter = {"_id": ObjectId(job_id)}
-                update = {"$set": doc}
-                job_col.update_one(update_filter, update, upsert=True)
-            except Exception as e:
-                error_msg = "Connot update doc\n"
-                error_msg += "ERROR -- {}:\n{}".format(
-                    e, "".join(traceback.format_exception(None, e, e.__traceback__))
-                )
-                raise ValueError(error_msg)
-
-        return True
-
-    def delete_one(self, job_id):
-        """
-        delete a doc by _id
-        """
-        self.logger.debug("start deleting document")
-        with self.pymongo_client(self.mongo_collection) as pymongo_client:
-            job_col = pymongo_client[self.mongo_database][self.mongo_collection]
-            try:
-                delete_filter = {"_id": ObjectId(job_id)}
-                job_col.delete_one(delete_filter)
-            except Exception as e:
-                error_msg = "Connot delete doc\n"
-                error_msg += "ERROR -- {}:\n{}".format(
-                    e, "".join(traceback.format_exception(None, e, e.__traceback__))
-                )
-                raise ValueError(error_msg)
-
-        return True
-
-    def find_in(self, elements, field_name, projection=None, batch_size=1000):
-        """
-        return cursor that contains docs which field column is in elements
-        """
-        self.logger.debug("start querying MongoDB")
-
-        with self.pymongo_client(self.mongo_collection) as pymongo_client:
-            job_col = pymongo_client[self.mongo_database][self.mongo_collection]
-            try:
-                result = job_col.find(
-                    {field_name: {"$in": elements}},
-                    projection=projection,
-                    batch_size=batch_size,
-                )
-            except Exception as e:
-                error_msg = "Connot query doc\n"
-                error_msg += "ERROR -- {}:\n{}".format(
-                    e, "".join(traceback.format_exception(None, e, e.__traceback__))
-                )
-                raise ValueError(error_msg)
-
-            self.logger.debug("returned {} results".format(result.count()))
-
-        return result
+        return slc
