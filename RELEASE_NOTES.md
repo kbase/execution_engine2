@@ -1,6 +1,10 @@
 # execution_engine2 (ee2) release notes
 =========================================
 
+## 0.0.8
+* Fixed a bug that could, seemingly rarely, cause job and log updates to be applied to the
+  wrong Mongo collection.
+
 ## 0.0.7
 * Fixed a bug that could cause missing `queued` timestamps if many jobs were submitted in a
   batch
