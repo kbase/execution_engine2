@@ -4,6 +4,7 @@
 ## 0.0.8
 * Fixed a bug that could, seemingly rarely, cause job and log updates to be applied to the
   wrong Mongo collection.
+* Removed docker shaded jar that causes log4j scan to appear positive with Trivy
 
 ## 0.0.7
 * Fixed a bug that could cause missing `queued` timestamps if many jobs were submitted in a
