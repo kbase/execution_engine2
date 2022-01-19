@@ -68,7 +68,7 @@ WORKDIR /kb/module/
 
 # Prune some un-needed jars and  files related to cve-2021-4104 (log4j)
 RUN rm -rf /kb/deployment/lib  
-RUN cd /usr/share; find . | grep jar$ | xargs r
+RUN cd /usr/share; find . | grep jar$ | xargs rm
 
 # Set deploy.cfg location
 ENV KB_DEPLOYMENT_CONFIG=/kb/module/deploy.cfg
