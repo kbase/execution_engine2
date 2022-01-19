@@ -70,8 +70,6 @@ RUN chmod +x download_runner.sh && ./download_runner.sh
 
 WORKDIR /kb/module/
 
-
-
 # Set deploy.cfg location
 ENV KB_DEPLOYMENT_CONFIG=/kb/module/deploy.cfg
 ENV PATH=/kb/module:$PATH
