@@ -33,28 +33,28 @@ class EE2ModelTest(unittest.TestCase):
 
     def test_insert_job(self):
         logging.info("Testing insert job")
-        with self.mongo_util.mongo_engine_connection(), self.mongo_util.pymongo_client(
-            self.config["mongo-jobs-collection"]
-        ) as pc:
-            job = get_example_job()
-            job.save()
 
-            logging.info(f"Inserted {job.id}")
+        job = get_example_job()
+        job.save()
 
-            logging.info(f"Searching for {job.id}")
-            db = self.config["mongo-database"]
-            coll = self.config["mongo-jobs-collection"]
-            saved_job = pc[db][coll].find_one({"_id": ObjectId(job.id)})
-            logging.info("Found")
-            logging.info(saved_job)
+        logging.info(f"Inserted {job.id}")
 
-            print(job.wsid)
-            print(saved_job["wsid"])
-            self.assertEqual(job.wsid, saved_job["wsid"])
-            self.assertEqual(
-                job.job_input.narrative_cell_info.cell_id,
-                saved_job["job_input"]["narrative_cell_info"]["cell_id"],
-            )
+        logging.info(f"Searching for {job.id}")
+        db = self.config["mongo-database"]
+        coll = self.config["mongo-jobs-collection"]
+        saved_job = self.mongo_util.pymongoc[db][coll].find_one(
+            {"_id": ObjectId(job.id)}
+        )
+        logging.info("Found")
+        logging.info(saved_job)
+
+        print(job.wsid)
+        print(saved_job["wsid"])
+        self.assertEqual(job.wsid, saved_job["wsid"])
+        self.assertEqual(
+            job.job_input.narrative_cell_info.cell_id,
+            saved_job["job_input"]["narrative_cell_info"]["cell_id"],
+        )
 
     def test_insert_log(self):
         """

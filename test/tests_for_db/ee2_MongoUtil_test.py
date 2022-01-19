@@ -55,7 +55,6 @@ class MongoUtilTest(unittest.TestCase):
             "mongo_user",
             "mongo_pass",
             "mongo_authmechanism",
-            "mongo_collection",
         ]
         mongo_util = self.getMongoUtil()
         self.assertTrue(set(class_attri) <= set(mongo_util.__dict__.keys()))
@@ -105,74 +104,6 @@ class MongoUtilTest(unittest.TestCase):
             else:
                 assert j.queued is None
                 assert j.status == state.value
-
-    def test_update_jobs_enmasse(self):
-        """Check to see that created jobs get updated to queued"""
-        for state in Status:
-            job = get_example_job(status=Status.created.value, scheduler_id=None)
-            job2 = get_example_job(status=state.value, scheduler_id=None)
-            job3 = get_example_job(status=state.value, scheduler_id=None)
-            jobs = [job, job2, job3]
-
-            for j in jobs:
-                j.scheduler_id = None
-                j.save()
-                assert j.scheduler_id is None
-
-            job_ids = [job.id, job2.id, job3.id]
-            scheduler_ids = ["humpty", "dumpty", "alice"]
-            jobs_to_update = list(map(JobIdPair, job_ids, scheduler_ids))
-
-            now_ms = time.time()
-            self.getMongoUtil().update_jobs_to_queued(jobs_to_update)
-            job.reload()
-            job2.reload()
-            job3.reload()
-
-            # Check that sched ids are set
-            for i, val in enumerate(scheduler_ids):
-                assert jobs[i].scheduler_id == val
-                assert jobs[i].scheduler_type == "condor"
-
-            #  Checks that a timestamp in seconds since the epoch is within a second of the current time.
-            for j in jobs:
-                assert now_ms + 1 > j.updated
-                assert now_ms - 1 < j.updated
-
-        # First job always should transition to queued
-        assert job.status == Status.queued.value
-
-        # Created jobs should transition
-        if state.value == Status.created.value:
-            assert all(j.status == Status.queued.value for j in [job, job2, job3])
-
-        else:
-            # Don't change their state
-            assert all(j.status == state.value for j in [job2, job3])
-
-    def test_update_jobs_enmasse_bad_job_pairs(self):
-        job = get_example_job(status=Status.created.value).save()
-        job2 = get_example_job(status=Status.created.value).save()
-        job3 = get_example_job(status=Status.created.value).save()
-        job_ids = [job.id, job2.id, job3.id]
-        scheduler_ids = [job.scheduler_id, job2.scheduler_id, None]
-        job_id_pairs = list(map(JobIdPair, job_ids, scheduler_ids))
-
-        with self.assertRaisesRegex(
-            expected_exception=ValueError,
-            expected_regex=f"Provided a bad job_id_pair, missing scheduler_id for {job3.id}",
-        ):
-            self.getMongoUtil().update_jobs_to_queued(job_id_pairs)
-
-        job_ids = [job.id, job2.id, None]
-        scheduler_ids = [job.scheduler_id, job2.scheduler_id, job3.scheduler_id]
-        job_id_pairs = list(map(JobIdPair, job_ids, scheduler_ids))
-
-        with self.assertRaisesRegex(
-            expected_exception=ValueError,
-            expected_regex=f"Provided a bad job_id_pair, missing job_id for {job3.scheduler_id}",
-        ):
-            self.getMongoUtil().update_jobs_to_queued(job_id_pairs)
 
     def test_get_by_cluster(self):
         """Get a job by its condor scheduler_id"""
@@ -347,113 +278,6 @@ class MongoUtilTest(unittest.TestCase):
             mongo_util.get_job(job_id=j.id).delete()
             self.assertEqual(ori_job_count, Job.objects.count())
 
-    def test_insert_one_ok(self):
-        mongo_util = self.getMongoUtil()
-
-        with mongo_util.pymongo_client(
-            self.config["mongo-jobs-collection"]
-        ) as pymongo_client:
-            col = pymongo_client[self.config["mongo-database"]][
-                self.config["mongo-jobs-collection"]
-            ]
-
-            ori_job_count = col.count_documents({})
-            doc = {"test_key": "foo"}
-            job_id = mongo_util.insert_one(doc)
-            self.assertEqual(ori_job_count, col.count_documents({}) - 1)
-
-            result = list(col.find({"_id": ObjectId(job_id)}))[0]
-            self.assertEqual(result["test_key"], "foo")
-
-            col.delete_one({"_id": ObjectId(job_id)})
-            self.assertEqual(col.count_documents({}), ori_job_count)
-
-    def test_find_in_ok(self):
-        mongo_util = self.getMongoUtil()
-
-        with mongo_util.pymongo_client(
-            self.config["mongo-jobs-collection"]
-        ) as pymongo_client:
-            col = pymongo_client[self.config["mongo-database"]][
-                self.config["mongo-jobs-collection"]
-            ]
-
-            ori_job_count = col.count_documents({})
-            doc = {"test_key_1": "foo", "test_key_2": "bar"}
-            job_id = mongo_util.insert_one(doc)
-            self.assertEqual(ori_job_count, col.count_documents({}) - 1)
-
-            # test query empty field
-            elements = ["foobar"]
-            docs = mongo_util.find_in(elements, "test_key_1")
-            self.assertEqual(docs.count(), 0)
-
-            # test query "foo"
-            elements = ["foo"]
-            docs = mongo_util.find_in(elements, "test_key_1")
-            self.assertEqual(docs.count(), 1)
-            doc = docs.next()
-            self.assertTrue("_id" in doc.keys())
-            self.assertTrue(doc.get("_id"), job_id)
-            self.assertEqual(doc.get("test_key_1"), "foo")
-
-            col.delete_one({"_id": ObjectId(job_id)})
-            self.assertEqual(col.count_documents({}), ori_job_count)
-
-    def test_update_one_ok(self):
-        mongo_util = self.getMongoUtil()
-
-        with mongo_util.pymongo_client(
-            self.config["mongo-jobs-collection"]
-        ) as pymongo_client:
-            col = pymongo_client[self.config["mongo-database"]][
-                self.config["mongo-jobs-collection"]
-            ]
-
-            ori_job_count = col.count_documents({})
-            doc = {"test_key_1": "foo"}
-            job_id = mongo_util.insert_one(doc)
-            self.assertEqual(ori_job_count, col.count_documents({}) - 1)
-
-            elements = ["foo"]
-            docs = mongo_util.find_in(elements, "test_key_1")
-            self.assertEqual(docs.count(), 1)
-            doc = docs.next()
-            self.assertTrue("_id" in doc.keys())
-            self.assertTrue(doc.get("_id"), job_id)
-            self.assertEqual(doc.get("test_key_1"), "foo")
-
-            mongo_util.update_one({"test_key_1": "bar"}, job_id)
-
-            elements = ["foo"]
-            docs = mongo_util.find_in(elements, "test_key_1")
-            self.assertEqual(docs.count(), 0)
-
-            elements = ["bar"]
-            docs = mongo_util.find_in(elements, "test_key_1")
-            self.assertEqual(docs.count(), 1)
-
-            col.delete_one({"_id": ObjectId(job_id)})
-            self.assertEqual(col.count_documents({}), ori_job_count)
-
-    def test_delete_one_ok(self):
-        mongo_util = MongoUtil(self.config)
-        with mongo_util.pymongo_client(self.config["mongo-jobs-collection"]) as pc:
-            col = pc.get_database(self.config["mongo-database"]).get_collection(
-                self.config["mongo-jobs-collection"]
-            )
-
-            doc_count = col.count_documents({})
-            logging.info("Found {} documents".format(doc_count))
-
-            doc = {"test_key_1": "foo", "test_key_2": "bar"}
-            job_id = mongo_util.insert_one(doc)
-
-            self.assertEqual(col.count_documents({}), doc_count + 1)
-            logging.info("Assert 0 documents")
-            mongo_util.delete_one(job_id)
-            self.assertEqual(col.count_documents({}), doc_count)
-
     def test_get_job_log_pymongo_ok(self):
         mongo_util = self.getMongoUtil()
 
@@ -465,20 +289,17 @@ class MongoUtilTest(unittest.TestCase):
         jl.stored_line_count = 0
         jl.lines = []
 
-        with mongo_util.pymongo_client(
-            self.config["mongo-jobs-collection"]
-        ) as pymongo_client:
-            jl_col = pymongo_client[self.config["mongo-database"]][
-                self.config["mongo-logs-collection"]
-            ]
+        jl_col = mongo_util.pymongoc[self.config["mongo-database"]][
+            self.config["mongo-logs-collection"]
+        ]
 
-            ori_jl_count = jl_col.count_documents({})
+        ori_jl_count = jl_col.count_documents({})
 
-            jl.save()  # save job log
+        jl.save()  # save job log
 
-            self.assertEqual(JobLog.objects.count(), ori_jl_count + 1)
-            job_log = mongo_util.get_job_log_pymongo(str(primary_key))
+        self.assertEqual(JobLog.objects.count(), ori_jl_count + 1)
+        job_log = mongo_util.get_job_log_pymongo(str(primary_key))
 
-            self.assertEqual(job_log.get("original_line_count"), 0)
-            self.assertEqual(job_log.get("stored_line_count"), 0)
-            self.assertIsNone(job_log.get("lines"))
+        self.assertEqual(job_log.get("original_line_count"), 0)
+        self.assertEqual(job_log.get("stored_line_count"), 0)
+        self.assertIsNone(job_log.get("lines"))

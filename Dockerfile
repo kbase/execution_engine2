@@ -23,6 +23,10 @@ RUN DEBIAN_FRONTEND=noninteractive wget -qO - https://research.cs.wisc.edu/htcon
 RUN cd /opt \
     && git clone https://github.com/kbase/jars \
     && cd -
+    
+# Remove due to cve-2021-4104 issue in spin (log4j)
+RUN rm /opt/jars/lib/jars/dockerjava/docker-java-shaded-3.0.14.jar
+
 
 # install mongodb
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2930ADAE8CAF5059EE73BB4B58712A2291FA4AD5 \
