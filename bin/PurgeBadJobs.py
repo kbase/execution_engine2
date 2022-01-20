@@ -44,6 +44,7 @@ ee2_jobs_collection = ee2_db.get_collection(
 
 CREATED_MINUTES_AGO = 5
 QUEUE_THRESHOLD_DAYS = 14
+RUNNING_THRESHOLD_DAYS = 8
 
 
 def cancel(record):
@@ -65,30 +66,45 @@ def cancel(record):
     sleep(1)
 
 
-def cancel_jobs_stuck_in_queue():
+def cancel_jobs_stuck_in_state(threshold_days, state):
+    before_days = (datetime.today() - timedelta(days=threshold_days + 1)).timestamp()
+    print({"status": state, state: {"$lt": before_days}})
+    stuck_jobs = ee2_jobs_collection.find(
+        {"status": state, state: {"$lt": before_days}}
+    )
+    print(
+        f"Found {stuck_jobs.count()} jobs that were stuck in the {state} state over {threshold_days} days"
+    )
+    for record in stuck_jobs:
+        queued_time = record[state]
+        now = datetime.now(timezone.utc).timestamp()
+        elapsed = now - queued_time
+        print(f"{state} days=", elapsed / 86000)
+        cancel(record)
+
+
+def cancel_jobs_stuck_in_running():
     """
-    For jobs over 14 days old, cancel them
+    For running jobs over 8 days old, cancel them
     Update a completed Job as necessary to test this out:
     ee2.update_job_status({'job_id': '601af2afeeb773acaf9de80d', 'as_admin': True, 'status': 'queued'})
     :return:
     """
-    queue_threshold_days = QUEUE_THRESHOLD_DAYS
-    before_days = (
-        datetime.today() - timedelta(days=queue_threshold_days + 1)
-    ).timestamp()
-    print({"status": "queued", "queued": {"$lt": before_days}})
-    stuck_jobs = ee2_jobs_collection.find(
-        {"status": Status.queued.value, "queued": {"$lt": before_days}}
+    cancel_jobs_stuck_in_state(
+        threshold_days=RUNNING_THRESHOLD_DAYS, state=Status.running.value
     )
-    print(
-        f"Found {stuck_jobs.count()} jobs that were stuck in the {Status.queued.value} state over {queue_threshold_days} days"
+
+
+def cancel_jobs_stuck_in_queue():
+    """
+    For queued jobs over 14 days old, cancel them
+    Update a completed Job as necessary to test this out:
+    ee2.update_job_status({'job_id': '601af2afeeb773acaf9de80d', 'as_admin': True, 'status': 'running'})
+    :return:
+    """
+    cancel_jobs_stuck_in_state(
+        threshold_days=QUEUE_THRESHOLD_DAYS, state=Status.queued.value
     )
-    for record in stuck_jobs:
-        queued_time = record["queued"]
-        now = datetime.now(timezone.utc).timestamp()
-        elapsed = now - queued_time
-        print("queued days=", elapsed / 86000)
-        cancel(record)
 
 
 def cancel_created():
@@ -116,6 +132,8 @@ def clean_retried_jobs():
 
 def purge():
     cancel_jobs_stuck_in_queue()
+    # Use this after an outage
+    # cancel_jobs_stuck_in_running()
     cancel_created()
 
 
