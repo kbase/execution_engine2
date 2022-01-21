@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -x
 
+# Attempt to fix 'Failed to write ToE tag to .job.ad file (13): Permission denied'
+chmod 777 .job.ad
+
 HOME=$(pwd)
 export HOME
 # Detect if we are running at NERSC and load some customization
