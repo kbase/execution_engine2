@@ -5,6 +5,6 @@ repos:
     - id: black
       exclude: '.+Impl.py'
 -   repo: https://gitlab.com/pycqa/flake8
-    rev: ''
+    rev: '3.9.2'
     hooks:
     - id: flake8
