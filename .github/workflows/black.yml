@@ -18,4 +18,4 @@ jobs:
           options: "--check --verbose"
           src: "./test"
           version: "22.1.0"
-          version: "21.5b1"
+
