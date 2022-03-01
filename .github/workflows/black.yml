@@ -1,0 +1,19 @@
+name: Lint with Black
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          src: "./lib"
+          version: "21.5b1"
+      - uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          src: "./test"
+          version: "21.5b1"
