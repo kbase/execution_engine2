@@ -1,6 +1,6 @@
 name: Lint with Black
 
-on: [push, pull_request]
+on: [pull_request]
 
 jobs:
   lint:
@@ -11,9 +11,11 @@ jobs:
         with:
           options: "--check --verbose"
           src: "./lib"
-          version: "21.5b1"
+          version: "22.1.0"
+          exclude: '.+Impl.py'
       - uses: psf/black@stable
         with:
           options: "--check --verbose"
           src: "./test"
+          version: "22.1.0"
           version: "21.5b1"
