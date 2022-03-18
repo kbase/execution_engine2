@@ -1,0 +1,103 @@
+name: non-sdk tests
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  non_sdk_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.7]
+    steps:
+
+      - name: Check out GitHub repo
+        if: "!contains(github.event.head_commit.message, 'skip ci')"
+        uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up test environment
+        if: "!contains(github.event.head_commit.message, 'skip ci')"
+        shell: bash
+        env:
+          KBASE_TEST_TOKEN: ${{ secrets.KBASE_TEST_TOKEN }}
+          MONGODB_VER: mongodb-linux-x86_64-3.6.16
+          ARANGODB_VER: 3.5.1
+          ARANGODB_V: 35
+          KAFKA_VER: 2.8.1
+          SCALA_VER: 2.12
+        run: |
+          # upgrade and update
+          apt update && apt upgrade
+          # Download necessary components for testing
+          # mongo is only a test dependency, no point in matrixing it
+          cd ..
+          wget http://fastdl.mongodb.org/linux/$MONGODB_VER.tgz
+          # file may be gzipped over transfer
+          gzip -d $MONGODB_VER.tgz
+          tar xf $MONGODB_VER.tar
+          export MONGOD=`pwd`/$MONGODB_VER/bin/mongod
+          cd -
+          echo "Done with Mongo"
+
+          # arango
+          cd ..
+          curl -O https://download.arangodb.com/arangodb$ARANGODB_V/Community/Linux/arangodb3-linux-$ARANGODB_VER.tar.gz
+          tar -xf arangodb3-linux-$ARANGODB_VER.tar.gz
+          export ARANGO_EXE=$(pwd)/arangodb3-$ARANGODB_VER/usr/sbin/arangod
+          export ARANGO_JS=$(pwd)/arangodb3-$ARANGODB_VER/usr/share/arangodb3/js/
+          cd -
+          echo "Done with Arango"
+
+          # kafka
+          cd ..
+          curl -O http://mirror.metrocast.net/apache/kafka/$KAFKA_VER/kafka_$SCALA_VER-$KAFKA_VER.tgz
+          tar -xzf kafka_$SCALA_VER-$KAFKA_VER.tgz
+          export KAFKA_BIN_DIR=$(pwd)/kafka_$SCALA_VER-$KAFKA_VER/bin
+          cd -
+          echo "Done with Kafka"
+
+          # jars
+          cd ..
+          git clone https://github.com/kbase/jars
+          export JARS=$(pwd)/jars/lib/jars
+          cd -
+          echo "Done with Jars"
+
+          # copy to test.cfg file
+          cd test
+          cp test.cfg.example test.cfg
+          sed -i "s#^test.jars.dir=.*#test.jars.dir=$JARS#" test.cfg
+          sed -i "s#^test.temp.dir=.*#test.temp.dir=temp_test_dir#" test.cfg
+          sed -i "s#^test.arango.exe.*#test.arango.exe=$ARANGO_EXE#" test.cfg
+          sed -i "s#^test.arango.js.*#test.arango.js=$ARANGO_JS#" test.cfg
+          sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD#" test.cfg
+          sed -i "s#^test.kafka.bin.dir.*#test.kafka.bin.dir=$KAFKA_BIN_DIR#" test.cfg
+          sed -i "s#^test.mongo.wired_tiger.*#test.mongo.wired_tiger=true#" test.cfg
+          cat test.cfg
+          cd -
+
+      - name: Install Python dependencies
+        shell: bash
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        shell: bash
+        run: |
+          echo "Create fake deployment config"
+          echo "[SampleService]" > service.cfg
+          echo "srv_wiz_url = https://ci.kbase.us/services/service_wizard" >> service.cfg
+          export KB_DEPLOYMENT_CONFIG=`pwd`/service.cfg
+          pipenv install --dev
+          pipenv run make test-sdkless
+
