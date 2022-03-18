@@ -1,4 +1,4 @@
-FROM quay.io/kbase/sdkbase2:python
+FROM kbase/sdkpython:3.8.0
 MAINTAINER KBase Developer
 
 RUN apt-get clean all && apt-get update --fix-missing -y && apt-get upgrade -y
@@ -12,7 +12,7 @@ RUN apt-get install -y gcc wget vim htop tmpreaper
 RUN mkdir -p /etc/apt/sources.list.d
 
 # Install condor
-RUN curl -fsSL https://get.htcondor.org | sudo /bin/bash -s -- --no-dry-run
+RUN curl -fsSL https://get.htcondor.org | /bin/bash -s -- --no-dry-run
 
 # install jars
 # perhaps we should have test and prod dockerfiles to avoid jars and mongo installs in prod
