@@ -1,7 +1,7 @@
 FROM quay.io/kbase/sdkbase2:python
 MAINTAINER KBase Developer
 
-RUN apt-get clean all && apt-get update --fix-missing -y
+RUN apt-get clean all && apt-get update --fix-missing -y && apt-get upgrade
 
 # -----------------------------------------
 # In this section, you can install any system dependencies required
@@ -11,12 +11,8 @@ RUN apt-get clean all && apt-get update --fix-missing -y
 RUN apt-get install -y gcc wget vim htop tmpreaper
 RUN mkdir -p /etc/apt/sources.list.d
 
-
-RUN DEBIAN_FRONTEND=noninteractive wget -qO - https://research.cs.wisc.edu/htcondor/debian/HTCondor-Release.gpg.key | apt-key add - \
-    && echo "deb http://research.cs.wisc.edu/htcondor/debian/8.8/stretch stretch contrib" >> /etc/apt/sources.list \
-    && echo "deb-src http://research.cs.wisc.edu/htcondor/debian/8.8/stretch stretch contrib" >> /etc/apt/sources.list \
-    && apt-get update -y \
-    && apt-get install -y condor
+# Install condor
+RUN curl -fsSL https://get.htcondor.org | sudo /bin/bash -s -- --no-dry-run
 
 # install jars
 # perhaps we should have test and prod dockerfiles to avoid jars and mongo installs in prod
