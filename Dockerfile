@@ -1,7 +1,7 @@
-FROM quay.io/kbase/sdkbase2:python
+FROM kbase/sdkpython:3.8.0
 MAINTAINER KBase Developer
 
-RUN apt-get clean all && apt-get update --fix-missing -y
+RUN apt-get clean all && apt-get update --fix-missing -y && apt-get upgrade -y
 
 # -----------------------------------------
 # In this section, you can install any system dependencies required
@@ -11,12 +11,8 @@ RUN apt-get clean all && apt-get update --fix-missing -y
 RUN apt-get install -y gcc wget vim htop tmpreaper
 RUN mkdir -p /etc/apt/sources.list.d
 
-
-RUN DEBIAN_FRONTEND=noninteractive wget -qO - https://research.cs.wisc.edu/htcondor/debian/HTCondor-Release.gpg.key | apt-key add - \
-    && echo "deb http://research.cs.wisc.edu/htcondor/debian/8.8/stretch stretch contrib" >> /etc/apt/sources.list \
-    && echo "deb-src http://research.cs.wisc.edu/htcondor/debian/8.8/stretch stretch contrib" >> /etc/apt/sources.list \
-    && apt-get update -y \
-    && apt-get install -y condor
+# Install condor
+RUN curl -fsSL https://get.htcondor.org | /bin/bash -s -- --no-dry-run
 
 # install jars
 # perhaps we should have test and prod dockerfiles to avoid jars and mongo installs in prod
@@ -26,6 +22,12 @@ RUN cd /opt \
     
 # Remove due to cve-2021-4104 issue in spin (log4j)
 RUN rm /opt/jars/lib/jars/dockerjava/docker-java-shaded-3.0.14.jar
+
+# Install DOCKERIZE
+RUN curl -o /tmp/dockerize.tgz https://raw.githubusercontent.com/kbase/dockerize/dist/dockerize-linux-amd64-v0.5.0.tar.gz && \
+      cd /usr/bin && \
+      tar xvzf /tmp/dockerize.tgz && \
+      rm /tmp/dockerize.tgz
 
 
 # install mongodb

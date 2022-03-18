@@ -19,7 +19,7 @@ services:
       - "-stdout"
       - "/kb/deployment/jettybase/logs/request.log"
       - "./scripts/entrypoint.sh"
-    entrypoint: [ "/kb/deployment/bin/dockerize" ]
+    entrypoint: [ "dockerize" ]
     depends_on: ["mongodb","condor"]
     environment:
       - POOL_PASSWORD=weakpassword
@@ -42,7 +42,7 @@ services:
       - "-stdout"
       - "/kb/deployment/jettybase/logs/request.log"
       - "./scripts/entrypoint.sh"
-    entrypoint: [ "/kb/deployment/bin/dockerize" ]
+    entrypoint: [ "dockerize" ]
     depends_on: ["mongodb","condor"]
     environment:
       - POOL_PASSWORD=weakpassword
