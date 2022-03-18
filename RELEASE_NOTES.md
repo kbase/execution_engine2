@@ -1,6 +1,9 @@
 # execution_engine2 (ee2) release notes
 =========================================
 
+## 0.0.81
+* Updated HTCondor Clients, New Base Image
+
 ## 0.0.8
 * Fixed a bug that could, seemingly rarely, cause job and log updates to be applied to the
   wrong Mongo collection.
