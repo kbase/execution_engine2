@@ -23,6 +23,12 @@ RUN cd /opt \
 # Remove due to cve-2021-4104 issue in spin (log4j)
 RUN rm /opt/jars/lib/jars/dockerjava/docker-java-shaded-3.0.14.jar
 
+# Install DOCKERIZE
+RUN curl -o /tmp/dockerize.tgz https://raw.githubusercontent.com/kbase/dockerize/dist/dockerize-linux-amd64-v0.5.0.tar.gz && \
+      cd /usr/bin && \
+      tar xvzf /tmp/dockerize.tgz && \
+      rm /tmp/dockerize.tgz
+
 
 # install mongodb
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2930ADAE8CAF5059EE73BB4B58712A2291FA4AD5 \
