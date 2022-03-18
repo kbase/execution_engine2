@@ -1,7 +1,7 @@
 FROM quay.io/kbase/sdkbase2:python
 MAINTAINER KBase Developer
 
-RUN apt-get clean all && apt-get update --fix-missing -y && apt-get upgrade
+RUN apt-get clean all && apt-get update --fix-missing -y && apt-get upgrade -y
 
 # -----------------------------------------
 # In this section, you can install any system dependencies required
