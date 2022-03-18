@@ -3,6 +3,7 @@
 
 ## 0.0.81
 * Updated HTCondor Clients, New Base Image
+* Use default GH actions
 
 ## 0.0.8
 * Fixed a bug that could, seemingly rarely, cause job and log updates to be applied to the
