@@ -493,17 +493,41 @@ class EE2RunJob:
 
         wsid = batch_params.get(_WORKSPACE_ID)
         meta = batch_params.get(_META)
-
+        now = time.time()
         self._preflight(
             runjob_params=params,
             batch_params=batch_params,
             new_batch_job=True,
             as_admin=as_admin,
         )
+        preflight_done = time.time()
+        self.logger.debug(f"preflight took {preflight_done - now}s")
+
+        pre_add_job_req = time.time()
         self._add_job_requirements(params, bool(as_admin))  # as_admin checked above
+        post_add_job_req = time.time()
+        self.logger.debug(
+            f"_add_job_requirements took {post_add_job_req - pre_add_job_req}s"
+        )
+
+        pre_check_job_args = time.time()
         self._check_job_arguments(params, batch_job=True)
+        post_check_job_args = time.time()
+        self.logger.debug(
+            f"check_job_arguments took  {post_check_job_args - pre_check_job_args}s"
+        )
+
+        pre_create_batch_job = time.time()
         batch_job = self._create_batch_job(wsid=wsid, meta=meta)
+        post_create_job_batch = time.time()
+        self.logger.debug(
+            f"create batch job took {post_create_job_batch - pre_create_batch_job}s"
+        )
+
+        pre_run_batch = time.time()
         children_jobs = self._run_batch(batch_job=batch_job, params=params)
+        post_run_batch = time.time()
+        self.logger.debug(f"run_batch took {post_run_batch - pre_run_batch}s")
 
         return {_BATCH_ID: str(batch_job.id), "child_job_ids": children_jobs}
 
