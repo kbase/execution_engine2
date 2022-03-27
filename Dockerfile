@@ -78,3 +78,6 @@ ENV PATH=/kb/module:$PATH
 
 ENTRYPOINT [ "./scripts/entrypoint.sh" ]
 CMD [ ]
+
+# Gunicorn runs here, exposed for docker-slim
+EXPOSE 5000
