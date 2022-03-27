@@ -14,6 +14,3 @@ docker build --build-arg BUILD_DATE="$DATE" \
              --label us.kbase.vcs-pull-req="$PR" \
              -t ghcr.io/"$MY_ORG"/"$MY_APP":"pr-""$PR" .
 docker push ghcr.io/"$MY_ORG"/"$MY_APP":"pr-""$PR"
-	
-docker run -i --rm -v /var/run/docker.sock:/var/run/docker.sock dslim/docker-slim build --http-probe=false  --tag ghcr.io/"$MY_ORG"/"$MY_APP":"pr-""$PR".slim ghcr.io/"$MY_ORG"/"$MY_APP":"pr-""$PR"
-docker push ghcr.io/"$MY_ORG"/"$MY_APP":"pr-""$PR".slim
