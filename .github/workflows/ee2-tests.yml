@@ -11,7 +11,7 @@
 name: Execution Engine 2 Test Suite
 
 on:
-  [push, pull_request]
+  [pull_request]
 
 jobs:
   build:
