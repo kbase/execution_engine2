@@ -13,7 +13,7 @@ name: Build & Tag Image on PR
     - ready_for_review
     - reopened
     - synchronize
-    - workflow_dispatch
+  workflow_dispatch:
 jobs:
   docker_build:
     runs-on: ubuntu-latest
