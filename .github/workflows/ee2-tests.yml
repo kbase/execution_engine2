@@ -1,0 +1,45 @@
+# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+# To ssh into this build add the following:
+#- name: Start SSH session
+#      uses: luchihoratiu/debug-via-ssh@main
+#      with:
+#        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+#        SSH_PASS: ${{ secrets.SSH_PASS }}
+
+name: Execution Engine 2 Test Suite
+
+on:
+  [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Lint with flake8 and black
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black pytest
+        flake8 ./lib ./test
+        black --check ./lib ./test
+    - name: Install dependencies
+      run: |
+        if [ -f requirements.txt ]; then pip install -r requirements-dev.txt; fi
+        cd /opt
+        git clone https://github.com/kbase/jars
+        cd -
+    - name: Build Docker Image
+      run: |
+        docker build . -t execution_engine2:test
+    - name: Run Tests
+      run: |
+        docker-compose up -d
+        cp test/env/test.travis.env test.env
+        make test-coverage
+        codecov
