@@ -65,7 +65,7 @@ RUN make all
 
 # Remove Jars and old Conda for Trivy Scans and after compilation is done
 RUN rm -rf /sdk && rm -rf /opt
-
+RUN rm -rf /miniconda-latest/pkgs/conda-4.12.0-py39h06a4308_0/info/test/tests/data/env_metadata
 
 WORKDIR /kb/module/scripts
 RUN chmod +x download_runner.sh && ./download_runner.sh
