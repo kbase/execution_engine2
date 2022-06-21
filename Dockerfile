@@ -63,8 +63,8 @@ RUN mkdir -p /kb/module/work && chmod -R a+rw /kb/module && mkdir -p /etc/condor
 WORKDIR /kb/module
 RUN make all
 
-# Remove Jars for Trivy Scans and after compilation is done
-RUN rm -rf /sdk    
+# Remove Jars and old Conda for Trivy Scans and after compilation is done
+RUN rm -rf /sdk && rm -rf /opt
 
 
 WORKDIR /kb/module/scripts
