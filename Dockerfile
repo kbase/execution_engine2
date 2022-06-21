@@ -14,14 +14,10 @@ RUN mkdir -p /etc/apt/sources.list.d
 # Install condor
 RUN curl -fsSL https://get.htcondor.org | /bin/bash -s -- --no-dry-run
 
-# install jars
-# perhaps we should have test and prod dockerfiles to avoid jars and mongo installs in prod
-RUN cd /opt \
-    && git clone https://github.com/kbase/jars \
-    && cd -
+# Install jars for testing purposes
+# Uncomment this if you want to run tests inside the ee2 container on MacOSX
+# RUN cd /opt && git clone https://github.com/kbase/jars && cd -
     
-# Remove due to cve-2021-4104 issue in spin (log4j)
-RUN rm /opt/jars/lib/jars/dockerjava/docker-java-shaded-3.0.14.jar
 
 # Install DOCKERIZE
 RUN curl -o /tmp/dockerize.tgz https://raw.githubusercontent.com/kbase/dockerize/dist/dockerize-linux-amd64-v0.5.0.tar.gz && \
