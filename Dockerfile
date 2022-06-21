@@ -17,7 +17,9 @@ RUN curl -fsSL https://get.htcondor.org | /bin/bash -s -- --no-dry-run
 # Install jars for testing purposes
 # Uncomment this if you want to run tests inside the ee2 container on MacOSX
 # RUN cd /opt && git clone https://github.com/kbase/jars && cd -
-    
+
+# Remove Jars for Trivy Scans
+RUN rm -rf /sdk    
 
 # Install DOCKERIZE
 RUN curl -o /tmp/dockerize.tgz https://raw.githubusercontent.com/kbase/dockerize/dist/dockerize-linux-amd64-v0.5.0.tar.gz && \
