@@ -1,7 +1,7 @@
-FROM quay.io/kbase/sdkbase2:python
+FROM kbase/sdkpython:3.8.0
 MAINTAINER KBase Developer
 
-RUN apt-get clean all && apt-get update --fix-missing -y
+RUN apt-get clean all && apt-get update --fix-missing -y && apt-get upgrade -y
 
 # -----------------------------------------
 # In this section, you can install any system dependencies required
@@ -11,21 +11,19 @@ RUN apt-get clean all && apt-get update --fix-missing -y
 RUN apt-get install -y gcc wget vim htop tmpreaper
 RUN mkdir -p /etc/apt/sources.list.d
 
+# Install condor
+RUN curl -fsSL https://get.htcondor.org | /bin/bash -s -- --no-dry-run
 
-RUN DEBIAN_FRONTEND=noninteractive wget -qO - https://research.cs.wisc.edu/htcondor/debian/HTCondor-Release.gpg.key | apt-key add - \
-    && echo "deb http://research.cs.wisc.edu/htcondor/debian/8.8/stretch stretch contrib" >> /etc/apt/sources.list \
-    && echo "deb-src http://research.cs.wisc.edu/htcondor/debian/8.8/stretch stretch contrib" >> /etc/apt/sources.list \
-    && apt-get update -y \
-    && apt-get install -y condor
+# Install jars for testing purposes
+# Uncomment this if you want to run tests inside the ee2 container on MacOSX
+# RUN cd /opt && git clone https://github.com/kbase/jars && cd -
 
-# install jars
-# perhaps we should have test and prod dockerfiles to avoid jars and mongo installs in prod
-RUN cd /opt \
-    && git clone https://github.com/kbase/jars \
-    && cd -
-    
-# Remove due to cve-2021-4104 issue in spin (log4j)
-RUN rm /opt/jars/lib/jars/dockerjava/docker-java-shaded-3.0.14.jar
+
+# Install DOCKERIZE
+RUN curl -o /tmp/dockerize.tgz https://raw.githubusercontent.com/kbase/dockerize/dist/dockerize-linux-amd64-v0.5.0.tar.gz && \
+      cd /usr/bin && \
+      tar xvzf /tmp/dockerize.tgz && \
+      rm /tmp/dockerize.tgz
 
 
 # install mongodb
@@ -64,6 +62,10 @@ RUN mkdir -p /kb/module/work && chmod -R a+rw /kb/module && mkdir -p /etc/condor
 
 WORKDIR /kb/module
 RUN make all
+
+# Remove Jars and old Conda for Trivy Scans and after compilation is done
+RUN rm -rf /sdk && rm -rf /opt
+RUN rm -rf /miniconda-latest/pkgs/conda-4.12.0-py39h06a4308_0/info/test/tests/data/env_metadata
 
 WORKDIR /kb/module/scripts
 RUN chmod +x download_runner.sh && ./download_runner.sh

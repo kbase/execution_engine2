@@ -216,37 +216,31 @@ def test_job_req_check_parameters_no_input():
 
 
 def test_job_req_check_parameters_full_input():
-    assert (
-        JobRequirements.check_parameters(
-            1,
-            1,
-            1,
-            "   b   ",
-            "x",
-            " user ",
-            890,
-            {"proc": "x286", "maxmem": "640k"},
-            [],
-        )
-        == (1, 1, 1, "b", True, "user", True, {"proc": "x286", "maxmem": "640k"}, False)
-    )
+    assert JobRequirements.check_parameters(
+        1,
+        1,
+        1,
+        "   b   ",
+        "x",
+        " user ",
+        890,
+        {"proc": "x286", "maxmem": "640k"},
+        [],
+    ) == (1, 1, 1, "b", True, "user", True, {"proc": "x286", "maxmem": "640k"}, False)
 
 
 def test_job_req_check_parameters_whitespace_as_user():
-    assert (
-        JobRequirements.check_parameters(
-            1,
-            1,
-            1,
-            "   b   ",
-            0,
-            " \t  ",
-            890,
-            {"proc": "x286", "maxmem": "640k"},
-            1,
-        )
-        == (1, 1, 1, "b", False, None, True, {"proc": "x286", "maxmem": "640k"}, True)
-    )
+    assert JobRequirements.check_parameters(
+        1,
+        1,
+        1,
+        "   b   ",
+        0,
+        " \t  ",
+        890,
+        {"proc": "x286", "maxmem": "640k"},
+        1,
+    ) == (1, 1, 1, "b", False, None, True, {"proc": "x286", "maxmem": "640k"}, True)
 
 
 def test_job_req_check_parameters_fail():
