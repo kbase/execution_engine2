@@ -14,14 +14,10 @@ RUN mkdir -p /etc/apt/sources.list.d
 # Install condor
 RUN curl -fsSL https://get.htcondor.org | /bin/bash -s -- --no-dry-run
 
-# install jars
-# perhaps we should have test and prod dockerfiles to avoid jars and mongo installs in prod
-RUN cd /opt \
-    && git clone https://github.com/kbase/jars \
-    && cd -
-    
-# Remove due to cve-2021-4104 issue in spin (log4j)
-RUN rm /opt/jars/lib/jars/dockerjava/docker-java-shaded-3.0.14.jar
+# Install jars for testing purposes
+# Uncomment this if you want to run tests inside the ee2 container on MacOSX
+# RUN cd /opt && git clone https://github.com/kbase/jars && cd -
+
 
 # Install DOCKERIZE
 RUN curl -o /tmp/dockerize.tgz https://raw.githubusercontent.com/kbase/dockerize/dist/dockerize-linux-amd64-v0.5.0.tar.gz && \
@@ -66,6 +62,10 @@ RUN mkdir -p /kb/module/work && chmod -R a+rw /kb/module && mkdir -p /etc/condor
 
 WORKDIR /kb/module
 RUN make all
+
+# Remove Jars and old Conda for Trivy Scans and after compilation is done
+RUN rm -rf /sdk && rm -rf /opt
+RUN rm -rf /miniconda-latest/pkgs/conda-4.12.0-py39h06a4308_0/info/test/tests/data/env_metadata
 
 WORKDIR /kb/module/scripts
 RUN chmod +x download_runner.sh && ./download_runner.sh

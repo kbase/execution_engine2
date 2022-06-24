@@ -1,6 +1,14 @@
 # execution_engine2 (ee2) release notes
 =========================================
 
+## 0.0.9
+* Update GHA with latest actions, remove old actions
+* Change job defaults to result in 
+* NJS and KB_UPLOAD 5 Jobs
+* Bigmem nodes with 250GB of ram take 1 job
+* Bigmem nodes with 1TB of ram take 4 jobs
+* Remove Jars from built image / cleanup for trivy
+
 ## 0.0.81
 * Updated HTCondor Clients, New Base Image
 * Use default GH actions

@@ -11,7 +11,7 @@
 name: Execution Engine 2 Test Suite
 
 on:
-  [push, pull_request]
+  [pull_request]
 
 jobs:
   build:
@@ -43,4 +43,3 @@ jobs:
         cp test/env/test.travis.env test.env
         make test-coverage
         codecov
-
