@@ -60,10 +60,10 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     def setUpClass(cls):
         cls.config_file = os.environ.get(
             "KB_DEPLOYMENT_CONFIG",
-            "/Users/bsadkhin/modules/execution_engine2/test/deploy.cfg",
+            "test/deploy.cfg",
         )
         logging.info(f"Loading config from {cls.config_file}")
-        print("Loading config from", cls.config_file)
+
         config_parser = ConfigParser()
         config_parser.read(cls.config_file)
 
