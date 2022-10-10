@@ -367,7 +367,8 @@ class JobsStatus:
                     error_message=None,
                 )
             )
-            self._send_exec_stats_to_catalog(job_id=job_id)
+            
+        self._send_exec_stats_to_catalog(job_id=job_id)
         self._update_finished_job_with_usage(job_id, as_admin=as_admin)
 
     def _update_finished_job_with_usage(self, job_id, as_admin=None) -> Dict:
