@@ -3,7 +3,7 @@ repos:
     rev: 22.10.0
     hooks:
     - id: black
-      exclude: '.+Impl.py'
+      exclude: ".*execution_engine2Impl.py"
 -   repo: https://gitlab.com/pycqa/flake8
     rev: '3.9.2'
     hooks:
