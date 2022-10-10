@@ -10,6 +10,7 @@ from execution_engine2.exceptions import (
     ChildrenNotFoundError,
 )
 from execution_engine2.sdk.EE2Constants import JobError
+from execution_engine2.utils.arg_processing import parse_bool
 from lib.execution_engine2.authorization.authstrategy import can_read_jobs
 from lib.execution_engine2.db.models.models import (
     Job,
@@ -18,7 +19,6 @@ from lib.execution_engine2.db.models.models import (
     ErrorCode,
     TerminatedCode,
 )
-from execution_engine2.utils.arg_processing import parse_bool
 from lib.execution_engine2.utils.KafkaUtils import (
     KafkaCancelJob,
     KafkaCondorCommand,
@@ -540,7 +540,8 @@ class JobsStatus:
         log_exec_stats_params = dict()
         log_exec_stats_params["user_id"] = job.user
         app_id = job_input.app_id
-        log_exec_stats_params["app_module_name"] = app_id.split("/")[0]
+        if app_id:
+            log_exec_stats_params["app_module_name"] = app_id.split("/")[0]
         log_exec_stats_params["app_id"] = app_id
         method = job_input.method
         log_exec_stats_params["func_module_name"] = method.split(".")[0]
