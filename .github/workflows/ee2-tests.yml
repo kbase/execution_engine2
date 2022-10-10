@@ -18,23 +18,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      
       - uses: psf/black@stable
         with:
           options: "--check --verbose"
-          src: "./lib"
-      
+          src: "./lib"      
       - uses: psf/black@stable
         with:
           options: "--check --verbose"
-          src: "./tests"
-  	
+          src: "./tests"  	
       - uses: py-actions/flake8@v2
-	with:
+        with:
           path: "./lib"
-
       - uses: py-actions/flake8@v2
-	with:
+        with:
           path: "./tests"
 
   build:
