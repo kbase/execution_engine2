@@ -18,14 +18,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      
       - uses: psf/black@stable
         with:
-	    options: "--check --verbose"
-	    src: "./lib"
+          options: "--check --verbose"
+          src: "./lib"
+      
       - uses: psf/black@stable
         with:
-	    options: "--check --verbose"
-	    src: "./tests"
+          options: "--check --verbose"
+          src: "./tests"
+  	
+      - uses: py-actions/flake8@v2
+
 
   build:
     runs-on: ubuntu-latest
@@ -56,3 +61,4 @@ jobs:
         cp test/env/test.travis.env test.env
         make test-coverage
         codecov
+
