@@ -58,9 +58,12 @@ from installed_clients.WorkspaceClient import Workspace
 class ee2_SDKMethodRunner_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
+        cls.config_file = os.environ.get(
+            "KB_DEPLOYMENT_CONFIG",
+            "/Users/bsadkhin/modules/execution_engine2/test/deploy.cfg",
+        )
         logging.info(f"Loading config from {cls.config_file}")
-
+        print("Loading config from", cls.config_file)
         config_parser = ConfigParser()
         config_parser.read(cls.config_file)
 
@@ -596,7 +599,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         runner = self.getRunner()
         runner._test_job_permissions = MagicMock(return_value=True)
-        runner.get_catalog().log_exec_stats = MagicMock(return_value=True)
+        mocked_catalog = runner.get_catalog()
+        mocked_catalog.log_exec_stats = MagicMock(return_value=True)
 
         # test missing job_id input
         with self.assertRaises(ValueError) as context1:
@@ -649,6 +653,19 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         with self.assertRaises(InvalidStatusTransitionException):
             self.mongo_util.update_job_status(
                 job_id=job_id, status=Status.running.value
+            )
+
+        expected_calls = {
+            "user_id": "wsadmin",
+            "app_module_name": "MEGAHIT",
+            "app_id": "MEGAHIT/run_megahit",
+            "func_module_name": "MEGAHIT",
+            "is_error": 0,
+        }
+        for key in expected_calls:
+            assert (
+                mocked_catalog.log_exec_stats.call_args[0][0][key]
+                == expected_calls[key]
             )
 
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
