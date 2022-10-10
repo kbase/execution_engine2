@@ -43,7 +43,7 @@ class SlackClient:
             calculated_hold_reason = "Unknown"
         message = (
             f"Job {job_id} {batch_name} was successfully marked as error (status == {status})."
-            + " It probably died because of {calculated_hold_reason} ({hold_reason} {hold_reason_code}"
+            + f" It probably died because of {calculated_hold_reason} ({hold_reason} {hold_reason_code}"
         )
         self.safe_chat_post_message(channel=self.channel, text=message)
 
