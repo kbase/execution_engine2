@@ -662,6 +662,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             "func_module_name": "MEGAHIT",
             "is_error": 0,
         }
+
         for key in expected_calls:
             assert (
                 mocked_catalog.log_exec_stats.call_args[0][0][key]
@@ -681,12 +682,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         condor._get_job_info = MagicMock(return_value={})
         condor.get_job_resource_info = MagicMock(return_value={})
         runner.condor = condor
-        runner._send_exec_stats_to_catalog = MagicMock(return_value=True)
         runner.catalog_utils = MagicMock(return_value=True)
         runner._test_job_permissions = MagicMock(return_value=True)
-
-        # with self.assertRaises(InvalidStatusTransitionException):
-        #     runner.finish_job(job_id=job_id, error_message="error message")
 
         runner.start_job(job_id=job_id, skip_estimation=True)
         time.sleep(2)
@@ -726,6 +723,20 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         self.mongo_util.get_job(job_id=job_id).delete()
         self.assertEqual(ori_job_count, Job.objects.count())
+
+        expected_calls = {
+            "user_id": "wsadmin",
+            "app_module_name": "MEGAHIT",
+            "app_id": "MEGAHIT/run_megahit",
+            "func_module_name": "MEGAHIT",
+            "is_error": 1,
+        }
+
+        for key in expected_calls:
+            assert (
+                runner.catalog.log_exec_stats.call_args[0][0][key]
+                == expected_calls[key]
+            )
 
     @requests_mock.Mocker()
     def test_check_job_global_perm(self, rq_mock):
