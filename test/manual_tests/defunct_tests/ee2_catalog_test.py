@@ -1,4 +1,5 @@
 import copy
+import os
 import unittest
 from configparser import ConfigParser
 
@@ -7,7 +8,7 @@ from lib.execution_engine2.utils.Condor import Condor
 from test.utils_shared.test_utils import bootstrap
 
 bootstrap()
-import os
+
 
 print("Current in ", os.getcwd())
 

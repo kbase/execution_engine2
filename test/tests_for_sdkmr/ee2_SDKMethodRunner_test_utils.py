@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from lib.execution_engine2.db.models.models import Job, JobInput, Meta
-from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 
 
 class ee2_sdkmr_test_helper:

@@ -26,10 +26,11 @@ def send_slack_message(message):
 
 
 def _send_slack_message_chunks(message):
-
     window = 15000
 
-    for m in [message[i : i + window] for i in range(0, len(message), window)]:
+    for m in [
+        message[i : i + window] for i in range(0, len(message), window)  # noqa: E203
+    ]:  # noqa: E203
         time.sleep(1)
         webhook_url = os.environ.get("SLACK_WEBHOOK_URL")
         slack_data = {"text": m}

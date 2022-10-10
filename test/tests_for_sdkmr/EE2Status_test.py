@@ -4,15 +4,16 @@ Unit tests for the EE2Status class.
 
 from logging import Logger
 from unittest.mock import create_autospec, call
+
 from bson.objectid import ObjectId
 
-from execution_engine2.db.models.models import Job, Status, JobInput
-from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
-from execution_engine2.sdk.EE2Status import JobsStatus, JobPermissions
 from execution_engine2.db.MongoUtil import MongoUtil
-from lib.execution_engine2.utils.KafkaUtils import KafkaClient, KafkaFinishJob
-from lib.execution_engine2.utils.Condor import Condor
+from execution_engine2.db.models.models import Job, Status, JobInput
+from execution_engine2.sdk.EE2Status import JobsStatus, JobPermissions
+from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from installed_clients.CatalogClient import Catalog
+from lib.execution_engine2.utils.Condor import Condor
+from lib.execution_engine2.utils.KafkaUtils import KafkaClient, KafkaFinishJob
 
 
 def _finish_job_complete_minimal_get_test_job(job_id, sched, app_id, gitcommit, user):
