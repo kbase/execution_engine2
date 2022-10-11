@@ -124,6 +124,8 @@ def _finish_job_complete_minimal(app_id, app_module):
         "job_id": job_id,
     }
     if app_id:
+        if app_id is not None:
+            app_id = app_id.split("/")[-1]
         les_expected.update({"app_id": app_id, "app_module_name": app_module})
     catalog.log_exec_stats.assert_called_once_with(les_expected)
     mongo.update_job_resources.assert_called_once_with(job_id, resources)

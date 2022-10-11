@@ -658,7 +658,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         expected_calls = {
             "user_id": "wsadmin",
             "app_module_name": "MEGAHIT",
-            "app_id": "MEGAHIT/run_megahit",
+            "app_id": "run_megahit",
             "func_module_name": "MEGAHIT",
             "is_error": 0,
         }
@@ -727,7 +727,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         expected_calls = {
             "user_id": "wsadmin",
             "app_module_name": "MEGAHIT",
-            "app_id": "MEGAHIT/run_megahit",
+            "app_id": "run_megahit",
             "func_module_name": "MEGAHIT",
             "is_error": 1,
         }
