@@ -542,7 +542,8 @@ class JobsStatus:
         app_id = job_input.app_id
         if app_id:
             log_exec_stats_params["app_module_name"] = app_id.split("/")[0]
-        log_exec_stats_params["app_id"] = app_id
+            log_exec_stats_params["app_id"] = app_id.split("/")[-1]
+
         method = job_input.method
         log_exec_stats_params["func_module_name"] = method.split(".")[0]
         log_exec_stats_params["func_name"] = method.split(".")[-1]
