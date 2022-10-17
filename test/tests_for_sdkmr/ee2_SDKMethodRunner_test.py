@@ -58,7 +58,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
     def setUpClass(cls):
         cls.config_file = os.environ.get(
             "KB_DEPLOYMENT_CONFIG",
-            "test/deploy.cfg",
+            "/Users/bsadkhin/modules/execution_engine2/test/deploy.cfg",
         )
         logging.info(f"Loading config from {cls.config_file}")
 
@@ -956,17 +956,29 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job1.delete()
 
     # flake8: noqa: C901
+    @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
-    def test_check_jobs_date_range(self, condor_mock):
+    def test_check_jobs_date_range(self, rq_mock, condor_mock):
+        rq_mock.add_matcher(
+            run_job_adapter(
+                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "n"}},
+                ws_perms_global=[self.ws_id],
+                user_roles=[],
+            )
+        )
+        # Mock Mock Mock
         user_name = "wsadmin"
-
         runner = self.getRunner()
+        runner.check_is_admin = MagicMock(return_value=True)
+        runner.catalog_cache.lookup_git_commit_version = MagicMock(
+            return_value="commit_goes_here"
+        )
+        runner.workspace_auth = MagicMock()
 
         # TODO redo this test with dependency injection & autospec vs. monkey patching
         resolver = create_autospec(
             JobRequirementsResolver, spec_set=True, instance=True
         )
-        runner.workspace_auth = MagicMock()
         runner.get_job_requirements_resolver = MagicMock(return_value=resolver)
         resolver.get_requirements_type.return_value = RequirementsType.STANDARD
         resolver.resolve_requirements.return_value = JobRequirements(
@@ -975,11 +987,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             disk_GB=1,
             client_group="njs",
         )
-        runner.auth.get_user = MagicMock(return_value=user_name)
-        runner.check_is_admin = MagicMock(return_value=True)
 
         runner.workspace_auth.can_read = MagicMock(return_value=True)
-
         self.mock = MagicMock(return_value=True)
 
         # fixed_rj = RunJob(runner)
