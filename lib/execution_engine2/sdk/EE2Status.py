@@ -533,14 +533,22 @@ class JobsStatus:
         return job_states
 
     def _send_exec_stats_to_catalog(self, job_id):
-        job = self.sdkmr.get_mongo_util().get_job(job_id)
+        # Some notes about app_ids in general
+        # Batch apps containers have an app_id of "batch_app"
+        # Download apps do not have an "app_id" or have it in the format of "module_id.app_name"
+        # Jobs launched directly via EE2 client directly should not specify an "app_id"
 
+        job = self.sdkmr.get_mongo_util().get_job(job_id)
         job_input = job.job_input
 
         log_exec_stats_params = dict()
         log_exec_stats_params["user_id"] = job.user
         app_id = job_input.app_id
         if app_id:
+            # Note this will not work properly for app_ids incorrectly separated by a '.',
+            # which happens in some KBase code (which needs to be fixed at some point) -
+            # notably the narrative data download code, maybe more
+            # It's been this way for a long time, so leave for now
             log_exec_stats_params["app_module_name"] = app_id.split("/")[0]
             log_exec_stats_params["app_id"] = app_id.split("/")[-1]
 
