@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+test / tests_for_sdkmr / ee2_SDKMethodRunner_test.pytest / tests_for_sdkmr / ee2_SDKMethodRunner_test.py  # -*- coding: utf-8 -*-
 import copy
 import json
 import logging
@@ -53,12 +53,14 @@ bootstrap()
 
 
 # TODO this isn't necessary with pytest, can just use regular old functions
+# TODO Fix Cross Mock Pollution. Until then, run each test one by one to make sure it really passes.
+# TODO Fix Cross Mock Pollution with the "Copy of the runner" likely being the culprit
 class ee2_SDKMethodRunner_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.config_file = os.environ.get(
             "KB_DEPLOYMENT_CONFIG",
-            "/Users/bsadkhin/modules/execution_engine2/test/deploy.cfg",
+            "test/deploy.cfg",
         )
         logging.info(f"Loading config from {cls.config_file}")
 
