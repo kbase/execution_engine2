@@ -1,4 +1,4 @@
-test / tests_for_sdkmr / ee2_SDKMethodRunner_test.pytest / tests_for_sdkmr / ee2_SDKMethodRunner_test.py  # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import copy
 import json
 import logging
