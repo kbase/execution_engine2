@@ -22,6 +22,7 @@ from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job, Status, TerminatedCode
 from execution_engine2.exceptions import AuthError
 from execution_engine2.exceptions import InvalidStatusTransitionException
+from execution_engine2.sdk.EE2Runjob import EE2RunJob
 from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.utils.Condor import Condor
@@ -34,6 +35,8 @@ from execution_engine2.utils.job_requirements_resolver import (
     JobRequirementsResolver,
     RequirementsType,
 )
+from installed_clients.CatalogClient import Catalog
+from installed_clients.WorkspaceClient import Workspace
 from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 from test.utils_shared.mock_utils import get_client_mocks, ALL_CLIENTS
 from test.utils_shared.test_utils import (
@@ -47,11 +50,6 @@ from tests_for_db.mongo_test_helper import MongoTestHelper
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
-
-from execution_engine2.sdk.EE2Runjob import EE2RunJob
-
-from installed_clients.CatalogClient import Catalog
-from installed_clients.WorkspaceClient import Workspace
 
 
 # TODO this isn't necessary with pytest, can just use regular old functions
@@ -682,7 +680,7 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         condor._get_job_info = MagicMock(return_value={})
         condor.get_job_resource_info = MagicMock(return_value={})
         runner.condor = condor
-        runner.catalog_utils = MagicMock(return_value=True)
+        runner.catalog = MagicMock(return_value=True)
         runner._test_job_permissions = MagicMock(return_value=True)
 
         runner.start_job(job_id=job_id, skip_estimation=True)
