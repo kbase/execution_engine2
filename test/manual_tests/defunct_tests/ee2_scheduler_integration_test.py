@@ -60,7 +60,7 @@
 #             "initial_dir": "/condor_shared",
 #             "executable": "/bin/sleep",
 #             "arguments": "5d38cbc5d9b2d9ce67fdbbc4 https://ci.kbase.us/services",
-#             "environment": "DOCKER_JOB_TIMEOUT=604805 KB_ADMIN_AUTH_TOKEN=test_auth_token KB_AUTH_TOKEN=XXXX CLIENTGROUP=None JOB_ID=5d38cbc5d9b2d9ce67fdbbc4 CONDOR_ID=$(Cluster).$(Process) ",
+#             "environment": "DOCKER_JOB_TIMEOUT=604805 KB_ADMIN_AUTH_TOKEN=test_auth_token KB_AUTH_TOKEN=XXXX CLIENTGROUP=None JOB_ID=5d38cbc5d9b2d9ce67fdbbc4 CONDOR_ID=$(Cluster).$(Process) ", # noqa: E501
 #             "universe": "vanilla",
 #             "+AccountingGroup": "bsadkhin",
 #             "Concurrency_Limits": "bsadkhin",

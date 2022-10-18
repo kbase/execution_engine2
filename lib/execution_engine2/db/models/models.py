@@ -414,9 +414,9 @@ class HeldJob(Document):
         return super(HeldJob, self).save(*args, **kwargs)
 
 
-###
-### Unused fields that we might want
-###
+#
+# Unused fields that we might want
+#
 
 result_example = {
     "shocknodes": [],
@@ -442,9 +442,9 @@ result_example = {
 }
 
 
-####
-#### Unused Stuff to look at
-####
+#
+# Unused Stuff to look at
+#
 
 
 class Results(EmbeddedDocument):

@@ -1,19 +1,16 @@
 #!/usr/bin/env python
 # type: ignore
-try:
-    from .transfer_ujs_njs import MigrateDatabases
-    from lib.execution_engine2.db.models.models import Status, valid_status
-except Exception:
-    from transfer_ujs_njs import MigrateDatabases
-    from models import *
+from collections import defaultdict
+
 from bson import ObjectId
 
-from pprint import pprint
+try:
+    from .transfer_ujs_njs import MigrateDatabases
+except Exception:
+    from transfer_ujs_njs import MigrateDatabases
 
 njs_jobs_db = MigrateDatabases().njs_jobs
 ujs_jobs_db = MigrateDatabases().ujs_jobs
-
-from collections import defaultdict
 
 count = 0
 missing_ujs = []
@@ -26,7 +23,6 @@ for job in njs_jobs_db.find():
     if not ujs_job:
         print(f"Couldn't find {job_id}, ")
         missing_ujs.append(job_id)
-
 
 print("Max occurences", max(c.values()))
 

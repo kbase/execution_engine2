@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 import logging
 import os
-import time
 import unittest
-from pytest import raises
 
 from bson.objectid import ObjectId
+from pytest import raises
 
-from execution_engine2.db.MongoUtil import MongoUtil, JobIdPair
+from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job, JobLog, Status
 from test.utils_shared.test_utils import (
     bootstrap,

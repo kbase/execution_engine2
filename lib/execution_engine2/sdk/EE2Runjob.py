@@ -46,6 +46,10 @@ from execution_engine2.utils.job_requirements_resolver import (
     DEBUG_MODE,
 )
 from execution_engine2.utils.job_requirements_resolver import RequirementsType
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 
 _JOB_REQUIREMENTS = "job_reqs"
 _JOB_REQUIREMENTS_INCOMING = "job_requirements"
@@ -73,12 +77,6 @@ class JobPermissions(Enum):
 class PreparedJobParams(NamedTuple):
     params: dict
     job_id: str
-
-
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 
 
 class EE2RunJob:

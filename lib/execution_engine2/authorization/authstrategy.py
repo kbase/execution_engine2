@@ -2,7 +2,7 @@
 A module with commands for checking user privileges for jobs.
 This doesn't include checking admin rights.
 """
-from typing import Dict, List
+from typing import List
 from lib.execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from lib.execution_engine2.db.models.models import Job
 from collections import defaultdict

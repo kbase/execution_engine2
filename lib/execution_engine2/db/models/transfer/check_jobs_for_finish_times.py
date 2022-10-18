@@ -1,15 +1,15 @@
 #!/usr/bin/env python
-# type: ignore
+from bson import ObjectId
+
 try:
     from .transfer_ujs_njs import MigrateDatabases
     from lib.execution_engine2.db.models.models import Status, valid_status
 except Exception:
     from transfer_ujs_njs import MigrateDatabases
-    from models import *
+    from models import Status, valid_status
 
 
 ee2_jobs = MigrateDatabases().ee2_jobs
-from bson import ObjectId
 
 count = 0
 for job in ee2_jobs.find():

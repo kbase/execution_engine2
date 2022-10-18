@@ -4,10 +4,10 @@ aiohttp==3.7.4.post0
 cachetools==4.2.2
 codecov==2.1.11
 configparser==5.0.2
-confluent-kafka==1.7.0
+confluent-kafka==1.9.2
 coverage==5.5
 docker==5.0.0
-gevent==21.1.2
+gevent==21.12.0
 greenlet==1.1.0
 gunicorn==20.1.0
 htcondor==9.1.0
@@ -24,7 +24,7 @@ python-dateutil==2.8.2
 python-dotenv==0.18.0
 requests==2.25.1
 requests-mock==1.9.3
-sanic==21.6.0
+sanic==22.9.0
 slackclient==2.9.3
 toml==0.10.2
 urllib3==1.26.6

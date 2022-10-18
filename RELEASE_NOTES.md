@@ -1,5 +1,10 @@
 # execution_engine2 (ee2) release notes
 =========================================
+## 0.0.10
+* Fixes bug with ee2 not recording all jobs with the catalog during the process 
+of finishing a job
+* Updates GHA with black and flake8
+* Fix flake8 and black formatting issues
 
 ## 0.0.9
 * Update GHA with latest actions, remove old actions

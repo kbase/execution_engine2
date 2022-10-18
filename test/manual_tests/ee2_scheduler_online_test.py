@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 
 import logging
-import unittest
-
-logging.basicConfig(level=logging.INFO)
-
-from lib.installed_clients.execution_engine2Client import execution_engine2
-from lib.installed_clients.WorkspaceClient import Workspace
 import os
 import sys
 import time
+import unittest
+from pprint import pprint
 
 from dotenv import load_dotenv
-from pprint import pprint
+
+from lib.installed_clients.WorkspaceClient import Workspace
+from lib.installed_clients.execution_engine2Client import execution_engine2
+
+logging.basicConfig(level=logging.INFO)
 
 load_dotenv("env/test.env", verbose=True)
 

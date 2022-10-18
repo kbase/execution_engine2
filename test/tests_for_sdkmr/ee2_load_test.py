@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
-import copy
 import logging
 import os
 import queue
 import threading
 import time
 import unittest
-from configparser import ConfigParser
 from unittest.mock import patch
+
+from mock import MagicMock
 
 from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.MongoUtil import MongoUtil
@@ -28,7 +28,6 @@ from tests_for_db.mongo_test_helper import MongoTestHelper
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
-from mock import MagicMock
 
 
 class ee2_server_load_test(unittest.TestCase):
