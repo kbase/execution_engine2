@@ -1,4 +1,4 @@
-# This workflow will install Py.github/workflows/ee2-tests.yml.github/workflows/ee2-tests.ymlthon dependencies, run tests and lint with a single version of Python
+# This workflow will install Py.github/workflows/ee2-tests.yml.github/workflows/ee2-tests.yml.github/workflows/ee2-tests.ymlthon dependencies, run tests and lint with a single version of Python
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
 # To ssh into this build add the following:
@@ -57,7 +57,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
-          git clone https://github.com/kbase/jars /opt/
+          git clone https://github.com/kbase/jars /opt/jars
           cd -
       - name: Build Docker Image
         run: |
