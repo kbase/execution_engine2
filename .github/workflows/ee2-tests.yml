@@ -1,4 +1,4 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# This workflow will install Py.github/workflows/ee2-tests.ymlthon dependencies, run tests and lint with a single version of Python
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
 # To ssh into this build add the following:
@@ -11,23 +11,23 @@
 name: Execution Engine 2 Test Suite
 
 on:
-  [pull_request]
+  [ pull_request ]
 
 jobs:
-  Lint With Black:
+  Lint_with_Black:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: psf/black@stable
         with:
           options: "--check --verbose"
-          src: "./lib"      
+          src: "./lib"
       - uses: psf/black@stable
         with:
           options: "--check --verbose"
           src: "./test"
-          
-  Lint with Flake8:
+
+  Lint_with_Flake8:
     runs-on: ubuntu-latest
     name: Lint
     steps:
@@ -40,31 +40,29 @@ jobs:
       - name: flake8 Lint Lib
         uses: py-actions/flake8@v2
         with:
-            path: "./lib"
+          path: "./lib"
       - name: flake8 Lint Test
         uses: py-actions/flake8@v2
         with:
-            path: "./test"
-          
+          path: "./test"
 
-  Build and Run Tests:
+
+  Build_and_Run_Tests_and_CodeCov:
     runs-on: ubuntu-latest
     steps:
-    - name: Check out source repository
-      uses: actions/checkout@v3
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-  
-        git clone https://github.com/kbase/jars /opt/
-        cd -
-    - name: Build Docker Image
-      run: |
-        docker build . -t execution_engine2:test
-    - name: Run Tests
-      run: |
-        docker-compose up -d
-        cp test/env/test.travis.env test.env
-        make test-coverage
-        codecov
-
+      - name: Check out source repository
+        uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          git clone https://github.com/kbase/jars /opt/
+          cd -
+      - name: Build Docker Image
+        run: |
+          docker build . -t execution_engine2:test
+      - name: Run Tests
+        run: |
+          docker-compose up -d
+          cp test/env/test.travis.env test.env
+          make test-coverage
+          codecov
