@@ -13,7 +13,7 @@ from execution_engine2.authorization.workspaceauth import WorkspaceAuth
 from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job, Status
 from execution_engine2.execution_engine2Impl import execution_engine2
-from execution_engine2.sdk.EE2Status import JobsStatus
+from execution_engine2.sdk.EE2Status import JobsStatus  # noqa: F401
 from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.utils.Condor import Condor
