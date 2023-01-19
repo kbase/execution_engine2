@@ -1,4 +1,4 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
+.github/workflows/ee2-tests.yml# This workflow will install Python dependencies, run tests and lint with a single version of Python
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
 # To ssh into this build add the following:
@@ -14,7 +14,7 @@ on:
   [pull_request]
 
 jobs:
-  lint_with_black:	
+  Lint With Black:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -27,7 +27,7 @@ jobs:
           options: "--check --verbose"
           src: "./test"
           
-  flake8-lint:
+  Lint with Flake8:
     runs-on: ubuntu-latest
     name: Lint
     steps:
@@ -47,14 +47,16 @@ jobs:
             path: "./test"
           
 
-  build:
+  Build and Run Tests:
     runs-on: ubuntu-latest
     steps:
+    - name: Check out source repository
+      uses: actions/checkout@v3
     - name: Install dependencies
       run: |
         pip install -r requirements.txt
-        cd /opt
-        git clone https://github.com/kbase/jars
+  
+        git clone https://github.com/kbase/jars /opt/
         cd -
     - name: Build Docker Image
       run: |
