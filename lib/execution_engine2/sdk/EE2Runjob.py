@@ -49,7 +49,7 @@ from execution_engine2.utils.job_requirements_resolver import RequirementsType
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
+    from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner  # noqa: F401
 
 _JOB_REQUIREMENTS = "job_reqs"
 _JOB_REQUIREMENTS_INCOMING = "job_requirements"

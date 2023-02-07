@@ -8,6 +8,14 @@ if [ $# -eq 0 ]; then
     /usr/sbin/condor_store_cred -p "${POOL_PASSWORD}" -f /etc/condor/password
     chown kbase:kbase /etc/condor/password
   fi
+  
+  #Add Condor Pool Token
+  if [ "$CONDOR_JWT_TOKEN" ] ; then
+       mkdir -p /home/kbase/.condor/tokens.d
+       echo "$CONDOR_JWT_TOKEN" > /home/kbase/.condor/tokens.d/JWT
+       chown kbase /home/kbase/.condor/tokens.d/JWT
+       chmod 600 /home/kbase/.condor/tokens.d/JWT
+  fi
   chown kbase /etc/condor/password
 
   # Copy downloaded JobRunner to a shared volume mount
