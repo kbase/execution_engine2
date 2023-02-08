@@ -1,5 +1,9 @@
 # execution_engine2 (ee2) release notes
 =========================================
+
+## 0.0.11
+* Add ability to contact condor via token
+
 ## 0.0.10
 * Fixes bug with ee2 not recording all jobs with the catalog during the process 
 of finishing a job
