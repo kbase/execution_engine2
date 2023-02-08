@@ -16,12 +16,15 @@ from lib.execution_engine2.utils.Condor import Condor
 from lib.execution_engine2.utils.KafkaUtils import KafkaClient, KafkaFinishJob
 
 
-def _finish_job_complete_minimal_get_test_job(job_id, sched, app_id, gitcommit, user):
+def _finish_job_complete_minimal_get_test_job(
+    job_id, sched, app_id, gitcommit, user, status=None
+):
     job = Job()
     job.id = ObjectId(job_id)
-    job.running = 123.0
+
     job.finished = 456.5
-    job.status = Status.running.value
+    job.status = Status.running.value if not status else status
+    job.running = 123.0 if job.status is Status.running.value else None
     job.scheduler_id = sched
     job_input = JobInput()
     job.job_input = job_input
@@ -128,3 +131,13 @@ def _finish_job_complete_minimal(app_id, app_module):
         les_expected.update({"app_id": app_id, "app_module_name": app_module})
     catalog.log_exec_stats.assert_called_once_with(les_expected)
     mongo.update_job_resources.assert_called_once_with(job_id, resources)
+
+    # Ensure that catalog stats were not logged for a job that never ran
+    log_exec_stats_call_count = catalog.log_exec_stats.call_count
+    job_id2 = "6046b539ce9c58ecf8c3e5f4"
+    job3 = _finish_job_complete_minimal_get_test_job(
+        job_id2, sched, app_id, gitcommit, user, Status.created.value
+    )
+    sdkmr.get_job_with_permission.side_effect = [job3, job3]
+    JobsStatus(sdkmr).finish_job(job_id2, job_output=job_output)  # no return
+    assert catalog.log_exec_stats.call_count == log_exec_stats_call_count

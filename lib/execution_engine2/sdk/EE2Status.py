@@ -301,6 +301,7 @@ class JobsStatus:
         job = self.sdkmr.get_job_with_permission(
             job_id=job_id, requested_job_perm=JobPermissions.WRITE, as_admin=as_admin
         )
+        job_ran = False if not job.running else True
         if job.status in [
             Status.error.value,
             Status.completed.value,
@@ -368,8 +369,10 @@ class JobsStatus:
                 )
             )
 
-        self._send_exec_stats_to_catalog(job_id=job_id)
-        self._update_finished_job_with_usage(job_id, as_admin=as_admin)
+        # Only send jobs to catalog that actually ran on a worker
+        if job_ran:
+            self._send_exec_stats_to_catalog(job_id=job_id)
+            self._update_finished_job_with_usage(job_id, as_admin=as_admin)
 
     def _update_finished_job_with_usage(self, job_id, as_admin=None) -> Dict:
         """
