@@ -132,7 +132,7 @@ def _finish_job_complete_minimal(app_id, app_module):
     catalog.log_exec_stats.assert_called_once_with(les_expected)
     mongo.update_job_resources.assert_called_once_with(job_id, resources)
 
-    # Ensure that catalog stats were not logged for a job tha was created but failed before running
+    # Ensure that catalog stats were not logged for a job that was created but failed before running
     bad_running_timestamps = [-1, 0, None]
     for timestamp in bad_running_timestamps:
         log_exec_stats_call_count = catalog.log_exec_stats.call_count
