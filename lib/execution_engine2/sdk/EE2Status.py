@@ -370,7 +370,7 @@ class JobsStatus:
             )
 
         # Only send jobs to catalog that actually ran on a worker
-        if job_ran:
+        if job.running is not None:
             self._send_exec_stats_to_catalog(job_id=job_id)
             self._update_finished_job_with_usage(job_id, as_admin=as_admin)
 
