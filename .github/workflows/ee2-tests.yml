@@ -1,4 +1,4 @@
-# This workflow will install Python dependencies, run tests and lint
+# This workflow will install Python dependencies, run tests and lintentrypoint.sh
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
 # To ssh into this build add the following:
@@ -23,10 +23,12 @@ jobs:
         with:
           options: "--check --verbose"
           src: "./lib"
+          version: "22.10.0"
       - uses: psf/black@stable
         with:
           options: "--check --verbose"
           src: "./test"
+          version: "22.10.0"
 
   Lint_with_Flake8:
     runs-on: ubuntu-latest
