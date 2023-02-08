@@ -136,6 +136,9 @@ def _finish_job_complete_minimal(app_id, app_module):
     bad_running_timestamps = [-1, 0, None]
     for timestamp in bad_running_timestamps:
         log_exec_stats_call_count = catalog.log_exec_stats.call_count
+        update_finished_job_with_usage_call_count = (
+            mongo.update_job_resources.call_count
+        )
         job_id2 = "6046b539ce9c58ecf8c3e5f4"
         subject_job = _finish_job_complete_minimal_get_test_job(
             job_id2,
@@ -149,3 +152,7 @@ def _finish_job_complete_minimal(app_id, app_module):
         sdkmr.get_job_with_permission.side_effect = [subject_job, subject_job]
         JobsStatus(sdkmr).finish_job(subject_job, job_output=job_output)  # no return
         assert catalog.log_exec_stats.call_count == log_exec_stats_call_count
+        assert (
+            mongo.update_job_resources.call_count
+            == update_finished_job_with_usage_call_count
+        )
