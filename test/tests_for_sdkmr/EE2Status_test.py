@@ -16,15 +16,13 @@ from lib.execution_engine2.utils.Condor import Condor
 from lib.execution_engine2.utils.KafkaUtils import KafkaClient, KafkaFinishJob
 
 
-def _finish_job_complete_minimal_get_test_job(
-    job_id, sched, app_id, gitcommit, user, status=None
-):
+def _finish_job_complete_minimal_get_test_job(job_id, sched, app_id, gitcommit, user):
     job = Job()
     job.id = ObjectId(job_id)
 
-    job.finished = 456.5
-    job.status = Status.running.value if not status else status
-    job.running = 123.0 if job.status is Status.running.value else None
+    job.finished = job.id.generation_time.timestamp() + 10
+    job.status = Status.running.value
+    job.running = job.id.generation_time.timestamp() + 5
     job.scheduler_id = sched
     job_input = JobInput()
     job.job_input = job_input
@@ -120,9 +118,11 @@ def _finish_job_complete_minimal(app_id, app_module):
         "func_module_name": "module",
         "func_name": "method_id",
         "git_commit_hash": gitcommit,
-        "creation_time": 1615246649.0,  # from Job ObjectId
-        "exec_start_time": 123.0,
-        "finish_time": 456.5,
+        "creation_time": ObjectId(
+            job_id
+        ).generation_time.timestamp(),  # from Job ObjectId
+        "exec_start_time": ObjectId(job_id).generation_time.timestamp() + 5,
+        "finish_time": ObjectId(job_id).generation_time.timestamp() + 10,
         "is_error": 0,
         "job_id": job_id,
     }
@@ -132,12 +132,20 @@ def _finish_job_complete_minimal(app_id, app_module):
     catalog.log_exec_stats.assert_called_once_with(les_expected)
     mongo.update_job_resources.assert_called_once_with(job_id, resources)
 
-    # Ensure that catalog stats were not logged for a job that never ran
-    log_exec_stats_call_count = catalog.log_exec_stats.call_count
-    job_id2 = "6046b539ce9c58ecf8c3e5f4"
-    job3 = _finish_job_complete_minimal_get_test_job(
-        job_id2, sched, app_id, gitcommit, user, Status.created.value
-    )
-    sdkmr.get_job_with_permission.side_effect = [job3, job3]
-    JobsStatus(sdkmr).finish_job(job_id2, job_output=job_output)  # no return
-    assert catalog.log_exec_stats.call_count == log_exec_stats_call_count
+    # Ensure that catalog stats were not logged for a job tha was created but failed before running
+    bad_running_timestamps = [-1, 0, None]
+    for timestamp in bad_running_timestamps:
+        log_exec_stats_call_count = catalog.log_exec_stats.call_count
+        job_id2 = "6046b539ce9c58ecf8c3e5f4"
+        subject_job = _finish_job_complete_minimal_get_test_job(
+            job_id2,
+            sched,
+            app_id,
+            gitcommit,
+            user,
+        )
+        subject_job.running = timestamp
+        subject_job.status = Status.created.value
+        sdkmr.get_job_with_permission.side_effect = [subject_job, subject_job]
+        JobsStatus(sdkmr).finish_job(subject_job, job_output=job_output)  # no return
+        assert catalog.log_exec_stats.call_count == log_exec_stats_call_count
