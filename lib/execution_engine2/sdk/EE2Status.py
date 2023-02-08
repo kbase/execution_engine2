@@ -557,7 +557,10 @@ class JobsStatus:
         log_exec_stats_params["func_name"] = method.split(".")[-1]
         log_exec_stats_params["git_commit_hash"] = job_input.service_ver
         log_exec_stats_params["creation_time"] = job.id.generation_time.timestamp()
-        log_exec_stats_params["exec_start_time"] = job.running
+        log_exec_stats_params["exec_start_time"] = job.id.generation_time.timestamp()
+        if job.running is not None:
+            log_exec_stats_params["exec_start_time"] = job.running
+
         log_exec_stats_params["finish_time"] = job.finished
         log_exec_stats_params["is_error"] = int(job.status == Status.error.value)
         log_exec_stats_params["job_id"] = job_id
