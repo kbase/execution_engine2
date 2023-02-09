@@ -368,8 +368,10 @@ class JobsStatus:
                 )
             )
 
-        self._send_exec_stats_to_catalog(job_id=job_id)
-        self._update_finished_job_with_usage(job_id, as_admin=as_admin)
+        # Only send jobs to catalog that actually ran on a worker
+        if job.running and job.running >= job.id.generation_time.timestamp():
+            self._send_exec_stats_to_catalog(job_id=job_id)
+            self._update_finished_job_with_usage(job_id, as_admin=as_admin)
 
     def _update_finished_job_with_usage(self, job_id, as_admin=None) -> Dict:
         """
