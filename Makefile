@@ -18,8 +18,11 @@ all: compile build
 compile:
 	kb-sdk compile $(SPEC_FILE) \
 		--out $(LIB_DIR) \
-		--pysrvname $(SERVICE_CAPS).$(SERVICE_CAPS)Server \
-		--pyimplname $(SERVICE_CAPS).$(SERVICE_CAPS)Impl;
+        --pyimplname $(SERVICE_CAPS).$(SERVICE_CAPS)Impl;
+# 		--pysrvname $(SERVICE_CAPS).$(SERVICE_CAPS)Server \
+# Need to comment this out due to bug in kb-sdk, so you should manually build the server and push it into the repo
+# upon changing the specfile
+
 
 	kb-sdk compile $(SPEC_FILE) \
 		--out . \
