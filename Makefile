@@ -19,6 +19,7 @@ compile:
 	kb-sdk compile $(SPEC_FILE) \
 		--out $(LIB_DIR) \
 		--pyimplname $(SERVICE_CAPS).$(SERVICE_CAPS)Impl;
+		--pysrvname $(SERVICE_CAPS).$(SERVICE_CAPS)Server \
 
 	kb-sdk compile $(SPEC_FILE) \
 		--out . \
