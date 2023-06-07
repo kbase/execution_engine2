@@ -23,10 +23,12 @@ jobs:
         with:
           options: "--check --verbose"
           src: "./lib"
+          version: "22.10.0"
       - uses: psf/black@stable
         with:
           options: "--check --verbose"
           src: "./test"
+          version: "22.10.0"
 
   Lint_with_Flake8:
     runs-on: ubuntu-latest
