@@ -1,6 +1,23 @@
 # execution_engine2 (ee2) release notes
 =========================================
 
+## 0.0.12
+* Forcing black to 22.1.0 to make sure that GHA doesn't suddenly fail
+* Prevent jobs that never ran from submitting job execution stats
+
+
+## 0.0.11
+* Add ability for `kbase` user to contact condor via token
+
+## 0.0.10
+* Fixes bug with ee2 not recording all jobs with the catalog during the process 
+of finishing a job
+* Updates GHA with black and flake8
+* Fix flake8 and black formatting issues by formatting MANY files
+* Updated docs for installing htcondor
+* Update many python libs in requirements.txt
+
+
 ## 0.0.9
 * Update GHA with latest actions, remove old actions
 * Change job defaults to result in 

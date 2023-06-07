@@ -3,7 +3,6 @@ import copy
 import logging
 import os
 import unittest
-from configparser import ConfigParser
 
 import requests_mock
 

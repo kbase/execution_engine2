@@ -1,4 +1,4 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
+# This workflow will install Python dependencies, run tests and lint
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
 # To ssh into this build add the following:
@@ -11,35 +11,61 @@
 name: Execution Engine 2 Test Suite
 
 on:
-  [pull_request]
+  [ pull_request ]
 
 jobs:
-  build:
+  Lint_with_Black:
+    runs-on: ubuntu-latest
+    name: Lint With Black
+    steps:
+      - uses: actions/checkout@v3
+      - uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          src: "./lib"
+          version: "22.10.0"
+      - uses: psf/black@stable
+        with:
+          options: "--check --verbose"
+          src: "./test"
+          version: "22.10.0"
+
+  Lint_with_Flake8:
+    runs-on: ubuntu-latest
+    name: Lint With Flake8
+    steps:
+      - name: Check out source repository
+        uses: actions/checkout@v3
+      - name: Set up Python environment
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.8"
+      - name: flake8 Lint Lib
+        uses: py-actions/flake8@v2
+        with:
+          path: "./lib"
+      - name: flake8 Lint Test
+        uses: py-actions/flake8@v2
+        with:
+          path: "./test"
+
+
+  Build_and_Run_Tests_and_CodeCov:
+    name: Build and Run Tests and CodeCov
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.8
-    - name: Lint with flake8 and black
-      run: |
-        python -m pip install --upgrade pip
-        pip install flake8 black pytest
-        flake8 ./lib ./test
-        black --check ./lib ./test
-    - name: Install dependencies
-      run: |
-        if [ -f requirements.txt ]; then pip install -r requirements-dev.txt; fi
-        cd /opt
-        git clone https://github.com/kbase/jars
-        cd -
-    - name: Build Docker Image
-      run: |
-        docker build . -t execution_engine2:test
-    - name: Run Tests
-      run: |
-        docker-compose up -d
-        cp test/env/test.travis.env test.env
-        make test-coverage
-        codecov
+      - name: Check out source repository
+        uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          git clone https://github.com/kbase/jars /opt/jars
+      - name: Build Docker Image
+        run: |
+          docker build . -t execution_engine2:test
+      - name: Run Tests
+        run: |
+          docker-compose up -d
+          cp test/env/test.travis.env test.env
+          make test-coverage
+          codecov

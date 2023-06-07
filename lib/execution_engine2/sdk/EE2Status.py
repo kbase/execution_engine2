@@ -10,6 +10,7 @@ from execution_engine2.exceptions import (
     ChildrenNotFoundError,
 )
 from execution_engine2.sdk.EE2Constants import JobError
+from execution_engine2.utils.arg_processing import parse_bool
 from lib.execution_engine2.authorization.authstrategy import can_read_jobs
 from lib.execution_engine2.db.models.models import (
     Job,
@@ -18,7 +19,6 @@ from lib.execution_engine2.db.models.models import (
     ErrorCode,
     TerminatedCode,
 )
-from execution_engine2.utils.arg_processing import parse_bool
 from lib.execution_engine2.utils.KafkaUtils import (
     KafkaCancelJob,
     KafkaCondorCommand,
@@ -367,8 +367,11 @@ class JobsStatus:
                     error_message=None,
                 )
             )
+
+        # Only send jobs to catalog that actually ran on a worker
+        if job.running and job.running >= job.id.generation_time.timestamp():
             self._send_exec_stats_to_catalog(job_id=job_id)
-        self._update_finished_job_with_usage(job_id, as_admin=as_admin)
+            self._update_finished_job_with_usage(job_id, as_admin=as_admin)
 
     def _update_finished_job_with_usage(self, job_id, as_admin=None) -> Dict:
         """
@@ -532,8 +535,12 @@ class JobsStatus:
         return job_states
 
     def _send_exec_stats_to_catalog(self, job_id):
-        job = self.sdkmr.get_mongo_util().get_job(job_id)
+        # Some notes about app_ids in general
+        # Batch apps containers have an app_id of "batch_app"
+        # Download apps do not have an "app_id" or have it in the format of "module_id.app_name"
+        # Jobs launched directly via EE2 client directly should not specify an "app_id"
 
+        job = self.sdkmr.get_mongo_util().get_job(job_id)
         job_input = job.job_input
 
         log_exec_stats_params = dict()
@@ -545,7 +552,8 @@ class JobsStatus:
             # notably the narrative data download code, maybe more
             # It's been this way for a long time, so leave for now
             log_exec_stats_params["app_module_name"] = app_id.split("/")[0]
-            log_exec_stats_params["app_id"] = app_id
+            log_exec_stats_params["app_id"] = app_id.split("/")[-1]
+
         method = job_input.method
         log_exec_stats_params["func_module_name"] = method.split(".")[0]
         log_exec_stats_params["func_name"] = method.split(".")[-1]

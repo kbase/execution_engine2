@@ -39,7 +39,6 @@ import pymongo
 from bson import ObjectId
 from pytest import fixture, raises
 
-from execution_engine2.exceptions import InvalidParameterForBatch
 from execution_engine2.sdk.EE2Constants import ADMIN_READ_ROLE, ADMIN_WRITE_ROLE
 from installed_clients.WorkspaceClient import Workspace
 from installed_clients.baseclient import ServerError
@@ -382,7 +381,7 @@ def test_get_admin_permission_success(ee2_port):
     assert ee2cli_write.get_admin_permission() == {"permission": "w"}
 
 
-######## run_job tests ########
+# run_job tests ########
 
 
 def _get_htc_mocks():
@@ -820,7 +819,7 @@ def _run_job_fail(ee2_port, token, params, expected, throw_exception=False):
         assert_exception_correct(got.value, ServerError("name", 1, expected))
 
 
-######## run_job_concierge tests ########
+# run_job_concierge tests ########
 
 
 def test_run_job_concierge_minimal(ee2_port, ws_controller, mongo_client):
@@ -1140,7 +1139,7 @@ def _run_job_concierge_fail(
         assert_exception_correct(got.value, ServerError("name", 1, expected))
 
 
-######## run_job_batch tests ########
+# run_job_batch tests ########
 
 
 def test_run_job_batch(ee2_port, ws_controller, mongo_client):

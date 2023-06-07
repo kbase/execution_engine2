@@ -22,6 +22,7 @@ from execution_engine2.db.MongoUtil import MongoUtil
 from execution_engine2.db.models.models import Job, Status, TerminatedCode
 from execution_engine2.exceptions import AuthError
 from execution_engine2.exceptions import InvalidStatusTransitionException
+from execution_engine2.sdk.EE2Runjob import EE2RunJob
 from execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from execution_engine2.sdk.job_submission_parameters import JobRequirements
 from execution_engine2.utils.Condor import Condor
@@ -34,6 +35,8 @@ from execution_engine2.utils.job_requirements_resolver import (
     JobRequirementsResolver,
     RequirementsType,
 )
+from installed_clients.CatalogClient import Catalog
+from installed_clients.WorkspaceClient import Workspace
 from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 from test.utils_shared.mock_utils import get_client_mocks, ALL_CLIENTS
 from test.utils_shared.test_utils import (
@@ -48,17 +51,17 @@ from tests_for_db.mongo_test_helper import MongoTestHelper
 logging.basicConfig(level=logging.INFO)
 bootstrap()
 
-from execution_engine2.sdk.EE2Runjob import EE2RunJob
-
-from installed_clients.CatalogClient import Catalog
-from installed_clients.WorkspaceClient import Workspace
-
 
 # TODO this isn't necessary with pytest, can just use regular old functions
+# TODO Fix Cross Mock Pollution. Until then, run each test one by one to make sure it really passes.
+# TODO Fix Cross Mock Pollution with the "Copy of the runner" likely being the culprit
 class ee2_SDKMethodRunner_test(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.config_file = os.environ.get("KB_DEPLOYMENT_CONFIG", "test/deploy.cfg")
+        cls.config_file = os.environ.get(
+            "KB_DEPLOYMENT_CONFIG",
+            "test/deploy.cfg",
+        )
         logging.info(f"Loading config from {cls.config_file}")
 
         config_parser = ConfigParser()
@@ -596,7 +599,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         runner = self.getRunner()
         runner._test_job_permissions = MagicMock(return_value=True)
-        runner.get_catalog().log_exec_stats = MagicMock(return_value=True)
+        mocked_catalog = runner.get_catalog()
+        mocked_catalog.log_exec_stats = MagicMock(return_value=True)
 
         # test missing job_id input
         with self.assertRaises(ValueError) as context1:
@@ -651,6 +655,20 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
                 job_id=job_id, status=Status.running.value
             )
 
+        expected_calls = {
+            "user_id": "wsadmin",
+            "app_module_name": "MEGAHIT",
+            "app_id": "run_megahit",
+            "func_module_name": "MEGAHIT",
+            "is_error": 0,
+        }
+
+        for key in expected_calls:
+            assert (
+                mocked_catalog.log_exec_stats.call_args[0][0][key]
+                == expected_calls[key]
+            )
+
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
     def test_finish_job_with_error_message(self, condor):
 
@@ -664,12 +682,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         condor._get_job_info = MagicMock(return_value={})
         condor.get_job_resource_info = MagicMock(return_value={})
         runner.condor = condor
-        runner._send_exec_stats_to_catalog = MagicMock(return_value=True)
-        runner.catalog_utils = MagicMock(return_value=True)
+        runner.catalog = MagicMock(return_value=True)
         runner._test_job_permissions = MagicMock(return_value=True)
-
-        # with self.assertRaises(InvalidStatusTransitionException):
-        #     runner.finish_job(job_id=job_id, error_message="error message")
 
         runner.start_job(job_id=job_id, skip_estimation=True)
         time.sleep(2)
@@ -709,6 +723,20 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
 
         self.mongo_util.get_job(job_id=job_id).delete()
         self.assertEqual(ori_job_count, Job.objects.count())
+
+        expected_calls = {
+            "user_id": "wsadmin",
+            "app_module_name": "MEGAHIT",
+            "app_id": "run_megahit",
+            "func_module_name": "MEGAHIT",
+            "is_error": 1,
+        }
+
+        for key in expected_calls:
+            assert (
+                runner.catalog.log_exec_stats.call_args[0][0][key]
+                == expected_calls[key]
+            )
 
     @requests_mock.Mocker()
     def test_check_job_global_perm(self, rq_mock):
@@ -930,17 +958,29 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
         job1.delete()
 
     # flake8: noqa: C901
+    @requests_mock.Mocker()
     @patch("lib.execution_engine2.utils.Condor.Condor", autospec=True)
-    def test_check_jobs_date_range(self, condor_mock):
+    def test_check_jobs_date_range(self, rq_mock, condor_mock):
+        rq_mock.add_matcher(
+            run_job_adapter(
+                ws_perms_info={"user_id": self.user_id, "ws_perms": {self.ws_id: "n"}},
+                ws_perms_global=[self.ws_id],
+                user_roles=[],
+            )
+        )
+        # Mock Mock Mock
         user_name = "wsadmin"
-
         runner = self.getRunner()
+        runner.check_is_admin = MagicMock(return_value=True)
+        runner.catalog_cache.lookup_git_commit_version = MagicMock(
+            return_value="commit_goes_here"
+        )
+        runner.workspace_auth = MagicMock()
 
         # TODO redo this test with dependency injection & autospec vs. monkey patching
         resolver = create_autospec(
             JobRequirementsResolver, spec_set=True, instance=True
         )
-        runner.workspace_auth = MagicMock()
         runner.get_job_requirements_resolver = MagicMock(return_value=resolver)
         resolver.get_requirements_type.return_value = RequirementsType.STANDARD
         resolver.resolve_requirements.return_value = JobRequirements(
@@ -949,11 +989,8 @@ class ee2_SDKMethodRunner_test(unittest.TestCase):
             disk_GB=1,
             client_group="njs",
         )
-        runner.auth.get_user = MagicMock(return_value=user_name)
-        runner.check_is_admin = MagicMock(return_value=True)
 
         runner.workspace_auth.can_read = MagicMock(return_value=True)
-
         self.mock = MagicMock(return_value=True)
 
         # fixed_rj = RunJob(runner)

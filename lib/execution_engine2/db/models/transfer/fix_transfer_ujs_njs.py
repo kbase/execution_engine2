@@ -1,19 +1,17 @@
 #!/usr/bin/env python
-# type: ignore
 import os
 from collections import Counter
 from configparser import ConfigParser
-
-jobs_database_name = "ee2_jobs"
-from mongoengine import connect
-
 from datetime import datetime
 
-try:
-    from lib.execution_engine2.db.models.models import Job, Status, JobInput
+from mongoengine import connect
 
+try:
+    from lib.execution_engine2.db.models.models import Job, Status
 except Exception:
-    from models import Status, Job, JobInput
+    from models import Status, Job
+
+jobs_database_name = "ee2_jobs"
 
 
 class FixEE2JobsDatabase:

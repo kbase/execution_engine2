@@ -61,7 +61,9 @@ COPY ./ /kb/module
 RUN mkdir -p /kb/module/work && chmod -R a+rw /kb/module && mkdir -p /etc/condor/
 
 WORKDIR /kb/module
-RUN make all
+# Due to older kb-sdk in this base image, getting some compilation results we don't want
+# Will have to manually use the correct version of kbase-sdk to compile impl/Server files
+RUN make build
 
 # Remove Jars and old Conda for Trivy Scans and after compilation is done
 RUN rm -rf /sdk && rm -rf /opt

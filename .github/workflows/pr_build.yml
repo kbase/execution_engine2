@@ -10,7 +10,7 @@ on:
       - opened
       - reopened
       - synchronize
-      - merged
+      - closed
 jobs:
   build-develop-open:
     if: github.base_ref == 'develop' && github.event.pull_request.merged == false

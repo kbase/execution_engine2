@@ -11,7 +11,6 @@ from mock import MagicMock
 
 from execution_engine2.exceptions import (
     CannotRetryJob,
-    RetryFailureException,
     InvalidParameterForBatch,
 )
 from execution_engine2.sdk.job_submission_parameters import JobRequirements
@@ -24,6 +23,7 @@ from lib.execution_engine2.db.MongoUtil import MongoUtil
 from lib.execution_engine2.db.models.models import Job, Status
 from lib.execution_engine2.sdk.SDKMethodRunner import SDKMethodRunner
 from lib.execution_engine2.utils.CondorTuples import SubmissionInfo
+from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 from test.utils_shared.test_utils import (
     bootstrap,
     get_example_job,
@@ -34,8 +34,6 @@ from tests_for_db.mongo_test_helper import MongoTestHelper
 
 logging.basicConfig(level=logging.INFO)
 bootstrap()
-
-from test.tests_for_sdkmr.ee2_SDKMethodRunner_test_utils import ee2_sdkmr_test_helper
 
 
 class ee2_SDKMethodRunner_test(unittest.TestCase):

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#BEGIN_HEADER
+# BEGIN_HEADER
 import os
 import time
 
@@ -10,7 +10,7 @@ from execution_engine2.utils.APIHelpers import GenerateFromConfig
 from execution_engine2.utils.clients import get_client_set
 
 _AS_ADMIN = "as_admin"
-#END_HEADER
+# END_HEADER
 
 
 class execution_engine2:
@@ -29,10 +29,10 @@ class execution_engine2:
     # the latter method is running.
     ######################################### noqa
     VERSION = "0.0.8"
-    GIT_URL = "https://github.com/mrcreosote/execution_engine2.git"
-    GIT_COMMIT_HASH = "2ad95ce47caa4f1e7b939651f2b1773840e67a8a"
+    GIT_URL = ""
+    GIT_COMMIT_HASH = ""
 
-    #BEGIN_CLASS_HEADER
+    # BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
     MONGO_AUTHMECHANISM = "DEFAULT"
 
@@ -43,12 +43,12 @@ class execution_engine2:
 
     ADMIN_ROLES_CACHE_SIZE = 500
     ADMIN_ROLES_CACHE_EXPIRE_TIME = 300  # seconds
-    #END_CLASS_HEADER
+    # END_CLASS_HEADER
 
     # config contains contents of config file in a hash or None if it couldn't
     # be found
     def __init__(self, config):
-        #BEGIN_CONSTRUCTOR
+        # BEGIN_CONSTRUCTOR
         self.config = config
         self.config["mongo-collection"] = self.MONGO_COLLECTION
         self.config.setdefault("mongo-authmechanism", self.MONGO_AUTHMECHANISM)
@@ -66,7 +66,7 @@ class execution_engine2:
         override = os.environ.get("OVERRIDE_CLIENT_GROUP")
         with open(configpath) as cf:
             self.clients = get_client_set(config, cf, override)
-        #END_CONSTRUCTOR
+        # END_CONSTRUCTOR
         pass
 
 
@@ -92,7 +92,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        #BEGIN list_config
+        # BEGIN list_config
         public_keys = [
             "external-url",
             "kbase-endpoint",
@@ -113,12 +113,13 @@ class execution_engine2:
 
         returnVal = {key: self.config.get(key) for key in public_keys}
 
-        #END list_config
+        # END list_config
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
-            raise ValueError('Method list_config return value ' +
-                             'returnVal is not type dict as required.')
+            raise ValueError('Method list_config ' +
+                             'return value returnVal ' +
+                             'is not type dict as required.')
         # return the results
         return [returnVal]
 
@@ -129,14 +130,15 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        #BEGIN ver
+        # BEGIN ver
         returnVal = self.VERSION
-        #END ver
+        # END ver
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, str):
-            raise ValueError('Method ver return value ' +
-                             'returnVal is not type str as required.')
+            raise ValueError('Method ver ' +
+                             'return value returnVal ' +
+                             'is not type str as required.')
         # return the results
         return [returnVal]
 
@@ -159,7 +161,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        #BEGIN status
+        # BEGIN status
         returnVal = {
             "server_time": time.time(),
             "git_commit": self.GIT_COMMIT_HASH,
@@ -167,12 +169,13 @@ class execution_engine2:
             "service": self.SERVICE_NAME,
         }
 
-        #END status
+        # END status
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
-            raise ValueError('Method status return value ' +
-                             'returnVal is not type dict as required.')
+            raise ValueError('Method status ' +
+                             'return value returnVal ' +
+                             'is not type dict as required.')
         # return the results
         return [returnVal]
 
@@ -252,7 +255,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: job_id
-        #BEGIN run_job
+        # BEGIN run_job
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients = self.clients,
@@ -260,12 +263,13 @@ class execution_engine2:
             admin_permissions_cache=self.admin_permissions_cache,
         )
         job_id = mr.run_job(params, as_admin=bool(params.get(_AS_ADMIN)))
-        #END run_job
+        # END run_job
 
         # At some point might do deeper type checking...
         if not isinstance(job_id, str):
-            raise ValueError('Method run_job return value ' +
-                             'job_id is not type str as required.')
+            raise ValueError('Method run_job ' +
+                             'return value job_id ' +
+                             'is not type str as required.')
         # return the results
         return [job_id]
 
@@ -357,7 +361,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: job_ids
-        #BEGIN run_job_batch
+        # BEGIN run_job_batch
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients = self.clients,
@@ -366,12 +370,13 @@ class execution_engine2:
         )
         job_ids = mr.run_job_batch(
             params, batch_params, as_admin=bool(batch_params.get(_AS_ADMIN)))
-        #END run_job_batch
+        # END run_job_batch
 
         # At some point might do deeper type checking...
         if not isinstance(job_ids, dict):
-            raise ValueError('Method run_job_batch return value ' +
-                             'job_ids is not type dict as required.')
+            raise ValueError('Method run_job_batch ' +
+                             'return value job_ids ' +
+                             'is not type dict as required.')
         # return the results
         return [job_ids]
 
@@ -399,7 +404,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: retry_result
-        #BEGIN retry_job
+        # BEGIN retry_job
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients = self.clients,
@@ -407,12 +412,13 @@ class execution_engine2:
             admin_permissions_cache=self.admin_permissions_cache
         )
         retry_result = mr.retry(job_id=params.get('job_id'), as_admin=params.get('as_admin'))
-        #END retry_job
+        # END retry_job
 
         # At some point might do deeper type checking...
         if not isinstance(retry_result, dict):
-            raise ValueError('Method retry_job return value ' +
-                             'retry_result is not type dict as required.')
+            raise ValueError('Method retry_job ' +
+                             'return value retry_result ' +
+                             'is not type dict as required.')
         # return the results
         return [retry_result]
 
@@ -433,7 +439,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: retry_result
-        #BEGIN retry_jobs
+        # BEGIN retry_jobs
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients = self.clients,
@@ -441,12 +447,13 @@ class execution_engine2:
             admin_permissions_cache=self.admin_permissions_cache
         )
         retry_result = mr.retry_multiple(job_ids=params.get('job_ids'), as_admin=params.get('as_admin'))
-        #END retry_jobs
+        # END retry_jobs
 
         # At some point might do deeper type checking...
         if not isinstance(retry_result, list):
-            raise ValueError('Method retry_jobs return value ' +
-                             'retry_result is not type list as required.')
+            raise ValueError('Method retry_jobs ' +
+                             'return value retry_result ' +
+                             'is not type list as required.')
         # return the results
         return [retry_result]
 
@@ -462,7 +469,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: parent_and_child_ids
-        #BEGIN abandon_children
+        # BEGIN abandon_children
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
@@ -472,12 +479,13 @@ class execution_engine2:
         parent_and_child_ids = mr.abandon_children(batch_id=params['batch_id'],
                                                    child_job_ids=params['child_job_ids'],
                                                    as_admin=params.get('as_admin'))
-        #END abandon_children
+        # END abandon_children
 
         # At some point might do deeper type checking...
         if not isinstance(parent_and_child_ids, dict):
-            raise ValueError('Method abandon_children return value ' +
-                             'parent_and_child_ids is not type dict as required.')
+            raise ValueError('Method abandon_children ' +
+                             'return value parent_and_child_ids ' +
+                             'is not type dict as required.')
         # return the results
         return [parent_and_child_ids]
 
@@ -579,18 +587,19 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: job_id
-        #BEGIN run_job_concierge
+        # BEGIN run_job_concierge
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
         )
         job_id = mr.run_job_concierge(params=params,concierge_params=concierge_params)
-        #END run_job_concierge
+        # END run_job_concierge
 
         # At some point might do deeper type checking...
         if not isinstance(job_id, str):
-            raise ValueError('Method run_job_concierge return value ' +
-                             'job_id is not type str as required.')
+            raise ValueError('Method run_job_concierge ' +
+                             'return value job_id ' +
+                             'is not type str as required.')
         # return the results
         return [job_id]
 
@@ -672,7 +681,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: params
-        #BEGIN get_job_params
+        # BEGIN get_job_params
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
@@ -680,12 +689,13 @@ class execution_engine2:
             admin_permissions_cache=self.admin_permissions_cache,
         )
         params = mr.get_job_params(job_id=params['job_id'], as_admin=params.get('as_admin'))
-        #END get_job_params
+        # END get_job_params
 
         # At some point might do deeper type checking...
         if not isinstance(params, dict):
-            raise ValueError('Method get_job_params return value ' +
-                             'params is not type dict as required.')
+            raise ValueError('Method get_job_params ' +
+                             'return value params ' +
+                             'is not type dict as required.')
         # return the results
         return [params]
 
@@ -700,7 +710,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: job_id
-        #BEGIN update_job_status
+        # BEGIN update_job_status
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
@@ -710,12 +720,13 @@ class execution_engine2:
         )
         job_id = mr.update_job_status(job_id=params['job_id'], status=params['status'],
                                       as_admin=params.get('as_admin'))
-        #END update_job_status
+        # END update_job_status
 
         # At some point might do deeper type checking...
         if not isinstance(job_id, str):
-            raise ValueError('Method update_job_status return value ' +
-                             'job_id is not type str as required.')
+            raise ValueError('Method update_job_status ' +
+                             'return value job_id ' +
+                             'is not type str as required.')
         # return the results
         return [job_id]
 
@@ -737,7 +748,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: results
-        #BEGIN add_job_logs
+        # BEGIN add_job_logs
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
@@ -750,12 +761,13 @@ class execution_engine2:
         results = {'success': add_job_logs.success,
                    'line_number': add_job_logs.stored_line_count}
 
-        #END add_job_logs
+        # END add_job_logs
 
         # At some point might do deeper type checking...
         if not isinstance(results, dict):
-            raise ValueError('Method add_job_logs return value ' +
-                             'results is not type dict as required.')
+            raise ValueError('Method add_job_logs ' +
+                             'return value results ' +
+                             'is not type dict as required.')
         # return the results
         return [results]
 
@@ -784,7 +796,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        #BEGIN get_job_logs
+        # BEGIN get_job_logs
         if params.get("skip_lines") and params.get("offset"):
             raise ValueError("Please provide only one of skip_lines or offset")
 
@@ -800,12 +812,13 @@ class execution_engine2:
             limit=params.get("limit", None),
             as_admin=params.get('as_admin')
         )
-        #END get_job_logs
+        # END get_job_logs
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
-            raise ValueError('Method get_job_logs return value ' +
-                             'returnVal is not type dict as required.')
+            raise ValueError('Method get_job_logs ' +
+                             'return value returnVal ' +
+                             'is not type dict as required.')
         # return the results
         return [returnVal]
 
@@ -827,7 +840,7 @@ class execution_engine2:
            parameter "as_admin" of type "boolean" (@range [0,1])
         """
         # ctx is the context object
-        #BEGIN finish_job
+        # BEGIN finish_job
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
@@ -843,7 +856,7 @@ class execution_engine2:
             as_admin=params.get('as_admin')
         )
 
-        #END finish_job
+        # END finish_job
         pass
 
     def start_job(self, ctx, params):
@@ -855,7 +868,7 @@ class execution_engine2:
            [0,1]), parameter "as_admin" of type "boolean" (@range [0,1])
         """
         # ctx is the context object
-        #BEGIN start_job
+        # BEGIN start_job
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
@@ -866,7 +879,7 @@ class execution_engine2:
             params["job_id"], skip_estimation=params.get("skip_estimation", True),
             as_admin=params.get('as_admin')
         )
-        #END start_job
+        # END start_job
         pass
 
     def check_job(self, ctx, params):
@@ -911,7 +924,7 @@ class execution_engine2:
            retry_ids - list - list of jobs that are retried based off of this
            job retry_parent - str - job_id of the parent this retry is based
            off of. Not available on a retry_parent itself batch_id - str -
-           the parent of the job, if the job is a child job created via
+           the coordinating job, if the job is a child job created via
            run_job_batch batch_job - bool - whether or not this is a batch
            parent container child_jobs - array - Only parent container should
            have child job ids scheduler_type - str - scheduler, such as awe
@@ -1004,7 +1017,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: job_state
-        #BEGIN check_job
+        # BEGIN check_job
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
@@ -1013,12 +1026,13 @@ class execution_engine2:
             params["job_id"], exclude_fields=params.get("exclude_fields", None),
             as_admin=params.get('as_admin')
         )
-        #END check_job
+        # END check_job
 
         # At some point might do deeper type checking...
         if not isinstance(job_state, dict):
-            raise ValueError('Method check_job return value ' +
-                             'job_state is not type dict as required.')
+            raise ValueError('Method check_job ' +
+                             'return value job_state ' +
+                             'is not type dict as required.')
         # return the results
         return [job_state]
 
@@ -1033,19 +1047,19 @@ class execution_engine2:
            of list of String, parameter "as_admin" of type "boolean" (@range
            [0,1])
         :returns: instance of type "CheckJobBatchResults" (batch_jobstate -
-           state of parent job of the batch child_jobstates - states of child
-           jobs IDEA: ADD aggregate_states - count of all available child job
-           states, even if they are zero) -> structure: parameter
-           "batch_jobstate" of type "JobState" (job_id - string - id of the
-           job user - string - user who started the job wsid - int - optional
-           id of the workspace where the job is bound authstrat - string -
-           what strategy used to authenticate the job job_input - object -
-           inputs to the job (from the run_job call)  ## TODO - verify
-           job_output - object - outputs from the job (from the run_job call)
-           ## TODO - verify updated - int - timestamp since epoch in
-           milliseconds of the last time the status was updated running - int
-           - timestamp since epoch in milliseconds of when it entered the
-           running state created - int - timestamp since epoch in
+           state of the coordinating job for the batch child_jobstates -
+           states of child jobs IDEA: ADD aggregate_states - count of all
+           available child job states, even if they are zero) -> structure:
+           parameter "batch_jobstate" of type "JobState" (job_id - string -
+           id of the job user - string - user who started the job wsid - int
+           - optional id of the workspace where the job is bound authstrat -
+           string - what strategy used to authenticate the job job_input -
+           object - inputs to the job (from the run_job call)  ## TODO -
+           verify job_output - object - outputs from the job (from the
+           run_job call) ## TODO - verify updated - int - timestamp since
+           epoch in milliseconds of the last time the status was updated
+           running - int - timestamp since epoch in milliseconds of when it
+           entered the running state created - int - timestamp since epoch in
            milliseconds when the job was created finished - int - timestamp
            since epoch in milliseconds when the job was finished status -
            string - status of the job. one of the following: created - job
@@ -1068,7 +1082,7 @@ class execution_engine2:
            retry_ids - list - list of jobs that are retried based off of this
            job retry_parent - str - job_id of the parent this retry is based
            off of. Not available on a retry_parent itself batch_id - str -
-           the parent of the job, if the job is a child job created via
+           the coordinating job, if the job is a child job created via
            run_job_batch batch_job - bool - whether or not this is a batch
            parent container child_jobs - array - Only parent container should
            have child job ids scheduler_type - str - scheduler, such as awe
@@ -1189,7 +1203,7 @@ class execution_engine2:
            retry_ids - list - list of jobs that are retried based off of this
            job retry_parent - str - job_id of the parent this retry is based
            off of. Not available on a retry_parent itself batch_id - str -
-           the parent of the job, if the job is a child job created via
+           the coordinating job, if the job is a child job created via
            run_job_batch batch_job - bool - whether or not this is a batch
            parent container child_jobs - array - Only parent container should
            have child job ids scheduler_type - str - scheduler, such as awe
@@ -1282,7 +1296,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        #BEGIN check_job_batch
+        # BEGIN check_job_batch
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
@@ -1291,12 +1305,13 @@ class execution_engine2:
             batch_id=params["job_id"], exclude_fields=params.get("exclude_fields", None),
             as_admin=params.get('as_admin')
         )
-        #END check_job_batch
+        # END check_job_batch
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
-            raise ValueError('Method check_job_batch return value ' +
-                             'returnVal is not type dict as required.')
+            raise ValueError('Method check_job_batch ' +
+                             'return value returnVal ' +
+                             'is not type dict as required.')
         # return the results
         return [returnVal]
 
@@ -1343,7 +1358,7 @@ class execution_engine2:
            retry_ids - list - list of jobs that are retried based off of this
            job retry_parent - str - job_id of the parent this retry is based
            off of. Not available on a retry_parent itself batch_id - str -
-           the parent of the job, if the job is a child job created via
+           the coordinating job, if the job is a child job created via
            run_job_batch batch_job - bool - whether or not this is a batch
            parent container child_jobs - array - Only parent container should
            have child job ids scheduler_type - str - scheduler, such as awe
@@ -1436,7 +1451,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        #BEGIN check_jobs
+        # BEGIN check_jobs
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
@@ -1447,12 +1462,13 @@ class execution_engine2:
             return_list=params.get("return_list", 1),
             as_admin=params.get('as_admin')
         )
-        #END check_jobs
+        # END check_jobs
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
-            raise ValueError('Method check_jobs return value ' +
-                             'returnVal is not type dict as required.')
+            raise ValueError('Method check_jobs ' +
+                             'return value returnVal ' +
+                             'is not type dict as required.')
         # return the results
         return [returnVal]
 
@@ -1500,7 +1516,7 @@ class execution_engine2:
            retry_ids - list - list of jobs that are retried based off of this
            job retry_parent - str - job_id of the parent this retry is based
            off of. Not available on a retry_parent itself batch_id - str -
-           the parent of the job, if the job is a child job created via
+           the coordinating job, if the job is a child job created via
            run_job_batch batch_job - bool - whether or not this is a batch
            parent container child_jobs - array - Only parent container should
            have child job ids scheduler_type - str - scheduler, such as awe
@@ -1593,7 +1609,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        #BEGIN check_workspace_jobs
+        # BEGIN check_workspace_jobs
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
@@ -1604,12 +1620,13 @@ class execution_engine2:
             return_list=params.get("return_list", 1),
             as_admin=params.get('as_admin')
         )
-        #END check_workspace_jobs
+        # END check_workspace_jobs
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
-            raise ValueError('Method check_workspace_jobs return value ' +
-                             'returnVal is not type dict as required.')
+            raise ValueError('Method check_workspace_jobs ' +
+                             'return value returnVal ' +
+                             'is not type dict as required.')
         # return the results
         return [returnVal]
 
@@ -1626,7 +1643,7 @@ class execution_engine2:
            "as_admin" of type "boolean" (@range [0,1])
         """
         # ctx is the context object
-        #BEGIN cancel_job
+        # BEGIN cancel_job
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
@@ -1638,7 +1655,7 @@ class execution_engine2:
             job_id=params["job_id"], terminated_code=params.get("terminated_code"),
             as_admin=params.get('as_admin')
         )
-        #END cancel_job
+        # END cancel_job
         pass
 
     def check_job_canceled(self, ctx, params):
@@ -1664,18 +1681,19 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: result
-        #BEGIN check_job_canceled
+        # BEGIN check_job_canceled
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
         )
         result = mr.check_job_canceled(job_id=params["job_id"], as_admin=params.get('as_admin'))
-        #END check_job_canceled
+        # END check_job_canceled
 
         # At some point might do deeper type checking...
         if not isinstance(result, dict):
-            raise ValueError('Method check_job_canceled return value ' +
-                             'result is not type dict as required.')
+            raise ValueError('Method check_job_canceled ' +
+                             'return value result ' +
+                             'is not type dict as required.')
         # return the results
         return [result]
 
@@ -1690,7 +1708,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: result
-        #BEGIN get_job_status
+        # BEGIN get_job_status
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
@@ -1698,12 +1716,13 @@ class execution_engine2:
             admin_permissions_cache=self.admin_permissions_cache,
         )
         result = mr.get_job_status_field(job_id=params['job_id'],       as_admin=params.get('as_admin'))
-        #END get_job_status
+        # END get_job_status
 
         # At some point might do deeper type checking...
         if not isinstance(result, dict):
-            raise ValueError('Method get_job_status return value ' +
-                             'result is not type dict as required.')
+            raise ValueError('Method get_job_status ' +
+                             'return value result ' +
+                             'is not type dict as required.')
         # return the results
         return [result]
 
@@ -1801,7 +1820,7 @@ class execution_engine2:
            retry_ids - list - list of jobs that are retried based off of this
            job retry_parent - str - job_id of the parent this retry is based
            off of. Not available on a retry_parent itself batch_id - str -
-           the parent of the job, if the job is a child job created via
+           the coordinating job, if the job is a child job created via
            run_job_batch batch_job - bool - whether or not this is a batch
            parent container child_jobs - array - Only parent container should
            have child job ids scheduler_type - str - scheduler, such as awe
@@ -1897,7 +1916,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        #BEGIN check_jobs_date_range_for_user
+        # BEGIN check_jobs_date_range_for_user
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
@@ -1913,12 +1932,13 @@ class execution_engine2:
             ascending=params.get("ascending"),
             as_admin=params.get('as_admin')
         )
-        #END check_jobs_date_range_for_user
+        # END check_jobs_date_range_for_user
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
-            raise ValueError('Method check_jobs_date_range_for_user return value ' +
-                             'returnVal is not type dict as required.')
+            raise ValueError('Method check_jobs_date_range_for_user ' +
+                             'return value returnVal ' +
+                             'is not type dict as required.')
         # return the results
         return [returnVal]
 
@@ -2016,7 +2036,7 @@ class execution_engine2:
            retry_ids - list - list of jobs that are retried based off of this
            job retry_parent - str - job_id of the parent this retry is based
            off of. Not available on a retry_parent itself batch_id - str -
-           the parent of the job, if the job is a child job created via
+           the coordinating job, if the job is a child job created via
            run_job_batch batch_job - bool - whether or not this is a batch
            parent container child_jobs - array - Only parent container should
            have child job ids scheduler_type - str - scheduler, such as awe
@@ -2112,7 +2132,7 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        #BEGIN check_jobs_date_range_for_all
+        # BEGIN check_jobs_date_range_for_all
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
@@ -2128,12 +2148,13 @@ class execution_engine2:
             as_admin=params.get('as_admin'),
             user="ALL",
         )
-        #END check_jobs_date_range_for_all
+        # END check_jobs_date_range_for_all
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
-            raise ValueError('Method check_jobs_date_range_for_all return value ' +
-                             'returnVal is not type dict as required.')
+            raise ValueError('Method check_jobs_date_range_for_all ' +
+                             'return value returnVal ' +
+                             'is not type dict as required.')
         # return the results
         return [returnVal]
 
@@ -2146,18 +2167,19 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        #BEGIN handle_held_job
+        # BEGIN handle_held_job
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
         )
         returnVal = mr.handle_held_job(cluster_id=cluster_id)
-        #END handle_held_job
+        # END handle_held_job
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
-            raise ValueError('Method handle_held_job return value ' +
-                             'returnVal is not type dict as required.')
+            raise ValueError('Method handle_held_job ' +
+                             'return value returnVal ' +
+                             'is not type dict as required.')
         # return the results
         return [returnVal]
 
@@ -2168,18 +2190,19 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        #BEGIN is_admin
+        # BEGIN is_admin
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
         )
         returnVal = mr.check_is_admin()
-        #END is_admin
+        # END is_admin
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, int):
-            raise ValueError('Method is_admin return value ' +
-                             'returnVal is not type int as required.')
+            raise ValueError('Method is_admin ' +
+                             'return value returnVal ' +
+                             'is not type int as required.')
         # return the results
         return [returnVal]
 
@@ -2193,18 +2216,19 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: returnVal
-        #BEGIN get_admin_permission
+        # BEGIN get_admin_permission
         mr = SDKMethodRunner(
             user_clients=self.gen_cfg.get_user_clients(ctx),
             clients=self.clients,
         )
         returnVal = mr.get_admin_permission()
-        #END get_admin_permission
+        # END get_admin_permission
 
         # At some point might do deeper type checking...
         if not isinstance(returnVal, dict):
-            raise ValueError('Method get_admin_permission return value ' +
-                             'returnVal is not type dict as required.')
+            raise ValueError('Method get_admin_permission ' +
+                             'return value returnVal ' +
+                             'is not type dict as required.')
         # return the results
         return [returnVal]
 
@@ -2215,15 +2239,16 @@ class execution_engine2:
         """
         # ctx is the context object
         # return variables are: client_groups
-        #BEGIN get_client_groups
+        # BEGIN get_client_groups
         # TODO I think this needs to be actually extracted from the config file
         client_groups = ['njs', 'bigmem', 'bigmemlong', 'extreme', 'concierge', 'hpc', 'kb_upload',
                          'terabyte', 'multi_tb', 'kb_upload_bulk']
-        #END get_client_groups
+        # END get_client_groups
 
         # At some point might do deeper type checking...
         if not isinstance(client_groups, list):
-            raise ValueError('Method get_client_groups return value ' +
-                             'client_groups is not type list as required.')
+            raise ValueError('Method get_client_groups ' +
+                             'return value client_groups ' +
+                             'is not type list as required.')
         # return the results
         return [client_groups]
