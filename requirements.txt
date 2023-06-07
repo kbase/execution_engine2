@@ -2,7 +2,7 @@
 aiofiles==0.7.0
 aiohttp==3.7.4.post0
 cachetools==4.2.2
-codecov==2.0.16
+codecov==2.1.13
 configparser==5.0.2
 confluent-kafka==1.9.2
 coverage==5.5
