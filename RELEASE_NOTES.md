@@ -2,7 +2,7 @@
 =========================================
 
 ## 0.0.13
-* Bump version in impl file
+* Bump version in impl file and sync branches
 
 ## 0.0.12 
 * Forcing black to 22.1.0 to make sure that GHA doesn't suddenly fail
