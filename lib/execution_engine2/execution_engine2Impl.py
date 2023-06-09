@@ -29,8 +29,8 @@ class execution_engine2:
     # the latter method is running.
     ######################################### noqa
     VERSION = "0.0.8"
-    GIT_URL = ""
-    GIT_COMMIT_HASH = ""
+    GIT_URL = "git@github.com:kbase/execution_engine2.git"
+    GIT_COMMIT_HASH = "dd2c2ccd7bf16134635e062223ce32df91389625"
 
     # BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
