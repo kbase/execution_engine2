@@ -1,10 +1,12 @@
 # execution_engine2 (ee2) release notes
 =========================================
 
-## 0.0.12
+## 0.0.13
+* Bump version in impl file
+
+## 0.0.12 
 * Forcing black to 22.1.0 to make sure that GHA doesn't suddenly fail
 * Prevent jobs that never ran from submitting job execution stats
-
 
 ## 0.0.11
 * Add ability for `kbase` user to contact condor via token

@@ -28,9 +28,9 @@ class execution_engine2:
     # state. A method could easily clobber the state set by another while
     # the latter method is running.
     ######################################### noqa
-    VERSION = "0.0.8"
-    GIT_URL = ""
-    GIT_COMMIT_HASH = ""
+    VERSION = "0.0.13"
+    GIT_URL = "git@github.com:kbase/execution_engine2.git"
+    GIT_COMMIT_HASH = "3e9f80f38458d7b383d2e028f15213b0fcb1a77e"
 
     # BEGIN_CLASS_HEADER
     MONGO_COLLECTION = "jobs"
