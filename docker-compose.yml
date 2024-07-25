@@ -147,7 +147,7 @@ services:
       ZOOKEEPER_SERVERS: zookeeper:12888:13888
 
   mongodb:
-    image: mongo:3.2
+    image: mongo:7.0
     environment:
       # provide your credentials here
       - MONGO_INITDB_ROOT_USERNAME=travis
