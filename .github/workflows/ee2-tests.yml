@@ -39,7 +39,7 @@ jobs:
       - name: Set up Python environment
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: "3.12.4"
       - name: flake8 Lint Lib
         uses: py-actions/flake8@v2
         with:
@@ -59,7 +59,7 @@ jobs:
       - name: Set up Python environment
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: "3.12.4"
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
