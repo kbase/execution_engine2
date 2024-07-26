@@ -27,7 +27,7 @@ RUN curl -o /tmp/dockerize.tgz https://raw.githubusercontent.com/kbase/dockerize
 
 
 #Install Python3 and Libraries (source /root/miniconda/bin/activate)
-RUN wget hhttps://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
 && bash ~/miniconda.sh -b -p /miniconda-latest
 
 
