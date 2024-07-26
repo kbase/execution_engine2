@@ -292,7 +292,7 @@ class EE2TestAdminMode(unittest.TestCase):
             r"ServerError\('Token validation failed: Auth service returned an error: 10020 Invalid token'\)\)"
         )
         with self.assertRaisesRegex(
-                expected_exception=RuntimeError, expected_regex=error_regex
+            expected_exception=RuntimeError, expected_regex=error_regex
         ):
             runner.run_job(params=job_params_1)
 
