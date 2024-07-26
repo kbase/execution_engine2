@@ -291,7 +291,9 @@ class EE2TestAdminMode(unittest.TestCase):
             r"An error occurred while fetching user permissions from the Workspace"
             r", ServerError\('Token validation failed: Auth service returned an error: 10020 Invalid token'\)"
         )
-        with self.assertRaisesRegex(expected_exception=RuntimeError, expected_regex=error_regex):
+        with self.assertRaisesRegex(
+            expected_exception=RuntimeError, expected_regex=error_regex
+        ):
             runner.run_job(params=job_params_1, as_admin=False)
 
     def test_admin_reader(self):
