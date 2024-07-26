@@ -27,9 +27,8 @@ RUN curl -o /tmp/dockerize.tgz https://raw.githubusercontent.com/kbase/dockerize
 
 
 #Install Python3 and Libraries (source /root/miniconda/bin/activate)
-RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-py310_24.5.0-0-Linux-x86_64.sh -O ~/miniconda.sh \
 && bash ~/miniconda.sh -b -p /miniconda-latest
-
 
 # Setup Cron
 COPY ./bin/ee2_cronjobs /etc/cron.d/ee2_cronjobs
