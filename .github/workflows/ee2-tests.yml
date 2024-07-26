@@ -64,12 +64,16 @@ jobs:
         run: |
           pip install -r requirements.txt
           git clone https://github.com/kbase/jars /opt/jars
+      - name: Give MongoDB a chance to startup
+        run: |
+          docker-compose up -d mongodb
       - name: Build Docker Image
         run: |
           docker build . -t execution_engine2:test
       - name: Run Tests
         run: |
           docker-compose up -d
+          curl localhost:27017 | grep "It looks like you are trying to access MongoDB over HTTP on the native driver port." || exit 1
           cp test/env/test.travis.env test.env
           make test-coverage
           codecov
