@@ -1,5 +1,3 @@
-db.auth('travis', 'travis')
-
 db = db.getSiblingDB('ee2')
 
 db.createUser(
