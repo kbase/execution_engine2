@@ -145,7 +145,7 @@ class JobRequirements:
         )
 
     def __eq__(self, other):
-        if type(self) == type(other):
+        if type(self) == type(other): # noqa E721
             return self._params() == (
                 other.cpus,
                 other.memory_MB,
@@ -214,7 +214,7 @@ class JobSubmissionParameters:
         )
         self.wsid = _gt_zero(wsid, "wsid", optional=True)
         source_ws_objects = source_ws_objects if source_ws_objects else []
-        if type(source_ws_objects) != list:
+        if not isinstance(source_ws_objects, list):
             raise IncorrectParamsException("source_ws_objects must be a list")
         for i, ref in enumerate(source_ws_objects):
             upa, is_valid = _is_valid_UPA(ref)
@@ -238,7 +238,7 @@ class JobSubmissionParameters:
         )
 
     def __eq__(self, other):
-        if type(self) == type(other):
+        if type(self) == type(other): # noqa E721
             return self._params() == (
                 other.job_id,
                 other.app_info,
