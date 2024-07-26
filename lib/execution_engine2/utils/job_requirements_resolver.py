@@ -77,7 +77,7 @@ def _check_clientgroup(clientgroup, source):
 
 
 def _string_request(putative_string, name, source):
-    if isinstance(putative_string, str):
+    if not isinstance(putative_string, str):
         _check_raise(name, putative_string, source)
     return putative_string.strip()
 
