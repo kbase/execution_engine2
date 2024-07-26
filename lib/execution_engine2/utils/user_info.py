@@ -28,7 +28,7 @@ class UserCreds:
         self.token = _check_string(token, "token")
 
     def __eq__(self, other):
-        if type(self) == type(other): # noqa E721
+        if type(self) == type(other):  # noqa E721
             return (self.username, self.token) == (other.username, other.token)
         return False
 
