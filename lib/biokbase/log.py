@@ -160,7 +160,7 @@ class log(object):
         self.module = module
         self.method = method
         self.call_id = call_id
-        noop = lambda: None
+        noop = lambda: None  # noqa
         self._callback = changecallback or noop
         self._subsystem = str(subsystem)
         self._mlog_config_file = config
@@ -223,7 +223,7 @@ class log(object):
             if MLOG_LOG_LEVEL in cfgitems:
                 try:
                     self._config_log_level = int(cfgitems[MLOG_LOG_LEVEL])
-                except:
+                except Exception:
                     _warnings.warn(
                         "Cannot parse log level {} from file {} to int".format(
                             cfgitems[MLOG_LOG_LEVEL], self._mlog_config_file
