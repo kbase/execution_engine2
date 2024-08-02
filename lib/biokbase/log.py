@@ -77,15 +77,15 @@ import warnings as _warnings
 from configparser import ConfigParser as _ConfigParser
 import time
 
-MLOG_ENV_FILE = 'MLOG_CONFIG_FILE'
-_GLOBAL = 'global'
-MLOG_LOG_LEVEL = 'mlog_log_level'
-MLOG_API_URL = 'mlog_api_url'
-MLOG_LOG_FILE = 'mlog_log_file'
+MLOG_ENV_FILE = "MLOG_CONFIG_FILE"
+_GLOBAL = "global"
+MLOG_LOG_LEVEL = "mlog_log_level"
+MLOG_API_URL = "mlog_api_url"
+MLOG_LOG_FILE = "mlog_log_file"
 
 DEFAULT_LOG_LEVEL = 6
-#MSG_CHECK_COUNT = 100
-#MSG_CHECK_INTERVAL = 300  # 300s = 5min
+# MSG_CHECK_COUNT = 100
+# MSG_CHECK_INTERVAL = 300  # 300s = 5min
 MSG_FACILITY = _syslog.LOG_LOCAL1
 EMERG_FACILITY = _syslog.LOG_LOCAL0
 
@@ -99,22 +99,31 @@ INFO = 6
 DEBUG = 7
 DEBUG2 = 8
 DEBUG3 = 9
-_MLOG_TEXT_TO_LEVEL = {'EMERG': EMERG,
-                      'ALERT': ALERT,
-                      'CRIT': CRIT,
-                      'ERR': ERR,
-                      'WARNING': WARNING,
-                      'NOTICE': NOTICE,
-                      'INFO': INFO,
-                      'DEBUG': DEBUG,
-                      'DEBUG2': DEBUG2,
-                      'DEBUG3': DEBUG3,
-                      }
-_MLOG_TO_SYSLOG = [_syslog.LOG_EMERG, _syslog.LOG_ALERT, _syslog.LOG_CRIT,
-                 _syslog.LOG_ERR, _syslog.LOG_WARNING, _syslog.LOG_NOTICE,
-                 _syslog.LOG_INFO, _syslog.LOG_DEBUG, _syslog.LOG_DEBUG,
-                 _syslog.LOG_DEBUG]
-#ALLOWED_LOG_LEVELS = set(_MLOG_TEXT_TO_LEVEL.values())
+_MLOG_TEXT_TO_LEVEL = {
+    "EMERG": EMERG,
+    "ALERT": ALERT,
+    "CRIT": CRIT,
+    "ERR": ERR,
+    "WARNING": WARNING,
+    "NOTICE": NOTICE,
+    "INFO": INFO,
+    "DEBUG": DEBUG,
+    "DEBUG2": DEBUG2,
+    "DEBUG3": DEBUG3,
+}
+_MLOG_TO_SYSLOG = [
+    _syslog.LOG_EMERG,
+    _syslog.LOG_ALERT,
+    _syslog.LOG_CRIT,
+    _syslog.LOG_ERR,
+    _syslog.LOG_WARNING,
+    _syslog.LOG_NOTICE,
+    _syslog.LOG_INFO,
+    _syslog.LOG_DEBUG,
+    _syslog.LOG_DEBUG,
+    _syslog.LOG_DEBUG,
+]
+# ALLOWED_LOG_LEVELS = set(_MLOG_TEXT_TO_LEVEL.values())
 _MLOG_LEVEL_TO_TEXT = {}
 for k, v in _MLOG_TEXT_TO_LEVEL.items():
     _MLOG_LEVEL_TO_TEXT[v] = k
@@ -128,21 +137,30 @@ class log(object):
     This class contains the methods necessary for sending log messages.
     """
 
-    def __init__(self, subsystem, constraints=None, config=None, logfile=None,
-                 ip_address=False, authuser=False, module=False,
-                 method=False, call_id=False, changecallback=None):
+    def __init__(
+        self,
+        subsystem,
+        constraints=None,
+        config=None,
+        logfile=None,
+        ip_address=False,
+        authuser=False,
+        module=False,
+        method=False,
+        call_id=False,
+        changecallback=None,
+    ):
         if not subsystem:
             raise ValueError("Subsystem must be supplied")
 
         self.user = _getpass.getuser()
-        self.parentfile = _os.path.abspath(_inspect.getfile(
-            _inspect.stack()[1][0]))
+        self.parentfile = _os.path.abspath(_inspect.getfile(_inspect.stack()[1][0]))
         self.ip_address = ip_address
         self.authuser = authuser
         self.module = module
         self.method = method
         self.call_id = call_id
-        noop = lambda: None
+        noop = lambda: None  # noqa
         self._callback = changecallback or noop
         self._subsystem = str(subsystem)
         self._mlog_config_file = config
@@ -171,11 +189,11 @@ class log(object):
         return time_diff
 
     def get_log_level(self):
-        if(self._user_log_level != -1):
+        if self._user_log_level != -1:
             return self._user_log_level
-        elif(self._config_log_level != -1):
+        elif self._config_log_level != -1:
             return self._config_log_level
-        elif(self._api_log_level != -1):
+        elif self._api_log_level != -1:
             return self._api_log_level
         else:
             return DEFAULT_LOG_LEVEL
@@ -205,37 +223,39 @@ class log(object):
             if MLOG_LOG_LEVEL in cfgitems:
                 try:
                     self._config_log_level = int(cfgitems[MLOG_LOG_LEVEL])
-                except:
+                except Exception:
                     _warnings.warn(
-                        'Cannot parse log level {} from file {} to int'.format(
-                            cfgitems[MLOG_LOG_LEVEL], self._mlog_config_file)
-                        + '. Keeping current log level.')
+                        "Cannot parse log level {} from file {} to int".format(
+                            cfgitems[MLOG_LOG_LEVEL], self._mlog_config_file
+                        )
+                        + ". Keeping current log level."
+                    )
             if MLOG_API_URL in cfgitems:
                 api_url = cfgitems[MLOG_API_URL]
             if MLOG_LOG_FILE in cfgitems:
                 self._config_log_file = cfgitems[MLOG_LOG_FILE]
         elif self._mlog_config_file:
-            _warnings.warn('Cannot read config file ' + self._mlog_config_file)
+            _warnings.warn("Cannot read config file " + self._mlog_config_file)
 
-        if (api_url):
+        if api_url:
             subsystem_api_url = api_url + "/" + self._subsystem
             try:
-                data = _json.load(_urllib2.urlopen(subsystem_api_url,
-                                                   timeout=5))
+                data = _json.load(_urllib2.urlopen(subsystem_api_url, timeout=5))
             except _urllib2.URLError as e:
                 code_ = None
-                if hasattr(e, 'code'):
-                    code_ = ' ' + str(e.code)
+                if hasattr(e, "code"):
+                    code_ = " " + str(e.code)
                 _warnings.warn(
-                    'Could not connect to mlog api server at ' +
-                    '{}:{} {}. Using default log level {}.'.format(
-                    subsystem_api_url, code_, str(e.reason),
-                    str(DEFAULT_LOG_LEVEL)))
+                    "Could not connect to mlog api server at "
+                    + "{}:{} {}. Using default log level {}.".format(
+                        subsystem_api_url, code_, str(e.reason), str(DEFAULT_LOG_LEVEL)
+                    )
+                )
             else:
                 max_matching_level = -1
-                for constraint_set in data['log_levels']:
-                    level = constraint_set['level']
-                    constraints = constraint_set['constraints']
+                for constraint_set in data["log_levels"]:
+                    level = constraint_set["level"]
+                    constraints = constraint_set["constraints"]
                     if level <= max_matching_level:
                         continue
 
@@ -243,23 +263,25 @@ class log(object):
                     for constraint in constraints:
                         if constraint not in self._log_constraints:
                             matches = 0
-                        elif (self._log_constraints[constraint] !=
-                              constraints[constraint]):
+                        elif (
+                            self._log_constraints[constraint] != constraints[constraint]
+                        ):
                             matches = 0
 
                     if matches == 1:
                         max_matching_level = level
 
                 self._api_log_level = max_matching_level
-        if ((self.get_log_level() != loglevel or
-             self.get_log_file() != logfile) and not self._init):
+        if (
+            self.get_log_level() != loglevel or self.get_log_file() != logfile
+        ) and not self._init:
             self._callback()
 
     def _resolve_log_level(self, level):
-        if(level in _MLOG_TEXT_TO_LEVEL):
+        if level in _MLOG_TEXT_TO_LEVEL:
             level = _MLOG_TEXT_TO_LEVEL[level]
-        elif(level not in _MLOG_LEVEL_TO_TEXT):
-            raise ValueError('Illegal log level')
+        elif level not in _MLOG_LEVEL_TO_TEXT:
+            raise ValueError("Illegal log level")
         return level
 
     def set_log_level(self, level):
@@ -280,33 +302,40 @@ class log(object):
     def set_log_msg_check_count(self, count):
         count = int(count)
         if count < 0:
-            raise ValueError('Cannot check a negative number of messages')
+            raise ValueError("Cannot check a negative number of messages")
         self._recheck_api_msg = count
 
     def set_log_msg_check_interval(self, interval):
         interval = int(interval)
         if interval < 0:
-            raise ValueError('interval must be positive')
+            raise ValueError("interval must be positive")
         self._recheck_api_time = interval
 
     def clear_user_log_level(self):
         self._user_log_level = -1
         self._callback()
 
-    def _get_ident(self, level, user, parentfile, ip_address, authuser, module,
-                   method, call_id):
-        infos = [self._subsystem, _MLOG_LEVEL_TO_TEXT[level],
-                 repr(time.time()), user, parentfile, str(_os.getpid())]
+    def _get_ident(
+        self, level, user, parentfile, ip_address, authuser, module, method, call_id
+    ):
+        infos = [
+            self._subsystem,
+            _MLOG_LEVEL_TO_TEXT[level],
+            repr(time.time()),
+            user,
+            parentfile,
+            str(_os.getpid()),
+        ]
         if self.ip_address:
-            infos.append(str(ip_address) if ip_address else '-')
+            infos.append(str(ip_address) if ip_address else "-")
         if self.authuser:
-            infos.append(str(authuser) if authuser else '-')
+            infos.append(str(authuser) if authuser else "-")
         if self.module:
-            infos.append(str(module) if module else '-')
+            infos.append(str(module) if module else "-")
         if self.method:
-            infos.append(str(method) if method else '-')
+            infos.append(str(method) if method else "-")
         if self.call_id:
-            infos.append(str(call_id) if call_id else '-')
+            infos.append(str(call_id) if call_id else "-")
         return "[" + "] [".join(infos) + "]"
 
     def _syslog(self, facility, level, ident, message):
@@ -322,47 +351,75 @@ class log(object):
         _syslog.closelog()
 
     def _log(self, ident, message):
-        ident = ' '.join([str(time.strftime(
-            "%Y-%m-%d %H:%M:%S", time.localtime())),
-                        _platform.node(), ident + ': '])
+        ident = " ".join(
+            [
+                str(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())),
+                _platform.node(),
+                ident + ": ",
+            ]
+        )
         try:
-            with open(self.get_log_file(), 'a') as log:
+            with open(self.get_log_file(), "a") as log:
                 if isinstance(message, str):
-                    log.write(ident + message + '\n')
+                    log.write(ident + message + "\n")
                 else:
                     try:
                         for m in message:
-                            log.write(ident + m + '\n')
+                            log.write(ident + m + "\n")
                     except TypeError:
-                        log.write(ident + str(message) + '\n')
+                        log.write(ident + str(message) + "\n")
         except Exception as e:
-            err = 'Could not write to log file ' + str(self.get_log_file()) + \
-                ': ' + str(e) + '.'
+            err = (
+                "Could not write to log file "
+                + str(self.get_log_file())
+                + ": "
+                + str(e)
+                + "."
+            )
             _warnings.warn(err)
 
-    def log_message(self, level, message, ip_address=None, authuser=None,
-                    module=None, method=None, call_id=None):
-#        message = str(message)
+    def log_message(
+        self,
+        level,
+        message,
+        ip_address=None,
+        authuser=None,
+        module=None,
+        method=None,
+        call_id=None,
+    ):
+        #        message = str(message)
         level = self._resolve_log_level(level)
 
         self.msg_count += 1
         self._msgs_since_config_update += 1
 
-        if(self._msgs_since_config_update >= self._recheck_api_msg
-           or self._get_time_since_start() >= self._recheck_api_time):
+        if (
+            self._msgs_since_config_update >= self._recheck_api_msg
+            or self._get_time_since_start() >= self._recheck_api_time
+        ):
             self.update_config()
 
-        ident = self._get_ident(level, self.user, self.parentfile, ip_address,
-                                authuser, module, method, call_id)
+        ident = self._get_ident(
+            level,
+            self.user,
+            self.parentfile,
+            ip_address,
+            authuser,
+            module,
+            method,
+            call_id,
+        )
         # If this message is an emergency, send a copy to the emergency
         # facility first.
-        if(level == 0):
+        if level == 0:
             self._syslog(EMERG_FACILITY, level, ident, message)
 
-        if(level <= self.get_log_level()):
+        if level <= self.get_log_level():
             self._syslog(MSG_FACILITY, level, ident, message)
             if self.get_log_file():
                 self._log(ident, message)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     pass
