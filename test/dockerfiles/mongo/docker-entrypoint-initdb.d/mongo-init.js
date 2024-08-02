@@ -1,6 +1,6 @@
 print("Adding travis username to ee2 database")
 
-// db.auth('travis', 'travis') This no longer works on Mongo7
+db.auth('travis', 'travis')
 
 
 db = db.getSiblingDB('ee2')
