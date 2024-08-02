@@ -69,7 +69,7 @@ jobs:
           docker build . -t execution_engine2:test
       - name: Run Tests
         run: |
-          docker-compose up -d
+          docker compose up -d
           cp test/env/test.travis.env test.env
           make test-coverage
           codecov
