@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Lint With Black
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: psf/black@stable
         with:
           options: "--check --verbose"
@@ -35,7 +35,7 @@ jobs:
     name: Lint With Flake8
     steps:
       - name: Check out source repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Python environment
         uses: actions/setup-python@v4
         with:
@@ -57,7 +57,7 @@ jobs:
       - name: Check out source repository
         uses: actions/checkout@v4
       - name: Set up Python environment
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10.14"
       - name: Install dependencies
