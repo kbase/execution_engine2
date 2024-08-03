@@ -2,57 +2,58 @@ version: "3.1"
 
 services:
 
+  # For Local Dev
   # Requires a ` docker build . -t execution_engine2:test `
   # Requires a ` make database `
-  ee2:
-    image: execution_engine2:test
-    command:
-      - "-poll"
-      - "-template"
-      - "/kb/module/build/templates/condor_config.templ:/etc/condor/condor_config"
-      - "-template"
-      - "/kb/module/test/deploy.cfg:/kb/module/deploy.cfg"
-      - "-timeout"
-      - "120s"
-      - "-wait"
-      - "tcp://mongodb:27017"
-      - "-stdout"
-      - "/kb/deployment/jettybase/logs/request.log"
-      - "./scripts/entrypoint.sh"
-    entrypoint: [ "dockerize" ]
-    depends_on: ["mongodb","condor"]
-    environment:
-      - POOL_PASSWORD=weakpassword
-    env_file: test/deploy.cfg
-    volumes:
-      - ./:/ee2
-
-  ee2_with_ssh:
-    image: execution_engine2:test
-    command:
-      - "-poll"
-      - "-template"
-      - "/kb/module/build/templates/condor_config.templ:/etc/condor/condor_config"
-      - "-template"
-      - "/kb/module/build/templates/deploy.docker.cfg.templ:/kb/module/deploy.cfg"
-      - "-timeout"
-      - "120s"
-      - "-wait"
-      - "tcp://mongodb:27017"
-      - "-stdout"
-      - "/kb/deployment/jettybase/logs/request.log"
-      - "./scripts/entrypoint.sh"
-    entrypoint: [ "dockerize" ]
-    depends_on: ["mongodb","condor"]
-    environment:
-      - POOL_PASSWORD=weakpassword
-      - LOCAL_DEV=1
-      - KB_DEPLOYMENT_CONFIG=/kb/module/deploy.cfg
-    env_file: test/deploy.cfg
-    ports: ["23:22","5678:5678"]
-    volumes:
-      - ./:/ee2
-      - /Users:/Users
+#  ee2:
+#    image: execution_engine2:test
+#    command:
+#      - "-poll"
+#      - "-template"
+#      - "/kb/module/build/templates/condor_config.templ:/etc/condor/condor_config"
+#      - "-template"
+#      - "/kb/module/test/deploy.cfg:/kb/module/deploy.cfg"
+#      - "-timeout"
+#      - "120s"
+#      - "-wait"
+#      - "tcp://mongodb:27017"
+#      - "-stdout"
+#      - "/kb/deployment/jettybase/logs/request.log"
+#      - "./scripts/entrypoint.sh"
+#    entrypoint: [ "dockerize" ]
+#    depends_on: ["mongodb","condor"]
+#    environment:
+#      - POOL_PASSWORD=weakpassword
+#    env_file: test/deploy.cfg
+#    volumes:
+#      - ./:/ee2
+#
+#  ee2_with_ssh:
+#    image: execution_engine2:test
+#    command:
+#      - "-poll"
+#      - "-template"
+#      - "/kb/module/build/templates/condor_config.templ:/etc/condor/condor_config"
+#      - "-template"
+#      - "/kb/module/build/templates/deploy.docker.cfg.templ:/kb/module/deploy.cfg"
+#      - "-timeout"
+#      - "120s"
+#      - "-wait"
+#      - "tcp://mongodb:27017"
+#      - "-stdout"
+#      - "/kb/deployment/jettybase/logs/request.log"
+#      - "./scripts/entrypoint.sh"
+#    entrypoint: [ "dockerize" ]
+#    depends_on: ["mongodb","condor"]
+#    environment:
+#      - POOL_PASSWORD=weakpassword
+#      - LOCAL_DEV=1
+#      - KB_DEPLOYMENT_CONFIG=/kb/module/deploy.cfg
+#    env_file: test/deploy.cfg
+#    ports: ["23:22","5678:5678"]
+#    volumes:
+#      - ./:/ee2
+#      - /Users:/Users
 
 
 
