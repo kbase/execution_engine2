@@ -72,10 +72,10 @@ jobs:
           echo "INIT_PATH=${{ matrix.mongo-config.init-path }}" >> $GITHUB_ENV
       - name: Start Services and Run Tests
         run: |
-          docker compose -f tests/dockerfiles/docker-compose.yml up -d
+          docker compose up -d
           cp test/env/test.travis.env test.env
           make test-coverage
           codecov
       - name: Cleanup
         run: |
-          docker compose -f tests/dockerfiles/docker-compose.yml down
+          docker compose down
