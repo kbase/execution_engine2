@@ -44,12 +44,17 @@ jobs:
           path: "./test"
 
 
+
   Build_and_Run_Tests_and_CodeCov:
     name: Build and Run Tests and CodeCov
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mongo-version: ["3.6", "7.0"]
+        mongo-config:
+          - version: "7.0"
+            init-path: "./test/dockerfiles/mongo/docker-entrypoint-initdb.d-7.0/"
+          - version: "3.6"
+            init-path: "./test/dockerfiles/mongo/docker-entrypoint-initdb.d-3.6/"
     steps:
       - name: Check out source repository
         uses: actions/checkout@v4
@@ -61,12 +66,16 @@ jobs:
         run: |
           pip install -r requirements.txt
           git clone https://github.com/kbase/jars /opt/jars
-      - name: Run Tests
+      - name: Set MongoDB Version and Init Path
         run: |
-          docker compose -f test/dockerfiles/docker-compose.yml up -d
-          docker run -d --name mongodb \
-          -v $(pwd)/tests/dockerfiles/mongo/docker-entrypoint-initdb.d-${{ matrix.mongo-version }}:/docker-entrypoint-initdb.d/ \
-          -p 27017:27017 mongo:${{ matrix.mongo-version }}
+          echo "MONGO_VERSION=${{ matrix.mongo-config.version }}" >> $GITHUB_ENV
+          echo "INIT_PATH=${{ matrix.mongo-config.init-path }}" >> $GITHUB_ENV
+      - name: Start Services and Run Tests
+        run: |
+          docker compose -f tests/dockerfiles/docker-compose.yml up -d
           cp test/env/test.travis.env test.env
           make test-coverage
           codecov
+      - name: Cleanup
+        run: |
+          docker compose -f tests/dockerfiles/docker-compose.yml down

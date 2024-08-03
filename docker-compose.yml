@@ -146,13 +146,15 @@ services:
       ZOOKEEPER_SYNC_LIMIT: 2docker-compose rm
       ZOOKEEPER_SERVERS: zookeeper:12888:13888
 
+
   mongodb:
-    image: mongo:7.0
+    image: mongo:${MONGO_VERSION:-7.0} # Use 7.0 as the default if MONGO_VERSION is not set
     environment:
-      # provide your credentials here
       - MONGO_INITDB_ROOT_USERNAME=travis
       - MONGO_INITDB_ROOT_PASSWORD=travis
       - MONGO_INITDB_DATABASE=ee2
-    ports: ["27018:27017","27017:27017"]
+    ports:
+      - "27018:27017"
+      - "27017:27017"
     volumes:
-      - "./test/dockerfiles/mongo/docker-entrypoint-initdb.d/:/docker-entrypoint-initdb.d/"
+      - ${INIT_PATH:-./test/dockerfiles/mongo/docker-entrypoint-initdb.d-7.0/}:/docker-entrypoint-initdb.d/
