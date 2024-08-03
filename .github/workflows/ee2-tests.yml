@@ -64,8 +64,7 @@ jobs:
       - name: Run Tests
         run: |
           docker compose up -f tests/dockerfiles/docker-compose.yml -d
-          docker run -d --name mongodb -p 27017:27017 ${{ matrix.mongo-version }} -v tests/dockerfiles/mongo/docker-entrypoint-initdb.d-{matrix.mongo-version}:/docker-entrypoint-initdb.d
-          docker run -d --name mongodb -p 27017:27017 mongo:${{ matrix.mongo-version }} -v tests/dockerfiles/mongo/docker-entrypoint-initdb.d-${{ matrix.mongo-version }}:/docker-entrypoint-initdb.d
+          docker run -d --name mongodb -v tests/dockerfiles/mongo/docker-entrypoint-initdb.d-${{ matrix.mongo-version }}:/docker-entrypoint-initdb.d -p 27017:27017 mongo:${{ matrix.mongo-version }}
           cp test/env/test.travis.env test.env
           make test-coverage
           codecov
