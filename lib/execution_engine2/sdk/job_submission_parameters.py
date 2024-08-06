@@ -124,9 +124,11 @@ class JobRequirements:
             client_group,
             None if client_group_regex is None else bool(client_group_regex),
             _check_string(bill_to_user, "bill_to_user", optional=True),
-            None
-            if ignore_concurrency_limits is None
-            else bool(ignore_concurrency_limits),
+            (
+                None
+                if ignore_concurrency_limits is None
+                else bool(ignore_concurrency_limits)
+            ),
             cls._check_scheduler_requirements(scheduler_requirements),
             None if debug_mode is None else bool(debug_mode),
         )
@@ -145,7 +147,7 @@ class JobRequirements:
         )
 
     def __eq__(self, other):
-        if type(self) == type(other):
+        if type(self) == type(other):  # noqa E721
             return self._params() == (
                 other.cpus,
                 other.memory_MB,
@@ -214,7 +216,7 @@ class JobSubmissionParameters:
         )
         self.wsid = _gt_zero(wsid, "wsid", optional=True)
         source_ws_objects = source_ws_objects if source_ws_objects else []
-        if type(source_ws_objects) != list:
+        if not isinstance(source_ws_objects, list):
             raise IncorrectParamsException("source_ws_objects must be a list")
         for i, ref in enumerate(source_ws_objects):
             upa, is_valid = _is_valid_UPA(ref)
@@ -238,7 +240,7 @@ class JobSubmissionParameters:
         )
 
     def __eq__(self, other):
-        if type(self) == type(other):
+        if type(self) == type(other):  # noqa E721
             return self._params() == (
                 other.job_id,
                 other.app_info,

@@ -26,23 +26,8 @@ RUN curl -o /tmp/dockerize.tgz https://raw.githubusercontent.com/kbase/dockerize
       rm /tmp/dockerize.tgz
 
 
-# install mongodb
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2930ADAE8CAF5059EE73BB4B58712A2291FA4AD5 \
-    && echo "deb http://repo.mongodb.org/apt/debian stretch/mongodb-org/3.6 main" | tee /etc/apt/sources.list.d/mongodb-org-3.6.list  \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends mongodb-org=3.6.11 mongodb-org-server=3.6.11 mongodb-org-shell=3.6.11 mongodb-org-mongos=3.6.11 mongodb-org-tools=3.6.11 \
-    && apt-get install -y --no-install-recommends mongodb \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN echo "mongodb-org hold" | dpkg --set-selections \
-    && echo "mongodb-org-server hold" | dpkg --set-selections \
-    && echo "mongodb-org-shell hold" | dpkg --set-selections \
-    && echo "mongodb-org-mongos hold" | dpkg --set-selections \
-    && echo "mongodb-org-tools hold" | dpkg --set-selections
-
 #Install Python3 and Libraries (source /root/miniconda/bin/activate)
-RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh \
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-py310_24.5.0-0-Linux-x86_64.sh -O ~/miniconda.sh \
 && bash ~/miniconda.sh -b -p /miniconda-latest
 
 # Setup Cron
