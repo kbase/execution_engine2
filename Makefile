@@ -38,7 +38,7 @@ setup-database:
 test-coverage:
 	# Set up travis user in mongo
 	@echo "Run tests for $(TESTS)"
-	PYTHONPATH=.:lib:test pytest --cov-report=xml --cov lib/execution_engine2/ --verbose $(TESTS)
+	PYTHONPATH=.:lib:test pytest --cov-report=xml --cov-report=term --cov lib/execution_engine2/  --verbose $(TESTS)
 
 build-condor-test-image:
 	cd test/dockerfiles/condor && echo `pwd` && docker build -f Dockerfile . -t $(CONDOR_DOCKER_IMAGE_TAG_NAME)
