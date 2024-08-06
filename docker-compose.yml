@@ -57,95 +57,95 @@ services:
 
 
 
-  condor_worker_mini:
-    privileged: true
-    image: kbase/condor-worker:develop
-    hostname: condor_worker_mini
-    command:
-      - "-poll"
-      - "-template"
-      - "/kb/deployment/conf/.templates/condor_config_worker.templ:/etc/condor/condor_config.local"
-      - "-template"
-      - "/kb/deployment/conf/.templates/shared_port_config.templ:/etc/condor/config.d/shared_port_config"
-      - "-timeout"
-      - "120s"
-      - "-stdout"
-      - "/var/log/condor/ProcLog"
-      - "-stdout"
-      - "/var/log/condor/StartLog"
-      - "/kb/deployment/bin/start-condor.sh"
-    depends_on: ["condor"]
-    environment:
-      - POOL_PASSWORD=weakpassword
-      - COLLECTOR_HOST=condor:9618?sock=collector
-      - USE_TCP=True
-      - EXECUTE_SUFFIX=mini_kb
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - /sys/fs/cgroup:/sys/fs/cgroup
+  # condor_worker_mini:
+  #   privileged: true
+  #   image: kbase/condor-worker:develop
+  #   hostname: condor_worker_mini
+  #   command:
+  #     - "-poll"
+  #     - "-template"
+  #     - "/kb/deployment/conf/.templates/condor_config_worker.templ:/etc/condor/condor_config.local"
+  #     - "-template"
+  #     - "/kb/deployment/conf/.templates/shared_port_config.templ:/etc/condor/config.d/shared_port_config"
+  #     - "-timeout"
+  #     - "120s"
+  #     - "-stdout"
+  #     - "/var/log/condor/ProcLog"
+  #     - "-stdout"
+  #     - "/var/log/condor/StartLog"
+  #     - "/kb/deployment/bin/start-condor.sh"
+  #   depends_on: ["condor"]
+  #   environment:
+  #     - POOL_PASSWORD=weakpassword
+  #     - COLLECTOR_HOST=condor:9618?sock=collector
+  #     - USE_TCP=True
+  #     - EXECUTE_SUFFIX=mini_kb
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #     - /sys/fs/cgroup:/sys/fs/cgroup
 
 
 
-  condor:
-    image: kbase/condor:develop
-    hostname: condor
-    environment:
-      - POOL_PASSWORD=weakpassword
-      - USE_TCP=True
-    ports:
-      - "9618:9618"
-    entrypoint:
-      - "/usr/bin/dockerize"
-    command:
-      - "-poll"
-      - "-template"
-      - "/etc/condor/.templates/condor_config.local.templ:/etc/condor/condor_config.local"
-      - "-stdout"
-      - "/var/log/condor/MasterLog"
-      - "-stdout"
-      - "/var/log/condor/SchedLog"
-      - "/usr/sbin/start-condor.sh"
-    volumes:
-      - ./condor_shared/:/condor_shared/
-      - ./condor_shared/cdr/:/cdr/
+  # condor:
+  #   image: kbase/condor:develop
+  #   hostname: condor
+  #   environment:
+  #     - POOL_PASSWORD=weakpassword
+  #     - USE_TCP=True
+  #   ports:
+  #     - "9618:9618"
+  #   entrypoint:
+  #     - "/usr/bin/dockerize"
+  #   command:
+  #     - "-poll"
+  #     - "-template"
+  #     - "/etc/condor/.templates/condor_config.local.templ:/etc/condor/condor_config.local"
+  #     - "-stdout"
+  #     - "/var/log/condor/MasterLog"
+  #     - "-stdout"
+  #     - "/var/log/condor/SchedLog"
+  #     - "/usr/sbin/start-condor.sh"
+  #   volumes:
+  #     - ./condor_shared/:/condor_shared/
+  #     - ./condor_shared/cdr/:/cdr/
 
-  manager:
-    image: kafkamanager/kafka-manager
-    hostname: manager
-    ports:
-      - "0.0.0.0:9000:9000"
-    depends_on:
-      - zookeeper
-    environment:
-      ZK_HOSTS: zookeeper
+  # manager:
+  #   image: kafkamanager/kafka-manager
+  #   hostname: manager
+  #   ports:
+  #     - "0.0.0.0:9000:9000"
+  #   depends_on:
+  #     - zookeeper
+  #   environment:
+  #     ZK_HOSTS: zookeeper
 
-  kafka:
-    image: confluentinc/cp-kafka:5.0.0
-    hostname: kafka
-    ports:
-      - "0.0.0.0:9092:9092"
-    depends_on:
-      - zookeeper
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_HEAP_OPTS: -Xmx512m -Xms512m
+  # kafka:
+  #   image: confluentinc/cp-kafka:5.0.0
+  #   hostname: kafka
+  #   ports:
+  #     - "0.0.0.0:9092:9092"
+  #   depends_on:
+  #     - zookeeper
+  #   environment:
+  #     KAFKA_BROKER_ID: 1
+  #     KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  #     KAFKA_HEAP_OPTS: -Xmx512m -Xms512m
 
-  # Required for kafka
-  zookeeper:
-    image: confluentinc/cp-zookeeper:latest
-    hostname: zookeeper
-    ports:
-      - "0.0.0.0:2181:2181"
-    environment:
-      ZOOKEEPER_SERVER_ID: 1
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-      ZOOKEEPER_INIT_LIMIT: 5
-      ZOOKEEPER_SYNC_LIMIT: 2docker-compose rm
-      ZOOKEEPER_SERVERS: zookeeper:12888:13888
+  # # Required for kafka
+  # zookeeper:
+  #   image: confluentinc/cp-zookeeper:latest
+  #   hostname: zookeeper
+  #   ports:
+  #     - "0.0.0.0:2181:2181"
+  #   environment:
+  #     ZOOKEEPER_SERVER_ID: 1
+  #     ZOOKEEPER_CLIENT_PORT: 2181
+  #     ZOOKEEPER_TICK_TIME: 2000
+  #     ZOOKEEPER_INIT_LIMIT: 5
+  #     ZOOKEEPER_SYNC_LIMIT: 2docker-compose rm
+  #     ZOOKEEPER_SERVERS: zookeeper:12888:13888
 
 
   mongodb:
