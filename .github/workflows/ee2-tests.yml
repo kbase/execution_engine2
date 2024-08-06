@@ -75,7 +75,7 @@ jobs:
           docker compose up -d
           cp test/env/test.travis.env test.env
           make test-coverage
-          codecov
+          codecov --token="${{ secrets.CODECOV_TOKEN }}"
       - name: Cleanup
         run: |
           docker compose down
