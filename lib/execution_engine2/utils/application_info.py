@@ -116,7 +116,7 @@ class AppInfo:
         return self.application_module
 
     def __eq__(self, other):
-        if type(self) == type(other):
+        if type(self) == type(other):  # noqa E721
             return (
                 self.module,
                 self.method,

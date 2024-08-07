@@ -483,10 +483,10 @@ class EE2RunJob:
         :return: A list of condor job ids or a failure notification
         """
 
-        if type(params) != list:
+        if not isinstance(params, list):
             raise IncorrectParamsException("params must be a list")
 
-        if type(batch_params) != dict:
+        if not isinstance(batch_params, dict):
             raise IncorrectParamsException("batch params must be a mapping")
 
         wsid = batch_params.get(_WORKSPACE_ID)
@@ -586,7 +586,7 @@ class EE2RunJob:
     def _check_is_string(self, putative_str, name):
         if not putative_str:
             return None
-        if type(putative_str) != str:
+        if not isinstance(putative_str, str):
             raise IncorrectParamsException(f"{name} must be a string")
         return putative_str
 
@@ -924,7 +924,7 @@ class EE2RunJob:
         """
 
         # TODO Test this
-        if type(params) != dict:
+        if not isinstance(params, dict):
             raise IncorrectParamsException("params must be a mapping")
 
         self._preflight(runjob_params=params, as_admin=as_admin)
@@ -949,10 +949,10 @@ class EE2RunJob:
         rl = concierge_params.get(_REQUIREMENTS_LIST)
         schd_reqs = {}
         if rl:
-            if type(rl) != list:
+            if not isinstance(rl, list):
                 raise IncorrectParamsException(f"{_REQUIREMENTS_LIST} must be a list")
             for s in rl:
-                if type(s) != str or "=" not in s:
+                if not isinstance(s, str) or "=" not in s:
                     raise IncorrectParamsException(
                         f"Found illegal requirement in {_REQUIREMENTS_LIST}: {s}"
                     )
