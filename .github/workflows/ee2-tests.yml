@@ -75,7 +75,6 @@ jobs:
           docker compose up -d
           cp test/env/test.travis.env test.env
           make test-coverage
-          codecov --token="${{ secrets.CODECOV_TOKEN }}"
       - name: Upload coverage reports to Codecov
       - uses: codecov/codecov-action@v4
         with:
