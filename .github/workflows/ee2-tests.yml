@@ -75,7 +75,7 @@ jobs:
           git clone https://github.com/kbase/jars /opt/jars
       - name: Run Tests with Coverage
         env:
-          MONGO_URL: mongodb://root:example@localhost:27017/testdb
+          MONGO_URL: mongodb://travis:travis@localhost:27017/travis
         run: |
           cp test/env/test.travis.env test.env
           make test-coverage
@@ -85,4 +85,4 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: Cleanup
         run: |
-          docker-compose down
+          docker compose down
