@@ -47,15 +47,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mongo-version: ["7.0", "3.6"]
+        mongo-version: ["3.6", "7.0","8.0"]
     services:
       mongo:
         image: mongo:${{ matrix.mongo-version }}
-        options: > 
-          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'" 
-          --health-interval 10s 
-          --health-timeout 5s 
-          --health-retries 3
         ports:
           - 27017:27017
         env:
