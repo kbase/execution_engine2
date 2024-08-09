@@ -47,16 +47,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mongo-version: ["3.6", "7.0"]
-    services:
-      mongo:
-        image: mongo:${{ matrix.mongo-version }}
-        ports:
-          - 27017:27017
-        env:
-          MONGO_INITDB_DATABASE: travis
-          MONGO_INITDB_ROOT_USERNAME: travis
-          MONGO_INITDB_ROOT_PASSWORD: travis
+        mongo-config:
+          - version: "7.0"
+            init-path: "./test/dockerfiles/mongo/docker-entrypoint-initdb.d-7.0/"
+          - version: "3.6"
+            init-path: "./test/dockerfiles/mongo/docker-entrypoint-initdb.d-3.6/"
     steps:
       - name: Check out source repository
         uses: actions/checkout@v4
@@ -68,10 +63,13 @@ jobs:
         run: |
           pip install -r requirements.txt
           git clone https://github.com/kbase/jars /opt/jars
-      - name: Run Tests with Coverage
-        env:
-          MONGO_URL: mongodb://travis:travis@localhost:27017/travis
+      - name: Set MongoDB Version and Init Path
         run: |
+          echo "MONGO_VERSION=${{ matrix.mongo-config.version }}" >> $GITHUB_ENV
+          echo "INIT_PATH=${{ matrix.mongo-config.init-path }}" >> $GITHUB_ENV
+      - name: Start Services and Run Tests
+        run: |
+          docker compose up -d
           cp test/env/test.travis.env test.env
           make test-coverage
       - name: Upload coverage reports to Codecov
