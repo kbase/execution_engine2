@@ -1,6 +1,4 @@
 # This workflow will install Python dependencies, run tests and lint
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
 name: Execution Engine 2 Test Suite
 
 on:
@@ -48,10 +46,11 @@ jobs:
     strategy:
       matrix:
         mongo-config:
-          - version: "7.0"
-            init-path: "./test/dockerfiles/mongo/docker-entrypoint-initdb.d-7.0/"
-          - version: "3.6"
-            init-path: "./test/dockerfiles/mongo/docker-entrypoint-initdb.d-3.6/"
+          - "7.0"
+          - "3.6"
+        init-path:
+          - "./test/dockerfiles/mongo/docker-entrypoint-initdb.d-7.0/"
+          - "./test/dockerfiles/mongo/docker-entrypoint-initdb.d-3.6/"
     steps:
       - name: Check out source repository
         uses: actions/checkout@v4
