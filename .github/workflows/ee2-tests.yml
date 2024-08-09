@@ -47,11 +47,21 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        mongo-config:
-          - version: "7.0"
-            init-path: "./test/dockerfiles/mongo/docker-entrypoint-initdb.d-7.0/"
-          - version: "3.6"
-            init-path: "./test/dockerfiles/mongo/docker-entrypoint-initdb.d-3.6/"
+        mongo-version: ["7.0", "3.6"]
+    services:
+      mongo:
+        image: mongo:${{ matrix.mongo-version }}
+        options: > 
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'" 
+          --health-interval 10s 
+          --health-timeout 5s 
+          --health-retries 3
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_DATABASE: travis
+          MONGO_INITDB_ROOT_USERNAME: travis
+          MONGO_INITDB_ROOT_PASSWORD: travis
     steps:
       - name: Check out source repository
         uses: actions/checkout@v4
@@ -63,13 +73,10 @@ jobs:
         run: |
           pip install -r requirements.txt
           git clone https://github.com/kbase/jars /opt/jars
-      - name: Set MongoDB Version and Init Path
+      - name: Run Tests with Coverage
+        env:
+          MONGO_URL: mongodb://root:example@localhost:27017/testdb
         run: |
-          echo "MONGO_VERSION=${{ matrix.mongo-config.version }}" >> $GITHUB_ENV
-          echo "INIT_PATH=${{ matrix.mongo-config.init-path }}" >> $GITHUB_ENV
-      - name: Start Services and Run Tests
-        run: |
-          docker compose up -d
           cp test/env/test.travis.env test.env
           make test-coverage
       - name: Upload coverage reports to Codecov
@@ -78,4 +85,4 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
       - name: Cleanup
         run: |
-          docker compose down
+          docker-compose down
