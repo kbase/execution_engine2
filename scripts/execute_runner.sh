@@ -43,7 +43,7 @@ ${PYTHON_EXECUTABLE} -V "${debug_dir}/pyversion"
 
 tar -xf JobRunner.tgz && cd JobRunner && cp scripts/*.py . && chmod +x ./*.py
 
-echo "Hey here are my changes!"
+
 ${PYTHON_EXECUTABLE} ./jobrunner.py "${JOB_ID}" "${EE2_ENDPOINT}" &
 pid=$!
 
