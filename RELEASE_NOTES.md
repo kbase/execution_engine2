@@ -1,6 +1,9 @@
 # execution_engine2 (ee2) release notes
 =========================================
 
+## 0.0.15
+- Update JobRunner and Execution Engine to substitute internal urls to go through cloudflare
+
 ## 0.0.14
 - Update clients to work with mongo7 by updating pymongo and mongoengine
 -  Fix linting issues from flake8 and black

@@ -3,19 +3,26 @@ set -x
 
 HOME=$(pwd)
 export HOME
+
+JOB_ID=$1
+EE2_ENDPOINT=$2
+
+# Remove 'services.' from EE2_ENDPOINT if it exists
+EE2_ENDPOINT=${EE2_ENDPOINT/services./}
+
+KBASE_ENDPOINT=$EE2_ENDPOINT
+export KBASE_ENDPOINT
+
 # Detect if we are running at NERSC and load some customization
-# Probably better ways to deal with this but this is good enough.
 if [ -e /global/homes/k/kbaserun/.local_settings ] ; then
    HOME=/global/homes/k/kbaserun
-   . $HOME/.local_settings $1 $2
+   . "$HOME/.local_settings" "$JOB_ID" "$EE2_ENDPOINT"
 fi
 
-debug_dir="debug"
-runner_logs="runner_logs"
-mkdir ${debug_dir}
-mkdir ${runner_logs}
-runner_logs=$(readlink -f runner_logs)
-debug_dir=$(readlink -f debug_dir)
+
+
+debug_dir=$(mkdir -p "$(readlink -f debug)")
+
 
 env >"${debug_dir}/envf"
 {
@@ -32,12 +39,10 @@ env >"${debug_dir}/envf"
 
 ${PYTHON_EXECUTABLE} -V "${debug_dir}/pyversion"
 
-JOB_ID=$1
-EE2_ENDPOINT=$2
-KBASE_ENDPOINT=$EE2_ENDPOINT
-export KBASE_ENDPOINT
+
 
 tar -xf JobRunner.tgz && cd JobRunner && cp scripts/*.py . && chmod +x ./*.py
+
 
 ${PYTHON_EXECUTABLE} ./jobrunner.py "${JOB_ID}" "${EE2_ENDPOINT}" &
 pid=$!
@@ -49,10 +54,6 @@ trap '{ kill $pid }' SIGTERM
 wait ${pid}
 EXIT_CODE=$?
 
-# Deprecated these in favor of moving them back to ee2 container.
-#LOG_DIR="../../../logs/${JOB_ID}"
-#mkdir -p "${LOG_DIR}"
-#cp "${runner_logs}/${JOB_ID}".out "${LOG_DIR}/".
-#cp "${runner_logs}/${JOB_ID}".err "${LOG_DIR}/"
+
 kill -9 $pid2
 exit ${EXIT_CODE}
