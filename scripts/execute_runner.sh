@@ -7,14 +7,14 @@ export HOME
 JOB_ID=$1
 EE2_ENDPOINT=$2
 
-# Remove 'services.' from EE2_ENDPOINT if it exists
-EE2_ENDPOINT=${EE2_ENDPOINT/services./}
 
 KBASE_ENDPOINT=$EE2_ENDPOINT
 export KBASE_ENDPOINT
 
 # Detect if we are running at NERSC and load some customization
 if [ -e /global/homes/k/kbaserun/.local_settings ] ; then
+   # Remove 'services.' from EE2_ENDPOINT if it exists
+   EE2_ENDPOINT=${EE2_ENDPOINT/services./}
    HOME=/global/homes/k/kbaserun
    . "$HOME/.local_settings" "$JOB_ID" "$EE2_ENDPOINT"
 fi
