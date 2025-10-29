@@ -64,7 +64,9 @@ jobs:
           python-version: "3.10.14"
       - name: Install dependencies
         run: |
-          curl -fsSL https://get.htcondor.org | /bin/bash -s -- --no-dry-run
+          pip install htcondor
+          pip freeze | grep htcondor
+          import htcondor; print(htcondor.__version__)
           pip install -r requirements.txt
           git clone https://github.com/kbase/jars /opt/jars
       - name: Set MongoDB Version and Init Path
