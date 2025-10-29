@@ -1,6 +1,9 @@
 # execution_engine2 (ee2) release notes
 =========================================
 
+## 0.0.16
+- Update JobRunner to no longer use ee2 branch (requires sanic==21.12.2 to be installed on the workers)
+
 ## 0.0.15
 - Update JobRunner and Execution Engine to substitute internal urls to go through cloudflare
 
