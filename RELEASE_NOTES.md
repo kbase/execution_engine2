@@ -1,6 +1,17 @@
 # execution_engine2 (ee2) release notes
 =========================================
 
+## 0.0.15
+- Update JobRunner and Execution Engine to substitute internal urls to go through cloudflare
+
+## 0.0.14
+- Update clients to work with mongo7 by updating pymongo and mongoengine
+-  Fix linting issues from flake8 and black
+- Update outdated libraries that can no longer be pip installed
+- The latest Dockerfile build contains conda which installs python 3.12.4 so these changes will pin python to 3.10 and save us headache in the future
+- Speed up tests by moving docker build step out
+- Create matrix of tests to run against mongo3.6 and mongo7
+
 ## 0.0.13
 * Bump version in impl file and sync branches
 

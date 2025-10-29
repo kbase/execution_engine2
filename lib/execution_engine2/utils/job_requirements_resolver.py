@@ -77,13 +77,13 @@ def _check_clientgroup(clientgroup, source):
 
 
 def _string_request(putative_string, name, source):
-    if type(putative_string) != str:
+    if not isinstance(putative_string, str):
         _check_raise(name, putative_string, source)
     return putative_string.strip()
 
 
 def _int_request(putative_int, original, name, source):
-    if type(putative_int) == float:
+    if isinstance(putative_int, float):
         _check_raise(f"{name} request", original, source)
     try:
         return int(putative_int)
@@ -96,7 +96,7 @@ def _check_cpus(cpus, source):
 
 
 def _check_memory(memory, source):
-    if type(memory) == int:
+    if isinstance(memory, int):
         return memory
     memory2 = _string_request(memory, "memory request", source)
     if memory2.endswith("M"):
@@ -107,7 +107,7 @@ def _check_memory(memory, source):
 
 
 def _check_disk(disk, source):
-    if type(disk) == int:
+    if isinstance(disk, int):
         return disk
     disk2 = _string_request(disk, "disk request", source)
     if disk2.endswith("GB"):
@@ -116,7 +116,7 @@ def _check_disk(disk, source):
 
 
 def _bool_request(putative_bool, name, source):
-    if type(putative_bool) == bool or type(putative_bool) == int:
+    if isinstance(putative_bool, bool) or isinstance(putative_bool, int):
         return bool(putative_bool)
     pbs = _string_request(putative_bool, name, source).lower()
     if pbs == "true":
@@ -347,7 +347,7 @@ class JobRequirementsResolver:
     def _has_value(cls, inc):
         if inc is None:
             return False
-        if type(inc) == str and not inc.strip():
+        if isinstance(inc, str) and not inc.strip():
             return False
         return True
 

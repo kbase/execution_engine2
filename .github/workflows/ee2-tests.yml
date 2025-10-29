@@ -1,12 +1,6 @@
 # This workflow will install Python dependencies, run tests and lint
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
-# To ssh into this build add the following:
-#- name: Start SSH session
-#      uses: luchihoratiu/debug-via-ssh@main
-#      with:
-#        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
-#        SSH_PASS: ${{ secrets.SSH_PASS }}
 
 name: Execution Engine 2 Test Suite
 
@@ -18,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Lint With Black
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: psf/black@stable
         with:
           options: "--check --verbose"
@@ -35,11 +29,11 @@ jobs:
     name: Lint With Flake8
     steps:
       - name: Check out source repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Set up Python environment
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.8"
+          python-version: "3.10.14"
       - name: flake8 Lint Lib
         uses: py-actions/flake8@v2
         with:
@@ -50,22 +44,38 @@ jobs:
           path: "./test"
 
 
+
   Build_and_Run_Tests_and_CodeCov:
     name: Build and Run Tests and CodeCov
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        mongo-config:
+          - version: "7.0"
+            init-path: "./test/dockerfiles/mongo/docker-entrypoint-initdb.d-7.0/"
+          - version: "3.6"
+            init-path: "./test/dockerfiles/mongo/docker-entrypoint-initdb.d-3.6/"
     steps:
       - name: Check out source repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+      - name: Set up Python environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10.14"
       - name: Install dependencies
         run: |
           pip install -r requirements.txt
           git clone https://github.com/kbase/jars /opt/jars
-      - name: Build Docker Image
+      - name: Set MongoDB Version and Init Path
         run: |
-          docker build . -t execution_engine2:test
-      - name: Run Tests
+          echo "MONGO_VERSION=${{ matrix.mongo-config.version }}" >> $GITHUB_ENV
+          echo "INIT_PATH=${{ matrix.mongo-config.init-path }}" >> $GITHUB_ENV
+      - name: Start Services and Run Tests
         run: |
-          docker-compose up -d
+          docker compose up -d
           cp test/env/test.travis.env test.env
           make test-coverage
-          codecov
+          codecov --token="${{ secrets.CODECOV_TOKEN }}"
+      - name: Cleanup
+        run: |
+          docker compose down

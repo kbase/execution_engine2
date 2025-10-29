@@ -12,7 +12,7 @@ import hashlib
 
 
 class TokenCache(object):
-    """ A basic cache for tokens. """
+    """A basic cache for tokens."""
 
     _MAX_TIME_SEC = 5 * 60  # 5 min
 
