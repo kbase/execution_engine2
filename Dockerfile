@@ -12,7 +12,10 @@ RUN apt-get install -y gcc wget vim htop tmpreaper
 RUN mkdir -p /etc/apt/sources.list.d
 
 # Install condor
-RUN curl -fsSL https://get.htcondor.org | /bin/bash -s -- --no-dry-run
+
+#RUN curl -fsSL https://get.htcondor.org | /bin/bash -s -- --no-dry-run
+
+RUN  DEBIAN_FRONTEND=noninteractive apt-get install -y htcondor
 
 # Install jars for testing purposes
 # Uncomment this if you want to run tests inside the ee2 container on MacOSX
@@ -37,6 +40,7 @@ COPY ./bin/ee2_cronjobs /etc/cron.d/ee2_cronjobs
 ENV PATH=/miniconda-latest/bin:$PATH
 RUN pip install --upgrade pip && python -V
 COPY ./requirements.txt /kb/module/requirements.txt
+
 
 RUN pip install -r /kb/module/requirements.txt
 RUN adduser --disabled-password --gecos '' -shell /bin/bash kbase
